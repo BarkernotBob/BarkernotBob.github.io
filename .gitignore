@@ -11,3 +11,7 @@ private/
 replit.nix
 .quartz/
 quartz/cli/tui/dist/
+content/private/
+.obsidian/
+content/private/
+.obsidian/

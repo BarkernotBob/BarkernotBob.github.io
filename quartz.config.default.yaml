@@ -99,15 +99,11 @@ plugins:
     enabled: false
     order: 92
   - source: github:quartz-community/remove-draft
-    enabled: false
+    enabled: true
   - source: github:quartz-community/explicit-publish
     enabled: true
     options:
       publishByDefault: false
-      publishField: publish
-      publishValue: Publish
-      draftField: draft
-      draftValue: false
   - source: github:quartz-community/alias-redirects
     enabled: true
   - source: github:quartz-community/content-index

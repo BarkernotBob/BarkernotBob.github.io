@@ -315,25 +315,30 @@
         #lobbyScreen .lobby-left, #lobbyScreen .lobby-right{ display:contents; }
         @media (min-width: 860px){
             /* width:100% (not shrink-to-fit) + minmax(0,1fr) columns keep the
-               layout a FIXED size: it never widens when teams/dropdowns appear. */
+               layout a FIXED size: it never widens when teams/dropdowns appear.
+               Row 1 height is driven by the LEFT column's content (settings),
+               which is kept constant whether teams are on or off. */
             #lobbyScreen .setup-container{
                 width:100%; max-width:1200px; margin:0 auto; display:grid;
                 grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-                grid-template-rows:minmax(0,1fr) auto auto;
+                grid-template-rows:minmax(0,auto) auto auto;
                 align-items:stretch; gap:16px 18px; min-height:0; overflow:hidden; padding-bottom:16px;
             }
-            /* Both columns fill the SAME height; each scrolls inside itself. */
             #lobbyScreen .lobby-left{
                 grid-column:1; grid-row:1;
                 display:flex; flex-direction:column; gap:12px;
                 min-height:0; overflow-y:auto; padding-right:6px;
             }
+            /* The right column matches the left's height. The player list is taken
+               out of flow (absolute) so the NUMBER of players can't change the
+               column height; it just scrolls inside when it overflows. */
             #lobbyScreen .lobby-right{
-                grid-column:2; grid-row:1;
-                display:flex; flex-direction:column; gap:12px; min-height:0;
+                display:block; grid-column:2; grid-row:1; position:relative; min-height:0;
             }
-            #lobbyScreen .lobby-right .player-list-section{ flex:1 1 auto; min-height:0; overflow-y:auto; margin:0; }
-            /* Start + copy buttons span the full width under BOTH columns, pinned. */
+            #lobbyScreen .lobby-right .player-list-section{
+                position:absolute; inset:0; overflow-y:auto; margin:0;
+            }
+            /* Start + copy buttons span the full width under BOTH columns. */
             #lobbyScreen #startFromLobbyBtn{ grid-column:1 / -1; grid-row:2; margin-top:0 !important; }
             #lobbyScreen #bottomCopyBtn{ grid-column:1 / -1; grid-row:3; margin-top:0 !important; }
             /* Settings panels use the full column width on desktop. */
@@ -2337,7 +2342,7 @@ window.addBot = function() {
         if (availableColorIdx === -1) return;
         
         let teamIdx = 0;
-        if (document.getElementById('joinTeamContainer').style.display !== 'none') {
+        if ((() => { const jc = document.getElementById('joinTeamContainer'); return jc.style.display !== 'none' && jc.style.visibility !== 'hidden'; })()) {
             teamIdx = parseInt(document.getElementById('joinTeamSelect').value, 10);
         }
 
@@ -2507,6 +2512,17 @@ window.startLocalGame = function() {
     renderLocalLobby();
 };
 
+// Show/hide a team-only control. On desktop its space stays reserved
+// (visibility:hidden) so toggling teams never resizes the lobby columns;
+// on mobile it fully collapses so the stacked layout stays tight.
+function setTeamControlVisible(el, show) {
+    if (!el) return;
+    const desktop = window.matchMedia('(min-width:860px)').matches;
+    if (show) { el.style.display = ''; el.style.visibility = 'visible'; }
+    else if (desktop) { el.style.display = ''; el.style.visibility = 'hidden'; }
+    else { el.style.display = 'none'; el.style.visibility = ''; }
+}
+
 function renderLocalLobby() {
     document.getElementById('teamConfigPanel').style.display = 'block';
     document.getElementById('hostBotSection').style.display = 'block';
@@ -2519,8 +2535,8 @@ function renderLocalLobby() {
     if(document.activeElement.id !== 'team3Name') document.getElementById('team3Name').value = G.teamConfig.teamNames[2] || 'Team 3';
     document.getElementById('team3NameGroup').style.display = G.teamConfig.teamCount === 3 ? 'block' : 'none';
 
+    setTeamControlVisible(document.getElementById('joinTeamContainer'), G.teamConfig.enabled);
     if (G.teamConfig.enabled) {
-        document.getElementById('joinTeamContainer').style.display = 'block';
         let teamOpts = '';
         for(let i=0; i<G.teamConfig.teamCount; i++) {
             teamOpts += `<option value="${i}">${G.teamConfig.teamNames[i] || `Team ${i+1}`}</option>`;
@@ -2529,8 +2545,6 @@ function renderLocalLobby() {
         let oldVal = selectEl.value;
         selectEl.innerHTML = teamOpts;
         if(oldVal && oldVal < G.teamConfig.teamCount) selectEl.value = oldVal;
-    } else {
-        document.getElementById('joinTeamContainer').style.display = 'none';
     }
 
     document.getElementById('hostReorderText').style.display = 'block';
@@ -3060,7 +3074,7 @@ function setupListener() {
                 document.getElementById('teamConfigPanel').style.display = 'block';
                 document.getElementById('hostBotSection').style.display = 'block';
                 document.getElementById('teamsToggle').classList.toggle('on', teamConfig.enabled);
-                document.getElementById('teamDetails').style.display = teamConfig.enabled ? 'block' : 'none';
+                setTeamControlVisible(document.getElementById('teamDetails'), teamConfig.enabled);
                 
                 const rb = document.querySelector(`input[name="teamCount"][value="${teamConfig.teamCount}"]`);
                 if(rb) rb.checked = true;
@@ -3076,8 +3090,8 @@ function setupListener() {
             }
 
             // Render Join Game Team Selector
+            setTeamControlVisible(document.getElementById('joinTeamContainer'), teamConfig.enabled);
             if (teamConfig.enabled) {
-                document.getElementById('joinTeamContainer').style.display = 'block';
                 let teamOpts = '';
                 for(let i=0; i<teamConfig.teamCount; i++) {
                     teamOpts += `<option value="${i}">${teamConfig.teamNames[i] || `Team ${i+1}`}</option>`;
@@ -3086,8 +3100,6 @@ function setupListener() {
                 let oldVal = selectEl.value;
                 selectEl.innerHTML = teamOpts;
                 if(oldVal && oldVal < teamConfig.teamCount) selectEl.value = oldVal;
-            } else {
-                document.getElementById('joinTeamContainer').style.display = 'none';
             }
 
             document.getElementById('hostReorderText').style.display = isHost ? 'block' : 'none';

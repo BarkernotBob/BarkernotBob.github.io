@@ -36,8 +36,8 @@
         .input-group { margin-bottom:18px; }
         label { display:block; margin-bottom:6px; font-weight:500; }
         input[type="number"], input[type="text"] { width:100%; padding:10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:1rem; }
-        .footprint-grid { display:grid; gap:4px; margin-top:6px; justify-content:center; }
-        .footprint-cell { width:40px; height:40px; background:var(--bg); border:2px solid var(--border); border-radius:4px; cursor:pointer; transition:all .2s; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; font-size: 0.9rem; }
+        .footprint-grid { display:grid; gap:4px; margin-top:6px; justify-content:center; width:100%; margin-left:auto; margin-right:auto; }
+        .footprint-cell { width:100%; aspect-ratio:1; min-width:0; background:var(--bg); border:2px solid var(--border); border-radius:4px; cursor:pointer; transition:all .2s; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; font-size: clamp(0.55rem, 2.4vw, 0.9rem); }
         .footprint-cell.active { background:var(--primary); border-color:var(--primary); }
         .footprint-cell.paid { background:#ff8822; border-color:#ff8822; }
         .footprint-cell:hover { transform:scale(1.1); }
@@ -134,7 +134,49 @@
         .action-cancel { padding:6px 18px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:8px; font-size:.82rem; cursor:pointer; }
         .action-cancel:hover { border-color:#ff6666; color:#ff9999; }
         @keyframes popIn { from{transform:translateX(-50%) scale(.8);opacity:0} to{transform:translateX(-50%) scale(1);opacity:1} }
-        
+
+        /* ===== In-game mobile (phones) ===== */
+        @media (max-width: 700px) {
+            /* (1) Camera/Visuals/Chat become full-width bottom sheets that sit just
+               above the control pills, so they're easy to reach with a thumb. */
+            .cam-panel, .visuals-panel, .chat-panel {
+                left:0; right:0; bottom:64px; width:auto; max-width:none;
+                border-radius:18px 18px 0 0; max-height:62vh;
+                padding-top:20px; transform:translateY(120%);
+                box-shadow:0 -8px 30px rgba(0,0,0,.55), inset 0 4px 0 var(--primary);
+            }
+            .visuals-panel { box-shadow:0 -8px 30px rgba(0,0,0,.55), inset 0 4px 0 #9b51e0; }
+            .chat-panel { bottom:64px; max-height:70vh; box-shadow:0 -8px 30px rgba(0,0,0,.55), inset 0 4px 0 #00d26a; }
+            .cam-panel.active, .visuals-panel.active, .chat-panel.active { transform:translateY(0); }
+            /* grab handle */
+            .cam-panel::before, .visuals-panel::before, .chat-panel::before {
+                content:""; position:absolute; top:8px; left:50%; transform:translateX(-50%);
+                width:42px; height:4px; border-radius:2px; background:rgba(255,255,255,.25);
+            }
+
+            /* (3) Pills in one tidy row at the very bottom; action button rides above. */
+            .bottom-left-controls { left:0; right:0; bottom:0; justify-content:center; gap:8px; padding:10px 8px; background:linear-gradient(0deg, rgba(7,13,22,.92), transparent); flex-wrap:nowrap; }
+            .pill-btn { padding:11px 14px; font-size:.9rem; flex:1; justify-content:center; max-width:160px; }
+            .action-wrap { bottom:74px; }
+            /* While a bottom sheet is open, hide the action button (the pills below
+               stay visible to close the sheet); it returns when the sheet closes. */
+            #gameScreen:has(.cam-panel.active, .visuals-panel.active, .chat-panel.active) .action-wrap { display:none !important; }
+
+            /* (2) Slimmer top HUD so the player list, banner and Menu don't crowd. */
+            .menu-toggle { top:10px; right:10px; padding:9px 13px; font-size:.85rem; }
+            .left-player-list { top:10px; left:10px; gap:5px; max-width:46vw; }
+            #addColBanner { top:10px; font-size:.78rem; padding:8px 14px; max-width:42vw; }
+            #quickResetCamBtn { top:56px; right:10px; font-size:.82rem; padding:8px 12px; }
+
+            /* (4) Bigger touch targets. */
+            .cam-btn { width:40px; height:40px; font-size:1rem; }
+            .cam-slider { height:8px; }
+            .cam-toggle input[type="checkbox"] { width:22px; height:22px; }
+            .chat-input-row input { padding:14px; font-size:1rem; }
+            .chat-input-row button { padding:0 20px; }
+            .menu-content .btn-sm, .store-item-btn { min-height:42px; }
+        }
+
         .store-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(13,27,42,.96); z-index:1600; display:none; align-items:center; justify-content:center; padding:20px; }
         .store-overlay.active { display:flex; }
         .store-content { background:var(--surface); padding:32px; border-radius:16px; border:2px solid var(--border); max-width:420px; width:100%; }
@@ -2249,7 +2291,8 @@ color:var(--primary)">🟦 Active</button>
     c.innerHTML = html;
     const g=document.createElement('div');
     g.className='footprint-grid';
-    g.style.gridTemplateColumns=`repeat(${W},40px)`;
+    g.style.gridTemplateColumns=`repeat(${W},1fr)`;
+    g.style.maxWidth=`${W*44}px`;
     for(let z=0;z<D;z++) for(let x=0;x<W;x++){
         const el=document.createElement('div');
         el.className='footprint-cell active';

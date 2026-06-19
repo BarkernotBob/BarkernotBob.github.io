@@ -309,6 +309,30 @@
         #lobbyScreen #startFromLobbyBtn{ background:#00d26a; color:#06281c; box-shadow:0 6px 0 #0a6e3c; font-weight:800; }
         #lobbyScreen .btn-sm{ background:rgba(30,41,59,0.6); border:1px solid rgba(125,211,252,.25); border-radius:9px; }
         #lobbyScreen .player-item-lobby{ background:#0d1a2c; border-radius:10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.05); }
+        /* Lobby layout: the .lobby-left / .lobby-right wrappers are invisible to
+           layout on phones (display:contents) so everything stacks in one column,
+           exactly like before. On wider screens they become two real columns. */
+        #lobbyScreen .lobby-left, #lobbyScreen .lobby-right{ display:contents; }
+        @media (min-width: 860px){
+            #lobbyScreen .setup-container{
+                max-width:1080px; display:grid; grid-template-columns:minmax(0,1fr) 340px;
+                align-items:stretch; gap:18px; min-height:0; overflow:hidden; padding-bottom:16px;
+            }
+            /* Left column = all the settings panels; scrolls inside itself if tall. */
+            #lobbyScreen .lobby-left{
+                display:flex; flex-direction:column; gap:12px;
+                min-height:0; overflow-y:auto; padding-right:6px;
+            }
+            /* Right column = player list (scrolls) with Start button pinned below. */
+            #lobbyScreen .lobby-right{
+                display:flex; flex-direction:column; gap:12px; min-height:0;
+            }
+            #lobbyScreen .lobby-right .player-list-section{ flex:1 1 auto; min-height:0; overflow-y:auto; }
+            #lobbyScreen #startFromLobbyBtn{ margin-top:0 !important; flex:0 0 auto; }
+            #lobbyScreen #bottomCopyBtn{ margin-top:0 !important; flex:0 0 auto; }
+            /* Settings panels can use the full left-column width on desktop. */
+            #lobbyScreen .lobby-left .setup-section{ max-width:none; }
+        }
 
         /* overlays + modals */
         .menu-overlay, .store-overlay, .confirm-overlay{ background:rgba(5,10,20,0.78); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
@@ -454,7 +478,8 @@
         <p style="font-weight: 500; color: #94a3b8;">Setup the game</p>
     </div>
     <div class="setup-container">
-        
+
+        <div class="lobby-left">
         <div class="setup-section" style="text-align: center; display:none;" id="roomLinkSection">
             <button class="btn" style="width: 100%; margin-bottom: 10px;" id="topCopyBtn" onclick="copyInviteLink()">📋 Copy Room Link</button>
         </div>
@@ -514,7 +539,10 @@
                 <button class="btn-sm" onclick="addBot()">Add Bot</button>
             </div>
         </div>
-        <div class="setup-section">
+        </div><!-- /lobby-left -->
+
+        <div class="lobby-right">
+        <div class="setup-section player-list-section">
             <h2>Joined Players</h2>
             <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:8px;" id="hostReorderText">Host can reorder players before starting.</p>
             <div id="lobbyPlayersList" style="display:flex; flex-direction:column; gap:10px;">
@@ -524,7 +552,8 @@
         <button class="btn" id="startFromLobbyBtn" onclick="startFromLobby()" style="display:none; margin-top: 10px; width: 100%;">Start Game</button>
 
         <button class="btn" id="bottomCopyBtn" style="width: 100%; margin-top: 10px;" onclick="copyInviteLink()">📋 Copy Room Link</button>
-        
+        </div><!-- /lobby-right -->
+
     </div>
 </div>
 
@@ -1656,7 +1685,7 @@ aiWorker.onmessage = function(e) {
                 G.turnState.unlockEarnSkip = true; // unlocking doesn't pay out chain tokens
                 botPlayer.tokens -= chosenMove.baseCost;
                 log(`${botPlayer.name} paid ${chosenMove.baseCost} tokens to unlock column (${chosenMove.cx},${chosenMove.cz})`);
-                updateColumnLabel(chosenMove.cx, chosenMove.cz);
+                animateUnlockColumn(chosenMove.cx, chosenMove.cz);
                 // Reactivated tokens may already complete a line.
                 if(triggerColumnWinIfAny(chosenMove.cx, chosenMove.cz)){ isAiThinking = false; return; }
             } else {
@@ -1755,7 +1784,11 @@ const CHAIN_RADIUS = 0.04;
 
 const ironMat = new THREE.MeshStandardMaterial({color: 0x2a2e33, metalness: 0.8, roughness: 0.6});
 const steelMat = new THREE.MeshStandardMaterial({color: 0x5a6370, metalness: 0.9, roughness: 0.4});
-const blackMetalMat = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8}); 
+const blackMetalMat = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8});
+// Translucent versions used for the "ghost" lock preview shown on tentative placement.
+const ironMatGhost = new THREE.MeshStandardMaterial({color: 0x2a2e33, metalness: 0.8, roughness: 0.6, transparent: true, opacity: 0.45});
+const steelMatGhost = new THREE.MeshStandardMaterial({color: 0x5a6370, metalness: 0.9, roughness: 0.4, transparent: true, opacity: 0.45});
+const blackMetalMatGhost = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8, transparent: true, opacity: 0.45});
 
 const DIRS = [
     [1,0,0], [0,1,0], [0,0,1], 
@@ -4134,6 +4167,38 @@ function initThree(){
                 a.mat.opacity = Math.max(0, 0.85 * (1 - a.progress * 1.2));
                 if (a.progress >= 1) { scene.remove(a.mesh); G.animations.splice(i, 1); }
             }
+            // Chains wind UP the column and the padlock snaps on (locking).
+            else if (a.type === 'lockWrap') {
+                a.progress += a.speed;
+                const p = Math.min(a.progress, 1);
+                const n = a.links.length;
+                const show = Math.ceil(p * n);
+                for (let k = 0; k < n; k++) a.links[k].visible = k < show;
+                // easeOutBack pop for the padlocks
+                const ps = Math.min(1, p * 1.15), x = ps - 1;
+                const eb = 1 + 2.70158 * x * x * x + 1.70158 * x * x;
+                a.padlocks.forEach(pl => pl.scale.setScalar(Math.max(0.001, eb)));
+                if (p >= 1) {
+                    for (let k = 0; k < n; k++) a.links[k].visible = true;
+                    a.padlocks.forEach(pl => pl.scale.setScalar(1));
+                    G.animations.splice(i, 1);
+                }
+            }
+            // Chains unwind from the top down and the padlock fades (unlocking).
+            else if (a.type === 'lockUnwrap') {
+                a.progress += a.speed;
+                const p = Math.min(a.progress, 1);
+                const n = a.links.length;
+                const show = Math.floor((1 - p) * n);
+                for (let k = 0; k < n; k++) a.links[k].visible = k < show;
+                const s = Math.max(0, 1 - p * 1.2);
+                a.padlocks.forEach(pl => pl.scale.setScalar(s));
+                if (p >= 1) {
+                    scene.remove(a.group);
+                    G.animations.splice(i, 1);
+                    updateColumnLabel(a.cx, a.cz); // redraw any remaining locks / paid label
+                }
+            }
         }
         
         G.pieces.forEach(m => {
@@ -4669,18 +4734,20 @@ function createContinuousChain(points, mat) {
     return group;
 }
 
-function createStackedPadlocks(cost, topY, group) {
+function createStackedPadlocks(cost, topY, group, mats) {
+    mats = mats || { iron: ironMat, steel: steelMat, black: blackMetalMat };
     const connectionPoints = [];
+    const locks = [];
     const MAX_PER_LAYER = 4;
-    const LAYER_HEIGHT = 0.38; 
-    
+    const LAYER_HEIGHT = 0.38;
+
     for(let i=0; i<cost; i++) {
         const pGroup = new THREE.Group();
-        const body = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.25, 0.15, 2, 0.04), ironMat);
+        const body = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.25, 0.15, 2, 0.04), mats.iron);
         body.castShadow = true;
-        const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.04, 8, 16, Math.PI), steelMat);
+        const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.04, 8, 16, Math.PI), mats.steel);
         shackle.position.y = 0.12; shackle.castShadow = true;
-        const kh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), blackMetalMat);
+        const kh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), mats.black);
         kh.rotation.x = Math.PI/2;
         pGroup.add(body, shackle, kh);
 
@@ -4703,14 +4770,52 @@ function createStackedPadlocks(cost, topY, group) {
         pGroup.rotation.z = (Math.random() - 0.5) * 0.15;
         
         group.add(pGroup);
+        locks.push(pGroup);
 
         const localShackleTop = new THREE.Vector3(0, 0.22, 0);
         localShackleTop.applyEuler(pGroup.rotation);
         localShackleTop.add(pGroup.position);
         connectionPoints.push(localShackleTop);
     }
-    
-    return connectionPoints;
+
+    return { points: connectionPoints, locks };
+}
+
+// Builds the padlocks + spiralling chains into `group` and returns the pieces
+// needed to animate them (chain links sorted bottom->top, padlock subgroups).
+// Used both for the real lock label and the translucent ghost preview.
+function buildChainsAndLocks(group, cx, cz, lockCount, ghost) {
+    const mats = ghost
+        ? { iron: ironMatGhost, steel: steelMatGhost, black: blackMetalMatGhost }
+        : { iron: ironMat, steel: steelMat, black: blackMetalMat };
+
+    let lvl = topLevel(cx, cz);
+    if (lvl === -1) lvl = G.heightCap;
+    const currentHeight = lvl * (G.rules.gravityOff ? SP : PS);
+    const topY = currentHeight === 0 ? 0 : currentHeight;
+    const heightToWrap = Math.max(currentHeight, 0.2);
+
+    const renderLocks = lockCount > 0 ? lockCount : 1;
+    const layers = Math.ceil(renderLocks / 4);
+    const maxLockY = topY + (layers * 0.38);
+
+    const { points: lockPoints, locks } = createStackedPadlocks(renderLocks, topY, group, mats);
+
+    const chainLinks = [];
+    lockPoints.forEach((pt, idx) => {
+        const turns = Math.max(0.4, lvl * 0.3);
+        const startA = (idx / renderLocks) * Math.PI * 2;
+        const c1 = createContinuousChain(getSpiralPoints(turns, heightToWrap, r=>r, startA, pt), mats.iron);
+        const c2 = createContinuousChain(getSpiralPoints(-turns, heightToWrap, r=>r, startA + Math.PI*1.5, pt), mats.steel);
+        group.add(c1, c2);
+        c1.children.forEach(m => chainLinks.push(m));
+        c2.children.forEach(m => chainLinks.push(m));
+    });
+    // Reveal order = bottom of the column upward, so the chains look like they
+    // climb and clamp the padlock on last.
+    chainLinks.sort((a, b) => a.position.y - b.position.y);
+
+    return { maxLockY, lockPoints, chainLinks, padlocks: locks };
 }
 
 function getSpiralPoints(turns, targetHeight, radiusModifierFunc, startAngle, targetPoint, yModifierFunc = null) {
@@ -4790,7 +4895,7 @@ function createCostSprite(cost, isNewlyAdded) {
     return sprite;
 }
 
-function updateColumnLabel(cx, cz) {
+function updateColumnLabel(cx, cz, animateMode) {
     const key = `${cx},${cz}`;
     const isPaid = G.rules.paidColumnsEnabled && G.paidColumns.has(key);
     const paidCost = isPaid ? G.paidColumns.get(key) : 0;
@@ -4810,26 +4915,15 @@ function updateColumnLabel(cx, cz) {
         
         let lvl = topLevel(cx, cz);
         if (lvl === -1) lvl = G.heightCap;
-        const currentHeight = lvl * (G.rules.gravityOff ? SP : PS); 
-        const topY = currentHeight === 0 ? 0 : currentHeight;
-        const heightToWrap = Math.max(currentHeight, 0.2); 
+        const currentHeight = lvl * (G.rules.gravityOff ? SP : PS);
+        let maxLockY = currentHeight;
 
-        let maxLockY = topY;
-        let lockPoints = [];
-        
         if (lockCount > 0 || isNewlyAdded) {
-            const renderLocks = lockCount > 0 ? lockCount : 1;
-            const layers = Math.ceil(renderLocks / 4);
-            maxLockY = topY + (layers * 0.38);
-            lockPoints = createStackedPadlocks(renderLocks, topY, group);
-
-            lockPoints.forEach((pt, idx) => {
-                const turns = Math.max(0.4, lvl * 0.3); 
-                const startA = (idx / renderLocks) * Math.PI * 2;
-                group.add(createContinuousChain(getSpiralPoints(turns, heightToWrap, r=>r, startA, pt), ironMat));
-                group.add(createContinuousChain(getSpiralPoints(-turns, heightToWrap, r=>r, startA + Math.PI*1.5, pt), steelMat));
-            });
-        }
+            const built = buildChainsAndLocks(group, cx, cz, lockCount, false);
+            maxLockY = built.maxLockY;
+            group.userData.chainLinks = built.chainLinks;
+            group.userData.padlocks = built.padlocks;
+        }
 
         const spriteYOffset = maxLockY + 0.25;
         const sprite = createCostSprite(totalCost, isNewlyAdded);
@@ -4849,7 +4943,33 @@ function updateColumnLabel(cx, cz) {
 
         G.paidLabels.set(key, group);
         scene.add(group);
+
+        // "lock" animation: hide the chains, then wind them up the column.
+        if (animateMode === 'lock' && group.userData.chainLinks && group.userData.chainLinks.length) {
+            group.userData.chainLinks.forEach(m => m.visible = false);
+            (group.userData.padlocks || []).forEach(pl => pl.scale.setScalar(0.001));
+            G.animations.push({ type: 'lockWrap', progress: 0, speed: 0.05,
+                links: group.userData.chainLinks, padlocks: group.userData.padlocks || [] });
+        }
     }
+}
+
+// Plays the chains unwinding off a column, then redraws whatever lock/cost
+// state remains (e.g. fewer locks, or a plain paid-column label).
+function animateUnlockColumn(cx, cz) {
+    const key = `${cx},${cz}`;
+    const oldGroup = G.paidLabels.get(key);
+    if (!oldGroup || !oldGroup.userData.chainLinks || !oldGroup.userData.chainLinks.length) {
+        updateColumnLabel(cx, cz);
+        return;
+    }
+    // Detach so updateColumnLabel (called when the animation finishes) won't
+    // fight over this key; keep it in the scene so it can animate out.
+    G.paidLabels.delete(key);
+    if (oldGroup.userData.sprite) oldGroup.userData.sprite.visible = false;
+    G.animations.push({ type: 'lockUnwrap', progress: 0, speed: 0.045,
+        group: oldGroup, links: oldGroup.userData.chainLinks,
+        padlocks: oldGroup.userData.padlocks || [], cx, cz });
 }
 
 window.toggleHoverContext = function() {
@@ -5373,26 +5493,13 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
     }
 
     if (G.mode === 'lock') {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128; canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.font = 'bold 80px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.globalAlpha = hover ? 0.6 : 1.0;
-        ctx.fillText('🔒', 64, 64);
-        const texture = new THREE.CanvasTexture(canvas);
-        const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-        G.ghost = new THREE.Sprite(mat);
-        
-        let lvl = topLevel(cx, cz);
-        if (lvl === -1) lvl = G.heightCap;
-        const targetHeight = 0.28;
-        G.ghost.scale.set(targetHeight, targetHeight, 1);
-        const yPos = (G.rules.gravityOff ? lvl * SP : lvl * PS) + (targetHeight / 2) + 0.02;
-        G.ghost.position.set(cx*SP, yPos, cz*SP);
-        G.ghost.renderOrder = 999;
-        G.ghost.userData = {type:'ghost', cx, cz, lvl, hover};
+        // Ghost preview = a translucent version of the real chains-and-padlock
+        // lock effect (instead of a small floating padlock icon).
+        const group = new THREE.Group();
+        group.position.set(cx*SP, 0, cz*SP);
+        buildChainsAndLocks(group, cx, cz, 1, true);
+        G.ghost = group;
+        G.ghost.userData = {type:'ghost', cx, cz, hover};
         scene.add(G.ghost);
         return;
     }
@@ -5741,7 +5848,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             G.turnState.purchasedType = null;
             G.turnState.purchaseCost = 0;
             G.mode = 'normal';
-            updateColumnLabel(cx, cz);
+            updateColumnLabel(cx, cz, 'lock');
             refreshUI();
             if(window._firebaseSave) window._firebaseSave();
             return;
@@ -7015,7 +7122,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                 G.history.push({ type: 'unlock', cx, cz, pIndex: G.cur, preTokens, preCur, preTS, preTotal, unlockCost: totalCost, hadLock, prevLockCount });
                 if(hadLock) {
                     G.locks.delete(key); G.turnState.unlockEarnSkip = true;
-                    updateColumnLabel(cx, cz);
+                    animateUnlockColumn(cx, cz);
                     // Reactivated tokens may already complete a line.
                     if(triggerColumnWinIfAny(cx, cz)) { G.pendingPaidColumn=null; return; }
                 }

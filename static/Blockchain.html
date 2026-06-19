@@ -315,21 +315,26 @@
         #lobbyScreen .lobby-left, #lobbyScreen .lobby-right{ display:contents; }
         @media (min-width: 860px){
             #lobbyScreen .setup-container{
-                max-width:1080px; display:grid; grid-template-columns:minmax(0,1fr) 340px;
-                align-items:stretch; gap:18px; min-height:0; overflow:hidden; padding-bottom:16px;
+                max-width:1200px; display:grid;
+                grid-template-columns:1fr 1fr;
+                grid-template-rows:minmax(0,1fr) auto auto;
+                align-items:stretch; gap:16px 18px; min-height:0; overflow:hidden; padding-bottom:16px;
             }
             /* Left column = all the settings panels; scrolls inside itself if tall. */
             #lobbyScreen .lobby-left{
+                grid-column:1; grid-row:1;
                 display:flex; flex-direction:column; gap:12px;
                 min-height:0; overflow-y:auto; padding-right:6px;
             }
-            /* Right column = player list (scrolls) with Start button pinned below. */
+            /* Right column = the player list, scrolls inside itself. */
             #lobbyScreen .lobby-right{
+                grid-column:2; grid-row:1;
                 display:flex; flex-direction:column; gap:12px; min-height:0;
             }
             #lobbyScreen .lobby-right .player-list-section{ flex:1 1 auto; min-height:0; overflow-y:auto; }
-            #lobbyScreen #startFromLobbyBtn{ margin-top:0 !important; flex:0 0 auto; }
-            #lobbyScreen #bottomCopyBtn{ margin-top:0 !important; flex:0 0 auto; }
+            /* Start + copy buttons span the full width under BOTH columns, pinned. */
+            #lobbyScreen #startFromLobbyBtn{ grid-column:1 / -1; grid-row:2; margin-top:0 !important; }
+            #lobbyScreen #bottomCopyBtn{ grid-column:1 / -1; grid-row:3; margin-top:0 !important; }
             /* Settings panels can use the full left-column width on desktop. */
             #lobbyScreen .lobby-left .setup-section{ max-width:none; }
         }
@@ -548,11 +553,11 @@
             <div id="lobbyPlayersList" style="display:flex; flex-direction:column; gap:10px;">
             </div>
         </div>
-        
+        </div><!-- /lobby-right -->
+
         <button class="btn" id="startFromLobbyBtn" onclick="startFromLobby()" style="display:none; margin-top: 10px; width: 100%;">Start Game</button>
 
         <button class="btn" id="bottomCopyBtn" style="width: 100%; margin-top: 10px;" onclick="copyInviteLink()">📋 Copy Room Link</button>
-        </div><!-- /lobby-right -->
 
     </div>
 </div>
@@ -2561,32 +2566,39 @@ function renderLocalLobby() {
     if(G.localPlayers.length === 0) html = '<div style="color:#666; text-align:center;">No players added yet</div>';
     document.getElementById('lobbyPlayersList').innerHTML = html;
 
+    // The Add Player panel stays visible even when the lobby is full, so the
+    // left column keeps a constant height; it just disables adding more.
     const joinPanel = document.getElementById('joinPanel');
-    if (G.localPlayers.length < 10) {
-        joinPanel.style.display = 'block';
-        let availableColorIdx = -1;
-        let swatchHtml = '';
-        COLORS.forEach((c, idx) => {
-            const isTaken = G.localPlayers.some(p => p.hex === c.hex);
-            if (!isTaken && availableColorIdx === -1) {
-                availableColorIdx = idx;
-            }
-            const hexColor = `#${c.hex.toString(16).padStart(6,'0')}`;
-            if(isTaken) {
-                swatchHtml += `<div class="color-swatch taken" style="background:${hexColor};" title="${c.name} (Taken)"></div>`;
-            } else {
-                const isSelected = selectedColorIndex === idx;
-                swatchHtml += `<div class="color-swatch ${isSelected?'selected':''}" id="swatch-${idx}" style="background:${hexColor};" onclick="selectColor(${idx})" title="${c.name}"></div>`;
-            }
-        });
-        document.getElementById('colorPicker').innerHTML = swatchHtml;
+    const submitBtn = document.getElementById('joinSubmitBtn');
+    const atMax = G.localPlayers.length >= 10;
+    joinPanel.style.display = 'block';
 
-        const nameInput = document.getElementById('joinName');
+    let availableColorIdx = -1;
+    let swatchHtml = '';
+    COLORS.forEach((c, idx) => {
+        const isTaken = G.localPlayers.some(p => p.hex === c.hex);
+        if (!isTaken && availableColorIdx === -1) {
+            availableColorIdx = idx;
+        }
+        const hexColor = `#${c.hex.toString(16).padStart(6,'0')}`;
+        if(isTaken) {
+            swatchHtml += `<div class="color-swatch taken" style="background:${hexColor};" title="${c.name} (Taken)"></div>`;
+        } else {
+            const isSelected = selectedColorIndex === idx;
+            swatchHtml += `<div class="color-swatch ${isSelected?'selected':''}" id="swatch-${idx}" style="background:${hexColor};" onclick="selectColor(${idx})" title="${c.name}"></div>`;
+        }
+    });
+    document.getElementById('colorPicker').innerHTML = swatchHtml;
+
+    if (atMax) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Max Players Reached';
+    } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Player';
         if (selectedColorIndex === -1 && availableColorIdx !== -1) {
             selectColor(availableColorIdx);
         }
-    } else {
-        joinPanel.style.display = 'none';
     }
 
     const startBtn = document.getElementById('startFromLobbyBtn');
@@ -2701,6 +2713,10 @@ window.submitJoin = function() {
     }
 
     if (G.isLocalGame) {
+        if (G.localPlayers.length >= 10) {
+            toast("Max 10 players reached", true);
+            return;
+        }
         if(G.localPlayers.some(p => p.hex === COLORS[selectedColorIndex].hex)) {
             toast("Color already taken!", true);
             return;

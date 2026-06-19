@@ -308,7 +308,58 @@
         #lobbyScreen .btn{ background:linear-gradient(90deg,#38bdf8,#818cf8); color:#04243a; border-radius:11px; font-weight:700; box-shadow:0 5px 0 #0b6493; }
         #lobbyScreen #startFromLobbyBtn{ background:#00d26a; color:#06281c; box-shadow:0 6px 0 #0a6e3c; font-weight:800; }
         #lobbyScreen .btn-sm{ background:rgba(30,41,59,0.6); border:1px solid rgba(125,211,252,.25); border-radius:9px; }
-        #lobbyScreen .player-item-lobby{ background:#0d1a2c; border-radius:10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.05); }
+        #lobbyScreen .player-item-lobby{ background:#0d1a2c; border-radius:10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.05); padding:8px 10px; display:flex; align-items:center; gap:8px; }
+        #lobbyScreen .player-item-lobby .pl-name{ flex:1; min-width:0; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #lobbyScreen .player-item-lobby .pl-ctrls{ display:flex; align-items:center; gap:6px; }
+        #lobbyScreen .player-item-lobby .btn-sm{ padding:2px 6px; }
+        #lobbyScreen .player-item-lobby .pl-x{ border-color:#ff6666; color:#ff6666; }
+        #lobbyScreen .player-item-lobby .pl-device{ border-color:var(--primary); color:var(--primary); }
+        #lobbyScreen .pl-handi{ font-size:0.75rem; color:#94a3b8; white-space:nowrap; }
+        #lobbyScreen .pl-handi input{ width:40px; padding:2px 4px; font-size:0.85rem; margin-left:3px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
+        /* Segmented Individual / 2 Teams / 3 Teams selector. */
+        #lobbyScreen .seg-control{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; background:#0d1a2c; padding:5px; border-radius:12px; }
+        #lobbyScreen .seg-control button{ padding:9px 4px; border:none; border-radius:8px; background:transparent; color:#94a3b8; font-weight:700; cursor:pointer; font-size:0.9rem; }
+        #lobbyScreen .seg-control button.active{ background:linear-gradient(90deg,#38bdf8,#818cf8); color:#04243a; box-shadow:0 3px 0 #0b6493; }
+        #lobbyScreen .copy-link-btn{ background:linear-gradient(90deg,#38bdf8,#818cf8); color:#04243a; box-shadow:0 5px 0 #0b6493; }
+        /* Phones: stacked layout, taller two-row player cards (no nested scroll). */
+        @media (max-width: 859px){
+            #lobbyScreen .player-item-lobby{ flex-direction:column; align-items:stretch; gap:8px; padding:10px 12px; }
+            #lobbyScreen .player-item-lobby .pl-ctrls{ justify-content:space-between; }
+        }
+        /* Lobby layout: the .lobby-left / .lobby-right wrappers are invisible to
+           layout on phones (display:contents) so everything stacks in one column.
+           On wider screens they become two real columns of matched height. */
+        #lobbyScreen .lobby-left, #lobbyScreen .lobby-right{ display:contents; }
+        @media (min-width: 860px){
+            /* width:100% + minmax(0,1fr) columns keep the layout a FIXED width.
+               align-content:start makes the columns row only as tall as the LEFT
+               column's content; the player list matches it and scrolls. */
+            #lobbyScreen .setup-container{
+                width:100%; max-width:1100px; margin:0 auto; display:grid;
+                grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+                grid-template-rows:auto minmax(0,auto) auto auto;
+                align-content:start; align-items:stretch; gap:14px 16px; min-height:0; overflow:hidden; padding-bottom:16px;
+            }
+            #lobbyScreen #roomLinkSection{ grid-column:1 / -1; grid-row:1; }
+            #lobbyScreen .lobby-left{
+                grid-column:1; grid-row:2;
+                display:flex; flex-direction:column; gap:12px;
+                min-height:0; overflow-y:auto; padding-right:6px;
+            }
+            /* Right column matches the left's height; player list scrolls inside
+               (taken out of flow so player count can't change the height). */
+            #lobbyScreen .lobby-right{
+                display:block; grid-column:2; grid-row:2; position:relative; min-height:0;
+            }
+            #lobbyScreen .lobby-right .player-list-section{
+                position:absolute; inset:0; overflow:hidden; margin:0; display:flex; flex-direction:column;
+            }
+            #lobbyScreen .lobby-right #lobbyPlayersList{ flex:1; min-height:0; overflow-y:auto; }
+            #lobbyScreen #startFromLobbyBtn{ grid-column:1 / -1; grid-row:3; margin-top:0 !important; }
+            /* Desktop online: copy link shows only at the top, not the bottom. */
+            #lobbyScreen #bottomCopyBtn{ display:none !important; }
+            #lobbyScreen .lobby-left .setup-section{ max-width:none; }
+        }
 
         /* overlays + modals */
         .menu-overlay, .store-overlay, .confirm-overlay{ background:rgba(5,10,20,0.78); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
@@ -454,56 +505,31 @@
         <p style="font-weight: 500; color: #94a3b8;">Setup the game</p>
     </div>
     <div class="setup-container">
-        
-        <div class="setup-section" style="text-align: center; display:none;" id="roomLinkSection">
-            <button class="btn" style="width: 100%; margin-bottom: 10px;" id="topCopyBtn" onclick="copyInviteLink()">📋 Copy Room Link</button>
+
+        <div id="roomLinkSection" style="display:none;">
+            <button class="btn copy-link-btn" style="width:100%;" id="topCopyBtn" onclick="copyInviteLink()">📋 Copy Room Link</button>
         </div>
 
+        <div class="lobby-left">
         <div class="setup-section" id="teamConfigPanel" style="display:none;">
-            <h2 style="margin-bottom: 10px;">Individual / Team</h2>
-            <div class="toggle-group" style="margin-bottom: 0;">
-                <div class="toggle-switch" id="teamsToggle" onclick="toggleTeams()">
-                    <div class="toggle-knob"></div>
-                </div>
-                <label style="flex:1; cursor:pointer" onclick="toggleTeams()">Enable Teams</label>
-            </div>
-            <div id="teamDetails" style="display:none; margin-top:10px;">
-                <div class="mode-toggle-wrap" style="justify-content: flex-start; margin-bottom: 10px;">
-                    <label class="mode-label">
-                        <input type="radio" name="teamCount" value="2" onchange="changeTeamCount(2)">
-                        <span>2 Teams</span>
-                    </label>
-                    <label class="mode-label">
-                        <input type="radio" name="teamCount" value="3" onchange="changeTeamCount(3)">
-                        <span>3 Teams</span>
-                    </label>
-                </div>
-                <div class="input-group" style="margin-bottom: 8px;">
-                    <input type="text" id="team1Name" placeholder="Team 1 Name" onchange="updateTeamName(0, this.value)">
-                </div>
-                <div class="input-group" style="margin-bottom: 8px;">
-                    <input type="text" id="team2Name" placeholder="Team 2 Name" onchange="updateTeamName(1, this.value)">
-                </div>
-                <div class="input-group" id="team3NameGroup" style="display:none; margin-bottom: 0;">
-                    <input type="text" id="team3Name" placeholder="Team 3 Name" onchange="updateTeamName(2, this.value)">
-                </div>
+            <h2>Mode</h2>
+            <div class="seg-control" id="teamModeSeg">
+                <button type="button" id="modeIndividual" onclick="setTeamMode('ind')">Individual</button>
+                <button type="button" id="mode2" onclick="setTeamMode('2')">2 Teams</button>
+                <button type="button" id="mode3" onclick="setTeamMode('3')">3 Teams</button>
             </div>
         </div>
 
         <div class="setup-section" id="joinPanel" style="display:none;">
-            <h2 id="joinPanelTitle" style="margin-bottom: 10px;">Join Game</h2>
-            <div id="joinTeamContainer" style="display:none; margin-bottom: 12px;">
-                <div style="margin-bottom: 6px; font-weight: 500;">Choose your team:</div>
-                <select id="joinTeamSelect" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid var(--border); font-size: 1rem; outline:none;"></select>
-            </div>
+            <h2 id="joinPanelTitle">Add Player</h2>
             <input type="text" id="joinName" placeholder="Enter your name" style="margin-bottom: 12px; padding: 8px;">
             <div style="margin-bottom: 6px; font-weight: 500;">Choose your color:</div>
             <div id="colorPicker" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"></div>
-            <button class="btn-sm" id="joinSubmitBtn" onclick="submitJoin()">Join Room</button>
+            <button class="btn-sm" id="joinSubmitBtn" onclick="submitJoin()">Add Player</button>
         </div>
 
-        <div class="setup-section" id="hostBotSection" style="display:none; padding: 16px 24px;">
-            <h2 style="margin-bottom: 10px;">Add Bots</h2>
+        <div class="setup-section" id="hostBotSection" style="display:none;">
+            <h2 style="margin-bottom: 10px;">Add Bot</h2>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                 <input type="text" id="botName" value="Bot 1" style="width: 90px; padding: 8px;">
                 <div style="display:flex; align-items:center; gap:6px; flex:1; min-width: 130px;">
@@ -514,17 +540,21 @@
                 <button class="btn-sm" onclick="addBot()">Add Bot</button>
             </div>
         </div>
-        <div class="setup-section">
-            <h2>Joined Players</h2>
+        </div><!-- /lobby-left -->
+
+        <div class="lobby-right">
+        <div class="setup-section player-list-section">
+            <h2 id="playerListHeading">Players</h2>
             <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:8px;" id="hostReorderText">Host can reorder players before starting.</p>
             <div id="lobbyPlayersList" style="display:flex; flex-direction:column; gap:10px;">
             </div>
         </div>
-        
-        <button class="btn" id="startFromLobbyBtn" onclick="startFromLobby()" style="display:none; margin-top: 10px; width: 100%;">Start Game</button>
+        </div><!-- /lobby-right -->
 
-        <button class="btn" id="bottomCopyBtn" style="width: 100%; margin-top: 10px;" onclick="copyInviteLink()">📋 Copy Room Link</button>
-        
+        <button class="btn" id="startFromLobbyBtn" onclick="startFromLobby()" style="display:none; width: 100%;">Start Game</button>
+
+        <button class="btn copy-link-btn" id="bottomCopyBtn" style="width: 100%;" onclick="copyInviteLink()">📋 Copy Room Link</button>
+
     </div>
 </div>
 
@@ -1656,7 +1686,7 @@ aiWorker.onmessage = function(e) {
                 G.turnState.unlockEarnSkip = true; // unlocking doesn't pay out chain tokens
                 botPlayer.tokens -= chosenMove.baseCost;
                 log(`${botPlayer.name} paid ${chosenMove.baseCost} tokens to unlock column (${chosenMove.cx},${chosenMove.cz})`);
-                updateColumnLabel(chosenMove.cx, chosenMove.cz);
+                animateUnlockColumn(chosenMove.cx, chosenMove.cz);
                 // Reactivated tokens may already complete a line.
                 if(triggerColumnWinIfAny(chosenMove.cx, chosenMove.cz)){ isAiThinking = false; return; }
             } else {
@@ -1755,7 +1785,11 @@ const CHAIN_RADIUS = 0.04;
 
 const ironMat = new THREE.MeshStandardMaterial({color: 0x2a2e33, metalness: 0.8, roughness: 0.6});
 const steelMat = new THREE.MeshStandardMaterial({color: 0x5a6370, metalness: 0.9, roughness: 0.4});
-const blackMetalMat = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8}); 
+const blackMetalMat = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8});
+// Translucent versions used for the "ghost" lock preview shown on tentative placement.
+const ironMatGhost = new THREE.MeshStandardMaterial({color: 0x2a2e33, metalness: 0.8, roughness: 0.6, transparent: true, opacity: 0.45});
+const steelMatGhost = new THREE.MeshStandardMaterial({color: 0x5a6370, metalness: 0.9, roughness: 0.4, transparent: true, opacity: 0.45});
+const blackMetalMatGhost = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8, transparent: true, opacity: 0.45});
 
 const DIRS = [
     [1,0,0], [0,1,0], [0,0,1], 
@@ -2297,10 +2331,8 @@ window.addBot = function() {
         }
         if (availableColorIdx === -1) return;
         
+        // New players/bots default to Team 1; the team is chosen in the player row.
         let teamIdx = 0;
-        if (document.getElementById('joinTeamContainer').style.display !== 'none') {
-            teamIdx = parseInt(document.getElementById('joinTeamSelect').value, 10);
-        }
 
         const newBot = {
             id: currentPlayers.length,
@@ -2468,92 +2500,84 @@ window.startLocalGame = function() {
     renderLocalLobby();
 };
 
+// Highlight the active button in the Individual / 2 Teams / 3 Teams selector.
+function updateTeamModeUI(enabled, count) {
+    const ind = document.getElementById('modeIndividual');
+    const m2 = document.getElementById('mode2');
+    const m3 = document.getElementById('mode3');
+    if (!ind) return;
+    ind.classList.toggle('active', !enabled);
+    m2.classList.toggle('active', enabled && count !== 3);
+    m3.classList.toggle('active', enabled && count === 3);
+}
+
+// Segmented Individual / 2 Teams / 3 Teams control (replaces the old toggle).
+window.setTeamMode = function(mode) {
+    if (!G.host || G.host !== localUserId) return;
+    const enabled = mode !== 'ind';
+    const count = mode === '3' ? 3 : 2;
+    if (G.isLocalGame) {
+        G.teamConfig.enabled = enabled;
+        if (enabled) G.teamConfig.teamCount = count;
+        G.localPlayers.forEach(p => { if (p.team >= G.teamConfig.teamCount) p.team = G.teamConfig.teamCount - 1; });
+        renderLocalLobby();
+        return;
+    }
+    gameRef.child('teamConfig').update({ enabled: enabled, teamCount: count });
+};
+
 function renderLocalLobby() {
     document.getElementById('teamConfigPanel').style.display = 'block';
     document.getElementById('hostBotSection').style.display = 'block';
-    document.getElementById('teamsToggle').classList.toggle('on', G.teamConfig.enabled);
-    const rb = document.querySelector(`input[name="teamCount"][value="${G.teamConfig.teamCount}"]`);
-    if(rb) rb.checked = true;
-
-    if(document.activeElement.id !== 'team1Name') document.getElementById('team1Name').value = G.teamConfig.teamNames[0] || 'Team 1';
-    if(document.activeElement.id !== 'team2Name') document.getElementById('team2Name').value = G.teamConfig.teamNames[1] || 'Team 2';
-    if(document.activeElement.id !== 'team3Name') document.getElementById('team3Name').value = G.teamConfig.teamNames[2] || 'Team 3';
-    document.getElementById('team3NameGroup').style.display = G.teamConfig.teamCount === 3 ? 'block' : 'none';
-
-    if (G.teamConfig.enabled) {
-        document.getElementById('joinTeamContainer').style.display = 'block';
-        let teamOpts = '';
-        for(let i=0; i<G.teamConfig.teamCount; i++) {
-            teamOpts += `<option value="${i}">${G.teamConfig.teamNames[i] || `Team ${i+1}`}</option>`;
-        }
-        const selectEl = document.getElementById('joinTeamSelect');
-        let oldVal = selectEl.value;
-        selectEl.innerHTML = teamOpts;
-        if(oldVal && oldVal < G.teamConfig.teamCount) selectEl.value = oldVal;
-    } else {
-        document.getElementById('joinTeamContainer').style.display = 'none';
-    }
+    updateTeamModeUI(G.teamConfig.enabled, G.teamConfig.teamCount);
 
     document.getElementById('hostReorderText').style.display = 'block';
 
     let html = '';
     G.localPlayers.forEach((p, i) => {
         const hex = `#${p.hex.toString(16).padStart(6,'0')}`;
-        let controls = `
-            <div style="display:flex; gap: 4px;">
-                <button class="btn-sm" style="padding: 2px 6px;" onclick="movePlayer(${i}, -1)" ${i===0?'disabled':''}>▲</button>
-                <button class="btn-sm" style="padding: 2px 6px;" onclick="movePlayer(${i}, 1)" ${i===G.localPlayers.length-1?'disabled':''}>▼</button>
-                <button class="btn-sm" style="padding: 2px 6px; border-color:#ff6666; color:#ff6666;" onclick="removeLocalPlayer(${i})">✕</button>
-            </div>
-        `;
-
         let teamDropdown = '';
         if (G.teamConfig.enabled) {
             teamDropdown = `<select class="team-select" onchange="changePlayerTeam(${i}, this.value)">`;
             for(let t=0; t<G.teamConfig.teamCount; t++) {
-                teamDropdown += `<option value="${t}" ${p.team === t ? 'selected' : ''}>${G.teamConfig.teamNames[t] || `Team ${t+1}`}</option>`;
+                teamDropdown += `<option value="${t}" ${p.team === t ? 'selected' : ''}>Team ${t+1}</option>`;
             }
             teamDropdown += `</select>`;
         }
-
-        const handicapInput = `<label style="font-size:0.75rem;color:#94a3b8;white-space:nowrap;">+🪙<input type="number" min="0" max="20" value="${p.startTokens||0}" style="width:40px;padding:2px 4px;font-size:0.85rem;margin-left:3px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="setStartTokens(${i},this.value)"></label>`;
-
-        html += `<div class="player-item-lobby" style="border-left: 6px solid ${hex}; display:flex; align-items:center; gap: 8px;">
-            <span style="font-weight:bold; flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name}</span>
-            ${teamDropdown}
-            ${handicapInput}
-            ${controls}
+        const handicapInput = `<label class="pl-handi">+🪙<input type="number" min="0" max="20" value="${p.startTokens||0}" onchange="setStartTokens(${i},this.value)"></label>`;
+        const controls = `<button class="btn-sm" onclick="movePlayer(${i}, -1)" ${i===0?'disabled':''}>▲</button><button class="btn-sm" onclick="movePlayer(${i}, 1)" ${i===G.localPlayers.length-1?'disabled':''}>▼</button><button class="btn-sm pl-x" onclick="removeLocalPlayer(${i})">✕</button>`;
+        html += `<div class="player-item-lobby" style="border-left:6px solid ${hex};">
+            <div class="pl-name">${p.name}</div>
+            <div class="pl-ctrls">${teamDropdown}${handicapInput}${controls}</div>
         </div>`;
     });
     if(G.localPlayers.length === 0) html = '<div style="color:#666; text-align:center;">No players added yet</div>';
     document.getElementById('lobbyPlayersList').innerHTML = html;
+    document.getElementById('playerListHeading').textContent = `Players (${G.localPlayers.length})`;
 
-    const joinPanel = document.getElementById('joinPanel');
-    if (G.localPlayers.length < 10) {
-        joinPanel.style.display = 'block';
-        let availableColorIdx = -1;
-        let swatchHtml = '';
-        COLORS.forEach((c, idx) => {
-            const isTaken = G.localPlayers.some(p => p.hex === c.hex);
-            if (!isTaken && availableColorIdx === -1) {
-                availableColorIdx = idx;
-            }
-            const hexColor = `#${c.hex.toString(16).padStart(6,'0')}`;
-            if(isTaken) {
-                swatchHtml += `<div class="color-swatch taken" style="background:${hexColor};" title="${c.name} (Taken)"></div>`;
-            } else {
-                const isSelected = selectedColorIndex === idx;
-                swatchHtml += `<div class="color-swatch ${isSelected?'selected':''}" id="swatch-${idx}" style="background:${hexColor};" onclick="selectColor(${idx})" title="${c.name}"></div>`;
-            }
-        });
-        document.getElementById('colorPicker').innerHTML = swatchHtml;
+    // The Add Player panel stays visible even when the lobby is full; it just disables.
+    const submitBtn = document.getElementById('joinSubmitBtn');
+    const atMax = G.localPlayers.length >= 10;
+    document.getElementById('joinPanel').style.display = 'block';
 
-        const nameInput = document.getElementById('joinName');
-        if (selectedColorIndex === -1 && availableColorIdx !== -1) {
-            selectColor(availableColorIdx);
+    let availableColorIdx = -1;
+    let swatchHtml = '';
+    COLORS.forEach((c, idx) => {
+        const isTaken = G.localPlayers.some(p => p.hex === c.hex);
+        if (!isTaken && availableColorIdx === -1) availableColorIdx = idx;
+        const hexColor = `#${c.hex.toString(16).padStart(6,'0')}`;
+        if(isTaken) swatchHtml += `<div class="color-swatch taken" style="background:${hexColor};" title="${c.name} (Taken)"></div>`;
+        else {
+            const isSelected = selectedColorIndex === idx;
+            swatchHtml += `<div class="color-swatch ${isSelected?'selected':''}" id="swatch-${idx}" style="background:${hexColor};" onclick="selectColor(${idx})" title="${c.name}"></div>`;
         }
-    } else {
-        joinPanel.style.display = 'none';
+    });
+    document.getElementById('colorPicker').innerHTML = swatchHtml;
+
+    if (atMax) { submitBtn.disabled = true; submitBtn.textContent = 'Max Players Reached'; }
+    else {
+        submitBtn.disabled = false; submitBtn.textContent = 'Add Player';
+        if (selectedColorIndex === -1 && availableColorIdx !== -1) selectColor(availableColorIdx);
     }
 
     const startBtn = document.getElementById('startFromLobbyBtn');
@@ -2662,12 +2686,14 @@ window.submitJoin = function() {
     if(!name) { toast("Please enter a name", true); return; }
     if(selectedColorIndex === -1) { toast("Please select a color", true); return; }
     
+    // New players default to Team 1; team is chosen later in the player row.
     let teamIdx = 0;
-    if (document.getElementById('joinTeamContainer').style.display !== 'none') {
-        teamIdx = parseInt(document.getElementById('joinTeamSelect').value, 10);
-    }
 
     if (G.isLocalGame) {
+        if (G.localPlayers.length >= 10) {
+            toast("Max 10 players reached", true);
+            return;
+        }
         if(G.localPlayers.some(p => p.hex === COLORS[selectedColorIndex].hex)) {
             toast("Color already taken!", true);
             return;
@@ -3009,35 +3035,10 @@ function setupListener() {
             if (isHost) {
                 document.getElementById('teamConfigPanel').style.display = 'block';
                 document.getElementById('hostBotSection').style.display = 'block';
-                document.getElementById('teamsToggle').classList.toggle('on', teamConfig.enabled);
-                document.getElementById('teamDetails').style.display = teamConfig.enabled ? 'block' : 'none';
-                
-                const rb = document.querySelector(`input[name="teamCount"][value="${teamConfig.teamCount}"]`);
-                if(rb) rb.checked = true;
-                
-                if(document.activeElement.id !== 'team1Name') document.getElementById('team1Name').value = teamConfig.teamNames[0] || 'Team 1';
-                if(document.activeElement.id !== 'team2Name') document.getElementById('team2Name').value = teamConfig.teamNames[1] || 'Team 2';
-                if(document.activeElement.id !== 'team3Name') document.getElementById('team3Name').value = teamConfig.teamNames[2] || 'Team 3';
-
-                document.getElementById('team3NameGroup').style.display = teamConfig.teamCount === 3 ? 'block' : 'none';
+                updateTeamModeUI(teamConfig.enabled, teamConfig.teamCount);
             } else {
                 document.getElementById('teamConfigPanel').style.display = 'none';
                 document.getElementById('hostBotSection').style.display = 'none';
-            }
-
-            // Render Join Game Team Selector
-            if (teamConfig.enabled) {
-                document.getElementById('joinTeamContainer').style.display = 'block';
-                let teamOpts = '';
-                for(let i=0; i<teamConfig.teamCount; i++) {
-                    teamOpts += `<option value="${i}">${teamConfig.teamNames[i] || `Team ${i+1}`}</option>`;
-                }
-                const selectEl = document.getElementById('joinTeamSelect');
-                let oldVal = selectEl.value;
-                selectEl.innerHTML = teamOpts;
-                if(oldVal && oldVal < teamConfig.teamCount) selectEl.value = oldVal;
-            } else {
-                document.getElementById('joinTeamContainer').style.display = 'none';
             }
 
             document.getElementById('hostReorderText').style.display = isHost ? 'block' : 'none';
@@ -3046,16 +3047,10 @@ function setupListener() {
             let html = '';
             joinedPlayers.forEach((p, i) => {
                 const hex = `#${p.hex.toString(16).padStart(6,'0')}`;
-                
+
                 let controls = '';
                 if (isHost && joinedPlayers.length > 1) {
-                    controls = `
-                        <div style="display:flex; gap: 4px;">
-                            <button class="btn-sm" style="padding: 2px 6px;" onclick="movePlayer(${i}, -1)" ${i===0?'disabled':''}>▲</button>
-                            <button class="btn-sm" style="padding: 2px 6px;" onclick="movePlayer(${i}, 1)" ${i===joinedPlayers.length-1?'disabled':''}>▼</button>
-                            <button class="btn-sm" style="padding: 2px 6px; border-color:#ff6666; color:#ff6666;" onclick="removePlayer(${i})">✕</button>
-                        </div>
-                    `;
+                    controls = `<button class="btn-sm" onclick="movePlayer(${i}, -1)" ${i===0?'disabled':''}>▲</button><button class="btn-sm" onclick="movePlayer(${i}, 1)" ${i===joinedPlayers.length-1?'disabled':''}>▼</button><button class="btn-sm pl-x" onclick="removePlayer(${i})">✕</button>`;
                 }
 
                 let teamDropdown = '';
@@ -3063,33 +3058,32 @@ function setupListener() {
                     let canEdit = isHost || p.userId === localUserId;
                     teamDropdown = `<select class="team-select" onchange="changePlayerTeam(${i}, this.value)" ${canEdit ? '' : 'disabled'}>`;
                     for(let t=0; t<teamConfig.teamCount; t++) {
-                        teamDropdown += `<option value="${t}" ${p.team === t ? 'selected' : ''}>${teamConfig.teamNames[t] || `Team ${t+1}`}</option>`;
+                        teamDropdown += `<option value="${t}" ${p.team === t ? 'selected' : ''}>Team ${t+1}</option>`;
                     }
                     teamDropdown += `</select>`;
                 }
-                
+
                 let myDeviceBtn = '';
                 if (p.userId === localUserId) {
-                    myDeviceBtn = `<button class="btn-sm" style="padding: 4px 8px; border-color: var(--primary); color: var(--primary); font-size: 0.75rem;" onclick="copyRejoinLink()" title="Copy a secret link to continue this game on your phone or another browser">📱 My device link</button>`;
+                    myDeviceBtn = `<button class="btn-sm pl-device" onclick="copyRejoinLink()" title="Copy a secret link to continue this game on your phone or another browser">📱</button>`;
                 }
 
                 let handicapEl = '';
                 if (isHost) {
-                    handicapEl = `<label style="font-size:0.75rem;color:#94a3b8;white-space:nowrap;">+🪙<input type="number" min="0" max="20" value="${p.startTokens||0}" style="width:40px;padding:2px 4px;font-size:0.85rem;margin-left:3px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="setStartTokens(${i},this.value)"></label>`;
+                    handicapEl = `<label class="pl-handi">+🪙<input type="number" min="0" max="20" value="${p.startTokens||0}" onchange="setStartTokens(${i},this.value)"></label>`;
                 } else if ((p.startTokens||0) > 0) {
-                    handicapEl = `<span style="font-size:0.8rem;color:#94a3b8;">+${p.startTokens}🪙</span>`;
+                    handicapEl = `<span class="pl-handi">+${p.startTokens}🪙</span>`;
                 }
 
-                html += `<div class="player-item-lobby" style="border-left: 6px solid ${hex}; display:flex; align-items:center; gap: 8px;">
-                    <span style="font-weight:bold; flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name} <span style="color:#888; font-size: 0.85rem;">${p.userId === localUserId ? '(You)' : ''}</span></span>
-                    ${teamDropdown}
-                    ${handicapEl}
-                    ${myDeviceBtn}
-                    ${controls}
+                const youTag = p.userId === localUserId ? ` <span style="color:#888; font-size:0.85rem;">(You)</span>` : '';
+                html += `<div class="player-item-lobby" style="border-left:6px solid ${hex};">
+                    <div class="pl-name">${p.name}${youTag}</div>
+                    <div class="pl-ctrls">${teamDropdown}${handicapEl}${myDeviceBtn}${controls}</div>
                 </div>`;
             });
             if(joinedPlayers.length === 0) html = '<div style="color:#666; text-align:center;">No players joined yet</div>';
             document.getElementById('lobbyPlayersList').innerHTML = html;
+            document.getElementById('playerListHeading').textContent = `Players (${joinedPlayers.length})`;
 
             // Render Join Panel Base Inputs
             const joinPanel = document.getElementById('joinPanel');
@@ -4134,6 +4128,38 @@ function initThree(){
                 a.mat.opacity = Math.max(0, 0.85 * (1 - a.progress * 1.2));
                 if (a.progress >= 1) { scene.remove(a.mesh); G.animations.splice(i, 1); }
             }
+            // Chains wind UP the column and the padlock snaps on (locking).
+            else if (a.type === 'lockWrap') {
+                a.progress += a.speed;
+                const p = Math.min(a.progress, 1);
+                const n = a.links.length;
+                const show = Math.ceil(p * n);
+                for (let k = 0; k < n; k++) a.links[k].visible = k < show;
+                // easeOutBack pop for the padlocks
+                const ps = Math.min(1, p * 1.15), x = ps - 1;
+                const eb = 1 + 2.70158 * x * x * x + 1.70158 * x * x;
+                a.padlocks.forEach(pl => pl.scale.setScalar(Math.max(0.001, eb)));
+                if (p >= 1) {
+                    for (let k = 0; k < n; k++) a.links[k].visible = true;
+                    a.padlocks.forEach(pl => pl.scale.setScalar(1));
+                    G.animations.splice(i, 1);
+                }
+            }
+            // Chains unwind from the top down and the padlock fades (unlocking).
+            else if (a.type === 'lockUnwrap') {
+                a.progress += a.speed;
+                const p = Math.min(a.progress, 1);
+                const n = a.links.length;
+                const show = Math.floor((1 - p) * n);
+                for (let k = 0; k < n; k++) a.links[k].visible = k < show;
+                const s = Math.max(0, 1 - p * 1.2);
+                a.padlocks.forEach(pl => pl.scale.setScalar(s));
+                if (p >= 1) {
+                    scene.remove(a.group);
+                    G.animations.splice(i, 1);
+                    updateColumnLabel(a.cx, a.cz); // redraw any remaining locks / paid label
+                }
+            }
         }
         
         G.pieces.forEach(m => {
@@ -4669,18 +4695,20 @@ function createContinuousChain(points, mat) {
     return group;
 }
 
-function createStackedPadlocks(cost, topY, group) {
+function createStackedPadlocks(cost, topY, group, mats) {
+    mats = mats || { iron: ironMat, steel: steelMat, black: blackMetalMat };
     const connectionPoints = [];
+    const locks = [];
     const MAX_PER_LAYER = 4;
-    const LAYER_HEIGHT = 0.38; 
-    
+    const LAYER_HEIGHT = 0.38;
+
     for(let i=0; i<cost; i++) {
         const pGroup = new THREE.Group();
-        const body = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.25, 0.15, 2, 0.04), ironMat);
+        const body = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.25, 0.15, 2, 0.04), mats.iron);
         body.castShadow = true;
-        const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.04, 8, 16, Math.PI), steelMat);
+        const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.04, 8, 16, Math.PI), mats.steel);
         shackle.position.y = 0.12; shackle.castShadow = true;
-        const kh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), blackMetalMat);
+        const kh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), mats.black);
         kh.rotation.x = Math.PI/2;
         pGroup.add(body, shackle, kh);
 
@@ -4703,14 +4731,52 @@ function createStackedPadlocks(cost, topY, group) {
         pGroup.rotation.z = (Math.random() - 0.5) * 0.15;
         
         group.add(pGroup);
+        locks.push(pGroup);
 
         const localShackleTop = new THREE.Vector3(0, 0.22, 0);
         localShackleTop.applyEuler(pGroup.rotation);
         localShackleTop.add(pGroup.position);
         connectionPoints.push(localShackleTop);
     }
-    
-    return connectionPoints;
+
+    return { points: connectionPoints, locks };
+}
+
+// Builds the padlocks + spiralling chains into `group` and returns the pieces
+// needed to animate them (chain links sorted bottom->top, padlock subgroups).
+// Used both for the real lock label and the translucent ghost preview.
+function buildChainsAndLocks(group, cx, cz, lockCount, ghost) {
+    const mats = ghost
+        ? { iron: ironMatGhost, steel: steelMatGhost, black: blackMetalMatGhost }
+        : { iron: ironMat, steel: steelMat, black: blackMetalMat };
+
+    let lvl = topLevel(cx, cz);
+    if (lvl === -1) lvl = G.heightCap;
+    const currentHeight = lvl * (G.rules.gravityOff ? SP : PS);
+    const topY = currentHeight === 0 ? 0 : currentHeight;
+    const heightToWrap = Math.max(currentHeight, 0.2);
+
+    const renderLocks = lockCount > 0 ? lockCount : 1;
+    const layers = Math.ceil(renderLocks / 4);
+    const maxLockY = topY + (layers * 0.38);
+
+    const { points: lockPoints, locks } = createStackedPadlocks(renderLocks, topY, group, mats);
+
+    const chainLinks = [];
+    lockPoints.forEach((pt, idx) => {
+        const turns = Math.max(0.4, lvl * 0.3);
+        const startA = (idx / renderLocks) * Math.PI * 2;
+        const c1 = createContinuousChain(getSpiralPoints(turns, heightToWrap, r=>r, startA, pt), mats.iron);
+        const c2 = createContinuousChain(getSpiralPoints(-turns, heightToWrap, r=>r, startA + Math.PI*1.5, pt), mats.steel);
+        group.add(c1, c2);
+        c1.children.forEach(m => chainLinks.push(m));
+        c2.children.forEach(m => chainLinks.push(m));
+    });
+    // Reveal order = bottom of the column upward, so the chains look like they
+    // climb and clamp the padlock on last.
+    chainLinks.sort((a, b) => a.position.y - b.position.y);
+
+    return { maxLockY, lockPoints, chainLinks, padlocks: locks };
 }
 
 function getSpiralPoints(turns, targetHeight, radiusModifierFunc, startAngle, targetPoint, yModifierFunc = null) {
@@ -4790,7 +4856,7 @@ function createCostSprite(cost, isNewlyAdded) {
     return sprite;
 }
 
-function updateColumnLabel(cx, cz) {
+function updateColumnLabel(cx, cz, animateMode) {
     const key = `${cx},${cz}`;
     const isPaid = G.rules.paidColumnsEnabled && G.paidColumns.has(key);
     const paidCost = isPaid ? G.paidColumns.get(key) : 0;
@@ -4810,26 +4876,15 @@ function updateColumnLabel(cx, cz) {
         
         let lvl = topLevel(cx, cz);
         if (lvl === -1) lvl = G.heightCap;
-        const currentHeight = lvl * (G.rules.gravityOff ? SP : PS); 
-        const topY = currentHeight === 0 ? 0 : currentHeight;
-        const heightToWrap = Math.max(currentHeight, 0.2); 
+        const currentHeight = lvl * (G.rules.gravityOff ? SP : PS);
+        let maxLockY = currentHeight;
 
-        let maxLockY = topY;
-        let lockPoints = [];
-        
         if (lockCount > 0 || isNewlyAdded) {
-            const renderLocks = lockCount > 0 ? lockCount : 1;
-            const layers = Math.ceil(renderLocks / 4);
-            maxLockY = topY + (layers * 0.38);
-            lockPoints = createStackedPadlocks(renderLocks, topY, group);
-
-            lockPoints.forEach((pt, idx) => {
-                const turns = Math.max(0.4, lvl * 0.3); 
-                const startA = (idx / renderLocks) * Math.PI * 2;
-                group.add(createContinuousChain(getSpiralPoints(turns, heightToWrap, r=>r, startA, pt), ironMat));
-                group.add(createContinuousChain(getSpiralPoints(-turns, heightToWrap, r=>r, startA + Math.PI*1.5, pt), steelMat));
-            });
-        }
+            const built = buildChainsAndLocks(group, cx, cz, lockCount, false);
+            maxLockY = built.maxLockY;
+            group.userData.chainLinks = built.chainLinks;
+            group.userData.padlocks = built.padlocks;
+        }
 
         const spriteYOffset = maxLockY + 0.25;
         const sprite = createCostSprite(totalCost, isNewlyAdded);
@@ -4849,7 +4904,33 @@ function updateColumnLabel(cx, cz) {
 
         G.paidLabels.set(key, group);
         scene.add(group);
+
+        // "lock" animation: hide the chains, then wind them up the column.
+        if (animateMode === 'lock' && group.userData.chainLinks && group.userData.chainLinks.length) {
+            group.userData.chainLinks.forEach(m => m.visible = false);
+            (group.userData.padlocks || []).forEach(pl => pl.scale.setScalar(0.001));
+            G.animations.push({ type: 'lockWrap', progress: 0, speed: 0.05,
+                links: group.userData.chainLinks, padlocks: group.userData.padlocks || [] });
+        }
     }
+}
+
+// Plays the chains unwinding off a column, then redraws whatever lock/cost
+// state remains (e.g. fewer locks, or a plain paid-column label).
+function animateUnlockColumn(cx, cz) {
+    const key = `${cx},${cz}`;
+    const oldGroup = G.paidLabels.get(key);
+    if (!oldGroup || !oldGroup.userData.chainLinks || !oldGroup.userData.chainLinks.length) {
+        updateColumnLabel(cx, cz);
+        return;
+    }
+    // Detach so updateColumnLabel (called when the animation finishes) won't
+    // fight over this key; keep it in the scene so it can animate out.
+    G.paidLabels.delete(key);
+    if (oldGroup.userData.sprite) oldGroup.userData.sprite.visible = false;
+    G.animations.push({ type: 'lockUnwrap', progress: 0, speed: 0.045,
+        group: oldGroup, links: oldGroup.userData.chainLinks,
+        padlocks: oldGroup.userData.padlocks || [], cx, cz });
 }
 
 window.toggleHoverContext = function() {
@@ -5373,26 +5454,13 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
     }
 
     if (G.mode === 'lock') {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128; canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.font = 'bold 80px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.globalAlpha = hover ? 0.6 : 1.0;
-        ctx.fillText('🔒', 64, 64);
-        const texture = new THREE.CanvasTexture(canvas);
-        const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-        G.ghost = new THREE.Sprite(mat);
-        
-        let lvl = topLevel(cx, cz);
-        if (lvl === -1) lvl = G.heightCap;
-        const targetHeight = 0.28;
-        G.ghost.scale.set(targetHeight, targetHeight, 1);
-        const yPos = (G.rules.gravityOff ? lvl * SP : lvl * PS) + (targetHeight / 2) + 0.02;
-        G.ghost.position.set(cx*SP, yPos, cz*SP);
-        G.ghost.renderOrder = 999;
-        G.ghost.userData = {type:'ghost', cx, cz, lvl, hover};
+        // Ghost preview = a translucent version of the real chains-and-padlock
+        // lock effect (instead of a small floating padlock icon).
+        const group = new THREE.Group();
+        group.position.set(cx*SP, 0, cz*SP);
+        buildChainsAndLocks(group, cx, cz, 1, true);
+        G.ghost = group;
+        G.ghost.userData = {type:'ghost', cx, cz, hover};
         scene.add(G.ghost);
         return;
     }
@@ -5741,7 +5809,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             G.turnState.purchasedType = null;
             G.turnState.purchaseCost = 0;
             G.mode = 'normal';
-            updateColumnLabel(cx, cz);
+            updateColumnLabel(cx, cz, 'lock');
             refreshUI();
             if(window._firebaseSave) window._firebaseSave();
             return;
@@ -7015,7 +7083,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                 G.history.push({ type: 'unlock', cx, cz, pIndex: G.cur, preTokens, preCur, preTS, preTotal, unlockCost: totalCost, hadLock, prevLockCount });
                 if(hadLock) {
                     G.locks.delete(key); G.turnState.unlockEarnSkip = true;
-                    updateColumnLabel(cx, cz);
+                    animateUnlockColumn(cx, cz);
                     // Reactivated tokens may already complete a line.
                     if(triggerColumnWinIfAny(cx, cz)) { G.pendingPaidColumn=null; return; }
                 }

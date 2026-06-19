@@ -314,28 +314,29 @@
            exactly like before. On wider screens they become two real columns. */
         #lobbyScreen .lobby-left, #lobbyScreen .lobby-right{ display:contents; }
         @media (min-width: 860px){
+            /* width:100% (not shrink-to-fit) + minmax(0,1fr) columns keep the
+               layout a FIXED size: it never widens when teams/dropdowns appear. */
             #lobbyScreen .setup-container{
-                max-width:1200px; display:grid;
-                grid-template-columns:1fr 1fr;
+                width:100%; max-width:1200px; margin:0 auto; display:grid;
+                grid-template-columns:minmax(0,1fr) minmax(0,1fr);
                 grid-template-rows:minmax(0,1fr) auto auto;
                 align-items:stretch; gap:16px 18px; min-height:0; overflow:hidden; padding-bottom:16px;
             }
-            /* Left column = all the settings panels; scrolls inside itself if tall. */
+            /* Both columns fill the SAME height; each scrolls inside itself. */
             #lobbyScreen .lobby-left{
                 grid-column:1; grid-row:1;
                 display:flex; flex-direction:column; gap:12px;
                 min-height:0; overflow-y:auto; padding-right:6px;
             }
-            /* Right column = the player list, scrolls inside itself. */
             #lobbyScreen .lobby-right{
                 grid-column:2; grid-row:1;
                 display:flex; flex-direction:column; gap:12px; min-height:0;
             }
-            #lobbyScreen .lobby-right .player-list-section{ flex:1 1 auto; min-height:0; overflow-y:auto; }
+            #lobbyScreen .lobby-right .player-list-section{ flex:1 1 auto; min-height:0; overflow-y:auto; margin:0; }
             /* Start + copy buttons span the full width under BOTH columns, pinned. */
             #lobbyScreen #startFromLobbyBtn{ grid-column:1 / -1; grid-row:2; margin-top:0 !important; }
             #lobbyScreen #bottomCopyBtn{ grid-column:1 / -1; grid-row:3; margin-top:0 !important; }
-            /* Settings panels can use the full left-column width on desktop. */
+            /* Settings panels use the full column width on desktop. */
             #lobbyScreen .lobby-left .setup-section{ max-width:none; }
         }
 
@@ -2557,7 +2558,7 @@ function renderLocalLobby() {
         const handicapInput = `<label style="font-size:0.75rem;color:#94a3b8;white-space:nowrap;">+🪙<input type="number" min="0" max="20" value="${p.startTokens||0}" style="width:40px;padding:2px 4px;font-size:0.85rem;margin-left:3px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="setStartTokens(${i},this.value)"></label>`;
 
         html += `<div class="player-item-lobby" style="border-left: 6px solid ${hex}; display:flex; align-items:center; gap: 8px;">
-            <span style="font-weight:bold; flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name}</span>
+            <span style="font-weight:bold; flex: 1; min-width:0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name}</span>
             ${teamDropdown}
             ${handicapInput}
             ${controls}
@@ -3130,7 +3131,7 @@ function setupListener() {
                 }
 
                 html += `<div class="player-item-lobby" style="border-left: 6px solid ${hex}; display:flex; align-items:center; gap: 8px;">
-                    <span style="font-weight:bold; flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name} <span style="color:#888; font-size: 0.85rem;">${p.userId === localUserId ? '(You)' : ''}</span></span>
+                    <span style="font-weight:bold; flex: 1; min-width:0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name} <span style="color:#888; font-size: 0.85rem;">${p.userId === localUserId ? '(You)' : ''}</span></span>
                     ${teamDropdown}
                     ${handicapEl}
                     ${myDeviceBtn}

@@ -343,6 +343,10 @@
            gap between the brush control and the board never shifts. */
         #setupScreen #footprintContainer .fp-cost-slot{ width:100%; min-height:50px; display:flex; align-items:center; justify-content:center; }
         #setupScreen #footprintContainer .btn-sm{ padding:6px 11px; font-size:.76rem; }
+        #setupScreen .saved-row{ display:flex; gap:8px; align-items:center; margin-bottom:13px; }
+        #setupScreen .saved-row select{ flex:1; min-width:0; padding:8px; background:#0b1626; color:var(--text); border:1px solid rgba(125,211,252,.18); border-radius:9px; font-size:.82rem; }
+        #setupScreen .saved-row .btn-sm{ flex-shrink:0; }
+        #setupScreen .saved-row .saved-del{ border-color:#ff6666; color:#ff9999; }
         /* =============== END HOLO BLOCKS REDESIGN =============== */
 
         /* =================== HOLO BLOCKS: lobby + in-game menu + store =================== */
@@ -540,6 +544,11 @@
                     <div class="input-group"><label for="boardD">Depth</label><div class="hb-step"><button type="button" onclick="stepInput('boardD',-1)">&minus;</button><input type="number" id="boardD" min="3" max="10" value="4" oninput="generateFootprint()"><button type="button" onclick="stepInput('boardD',1)">+</button></div></div>
                     <div class="input-group"><label for="heightCap">Height</label><div class="hb-step"><button type="button" onclick="stepInput('heightCap',-1)">&minus;</button><input type="number" id="heightCap" min="4" max="10" value="10" oninput="generateFootprint()"><button type="button" onclick="stepInput('heightCap',1)">+</button></div></div>
                 </div>
+                <div class="saved-row">
+                    <select id="savedShapesSelect" onchange="loadSavedShape(this.value)"><option value="">📐 Saved shapes…</option></select>
+                    <button type="button" class="btn-sm" onclick="saveCurrentShape()">＋ Save</button>
+                    <button type="button" class="btn-sm saved-del" onclick="deleteSavedShape()" title="Delete selected">🗑</button>
+                </div>
                 <div id="footprintContainer"></div>
             </div>
         </div>
@@ -550,6 +559,11 @@
                     <div class="seg" id="templateClassicToggle" onclick="toggleTemplate('classic')"><i class="ti ti-checkbox" aria-hidden="true"></i>Classic</div>
                     <div class="seg" id="templateWildWestToggle" onclick="toggleTemplate('wildWest')"><i class="ti ti-bolt" aria-hidden="true"></i>Wild West</div>
                     <div class="seg" id="templateCustomBtn" onclick="selectCustomPreset()"><i class="ti ti-adjustments" aria-hidden="true"></i>Custom</div>
+                </div>
+                <div class="saved-row">
+                    <select id="savedRulesetsSelect" onchange="loadSavedRuleset(this.value)"><option value="">📋 Saved rulesets…</option></select>
+                    <button type="button" class="btn-sm" onclick="saveCurrentRuleset()">＋ Save</button>
+                    <button type="button" class="btn-sm saved-del" onclick="deleteSavedRuleset()" title="Delete selected">🗑</button>
                 </div>
                 <div id="rulesCollapse">
                     <div class="rule-section-title">Advantage Pieces</div>
@@ -2378,6 +2392,123 @@ let html = '';
     if (paidEnabled) setFpBrush(window.currentFpBrush);
 };
 
+// ================= Personalization (localStorage, no login) =================
+const LS = {
+    read(k, def){ try{ const v=localStorage.getItem(k); return v!=null?JSON.parse(v):def; }catch(e){ return def; } },
+    write(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+function setRuleToggle(id, on, costGroupId){
+    const t=document.getElementById(id); if(!t) return;
+    t.classList.toggle('on', !!on);
+    if(costGroupId){ const g=document.getElementById(costGroupId); if(g) g.style.display = on ? 'flex' : 'none'; }
+}
+
+// Inverse of getSetupRules(): set every toggle/cost input from a rules object.
+function applySetupRules(r){
+    if(!r) return;
+    const setVal=(id,v)=>{ const e=document.getElementById(id); if(e && v!=null) e.value=v; };
+    setVal('blockerCost',r.blockerCost); setVal('wildCost',r.wildCost); setVal('coreCost',r.coreCost);
+    setVal('lockCost',r.lockCost); setVal('addColCost',r.addColCost); setVal('timerSec',r.timerSec);
+    setVal('timedAddColRounds',r.timedAddColRounds); setVal('chainTokens',r.chainTokens); setVal('timebombCost',r.timebombCost);
+    setRuleToggle('blockerToggle',r.blockerEnabled,'blockerCostGroup');
+    setRuleToggle('wildToggle',r.wildEnabled,'wildCostGroup');
+    setRuleToggle('coreToggle',r.coreEnabled,'coreCostGroup');
+    setRuleToggle('lockToggle',r.lockEnabled,'lockCostGroup');
+    setRuleToggle('addColToggle',r.addColEnabled,'addColCostGroup');
+    setRuleToggle('removeColToggle',r.removeColEnabled);
+    setRuleToggle('gravityToggle',r.gravityOff);
+    setRuleToggle('timerToggle',r.timerEnabled,'timerCostGroup');
+    setRuleToggle('timedAddColToggle',r.timedAddColEnabled,'timedAddColCostGroup');
+    setRuleToggle('timebombToggle',r.timebombEnabled,'timebombCostGroup');
+    setRuleToggle('wildEarnToggle',r.wildEarnTokens);
+    setRuleToggle('coreEarnToggle',r.coreEarnTokens);
+    const tg=document.getElementById('theGridToggle'); if(tg) tg.classList.toggle('on', !!r.theGridEnabled);
+    const we=document.getElementById('wildEarnGroup'); if(we) we.style.display = r.wildEnabled ? 'flex' : 'none';
+    const ce=document.getElementById('coreEarnGroup'); if(ce) ce.style.display = r.coreEnabled ? 'flex' : 'none';
+    if(window.syncPresetSeg) syncPresetSeg();
+}
+
+// Rebuild the footprint grid at the given size, then paint saved cell states.
+function applyFootprint(W, D, footprintArr, paidMap){
+    if(W) document.getElementById('boardW').value=W;
+    if(D) document.getElementById('boardD').value=D;
+    generateFootprint(true);
+    const fset=new Set(footprintArr||[]); paidMap=paidMap||{};
+    document.querySelectorAll('.footprint-cell').forEach(c=>{
+        const key=`${c.dataset.cx},${c.dataset.cz}`;
+        c.className='footprint-cell'; c.textContent='';
+        if(paidMap[key]!==undefined){ c.classList.add('paid'); c.dataset.cost=paidMap[key]; c.textContent=paidMap[key]; }
+        else if(fset.has(key)){ c.classList.add('active'); }
+    });
+}
+
+function captureSetup(){
+    const fp=parseFootprintSetup();
+    return { W:+document.getElementById('boardW').value, D:+document.getElementById('boardD').value,
+             heightCap:+document.getElementById('heightCap').value,
+             footprint:fp.footprintArray, paid:fp.paidColsMap, rules:getSetupRules() };
+}
+function saveLastSetup(){ LS.write('bc_last_setup', captureSetup()); }
+function restoreLastSetup(){
+    const s=LS.read('bc_last_setup'); if(!s) return;
+    if(s.heightCap) document.getElementById('heightCap').value=s.heightCap;
+    applySetupRules(s.rules);
+    applyFootprint(s.W, s.D, s.footprint, s.paid);
+}
+
+// Saved board shapes
+function refreshShapeSelect(){
+    const sel=document.getElementById('savedShapesSelect'); if(!sel) return;
+    const shapes=LS.read('bc_shapes',[]);
+    sel.innerHTML='<option value="">📐 Saved shapes…</option>'+shapes.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+}
+window.saveCurrentShape=function(){
+    const name=(prompt('Name this board shape:')||'').trim(); if(!name) return;
+    const fp=parseFootprintSetup();
+    const shapes=LS.read('bc_shapes',[]);
+    shapes.push({ name, W:+document.getElementById('boardW').value, D:+document.getElementById('boardD').value, footprint:fp.footprintArray, paid:fp.paidColsMap });
+    LS.write('bc_shapes',shapes); refreshShapeSelect(); toast('Shape saved: '+name);
+};
+window.loadSavedShape=function(i){
+    if(i===''||i==null) return; const s=LS.read('bc_shapes',[])[+i]; if(!s) return;
+    applyFootprint(s.W,s.D,s.footprint,s.paid);
+};
+window.deleteSavedShape=function(){
+    const sel=document.getElementById('savedShapesSelect'); const i=sel&&sel.value;
+    if(i===''||i==null){ toast('Pick a saved shape first',true); return; }
+    const shapes=LS.read('bc_shapes',[]); const s=shapes[+i]; if(!s) return;
+    if(!confirm('Delete saved shape "'+s.name+'"?')) return;
+    shapes.splice(+i,1); LS.write('bc_shapes',shapes); refreshShapeSelect();
+};
+
+// Saved rulesets
+function refreshRulesetSelect(){
+    const sel=document.getElementById('savedRulesetsSelect'); if(!sel) return;
+    const rs=LS.read('bc_rulesets',[]);
+    sel.innerHTML='<option value="">📋 Saved rulesets…</option>'+rs.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+}
+window.saveCurrentRuleset=function(){
+    const name=(prompt('Name this ruleset:')||'').trim(); if(!name) return;
+    const rs=LS.read('bc_rulesets',[]); rs.push({ name, rules:getSetupRules() });
+    LS.write('bc_rulesets',rs); refreshRulesetSelect(); toast('Ruleset saved: '+name);
+};
+window.loadSavedRuleset=function(i){
+    if(i===''||i==null) return; const s=LS.read('bc_rulesets',[])[+i]; if(!s) return;
+    applySetupRules(s.rules);
+};
+window.deleteSavedRuleset=function(){
+    const sel=document.getElementById('savedRulesetsSelect'); const i=sel&&sel.value;
+    if(i===''||i==null){ toast('Pick a saved ruleset first',true); return; }
+    const rs=LS.read('bc_rulesets',[]); const s=rs[+i]; if(!s) return;
+    if(!confirm('Delete saved ruleset "'+s.name+'"?')) return;
+    rs.splice(+i,1); LS.write('bc_rulesets',rs); refreshRulesetSelect();
+};
+
+// Remembered player name / color
+function savedColorIndex(){ const hex=LS.read('bc_player_color'); if(hex==null) return -1; return COLORS.findIndex(c=>c.hex===hex); }
+function rememberPlayer(name, hex){ if(name) LS.write('bc_player_name', name); if(hex!=null) LS.write('bc_player_color', hex); }
+
 function getSetupRules() {
     return {
         blockerEnabled: document.getElementById('blockerToggle').classList.contains('on'),
@@ -2553,6 +2684,7 @@ window.startLocalGame = function() {
     const D = +document.getElementById('boardD').value;
     const fpData = parseFootprintSetup();
     if(!fpData.count){ alert('Select at least one cell!'); return; }
+    saveLastSetup();
 
     G.isLocalGame = true;
     G.isVsAI = false;
@@ -2600,7 +2732,7 @@ window.startLocalGame = function() {
     document.getElementById('topCopyBtn').style.display = 'none';
     document.getElementById('bottomCopyBtn').style.display = 'none';
     document.getElementById('joinPanelTitle').textContent = "Add Player";
-    document.getElementById('joinName').value = "Player 1";
+    document.getElementById('joinName').value = LS.read('bc_player_name') || "Player 1";
     document.getElementById('joinSubmitBtn').textContent = "Add Player";
 
     renderLocalLobby();
@@ -2734,7 +2866,11 @@ function renderLocalLobby() {
     if (atMax) { submitBtn.disabled = true; submitBtn.textContent = 'Max Players Reached'; }
     else {
         submitBtn.disabled = false; submitBtn.textContent = 'Add Player';
-        if (selectedColorIndex === -1 && availableColorIdx !== -1) selectColor(availableColorIdx);
+        if (selectedColorIndex === -1) {
+            const pref = savedColorIndex();
+            if (pref !== -1 && !G.localPlayers.some(p => p.hex === COLORS[pref].hex)) selectColor(pref);
+            else if (availableColorIdx !== -1) selectColor(availableColorIdx);
+        }
     }
 
     const startBtn = document.getElementById('startFromLobbyBtn');
@@ -2750,6 +2886,7 @@ window.createRoom = function(){
     const D=+document.getElementById('boardD').value;
     const fpData = parseFootprintSetup();
     if(!fpData.count){alert('Select at least one cell!');return;}
+    saveLastSetup();
 
     const roomId = Math.random().toString(36).substr(2, 4).toUpperCase();
     window.history.replaceState(null, '', `?room=${roomId}`);
@@ -2845,6 +2982,7 @@ window.submitJoin = function() {
     
     // New players default to Team 1; team is chosen later in the player row.
     let teamIdx = 0;
+    rememberPlayer(name, COLORS[selectedColorIndex].hex);
 
     if (G.isLocalGame) {
         if (G.localPlayers.length >= 10) {
@@ -3149,7 +3287,9 @@ window.startFromLobby = function() {
 };
 
 window.onload = () => {
-    generateFootprint(); 
+    generateFootprint();
+    refreshShapeSelect();
+    refreshRulesetSelect();
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room');
     if (roomId) {
@@ -3163,6 +3303,8 @@ window.onload = () => {
         document.getElementById('joinSubmitBtn').textContent = "Join Room";
         gameRef = db.ref('games/' + roomId);
         setupListener();
+    } else {
+        restoreLastSetup();
     }
 };
 
@@ -3267,9 +3409,11 @@ function setupListener() {
                 
                 const nameInput = document.getElementById('joinName');
                 if (selectedColorIndex === -1 && availableColorIdx !== -1) {
-                    selectColor(availableColorIdx);
+                    const pref = savedColorIndex();
+                    if (pref !== -1 && !joinedPlayers.some(p => p.hex === COLORS[pref].hex)) selectColor(pref);
+                    else selectColor(availableColorIdx);
                     if (!nameInput.value) {
-                        nameInput.value = `Player ${joinedPlayers.length + 1}`;
+                        nameInput.value = LS.read('bc_player_name') || `Player ${joinedPlayers.length + 1}`;
                     }
                     setTimeout(() => nameInput.focus(), 50);
                 }

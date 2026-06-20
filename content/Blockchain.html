@@ -25,6 +25,10 @@
             --border: rgba(148,163,184,0.3);
         }
         * { margin:0; padding:0; box-sizing:border-box; }
+        /* Disable double-tap-to-zoom (keeps pinch-zoom) so rapid taps on steppers
+           and buttons register cleanly instead of zooming the page. */
+        html, body { touch-action: manipulation; }
+        #gameCanvas { touch-action: none; }
         body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; height:100vh; display:flex; flex-direction:column; }
         #setupScreen, #lobbyScreen, #gameScreen { display:none; flex-direction:column; height:100%; }
         #setupScreen.active, #lobbyScreen.active, #gameScreen.active { display:flex; }
@@ -55,6 +59,7 @@
         #gameCanvas { position:absolute; top:0; left:0; width:100%; height:100%; display:block; }
         
         .left-player-list { position:fixed; top:18px; left:18px; z-index:1000; display:flex; flex-direction:column; gap:8px; }
+        .pl-list-toggle { display:none; }
         .player-indicator { background:var(--surface); padding:12px 16px; border-radius:8px; border:2px solid var(--border); display:flex; align-items:center; gap:10px; font-weight:600; font-size:.95rem; transition: border-color 0.3s, opacity 0.3s;}
         .player-indicator.my-turn { opacity: 1; border-color: #33dd66; box-shadow: 0 0 15px rgba(51, 221, 102, 0.4); }
         .player-indicator.inactive { opacity: 0.5; }
@@ -162,10 +167,15 @@
                stay visible to close the sheet); it returns when the sheet closes. */
             #gameScreen:has(.cam-panel.active, .visuals-panel.active, .chat-panel.active) .action-wrap { display:none !important; }
 
-            /* (2) Slimmer top HUD so the player list, banner and Menu don't crowd. */
+            /* (2) Slimmer top HUD so the player list, banner and Menu don't crowd.
+               The turn order collapses to just the active player; tap to expand. */
             .menu-toggle { top:10px; right:10px; padding:9px 13px; font-size:.85rem; }
-            .left-player-list { top:10px; left:10px; gap:5px; max-width:46vw; }
-            #addColBanner { top:10px; font-size:.78rem; padding:8px 14px; max-width:42vw; }
+            .left-player-list { top:10px; left:10px; gap:5px; max-width:62vw; }
+            .left-player-list .player-indicator.inactive { display:none; }
+            .left-player-list.expanded .player-indicator.inactive { display:flex; }
+            .left-player-list.expanded { max-height:72vh; overflow-y:auto; }
+            .pl-list-toggle { display:block; align-self:flex-start; background:#16243a; color:#bae6fd; font-weight:700; font-size:.74rem; padding:6px 12px; border-radius:14px; box-shadow:0 4px 0 #0a1322; cursor:pointer; }
+            #addColBanner { top:10px; font-size:.78rem; padding:8px 14px; max-width:40vw; right:auto; left:auto; }
             #quickResetCamBtn { top:56px; right:10px; font-size:.82rem; padding:8px 12px; }
 
             /* (4) Bigger touch targets. */
@@ -368,6 +378,7 @@
         #lobbyScreen .seg-control button.active{ background:linear-gradient(90deg,#38bdf8,#818cf8); color:#04243a; box-shadow:0 3px 0 #0b6493; }
         #lobbyScreen .copy-link-btn{ background:linear-gradient(90deg,#38bdf8,#818cf8); color:#04243a; box-shadow:0 5px 0 #0b6493; }
         #lobbyScreen .lobby-back-btn{ position:absolute; top:14px; left:14px; z-index:3; background:#16243a; border:none; box-shadow:0 4px 0 #0a1322; color:#bae6fd; font-weight:700; }
+        @media (max-width: 859px){ #lobbyScreen .screen-header{ padding-top:46px; } }
         #lobbyScreen .lobby-back-btn:hover{ color:#7dd3fc; }
         #lobbyScreen .summary-chip{ display:inline-block; background:#0d1a2c; border:1px solid var(--border); border-radius:8px; padding:4px 9px; font-size:.78rem; margin:0 6px 6px 0; color:#bae6fd; font-weight:600; }
         #lobbyScreen .mini-grid{ display:grid; gap:2px; margin:8px 0 4px; }
@@ -376,9 +387,20 @@
         #lobbyScreen .mini-cell.paid{ background:linear-gradient(135deg,#ff9f43,#ff7f00); }
         #lobbyScreen .summary-rules{ justify-content:flex-start; margin-top:8px; }
         /* Phones: stacked layout, taller two-row player cards (no nested scroll). */
+        /* Add-bot row: tidy flex on desktop, stacked on phones so the button
+           never floats over the slider. */
+        #lobbyScreen .bot-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        #lobbyScreen .bot-diff{ display:flex; align-items:center; gap:6px; flex:1; min-width:130px; }
         @media (max-width: 859px){
             #lobbyScreen .player-item-lobby{ flex-direction:column; align-items:stretch; gap:8px; padding:10px 12px; }
-            #lobbyScreen .player-item-lobby .pl-ctrls{ justify-content:space-between; }
+            #lobbyScreen .player-item-lobby .pl-name{ font-size:1rem; }
+            #lobbyScreen .player-item-lobby .pl-ctrls{ justify-content:flex-start; gap:8px; flex-wrap:nowrap; }
+            #lobbyScreen .player-item-lobby .team-select{ flex:1 1 auto; min-width:0; }
+            #lobbyScreen .player-item-lobby .pl-x{ margin-left:auto; }
+            #lobbyScreen .bot-row{ flex-direction:column; align-items:stretch; }
+            #lobbyScreen .bot-row .bot-name{ width:100% !important; }
+            #lobbyScreen .bot-row .bot-diff{ width:100%; }
+            #lobbyScreen .bot-row .bot-add{ width:100%; }
         }
         /* Lobby layout: the .lobby-left / .lobby-right wrappers are invisible to
            layout on phones (display:contents) so everything stacks in one column.
@@ -589,14 +611,14 @@
 
         <div class="setup-section" id="hostBotSection" style="display:none;">
             <h2 style="margin-bottom: 10px;">Add Bot</h2>
-            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                <input type="text" id="botName" value="Bot 1" style="width: 90px; padding: 8px;">
-                <div style="display:flex; align-items:center; gap:6px; flex:1; min-width: 130px;">
+            <div class="bot-row">
+                <input type="text" id="botName" value="Bot 1" class="bot-name" style="width: 90px; padding: 8px;">
+                <div class="bot-diff">
                     <span style="font-size: 0.85rem; color: #94a3b8;">Difficulty:</span>
-                    <input type="range" id="botDifficulty" min="1" max="10" value="5" style="flex:1; accent-color: var(--primary); cursor:pointer;" oninput="document.getElementById('botDiffVal').textContent = this.value">
+                    <input type="range" id="botDifficulty" min="1" max="10" value="5" style="flex:1; min-width:0; accent-color: var(--primary); cursor:pointer;" oninput="document.getElementById('botDiffVal').textContent = this.value">
                     <span id="botDiffVal" style="font-size: 0.9rem; font-weight: bold; width: 16px; text-align: center;">5</span>
                 </div>
-                <button class="btn-sm" onclick="addBot()">Add Bot</button>
+                <button class="btn-sm bot-add" onclick="addBot()">Add Bot</button>
             </div>
         </div>
         </div><!-- /lobby-left -->
@@ -7013,6 +7035,16 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                 }
                 listContainer.appendChild(el);
             });
+            // On phones the full list is collapsed to just the active player; a
+            // toggle reveals/hides the rest so it doesn't cover the board.
+            if (displayPlayers.length > 1) {
+                const toggle = document.createElement('div');
+                toggle.className = 'pl-list-toggle';
+                const setLbl = () => { toggle.textContent = listContainer.classList.contains('expanded') ? '▴ Hide' : `▾ ${displayPlayers.length} players`; };
+                setLbl();
+                toggle.onclick = (ev) => { ev.stopPropagation(); listContainer.classList.toggle('expanded'); setLbl(); };
+                listContainer.appendChild(toggle);
+            }
         }
         document.title = (isMe && !G.isLocalGame) ? "▶ YOUR TURN | BlockChain 3D" : "BlockChain 3D";
         const currentHex=`#${p.hex.toString(16).padStart(6,'0')}`;

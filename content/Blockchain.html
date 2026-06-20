@@ -343,10 +343,19 @@
            gap between the brush control and the board never shifts. */
         #setupScreen #footprintContainer .fp-cost-slot{ width:100%; min-height:50px; display:flex; align-items:center; justify-content:center; }
         #setupScreen #footprintContainer .btn-sm{ padding:6px 11px; font-size:.76rem; }
-        #setupScreen .saved-row{ display:flex; gap:8px; align-items:center; margin-bottom:13px; }
-        #setupScreen .saved-row select{ flex:1; min-width:0; padding:8px; background:#0b1626; color:var(--text); border:1px solid rgba(125,211,252,.18); border-radius:9px; font-size:.82rem; }
-        #setupScreen .saved-row .btn-sm{ flex-shrink:0; }
-        #setupScreen .saved-row .saved-del{ border-color:#ff6666; color:#ff9999; }
+        #setupScreen .saved-row{ display:flex; gap:8px; align-items:stretch; margin-bottom:13px; }
+        #setupScreen .saved-row select{
+            flex:1; min-width:0; padding:9px 30px 9px 12px; color:#cbd5e1; font-size:.8rem; font-weight:600;
+            background-color:#0b1626; border:none; border-radius:10px;
+            box-shadow:0 3px 0 #060d18, inset 0 1px 0 rgba(255,255,255,.05);
+            appearance:none; -webkit-appearance:none; cursor:pointer;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237dd3fc' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 11px center;
+        }
+        #setupScreen .saved-row .btn-sm{ flex-shrink:0; border:none; border-radius:10px; padding:8px 13px; font-weight:700; background:#16243a; color:#bae6fd; box-shadow:0 3px 0 #060d18, inset 0 1px 0 rgba(255,255,255,.06); }
+        #setupScreen .saved-row .btn-sm:hover{ color:#7dd3fc; }
+        #setupScreen .saved-row .saved-del{ background:#2a1416; color:#ff9999; box-shadow:0 3px 0 #160708, inset 0 1px 0 rgba(255,255,255,.05); }
+        #setupScreen .saved-row .saved-del:hover{ color:#ff6666; }
         /* =============== END HOLO BLOCKS REDESIGN =============== */
 
         /* =================== HOLO BLOCKS: lobby + in-game menu + store =================== */
@@ -397,6 +406,16 @@
         #lobbyScreen .mini-cell.on{ background:linear-gradient(135deg,#38bdf8,#818cf8); }
         #lobbyScreen .mini-cell.paid{ background:linear-gradient(135deg,#ff9f43,#ff7f00); }
         #lobbyScreen .summary-rules{ justify-content:flex-start; margin-top:8px; }
+        #lobbyRulesOverlay .summary-section{ margin-bottom:18px; }
+        #lobbyRulesOverlay .summary-section:last-child{ margin-bottom:0; }
+        #lobbyRulesOverlay .summary-label{ font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#7dd3fc; margin-bottom:10px; }
+        #lobbyRulesOverlay .summary-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+        #lobbyRulesOverlay .summary-chip{ background:#0d1a2c; border:1px solid rgba(125,211,252,.22); border-radius:9px; padding:6px 12px; font-size:.85rem; color:#bae6fd; font-weight:600; }
+        #lobbyRulesOverlay .mini-cell{ width:100%; aspect-ratio:1; background:#0a1322; border-radius:3px; }
+        #lobbyRulesOverlay .mini-cell.on{ background:linear-gradient(135deg,#38bdf8,#818cf8); }
+        #lobbyRulesOverlay .mini-cell.paid{ background:linear-gradient(135deg,#ff9f43,#ff7f00); }
+        #lobbyRulesOverlay .summary-rules{ justify-content:flex-start; gap:8px; }
+        #lobbyRulesOverlay .rule-item{ font-size:.88rem; }
         /* Phones: stacked layout, taller two-row player cards (no nested scroll). */
         /* Add-bot row: tidy flex on desktop, stacked on phones so the button
            never floats over the slider. */
@@ -598,7 +617,7 @@
 
 <div id="lobbyScreen">
     <button class="btn-sm lobby-back-btn" onclick="returnToMainMenu()">← Main Menu</button>
-    <button class="btn-sm lobby-rules-btn" onclick="toggleLobbyRules()">📋 Game Setup</button>
+    <button class="btn-sm lobby-rules-btn" onclick="toggleLobbyRules()">📋 View Rules &amp; Board</button>
     <div class="screen-header">
         <h1>LOBBY</h1>
         <p style="font-weight: 500; color: #94a3b8;">Setup the game</p>
@@ -621,10 +640,13 @@
 
         <div class="setup-section" id="joinPanel" style="display:none;">
             <h2 id="joinPanelTitle">Add Player</h2>
-            <input type="text" id="joinName" placeholder="Enter your name" style="margin-bottom: 12px; padding: 8px;">
-            <div style="margin-bottom: 6px; font-weight: 500;">Choose your color:</div>
-            <div id="colorPicker" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"></div>
-            <button class="btn-sm" id="joinSubmitBtn" onclick="submitJoin()">Add Player</button>
+            <div id="joinForm">
+                <input type="text" id="joinName" placeholder="Enter your name" style="margin-bottom: 12px; padding: 8px;">
+                <div style="margin-bottom: 6px; font-weight: 500;">Choose your color:</div>
+                <div id="colorPicker" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"></div>
+                <button class="btn-sm" id="joinSubmitBtn" onclick="submitJoin()">Add Player</button>
+            </div>
+            <div id="joinedStatus" style="display:none;"></div>
         </div>
 
         <div class="setup-section" id="hostBotSection" style="display:none;">
@@ -657,8 +679,8 @@
     </div>
 
     <div class="confirm-overlay" id="lobbyRulesOverlay" onclick="if(event.target===this)toggleLobbyRules()">
-        <div class="confirm-box" style="max-width:540px; text-align:left;">
-            <h3>Game Setup</h3>
+        <div class="confirm-box" style="max-width:600px; width:100%; text-align:left; max-height:85vh; overflow-y:auto;">
+            <h3 style="margin-bottom:6px;">Game Rules &amp; Board</h3>
             <div id="lobbySummaryBody"></div>
             <div class="confirm-buttons" style="margin-top:16px;">
                 <button class="confirm-btn yes" onclick="toggleLobbyRules()">Close</button>
@@ -2769,6 +2791,16 @@ window.toggleLobbyRules = function() {
     document.getElementById('lobbyRulesOverlay').classList.toggle('active');
 };
 
+// Leave an online room (remove yourself from the player list) and go to setup.
+window.leaveOnlineGame = function() {
+    if (typeof gameRef === 'undefined' || !gameRef) { returnToMainMenu(); return; }
+    gameRef.child('players').once('value').then(snap => {
+        let players = snap.val() || [];
+        players = players.filter(p => p.userId !== localUserId);
+        return gameRef.child('players').set(players);
+    }).catch(()=>{}).finally(() => returnToMainMenu());
+};
+
 // Return from the lobby back to the main setup screen.
 window.returnToMainMenu = function() {
     if (typeof gameRef !== 'undefined' && gameRef) { try { gameRef.off(); } catch(e) {} }
@@ -2792,7 +2824,7 @@ function buildFootprintMini(fpArr, paidMap) {
         const paid = paidMap && (paidMap[key] !== undefined || paidMap[`${x}_${z}`] !== undefined);
         cells += `<div class="mini-cell${on ? (paid ? ' paid' : ' on') : ''}"></div>`;
     }
-    const cellPx = Math.max(8, Math.min(18, Math.floor(150 / w)));
+    const cellPx = Math.max(10, Math.min(26, Math.floor(260 / w)));
     return `<div class="mini-grid" style="grid-template-columns:repeat(${w}, ${cellPx}px);">${cells}</div>`;
 }
 
@@ -2804,13 +2836,19 @@ function renderLobbySummary(cfg) {
     const bW = cfg.bW ?? G.bW, bD = cfg.bD ?? G.bD, hc = cfg.heightCap ?? G.heightCap;
     const fpArr = cfg.footprint || (G.footprint ? [...G.footprint] : []);
     const rules = cfg.rules || G.rules || {};
-    let html = `<div>
-        <span class="summary-chip">${bW}×${bD} board</span>
-        <span class="summary-chip">Height ${hc}</span>
-        <span class="summary-chip">${fpArr.length} columns</span>
+    let html = `<div class="summary-section">
+        <div class="summary-label">Board</div>
+        <div class="summary-chips">
+            <span class="summary-chip">${bW}×${bD} board</span>
+            <span class="summary-chip">Height ${hc}</span>
+            <span class="summary-chip">${fpArr.length} columns</span>
+        </div>
+        ${buildFootprintMini(fpArr, cfg.paidColumns || null)}
+    </div>
+    <div class="summary-section">
+        <div class="summary-label">Active Rules</div>
+        <div class="rules-list summary-rules">${getRulesHTML(rules)}</div>
     </div>`;
-    html += buildFootprintMini(fpArr, cfg.paidColumns || null);
-    html += `<div class="rules-list summary-rules">${getRulesHTML(rules)}</div>`;
     el.innerHTML = html;
 }
 
@@ -2848,6 +2886,9 @@ function renderLocalLobby() {
     const submitBtn = document.getElementById('joinSubmitBtn');
     const atMax = G.localPlayers.length >= 10;
     document.getElementById('joinPanel').style.display = 'block';
+    document.getElementById('joinForm').style.display = 'block';
+    document.getElementById('joinedStatus').style.display = 'none';
+    document.getElementById('joinPanelTitle').textContent = 'Add Player';
 
     let availableColorIdx = -1;
     let swatchHtml = '';
@@ -3417,8 +3458,26 @@ function setupListener() {
                     }
                     setTimeout(() => nameInput.focus(), 50);
                 }
+                document.getElementById('joinForm').style.display = 'block';
+                document.getElementById('joinedStatus').style.display = 'none';
             } else {
-                joinPanel.style.display = 'none';
+                // Already joined: keep the panel (don't collapse the lobby) and show
+                // a joined status instead of the form.
+                joinPanel.style.display = 'block';
+                document.getElementById('joinPanelTitle').textContent = "You're In";
+                document.getElementById('joinForm').style.display = 'none';
+                const me = joinedPlayers.find(p => p.userId === localUserId);
+                const meHex = me ? `#${me.hex.toString(16).padStart(6,'0')}` : '#888';
+                const js = document.getElementById('joinedStatus');
+                js.style.display = 'block';
+                js.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <span style="width:22px; height:22px; border-radius:50%; background:${meHex}; box-shadow:0 0 0 2px rgba(255,255,255,.15);"></span>
+                        <span style="font-weight:700;">${me ? me.name : 'You'} <span style="color:#94a3b8; font-weight:500;">(you)</span></span>
+                    </div>
+                    <p style="font-size:.85rem; color:#94a3b8; margin-bottom:12px;">${isHost ? 'Start the game when everyone has joined.' : 'Waiting for the host to start the game…'}</p>
+                    <button class="btn-sm" onclick="leaveOnlineGame()" style="border-color:#ff6666; color:#ff9999;">Leave Game</button>
+                `;
             }
 
             const startBtn = document.getElementById('startFromLobbyBtn');

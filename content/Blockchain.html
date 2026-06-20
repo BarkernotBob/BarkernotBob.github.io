@@ -309,12 +309,12 @@
         #setupScreen #wildEarnGroup, #setupScreen #coreEarnGroup{ margin-left:16px !important; background:#0a1422; border-left:2px solid #e879f9; border-radius:8px; padding:6px 10px; opacity:1 !important; }
         #setupScreen #coreEarnGroup{ border-left-color:#a78bfa; }
         /* stepper */
-        .hb-step{ display:inline-flex; align-items:center; background:#0b1626; border-radius:8px; box-shadow:0 3px 0 #060d18; overflow:hidden; flex-shrink:0; }
+        .hb-step{ display:inline-flex; align-items:center; gap:0; background:#0b1626; border-radius:8px; box-shadow:0 3px 0 #060d18; overflow:hidden; flex-shrink:0; }
         .hb-step button{ width:28px; height:30px; border:none; background:transparent; color:#7dd3fc; font-size:18px; cursor:pointer; line-height:1; padding:0; }
         .hb-step button:active{ background:rgba(56,189,248,.18); }
-        .hb-step input{ width:24px; text-align:right; background:transparent; border:none; color:#f1f5f9; font-size:.85rem; font-weight:700; padding:6px 1px 6px 0; -moz-appearance:textfield; }
+        .hb-step input{ width:2ch; text-align:center; background:transparent; border:none; color:#f1f5f9; font-size:.85rem; font-weight:700; padding:6px 0; -moz-appearance:textfield; }
         .hb-step input::-webkit-outer-spin-button, .hb-step input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
-        .hb-step .hb-coin{ color:#fde68a; font-size:.72rem; padding-right:6px; }
+        .hb-step .hb-coin{ color:#fde68a; font-size:.72rem; padding:0 5px 0 1px; }
         #setupScreen .cost-input{ margin-left:0; }
         #setupScreen .input-group{ margin-bottom:0; flex:1; }
         #setupScreen .input-group label{ font-size:.7rem; color:var(--hb-mut); text-align:center; margin-bottom:5px; display:block; }
@@ -381,6 +381,8 @@
         #lobbyScreen .lobby-back-btn{ position:absolute; top:14px; left:14px; z-index:3; background:#16243a; border:none; box-shadow:0 4px 0 #0a1322; color:#bae6fd; font-weight:700; }
         @media (max-width: 859px){ #lobbyScreen .screen-header{ padding-top:46px; } }
         #lobbyScreen .lobby-back-btn:hover{ color:#7dd3fc; }
+        #lobbyScreen .lobby-rules-btn{ position:absolute; top:14px; right:14px; z-index:3; background:#16243a; border:none; box-shadow:0 4px 0 #0a1322; color:#bae6fd; font-weight:700; }
+        #lobbyScreen .lobby-rules-btn:hover{ color:#7dd3fc; }
         #lobbyScreen .summary-chip{ display:inline-block; background:#0d1a2c; border:1px solid var(--border); border-radius:8px; padding:4px 9px; font-size:.78rem; margin:0 6px 6px 0; color:#bae6fd; font-weight:600; }
         #lobbyScreen .mini-grid{ display:grid; gap:2px; margin:8px 0 4px; }
         #lobbyScreen .mini-cell{ width:100%; aspect-ratio:1; background:#0a1322; border-radius:2px; }
@@ -411,25 +413,22 @@
             /* width:100% + minmax(0,1fr) columns keep the layout a FIXED width.
                align-content:start makes the columns row only as tall as the LEFT
                column's content; the player list matches it and scrolls. */
-            /* Three columns on desktop: the Game Setup summary sits on its own to
-               the left, then the settings, then the player list. */
             #lobbyScreen .setup-container{
-                width:100%; max-width:1340px; margin:0 auto; display:grid;
-                grid-template-columns:minmax(170px,210px) minmax(0,1fr) minmax(0,1fr);
+                width:100%; max-width:1100px; margin:0 auto; display:grid;
+                grid-template-columns:minmax(0,1fr) minmax(0,1fr);
                 grid-template-rows:auto minmax(0,auto) auto auto;
                 align-content:start; align-items:stretch; gap:14px 16px; min-height:0; overflow:hidden; padding-bottom:16px;
             }
             #lobbyScreen #roomLinkSection{ grid-column:1 / -1; grid-row:1; }
-            #lobbyScreen #lobbySummaryPanel{ grid-column:1; grid-row:2; align-self:start; max-width:none; }
             #lobbyScreen .lobby-left{
-                grid-column:2; grid-row:2;
+                grid-column:1; grid-row:2;
                 display:flex; flex-direction:column; gap:12px;
                 min-height:0; overflow-y:auto; padding-right:6px;
             }
             /* Right column matches the left's height; player list scrolls inside
                (taken out of flow so player count can't change the height). */
             #lobbyScreen .lobby-right{
-                display:block; grid-column:3; grid-row:2; position:relative; min-height:0;
+                display:block; grid-column:2; grid-row:2; position:relative; min-height:0;
             }
             #lobbyScreen .lobby-right .player-list-section{
                 position:absolute; inset:0; overflow:hidden; margin:0; display:flex; flex-direction:column;
@@ -581,6 +580,7 @@
 
 <div id="lobbyScreen">
     <button class="btn-sm lobby-back-btn" onclick="returnToMainMenu()">← Main Menu</button>
+    <button class="btn-sm lobby-rules-btn" onclick="toggleLobbyRules()">📋 Game Setup</button>
     <div class="screen-header">
         <h1>LOBBY</h1>
         <p style="font-weight: 500; color: #94a3b8;">Setup the game</p>
@@ -591,10 +591,6 @@
             <button class="btn copy-link-btn" style="width:100%;" id="topCopyBtn" onclick="copyInviteLink()">📋 Copy Room Link</button>
         </div>
 
-        <div class="setup-section" id="lobbySummaryPanel">
-            <h2>Game Setup</h2>
-            <div id="lobbySummaryBody"></div>
-        </div>
         <div class="lobby-left">
         <div class="setup-section" id="teamConfigPanel" style="display:none;">
             <h2>Mode</h2>
@@ -640,6 +636,16 @@
 
         <button class="btn copy-link-btn" id="bottomCopyBtn" style="width: 100%;" onclick="copyInviteLink()">📋 Copy Room Link</button>
 
+    </div>
+
+    <div class="confirm-overlay" id="lobbyRulesOverlay" onclick="if(event.target===this)toggleLobbyRules()">
+        <div class="confirm-box" style="max-width:540px; text-align:left;">
+            <h3>Game Setup</h3>
+            <div id="lobbySummaryBody"></div>
+            <div class="confirm-buttons" style="margin-top:16px;">
+                <button class="confirm-btn yes" onclick="toggleLobbyRules()">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -2282,7 +2288,9 @@ window.setFpBrush = function(type) {
     document.getElementById('brushPaid').style.color = type === 'paid' ? '#ff8822' : 'var(--text)';
     document.getElementById('brushErase').style.borderColor = type === 'erase' ? '#ef4444' : 'var(--border)';
     document.getElementById('brushErase').style.color = type === 'erase' ? '#ef4444' : 'var(--text)';
-    document.getElementById('brushCostContainer').style.display = type === 'paid' ? 'flex' : 'none';
+    // Keep the row in the layout (visibility, not display) so picking Paid
+    // doesn't resize the board setup.
+    document.getElementById('brushCostContainer').style.visibility = type === 'paid' ? 'visible' : 'hidden';
 };
 
 window.generateFootprint = function(fromTemplate = false){
@@ -2306,7 +2314,7 @@ let html = '';
 color:var(--primary)">🟦 Active</button>
             <button class="btn-sm" id="brushPaid" onclick="setFpBrush('paid')">🟧 Paid</button>
             <button class="btn-sm" id="brushErase" onclick="setFpBrush('erase')">⬛ Erase</button>
-            <div id="brushCostContainer" style="display:none; align-items:center; gap:4px; width:100%; justify-content:center; margin-top:4px;">
+            <div id="brushCostContainer" style="display:flex; visibility:hidden; align-items:center; gap:4px; width:100%; justify-content:center; margin-top:4px;">
                 Cost: <input type="number" id="brushCost" value="1" min="1" max="10" style="width:60px; padding:4px;">
             </div>
         </div>`;
@@ -2610,6 +2618,11 @@ window.setTeamMode = function(mode) {
         return;
     }
     gameRef.child('teamConfig').update({ enabled: enabled, teamCount: count });
+};
+
+// Show/hide the Game Setup (board + rules) popover in the lobby.
+window.toggleLobbyRules = function() {
+    document.getElementById('lobbyRulesOverlay').classList.toggle('active');
 };
 
 // Return from the lobby back to the main setup screen.

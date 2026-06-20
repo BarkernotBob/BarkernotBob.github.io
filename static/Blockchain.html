@@ -336,8 +336,12 @@
         /* fixes: audio chips in normal flow (no title overlap), centered/compact brush, bottom padding */
         #setupScreen .audio-float{ position:static; width:100%; justify-content:flex-end; padding:12px 16px 0; z-index:auto; }
         #setupScreen .setup-container{ padding-bottom:52px; }
-        #setupScreen #footprintContainer{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:6px; }
-        #setupScreen #footprintContainer > div:first-child{ width:fit-content !important; max-width:100%; margin:4px auto 10px !important; flex-wrap:nowrap !important; justify-content:center; }
+        #setupScreen #footprintContainer{ display:flex; flex-direction:column; align-items:center; gap:0; margin-top:6px; }
+        #setupScreen #footprintContainer .fp-paint-title{ width:100%; margin:2px 0 8px; }
+        #setupScreen #footprintContainer .fp-brush-seg{ width:100%; }
+        /* Fixed-height slot: the Paid cost row appears/disappears inside it so the
+           gap between the brush control and the board never shifts. */
+        #setupScreen #footprintContainer .fp-cost-slot{ width:100%; min-height:50px; display:flex; align-items:center; justify-content:center; }
         #setupScreen #footprintContainer .btn-sm{ padding:6px 11px; font-size:.76rem; }
         /* =============== END HOLO BLOCKS REDESIGN =============== */
 
@@ -1043,6 +1047,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Sky } from 'three/addons/objects/Sky.js';
+
+// iOS Safari ignores user-scalable=no, so block its pinch-zoom gesture events
+// directly. The 3D board zoom is unaffected (OrbitControls uses touch events,
+// not these gesture events) and double-tap zoom is handled via touch-action.
+['gesturestart','gesturechange','gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
 
 // ----------------------------------------------------
 // FIREBASE & USER IDENTITY
@@ -2282,15 +2292,14 @@ window.toggleSetupSwitch = function(type){
 window.currentFpBrush = 'active';
 window.setFpBrush = function(type) {
     window.currentFpBrush = type;
-    document.getElementById('brushActive').style.borderColor = type === 'active' ? 'var(--primary)' : 'var(--border)';
-    document.getElementById('brushActive').style.color = type === 'active' ? 'var(--primary)' : 'var(--text)';
-    document.getElementById('brushPaid').style.borderColor = type === 'paid' ? '#ff8822' : 'var(--border)';
-    document.getElementById('brushPaid').style.color = type === 'paid' ? '#ff8822' : 'var(--text)';
-    document.getElementById('brushErase').style.borderColor = type === 'erase' ? '#ef4444' : 'var(--border)';
-    document.getElementById('brushErase').style.color = type === 'erase' ? '#ef4444' : 'var(--text)';
-    // Keep the row in the layout (visibility, not display) so picking Paid
-    // doesn't resize the board setup.
-    document.getElementById('brushCostContainer').style.visibility = type === 'paid' ? 'visible' : 'hidden';
+    [['active','brushActive'],['paid','brushPaid'],['erase','brushErase']].forEach(([t, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('on', t === type);
+    });
+    // The cost row shows/hides inside a fixed-height slot, so the gap between
+    // the brush control and the board never changes.
+    const cc = document.getElementById('brushCostContainer');
+    if (cc) cc.style.display = type === 'paid' ? 'flex' : 'none';
 };
 
 window.generateFootprint = function(fromTemplate = false){
@@ -2309,13 +2318,16 @@ window.generateFootprint = function(fromTemplate = false){
 let html = '';
     if (paidEnabled) {
         html += `
-        <div style="display:flex; gap:8px; margin: 4px 0 8px; justify-content:center; align-items:center; flex-wrap:wrap;">
-            <button class="btn-sm" id="brushActive" onclick="setFpBrush('active')" style="border-color:var(--primary);
-color:var(--primary)">🟦 Active</button>
-            <button class="btn-sm" id="brushPaid" onclick="setFpBrush('paid')">🟧 Paid</button>
-            <button class="btn-sm" id="brushErase" onclick="setFpBrush('erase')">⬛ Erase</button>
-            <div id="brushCostContainer" style="display:flex; visibility:hidden; align-items:center; gap:4px; width:100%; justify-content:center; margin-top:4px;">
-                Cost: <input type="number" id="brushCost" value="1" min="1" max="10" style="width:60px; padding:4px;">
+        <div class="rule-section-title fp-paint-title">Paint Columns</div>
+        <div class="hb-seg hb-seg-blue fp-brush-seg">
+            <div class="seg" id="brushActive" onclick="setFpBrush('active')"><i class="ti ti-square" aria-hidden="true"></i>Active</div>
+            <div class="seg" id="brushPaid" onclick="setFpBrush('paid')"><i class="ti ti-coin" aria-hidden="true"></i>Paid</div>
+            <div class="seg" id="brushErase" onclick="setFpBrush('erase')"><i class="ti ti-eraser" aria-hidden="true"></i>Erase</div>
+        </div>
+        <div class="fp-cost-slot">
+            <div id="brushCostContainer" style="display:none; align-items:center; justify-content:center; gap:8px;">
+                <span style="font-size:.82rem; color:#cbd5e1;">Paid column cost</span>
+                <div class="hb-step"><button type="button" onclick="stepInput('brushCost',-1)">&minus;</button><input type="number" id="brushCost" value="1" min="1" max="10"><span class="hb-coin">🪙</span><button type="button" onclick="stepInput('brushCost',1)">+</button></div>
             </div>
         </div>`;
     } else {

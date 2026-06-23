@@ -159,7 +159,12 @@ const C = {
   acaBands:[{lo:0,hi:133,p0:.021,p1:.021},{lo:133,hi:150,p0:.0314,p1:.0419},{lo:150,hi:200,p0:.0419,p1:.066},{lo:200,hi:250,p0:.066,p1:.0844},{lo:250,hi:300,p0:.0844,p1:.0996},{lo:300,hi:400,p0:.0996,p1:.0996}],
   fpl:{1:15650,2:21150,3:26650,4:32150,5:37650,6:43150,7:48650,8:54150,addl:5500},
   medicaidFplPct:138,
-  indiana:{ rate:.0295, ex:{ personal:1000, dependent:1000, childAddl:1500, age65:1000, blind:1000 }, credit529:{rate:.20,max:1500,maxMfs:750}, rentersMax:3000, homeownerPropMax:2500 },
+  eitc:{ investmentLimit:12200, // 2026 (Rev. Proc. 2025-32); rates are statutory and fixed
+    tiers:[ {max:664,inRate:.0765,outRate:.0765,begin:10860,beginMFJ:18140},
+            {max:4427,inRate:.34,outRate:.1598,begin:23890,beginMFJ:31160},
+            {max:7316,inRate:.40,outRate:.2106,begin:23890,beginMFJ:31160},
+            {max:8231,inRate:.45,outRate:.2106,begin:23890,beginMFJ:31160} ] },
+  indiana:{ rate:.0295, eitcRate:.10, ex:{ personal:1000, dependent:1000, childAddl:1500, age65:1000, blind:1000 }, credit529:{rate:.20,max:1500,maxMfs:750}, rentersMax:3000, homeownerPropMax:2500 },
   ageCurve:(function(){const t={};for(let a=0;a<=14;a++)t[a]=0.765;
     const m={15:.833,16:.859,17:.885,18:.913,19:.941,20:.970,21:1.000,22:1.000,23:1.000,24:1.000,25:1.004,26:1.024,27:1.048,28:1.087,29:1.119,30:1.135,31:1.159,32:1.183,33:1.198,34:1.214,35:1.222,36:1.230,37:1.238,38:1.246,39:1.262,40:1.278,41:1.302,42:1.325,43:1.357,44:1.397,45:1.444,46:1.500,47:1.563,48:1.635,49:1.706,50:1.786,51:1.865,52:1.952,53:2.040,54:2.135,55:2.230,56:2.333,57:2.437,58:2.548,59:2.603,60:2.714,61:2.810,62:2.873,63:2.952};
     Object.assign(t,m);for(let a=64;a<=120;a++)t[a]=3.000;return t;})(),
@@ -173,7 +178,7 @@ const COUNTIES = [{"name":"Adams","rate":0.016},{"name":"Allen","rate":0.0159},{
 const S = defaults();
 function defaults(){
   return {
-    filingStatus:"single", yourAge:40, spouseAge:40, youBlind:false, spouseBlind:false,
+    filingStatus:"single", yourAge:29, spouseAge:29, youBlind:false, spouseBlind:false,
     dependents:[], county:"Marion",
     wages:0, wagesSpouse:0, interest:0, ordDiv:0, qualDiv:0, stcg:0, ltcg:0, rental:0, otherOrdinary:0,
     tips:0, overtime:0, ssBenefits:0, railroad:0, military:0, seNetProfit:0, seNetProfitSpouse:0,
@@ -185,7 +190,7 @@ function defaults(){
     eduStudentsAOTC:0, eduExpensesAOTC:0, aotcEligible:true, eduExpensesLLC:0, depCareExpenses:0,
     hasMCC:false, mccRate:0,
     healthInsuranceSource:"employer", annualHealthPremium:0,
-    acaBenchmarkOverride:0, advancePtc:0,
+    acaBenchmarkOverride:0, acaBenchmarkTouched:false, advancePtc:0,
     in529:0, inRentPaid:0, inRented:false,
     fedWithholding:0, fedEstimated:0, inWithholding:0,
     showLessIncome:false, showLessCredits:false,
@@ -259,8 +264,15 @@ function compute(s){
   const status=s.filingStatus, married=isMarried(s);
   const wYouRaw=Math.max(0,n(s.wages)), wSpRaw=married?Math.max(0,n(s.wagesSpouse)):0;
   const wages=wYouRaw+wSpRaw;
-  const ltcgQ=Math.max(0,n(s.ltcg))+Math.max(0,n(s.qualDiv));
-  const ordinaryInvest=n(s.interest)+n(s.ordDiv)+Math.max(0,n(s.stcg))+n(s.rental)+n(s.otherOrdinary);
+  // capital gains: net short- and long-term; up to $3,000 of net loss offsets ordinary income
+  const capNet=netCapital(n(s.stcg),n(s.ltcg));
+  // qualified dividends are a subset of ordinary dividends; total dividends = larger of the two
+  const totalDiv=Math.max(n(s.ordDiv),Math.max(0,n(s.qualDiv)));
+  const qualDiv=Math.min(Math.max(0,n(s.qualDiv)),totalDiv);
+  const nonQualDiv=totalDiv-qualDiv;
+  const ltcgQ=capNet.pref+qualDiv; // income taxed at preferential LTCG/qual-div rates
+  const ordinaryInvest=n(s.interest)+nonQualDiv+capNet.ord+n(s.rental)+n(s.otherOrdinary)-capNet.loss;
+  const netInvestIncome=Math.max(0,n(s.interest)+totalDiv+n(s.rental)+capNet.pref+capNet.ord);
   const seNet=Math.max(0,n(s.seNetProfit))+(married?Math.max(0,n(s.seNetProfitSpouse)):0);
 
   // SE tax
@@ -334,7 +346,6 @@ function compute(s){
   const wYou=Math.max(0,wYouRaw-hsaPayroll);
   const medWages=wYou+wSpRaw;
   const addlMedicare=Math.max(0,(medWages+Math.max(0,seNet*0.9235))-C.fica.addlMedThresh[status])*C.fica.addlMed;
-  const netInvestIncome=Math.max(0,n(s.interest)+n(s.ordDiv)+ltcgQ+Math.max(0,n(s.stcg))+n(s.rental));
   const niit=Math.max(0,Math.min(netInvestIncome,agi-C.niit.thresh[status]))*C.niit.rate;
 
   const fedTaxBeforeCredits=regularTax+amt+addlMedicare+niit;
@@ -370,27 +381,47 @@ function compute(s){
   const taxAfterOther=fedTaxBeforeCredits-otherNonRef;
   const ctcNonRef=Math.min(ctc,taxAfterOther);
   const ctcRemaining=ctc-ctcNonRef;
-  const earnedIncome=wages+Math.max(0,seNet*0.9235);
+  const earnedIncome=wages+n(s.tips)+n(s.overtime)+Math.max(0,seNet*0.9235);
   const actc=Math.min(ctcRemaining, C.ctc.refundableMax*kidsUnder17, Math.max(0,(earnedIncome-C.ctc.actcFloor))*C.ctc.actcRate);
-  const refundableExtras=aotc*C.aotc.refundPct+actc;
+  const eitc=eitcFederal(s,earnedIncome,agi,netInvestIncome);
+  const refundableExtras=aotc*C.aotc.refundPct+actc+eitc;
   const fedIncomeTax=Math.max(0,fedTaxBeforeCredits-otherNonRef-ctcNonRef);
 
   const ssTax=Math.min(wYou,C.fica.ssWageBase)*C.fica.ssEmp+Math.min(wSpRaw,C.fica.ssWageBase)*C.fica.ssEmp;
   const medTax=medWages*C.fica.medEmp;
 
   const indiana=computeIndiana(s,agi);
+  const inEITC=eitc*C.indiana.eitcRate; // Indiana EIC = 10% of federal, refundable
 
-  const totalTax=fedIncomeTax+indiana.stateTax+indiana.countyTax+seTax+ssTax+medTax-aca.netPtc-refundableExtras;
+  const totalTax=fedIncomeTax+indiana.stateTax+indiana.countyTax+seTax+ssTax+medTax-aca.netPtc-refundableExtras-inEITC;
   const payments=n(s.fedWithholding)+n(s.fedEstimated)+n(s.inWithholding);
   const balance=payments-totalTax;
   const marginalOrd=marginalOrdRate(ordTaxable,status);
 
   return { status,married,totalIncome,agi,deduction,useItemized,std,itemizedTotal,saltDed,saltCap:saltCapV,seniorBonus,nonItemizerCharity,
     qbiDeduction,taxableIncome,ordTaxable,ordinaryTax,ltcgTax,regularTax,amt,addlMedicare,niit,fedTaxBeforeCredits,
-    ctc,ctcGross,ctcPhase,actc,aotc,llc,depCare,saver,mcc,fedIncomeTax,seTax,ssTax,medTax,taxableSS,indiana,aca,
+    ctc,ctcGross,ctcPhase,actc,eitc,inEITC,aotc,llc,depCare,saver,mcc,fedIncomeTax,seTax,ssTax,medTax,taxableSS,indiana,aca,
     totalTax,payments,balance,refundableExtras,marginalOrd,hsaPayroll };
 }
 
+function netCapital(st,lt){
+  if(st>=0&&lt>=0)return {pref:lt,ord:st,loss:0};
+  const combined=st+lt;
+  if(combined<=0)return {pref:0,ord:0,loss:Math.min(3000,-combined)};
+  if(lt<0)return {pref:0,ord:combined,loss:0}; // net short-term gain → ordinary
+  return {pref:combined,ord:0,loss:0};          // net long-term gain → preferential
+}
+function eitcFederal(s,earnedIncome,agi,investmentIncome){
+  if(s.filingStatus==="mfs")return 0;
+  if(investmentIncome>C.eitc.investmentLimit)return 0;
+  const kids=Math.min(3,s.dependents.filter(d=>n(d.age)<19).length);
+  if(kids===0){ const a=n(s.yourAge); if(a<25||a>64)return 0; } // childless EITC: age 25–64
+  const t=C.eitc.tiers[kids], married=isMarried(s), begin=married?t.beginMFJ:t.begin;
+  let credit=Math.min(t.max,Math.max(0,earnedIncome)*t.inRate);
+  const phaseBase=Math.max(agi,earnedIncome);
+  if(phaseBase>begin)credit=Math.min(credit,t.max-(phaseBase-begin)*t.outRate);
+  return Math.max(0,credit);
+}
 function qbiDeductionCalc(s,afterDed,ltcgQ,seNet){
   if(seNet<=0)return 0;
   const status=s.filingStatus, ti=afterDed; // taxable income before the QBI deduction
@@ -523,9 +554,10 @@ function recommendations(s,r){
 function tipIcon(t){ return t?`<span class="info" tabindex="0" data-tip="${t.replace(/"/g,'&quot;')}">i</span>`:""; }
 function field(label,key,opts={}){
   const cap=opts.cap; const capNote=cap?`<span class="capTag">max ${usd(cap)}</span>`:"";
+  const val=opts.value!==undefined?opts.value:S[key];
   return `<div class="row" ${opts.rowId?`id="${opts.rowId}"`:""}>
     <label class="lbl" for="f_${key}">${label}${opts.est?'<span class="estTag">auto-estimated</span>':''}${tipIcon(opts.tip)}${capNote}</label>
-    <input type="number" id="f_${key}" data-key="${key}" value="${S[key]}" step="${opts.step||100}" min="${opts.min??0}" ${cap?`max="${cap}" data-cap="${key}"`:""}/>
+    <input type="number" id="f_${key}" data-key="${key}" value="${val}" step="${opts.step||100}" min="${opts.min??0}" ${cap?`max="${cap}" data-cap="${key}"`:""}/>
     ${opts.hint?`<div class="hint">${opts.hint}</div>`:""}</div>`;
 }
 function pairField(label,keyYou,keySpouse,opts={}){
@@ -542,6 +574,7 @@ function pairField(label,keyYou,keySpouse,opts={}){
 function check(label,key,tip){ return `<label class="check"><input type="checkbox" data-key="${key}" ${S[key]?'checked':''}/> ${label}${tipIcon(tip)}</label>`; }
 
 function renderForm(){
+  const prevOpen=[...document.querySelectorAll('#form details.sec')].map(d=>d.open);
   const married=isMarried(S);
   const countyOpts=COUNTIES.map(c=>`<option ${c.name===S.county?'selected':''}>${c.name}</option>`).join("");
   const depRows=S.dependents.map((d,i)=>`<div class="depRow"><span>Dependent ${i+1}</span><input type="number" data-dep="${i}" value="${d.age}" min="0" step="1" style="width:90px" title="age at year end"/> <button data-deldep="${i}">Remove</button></div>`).join("");
@@ -613,7 +646,7 @@ function renderForm(){
     <div id="premiumRow" class="${S.healthInsuranceSource==="none"||S.healthInsuranceSource==="medicaid"?'hidden':''}">${field("Annual health insurance premium you pay","annualHealthPremium")}</div>
     <div id="marketplaceBlock" class="${S.healthInsuranceSource==="marketplace"?'':'hidden'}">
       <div class="miniNote">Household size is filled automatically from your filing status and dependents: <strong id="autoHouseholdSize"></strong>.</div>
-      ${field("Benchmark Silver annual premium (override)","acaBenchmarkOverride",{est:true,tip:"The 2nd-lowest-cost Silver plan in your area — the basis for the subsidy. We estimate it from ages; enter your exact figure from HealthCare.gov to override.",hint:"Auto-estimated from ages. Enter your exact benchmark to override."})}
+      ${field("Benchmark Silver annual premium","acaBenchmarkOverride",{est:true,value:S.acaBenchmarkTouched?S.acaBenchmarkOverride:estimateBenchmarkAnnual(S),tip:"The 2nd-lowest-cost Silver plan in your area — the basis for the subsidy. We pre-fill an estimate from ages; type your exact figure from HealthCare.gov to override it.",hint:"Pre-filled from ages. Type your exact benchmark to override."})}
       ${field("Advance premium tax credit already received (annual)","advancePtc",{tip:"If you took the subsidy in advance to lower monthly premiums, enter the yearly total. We reconcile it against what you actually qualify for."})}
     </div>
   </div></details>
@@ -658,6 +691,7 @@ function renderForm(){
     ${field("Federal estimated payments","fedEstimated")}
     ${field("Indiana withholding + estimates","inWithholding")}
   </div></details>`;
+  if(prevOpen.length) document.querySelectorAll('#form details.sec').forEach((d,i)=>{ if(prevOpen[i]!==undefined) d.open=prevOpen[i]; });
   wireForm();
 }
 
@@ -706,7 +740,9 @@ function renderResults(){
         <tr class="sub"><td>Employee Social Security + Medicare</td><td class="amt">${usd(r.ssTax+r.medTax)}</td></tr>
         <tr class="sub"><td>Indiana state tax (2.95%)</td><td class="amt">${usd(r.indiana.stateTax)}</td></tr>
         <tr class="sub"><td>Indiana county tax (${pct(r.indiana.countyRate)})</td><td class="amt">${usd(r.indiana.countyTax)}</td></tr>
-        ${r.refundableExtras>0?`<tr class="sub"><td>Refundable credits (ACTC + AOTC)</td><td class="amt">−${usd(r.refundableExtras)}</td></tr>`:""}
+        ${r.eitc>0?`<tr class="sub"><td>Earned Income Tax Credit (refundable)</td><td class="amt">−${usd(r.eitc)}</td></tr>`:""}
+        ${(r.actc+r.aotc*C.aotc.refundPct)>0?`<tr class="sub"><td>Refundable CTC + AOTC</td><td class="amt">−${usd(r.actc+r.aotc*C.aotc.refundPct)}</td></tr>`:""}
+        ${r.inEITC>0?`<tr class="sub"><td>Indiana EIC (10% of federal)</td><td class="amt">−${usd(r.inEITC)}</td></tr>`:""}
         ${S.healthInsuranceSource==="marketplace"?`<tr class="sub"><td>ACA Premium Tax Credit</td><td class="amt">−${usd(r.aca.netPtc)}</td></tr>`:""}
         <tr class="tot"><td>Total tax</td><td class="amt">${usd(r.totalTax)}</td></tr>
       </table>
@@ -843,7 +879,10 @@ function wireForm(){
       if(el.type==="checkbox")S[key]=el.checked;
       else if(el.type==="number")S[key]=n(el.value);
       else S[key]=el.value;
-      if(["filingStatus","seNetProfit","seNetProfitSpouse","eduStudentsAOTC","yourAge","spouseAge","hsaFamily"].includes(key)){ renderForm(); }
+      if(key==="acaBenchmarkOverride")S.acaBenchmarkTouched=true;
+      // Only rebuild the whole form for changes that add/remove fields (filing status,
+      // family-HSA toggle). Everything else updates live so the input keeps focus.
+      if(["filingStatus","hsaFamily"].includes(key)){ renderForm(); }
       refresh();
     };
     el.addEventListener(el.tagName==="SELECT"||el.type==="checkbox"?"change":"input",handler);
@@ -854,7 +893,11 @@ function wireForm(){
   const i=document.getElementById("toggleLessIncome"); if(i)i.addEventListener("click",()=>{ S.showLessIncome=!S.showLessIncome; renderForm(); refresh(); });
   const c=document.getElementById("toggleLessCredits"); if(c)c.addEventListener("click",()=>{ S.showLessCredits=!S.showLessCredits; renderForm(); refresh(); });
 }
-function refresh(){ applyCaps(); applyVisibility(); updateSubtotals(); renderResults(); }
+function updateAutoFields(){
+  const el=document.getElementById("f_acaBenchmarkOverride");
+  if(el && !S.acaBenchmarkTouched) el.value=estimateBenchmarkAnnual(S); // keep estimate live until user overrides
+}
+function refresh(){ applyCaps(); applyVisibility(); updateAutoFields(); updateSubtotals(); renderResults(); }
 
 document.getElementById("presets").addEventListener("click",e=>{
   const p=e.target.dataset.preset; if(!p)return; Object.assign(S,defaults());

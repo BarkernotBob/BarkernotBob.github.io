@@ -65,6 +65,11 @@
       table.water td.amt { text-align:right; }
       table.water tr.tot td { font-weight:700; border-bottom:none; border-top:2px solid var(--ink); padding-top:8px; }
       table.water tr.sub td { color:var(--muted); }
+      .sbgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
+      @media (max-width:520px){ .sbgrid { grid-template-columns:1fr; } }
+      .sbf { display:flex; flex-direction:column; gap:3px; font-size:12.5px; color:var(--muted); }
+      .sbf input { padding:7px 8px; border:1px solid var(--line); border-radius:7px; background:var(--bg); color:var(--ink); font-size:14px; width:100%; box-sizing:border-box; }
+      .sbhint { font-size:11.5px; color:var(--muted); }
       .cliff { padding:8px 10px; border-radius:8px; margin-bottom:8px; font-size:13px; border:1px solid var(--line); }
       .cliff.faraway { opacity:.5; }
       .cliffhead { display:flex; justify-content:space-between; gap:8px; margin-bottom:6px; }
@@ -183,6 +188,8 @@ const C = {
   seniorBonus:{ perPerson:6000, phase:{ single:{s:75000,e:175000}, hoh:{s:75000,e:175000}, qss:{s:75000,e:175000}, mfj:{s:150000,e:250000}, mfs:{s:-1,e:-1} } },
   ctc:{ perChild:2200, refundableMax:1700, actcFloor:2500, actcRate:.15, odc:500, phaseBegin:{single:200000,mfs:200000,hoh:200000,mfj:400000,qss:400000}, per1k:50 },
   retire:{ k401:{base:24500,catch50:8000,catch60:11250}, ira:{base:7500,catch50:1100}, sepMax:70000, simpleBase:16500, simpleCatch50:3500 },
+  business:{ mileageRate:0.70, homeOfficeRate:5, homeOfficeMaxSqft:300, sepProfitPct:0.25 },
+  dcfsa:{ max:5000, maxMfs:2500 },
   hsa:{ selfOnly:4400, family:8750, catch55:1000 },
   fica:{ ssWageBase:184500, ssEmp:.062, medEmp:.0145, ssSE:.124, medSE:.029, addlMed:.009, addlMedThresh:{single:200000,hoh:200000,mfj:250000,qss:250000,mfs:125000} },
   niit:{ rate:.038, thresh:{single:200000,hoh:200000,mfj:250000,qss:250000,mfs:125000} },
@@ -234,7 +241,8 @@ function defaults(){
     sep:0, soloK:0, simple:0, seHealth:0, studentLoanInterest:0, educatorExpenses:0,
     mortgageInterest:0, mortgageBalance:0, pmiPaid:0,
     saltIncome:0, saltProperty:0, charitableCash:0, charitableNonCash:0, medicalExpenses:0,
-    eduStudentsAOTC:0, eduExpensesAOTC:0, aotcEligible:true, eduExpensesLLC:0, depCareExpenses:0,
+    eduStudentsAOTC:0, eduExpensesAOTC:0, aotcEligible:true, eduExpensesLLC:0, depCareExpenses:0, depCareFsa:0,
+    sbOn:false, sbRevenue:0, sbExpenses:0, sbHomeSqft:0, sbMiles:0, sbEquipment:0, sbHealth:0, sbRetire:0,
     hasMCC:false, mccRate:0,
     healthInsuranceSource:"employer", annualHealthPremium:0, premiumPreTax:true,
     acaBenchmarkOverride:0, acaBenchmarkTouched:false, advancePtc:0,
@@ -332,7 +340,10 @@ function compute(s){
   // Wages are entered GROSS (pre-everything). Pre-tax employer health premiums are excluded
   // from both taxable wages and FICA wages; 401(k)/HSA are handled via the above-the-line bucket.
   const employerHealthPreTax=(s.healthInsuranceSource==="employer"&&s.premiumPreTax)?Math.max(0,n(s.annualHealthPremium)):0;
-  const aboveLineNoSe=aboveLineExcludingSeHalf(s)+employerHealthPreTax;
+  // Dependent-care FSA: pre-tax for income + FICA, capped, and it reduces the dependent-care credit base.
+  const dcfsaCap=s.filingStatus==="mfs"?C.dcfsa.maxMfs:C.dcfsa.max;
+  const depCareFsa=Math.min(dcfsaCap, Math.max(0,n(s.depCareFsa)), Math.max(0,n(s.depCareExpenses)));
+  const aboveLineNoSe=aboveLineExcludingSeHalf(s)+employerHealthPreTax+depCareFsa;
   const provisionalOther=wages+ordinaryInvest+ltcgQ+n(s.tips)+n(s.overtime)+n(s.military)+seNet-seTaxDeduction-aboveLineNoSe;
   const ss=Math.max(0,n(s.ssBenefits)); let taxableSS=0;
   if(ss>0){ const b1=married?32000:25000, b2=married?44000:34000; const prov=provisionalOther+ss*0.5;
@@ -357,6 +368,7 @@ function compute(s){
   addAdj('Student-loan interest', Math.min(C.studentLoan.max,Math.max(0,n(s.studentLoanInterest)))*studentLoanFactor(s));
   addAdj('Educator expenses', Math.max(0,n(s.educatorExpenses)));
   addAdj('Pre-tax employer health', employerHealthPreTax);
+  addAdj('Dependent-care FSA', depCareFsa);
   addAdj('½ self-employment tax', seTaxDeduction);
 
   // Standard vs itemized
@@ -410,7 +422,7 @@ function compute(s){
 
   // Additional Medicare + NIIT
   const hsaPayroll=s.hsaThroughPayroll?Math.min(limitHSA(s),Math.max(0,n(s.hsaContribution))):0;
-  const wYou=Math.max(0,wYouRaw-hsaPayroll-employerHealthPreTax); // FICA-exempt pre-tax items
+  const wYou=Math.max(0,wYouRaw-hsaPayroll-employerHealthPreTax-depCareFsa); // FICA-exempt pre-tax items
   const medWages=wYou+wSpRaw;
   const addlMedicare=Math.max(0,(medWages+Math.max(0,seNet*0.9235))-C.fica.addlMedThresh[status])*C.fica.addlMed;
   const niit=Math.max(0,Math.min(netInvestIncome,agi-C.niit.thresh[status]))*C.niit.rate;
@@ -433,9 +445,9 @@ function compute(s){
 
   const careKids=s.dependents.filter(d=>n(d.age)<13).length;
   let depCare=0;
-  if(careKids>0&&n(s.depCareExpenses)>0){ const cap=careKids>=2?C.depCare.capMulti:C.depCare.capOne;
+  if(careKids>0&&n(s.depCareExpenses)>0){ const cap=Math.max(0,(careKids>=2?C.depCare.capMulti:C.depCare.capOne)-depCareFsa); // FSA reduces the credit cap dollar-for-dollar
     const earned=married?Math.min(wYouRaw+Math.max(0,n(s.seNetProfit)),wSpRaw+Math.max(0,n(s.seNetProfitSpouse))):(wYouRaw+Math.max(0,n(s.seNetProfit)));
-    const qexp=Math.min(n(s.depCareExpenses),cap,Math.max(0,earned)); depCare=qexp*depCareRate(agi,married); }
+    const qexp=Math.min(Math.max(0,n(s.depCareExpenses)-depCareFsa),cap,Math.max(0,earned)); depCare=qexp*depCareRate(agi,married); }
 
   const saver=saverCredit(s,agi);
   let mcc=0; if(s.hasMCC&&n(s.mccRate)>0){ mcc=n(s.mortgageInterest)*(n(s.mccRate)/100); if(n(s.mccRate)>20)mcc=Math.min(mcc,2000); }
@@ -742,6 +754,7 @@ function renderForm(){
     </div>
     ${field("Other education expenses (grad/part-time → LLC)","eduExpensesLLC",{tip:"Graduate school, part-time, or job-skill courses — eligible for the Lifetime Learning Credit (20%, up to $2,000)."})}
     ${field("Child & dependent care expenses paid","depCareExpenses",{tip:"For dependents under 13 while you (and spouse) work. Credit rate is 20%–50% depending on income (2026 OBBBA rules).",hint:"For dependents under age 13."})}
+    ${field("Dependent-care FSA contribution","depCareFsa",{tip:"Pre-tax money set aside through an employer for child/dependent care, up to $5,000 ($2,500 if filing separately). It's excluded from income AND Social Security/Medicare tax, but reduces the dependent-care credit dollar-for-dollar.",hint:"Pre-tax, max $5,000. Reduces the care credit cap."})}
     <button class="moreToggle" id="toggleLessCredits">${S.showLessCredits?'– Hide less common credits':'+ Show less common credits'}</button>
     <div id="lessCredits" class="${S.showLessCredits?'':'hidden'}">
       <div class="miniNote">Note: the federal EV/clean-vehicle credit and the residential clean-energy credit were ended after 2025 by OBBBA, so they are not included for 2026.</div>
@@ -774,13 +787,16 @@ function planLevers(s){
   const youWages=n(s.wages)>0, spWages=m&&n(s.wagesSpouse)>0;
   const youEarned=youWages||n(s.seNetProfit)>0, spEarned=m&&(spWages||n(s.seNetProfitSpouse)>0);
   const householdEarned=youEarned||spEarned;
-  const add=(key,label,cap)=>{ const cur=Math.max(0,n(s[key])); if(cap>0) L.push({key,label,cap,cur,room:Math.max(0,cap-cur)}); };
+  const careKids=s.dependents.filter(d=>n(d.age)<13).length;
+  const add=(key,label,cap,lowersIncome=true)=>{ const cur=Math.max(0,n(s[key])); if(cap>0) L.push({key,label,cap,cur,room:Math.max(0,cap-cur),lowersIncome}); };
   add('hsaContribution','HSA'+(s.hsaThroughPayroll?' (payroll)':''),limitHSA(s));
   if(youWages) add('trad401k', m?'401(k) — you':'401(k)', limit401k(s.yourAge)); // 401(k) needs W-2 wages
   if(spWages) add('trad401kSpouse','401(k) — spouse', limit401k(s.spouseAge));
   if(m?householdEarned:youEarned) add('tradIRA', m?'Traditional IRA — you':'Traditional IRA', limitIRA(s.yourAge)); // spousal IRA OK if couple has earned income
   if(m && householdEarned) add('tradIRASpouse','Traditional IRA — spouse', limitIRA(s.spouseAge));
+  if(careKids>0 && householdEarned) add('depCareFsa','Dependent-care FSA', s.filingStatus==="mfs"?C.dcfsa.maxMfs:C.dcfsa.max);
   if(n(s.seNetProfit)>0){ add('sep','SEP-IRA', C.retire.sepMax); add('soloK','Solo 401(k) deferral', limit401k(s.yourAge)); }
+  add('in529','Indiana 529 (20% credit)', Math.round(C.indiana.credit529.max/C.indiana.credit529.rate), false); // a state credit, not an income reduction
   return L;
 }
 function totalTaxWith(s,key,val){ return compute(Object.assign({},s,{[key]:val})).totalTax; }
@@ -918,7 +934,7 @@ function headroomHtml(h){
 function combinedMarginal(s){ const b=compute(s).totalTax; const a=compute(Object.assign({},s,{otherOrdinary:n(s.otherOrdinary)+1000})).totalTax; return (a-b)/1000; }
 function opportunities(s,r){
   const status=s.filingStatus, agi=r.agi, magi=agi, married=isMarried(s);
-  const room=planLevers(s).reduce((t,l)=>t+l.room,0);
+  const room=planLevers(s).filter(l=>l.lowersIncome).reduce((t,l)=>t+l.room,0);
   const size=householdSize(s), fpl=fplFor(size);
   const out=[];
   const add=(name,income,limit,value,how)=>{ if(limit<0||income<=limit) return; const gap=income-limit; out.push({name,gap,reachable:gap<=room&&room>0,limit,income,value,how}); };
@@ -945,6 +961,86 @@ function opportunitiesHtml(o){
   if(far.length) html+=`<div class="sub2" style="margin:12px 0 4px"><b>Bigger income change needed</b> — beyond your pre-tax room, but reachable if you can lower income another way (defer a bonus, realize fewer gains, etc.):</div>`+far.map(row).join('');
   return html;
 }
+/* ---- Side-business what-if ---- */
+function sideBusiness(s){
+  const rev=Math.max(0,n(s.sbRevenue)), exp=Math.max(0,n(s.sbExpenses));
+  const home=Math.min(Math.max(0,n(s.sbHomeSqft)),C.business.homeOfficeMaxSqft)*C.business.homeOfficeRate;
+  const miles=Math.round(Math.max(0,n(s.sbMiles))*C.business.mileageRate);
+  const equip=Math.max(0,n(s.sbEquipment)), health=Math.max(0,n(s.sbHealth));
+  const totalDeductions=exp+home+miles+equip;
+  const netProfit=Math.max(0,rev-totalDeductions);
+  const halfSe=netProfit>0?(netProfit*0.9235*0.153)/2:0;
+  const remainingDeferral=Math.max(0,limit401k(s.yourAge)-Math.max(0,n(s.trad401k))-Math.max(0,n(s.soloK)));
+  const employerShare=Math.max(0,Math.round((netProfit-halfSe)*C.business.sepProfitPct));
+  const soloRoom=Math.max(0,Math.min(C.retire.sepMax, remainingDeferral+employerShare));
+  const retire=Math.min(Math.max(0,n(s.sbRetire)), soloRoom);
+  const base=compute(s);
+  const s2=Object.assign({},s,{ seNetProfit:Math.max(0,n(s.seNetProfit))+netProfit, seHealth:Math.max(0,n(s.seHealth))+health, sep:Math.max(0,n(s.sep))+retire });
+  const withBiz=compute(s2);
+  const dTax=withBiz.totalTax-base.totalTax, dSe=withBiz.seTax-base.seTax, dQbi=withBiz.qbiDeduction-base.qbiDeduction;
+  return {rev,exp,home,miles,equip,health,totalDeductions,netProfit,soloRoom,retire,dTax,dSe,dQbi,effRate:netProfit>0?dTax/netProfit:0,takeHome:netProfit-dTax,active:rev>0||totalDeductions>0};
+}
+function sideBusinessHtml(s){
+  const b=sideBusiness(s);
+  const f=(label,key,hint)=>`<div class="sbf"><span>${label}</span><input type="number" inputmode="numeric" data-sb="${key}" value="${n(s[key])||''}" placeholder="0">${hint?`<div class="sbhint">${hint}</div>`:''}</div>`;
+  const inputs=`<div class="sbgrid">
+    ${f('Business revenue / gross income','sbRevenue')}
+    ${f('Supplies, software, phone, etc.','sbExpenses','Costs you pay to run it — phone, internet, subscriptions, supplies.')}
+    ${f('Home-office square feet','sbHomeSqft',`Simplified method: $${C.business.homeOfficeRate}/sq ft up to ${C.business.homeOfficeMaxSqft} sq ft = $${C.business.homeOfficeMaxSqft*C.business.homeOfficeRate} max. A spare room used only for the business counts.`)}
+    ${f('Business miles driven','sbMiles',`Deducted at $${C.business.mileageRate}/mile (the IRS standard rate).`)}
+    ${f('Equipment / computer (Sec. 179)','sbEquipment','Tools, a laptop, a desk — often fully deductible the year you buy them.')}
+    ${f('Self-employed health premiums','sbHealth','If you pay your own health insurance, the premiums are deductible against this income.')}
+    ${f('Solo 401(k) / SEP contribution','sbRetire',`You could shelter up to ${usd(b.soloRoom)} here — far above the ${usd(limit401k(s.yourAge))} employee 401(k) limit.`)}
+  </div>`;
+  if(!b.active) return inputs+`<div class="sub2" style="margin-top:8px">Enter a revenue figure above to see what a side business would do to your taxes — including which everyday costs become deductible and how much retirement space it unlocks.</div>`;
+  const sub=(l,v)=>v>0?`<tr class="sub"><td>${l}</td><td class="amt">−${usd(v)}</td></tr>`:'';
+  return inputs+`<table class="water" style="margin-top:10px">
+    <tr><td>Business revenue</td><td class="amt">${usd(b.rev)}</td></tr>
+    ${sub('Expenses (supplies, phone, etc.)',b.exp)}
+    ${sub('Home office',b.home)}
+    ${sub('Mileage',b.miles)}
+    ${sub('Equipment',b.equip)}
+    <tr><td><strong>Net profit (Schedule C)</strong></td><td class="amt"><strong>${usd(b.netProfit)}</strong></td></tr>
+    <tr class="sub"><td>Self-employment tax added</td><td class="amt">${usd(b.dSe)}</td></tr>
+    <tr class="sub"><td>QBI 20% deduction gained</td><td class="amt">−${usd(b.dQbi)}</td></tr>
+    ${b.retire>0?`<tr class="sub"><td>Solo 401(k)/SEP sheltered</td><td class="amt">−${usd(b.retire)}</td></tr>`:''}
+    <tr class="tot"><td>Net added tax (federal + Indiana)</td><td class="amt">${usd(b.dTax)}</td></tr>
+  </table>
+  <div class="rec" style="margin-top:8px">On ${usd(b.netProfit)} of net profit you'd keep <b>${usd(b.takeHome)}</b> after an effective <b>${pct(b.effRate)}</b> — and you could move up to <b>${usd(b.soloRoom)}</b> into a Solo 401(k)/SEP (vs. the ${usd(limit401k(s.yourAge))} employee limit). Costs you already pay personally — part of your home, phone, internet, car — become deductions once they're for the business. Keep records and a separate account; the business must be real and profit-seeking, not a hobby.</div>`;
+}
+/* ---- Creative moves ---- */
+function creativeMoves(s,r){
+  const t=[]; const status=s.filingStatus, magi=r.agi, h=buildHeadroom(s,r);
+  const rothEnd=C.rothPhase[status]?C.rothPhase[status].e:Infinity;
+  if(magi>rothEnd) t.push(['Backdoor Roth IRA',`Your income (~${usd(magi)}) is above the ${usd(rothEnd)} Roth limit, so you can't contribute to a Roth directly. A "backdoor Roth" — put up to $7,000/person into a <i>non-deductible</i> traditional IRA, then convert it to Roth — legally sidesteps the limit. Cleanest if you don't already hold pre-tax IRA money (the "pro-rata rule" can tax the conversion otherwise).`]);
+  const giving=Math.max(0,n(s.charitableCash))+Math.max(0,n(s.charitableNonCash));
+  if(!r.useItemized && giving>0) t.push(['Bunch your charitable giving',`You're taking the ${usd(r.deduction)} standard deduction, so your ${usd(giving)} of donations adds no extra deduction this year. Combine two or more years of giving into one year — ideally through a <b>donor-advised fund</b> (give once, grant to charities over time) — to clear the standard deduction and itemize that year, then take the standard deduction the next.`]);
+  const gains=Math.max(0,n(s.ltcg))+Math.max(0,n(s.stcg));
+  if(gains>0) t.push(['Tax-loss harvesting',`You're showing ${usd(gains)} of capital gains. Selling other taxable investments that are <i>down</i> ("harvesting losses") offsets those gains dollar-for-dollar, and up to $3,000 of leftover loss offsets ordinary income (the rest carries to future years). Don't rebuy the same security within 30 days — that triggers the "wash-sale" rule and voids the loss.`]);
+  const lev=planLevers(s).filter(l=>l.lowersIncome);
+  const hsa=lev.find(l=>l.key==='hsaContribution');
+  if(hsa && hsa.room>0) t.push(['HSA as a stealth retirement account',`You have ${usd(hsa.room)} of unused HSA room. An HSA is triple-tax-free — deductible going in, grows untaxed, and tax-free for medical costs. Pay current medical bills out of pocket, save the receipts, and let the HSA invest and grow; you can reimburse yourself tax-free years later, making it a backdoor retirement account.`]);
+  if(h.gain0>0) t.push(['Harvest gains in the 0% bracket',`About ${usd(h.gain0)} of long-term gains could be sold at a <b>0%</b> federal rate this year (you'd still owe Indiana). Selling and immediately rebuying resets your cost basis higher for free — there's no wash-sale rule on gains — lowering future taxable gains.`]);
+  return t;
+}
+function creativeMovesHtml(s,r){
+  const t=creativeMoves(s,r);
+  if(!t.length) return '<div class="sub2">No standout creative moves flagged from your current entries. As income, giving, or investments change, ideas will appear here.</div>';
+  return t.map(x=>`<div class="rec" style="margin-bottom:8px"><b>${x[0]}</b><br>${x[1]}</div>`).join('');
+}
+/* ---- Advanced strategies (explainer only) ---- */
+function advancedStrategiesHtml(s){
+  const hasBiz=n(s.seNetProfit)>0||n(s.sbRevenue)>0;
+  const items=[
+    ['S-corporation election',`Once a business nets roughly $50k+, electing to be taxed as an <b>S-corp</b> can cut self-employment tax: you pay yourself a "reasonable salary" (subject to the 15.3% payroll tax) and take the rest as distributions (not subject to it). It adds payroll paperwork and costs, so it's worth modeling with a CPA.`,hasBiz],
+    ['Hire your kids',`If you own a business, paying your child for real work (filing, social media, modeling) shifts income to their much lower bracket — and a child can earn up to the standard deduction (~$15,000) federally tax-free. A sole-proprietor parent also owes no Social Security/Medicare tax on wages to a child under 18. The work and pay must be genuine and documented.`,hasBiz],
+    ['Augusta rule (14-day home rental)',`You can rent your home to your own business for up to <b>14 days a year</b> and the rental income is completely tax-free to you, while the business deducts it. Useful for board meetings or off-sites — needs a real business purpose, a written agreement, and fair-market rent.`,hasBiz],
+    ['Mega-backdoor Roth',`If your 401(k) plan allows <i>after-tax</i> contributions and in-plan Roth conversions, you may be able to funnel tens of thousands more into Roth each year beyond the normal limits. Plan-specific — check whether yours supports it.`,true],
+    ['529 → Roth rollover',`Leftover money in a 529 college account can now be rolled into the beneficiary's Roth IRA (lifetime cap $35,000, subject to conditions). Combined with Indiana's 20% contribution credit, a 529 can double as a backup retirement vehicle.`,true],
+  ];
+  return items.map(x=>`<details style="margin-bottom:6px"${x[2]?'':''}><summary style="cursor:pointer;font-weight:600;padding:4px 0">${x[0]}${x[2]?'':' <span class="sub2" style="font-weight:400">(needs a business)</span>'}</summary><div class="sub2" style="padding:2px 0 8px">${x[1]}</div></details>`).join('')
+    +`<div class="sub2" style="margin-top:6px">These are heavier strategies with paperwork and rules — talk to a CPA before acting. This section is educational, not modeled in the numbers above.</div>`;
+}
 function renderOptimizeTab(r){
   const lb=buildLeaderboard(S);
   const E=buildExplorer(S); EXP=E; const svg=explorerSVG(E);
@@ -964,9 +1060,13 @@ function renderOptimizeTab(r){
     </div>
     <div class="card"><div class="h3">Your optimal plan</div>${planHtml(plan)}</div>
     <div class="card"><div class="h3">Benefits within reach ${tipIcon("Income-tested benefits you're currently above the limit for, and how much you'd need to lower income to qualify. Closest first.")}</div>${opportunitiesHtml(opp)}</div>
+    <div class="card"><div class="h3">What if you started a side business? ${tipIcon("Models a self-employment side gig layered on your current return: which everyday costs become deductible, the self-employment-tax trade-off, the 20% QBI deduction, and the much larger retirement space a Solo 401(k)/SEP unlocks.")}</div>${sideBusinessHtml(S)}</div>
+    <div class="card"><div class="h3">Creative moves to consider ${tipIcon("Strategies flagged from your specific numbers, with rough dollar values.")}</div>${creativeMovesHtml(S,r)}</div>
+    <div class="card"><div class="h3">Advanced strategies (talk to a pro)</div>${advancedStrategiesHtml(S)}</div>
     <div class="card"><div class="h3">Capital-gains &amp; Roth headroom ${tipIcon("How much room you have before key ceilings, based on your current taxable income.")}</div>${headroomHtml(h)}</div>`;
 }
 function wireOptimize(){
+  document.querySelectorAll('#results [data-sb]').forEach(el=>el.addEventListener('input',()=>{ const k=el.dataset.sb; S[k]=el.value===''?0:+el.value; renderResults(); const f=document.querySelector('#results [data-sb="'+k+'"]'); if(f) f.focus(); }));
   document.querySelectorAll('#results [data-lever]').forEach(el=>el.addEventListener('click',()=>{ S.explorerLever=el.dataset.lever; renderResults(); document.getElementById('expSvg')?.scrollIntoView({behavior:'smooth',block:'center'}); }));
   document.querySelectorAll('#results [data-sort]').forEach(el=>el.addEventListener('click',()=>{ S.leaderboardSort=el.dataset.sort; renderResults(); }));
   const lev=document.getElementById('expLever'); if(lev) lev.addEventListener('change',()=>{ S.explorerLever=lev.value; renderResults(); });
@@ -1099,7 +1199,7 @@ function acaCard(r){
 /* =========================================================================
    EXPORT FOR AI REVIEW
    ========================================================================= */
-const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax'];
+const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax','sbOn','sbRevenue','sbExpenses','sbHomeSqft','sbMiles','sbEquipment','sbHealth','sbRetire'];
 function exportInputs(){ const inputs={};
   for(const k of Object.keys(S)){ if(k.startsWith('show')||UI_KEYS.includes(k))continue; const v=S[k]; if(v===0||v===false||(Array.isArray(v)&&v.length===0))continue; inputs[k]=v; }
   return inputs;

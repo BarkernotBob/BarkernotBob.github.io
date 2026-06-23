@@ -21,6 +21,11 @@
       header.top { padding:18px 20px; background:var(--panel); border-bottom:1px solid var(--line); }
       header.top h1 { margin:0 0 2px; font-size:20px; }
       header.top p { margin:0; color:var(--muted); font-size:13px; }
+      header.top p.privacy { margin-top:6px; color:var(--good); font-size:12px; max-width:760px; }
+      .methodology { border:1px solid var(--line); border-radius:8px; padding:8px 12px; background:var(--panel); }
+      .methodology summary { cursor:pointer; font-size:13px; }
+      .methbody { font-size:12.5px; color:var(--muted); margin-top:8px; }
+      .methbody p { margin:6px 0; }
       .wrap { max-width:1180px; margin:0 auto; padding:18px 20px 60px; }
       .grid { display:grid; grid-template-columns:1fr; gap:18px; }
       @media (min-width:960px){ .grid{ grid-template-columns:1.05fr .95fr; } .results{ position:sticky; top:14px; align-self:start; max-height:calc(100vh - 28px); overflow:auto; } }
@@ -65,6 +70,8 @@
       table.water td.amt { text-align:right; }
       table.water tr.tot td { font-weight:700; border-bottom:none; border-top:2px solid var(--ink); padding-top:8px; }
       table.water tr.sub td { color:var(--muted); }
+      .modeToggle { display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+      #form input[type=text] { padding:8px 9px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font-size:14px; }
       .sbgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
       @media (max-width:520px){ .sbgrid { grid-template-columns:1fr; } }
       .sbf { display:flex; flex-direction:column; gap:3px; font-size:12.5px; color:var(--muted); }
@@ -144,8 +151,9 @@
   </head>
   <body>
     <header class="top">
-      <h1>Indiana Tax Modeler — Tax Year 2026</h1>
-      <p>Federal + Indiana estimate. Runs entirely on your computer. Educational only — not tax advice.</p>
+      <h1>US Tax Modeler — Tax Year 2026</h1>
+      <p>Federal + state estimate (Indiana modeled in full). Educational only — not tax advice.</p>
+      <p class="privacy">🔒 100% private — runs entirely in your browser. Nothing is uploaded or sent anywhere; your entries are saved only on this device and you can clear them anytime with “Reset all.”</p>
     </header>
     <div class="wrap">
       <div class="presets" id="presets">
@@ -161,9 +169,15 @@
         <div class="results" id="results"></div>
       </div>
       <footer>
-        <p><strong>Disclaimer:</strong> Educational modeling tool only — not tax advice.
-        2026 parameters based on IRS Rev. Proc. 2025-32, OBBBA provisions, and Indiana DOR guidance.
-        The ACA benchmark premium is a rough age-based estimate; enter your exact figure from HealthCare.gov for accuracy.</p>
+        <details class="methodology"><summary><strong>Methodology, assumptions &amp; what's NOT modeled</strong> — please read before relying on any number</summary>
+          <div class="methbody">
+            <p><strong>Tax year 2026.</strong> Figures last reviewed <strong id="methDate"></strong>, based on <span id="methSrc"></span>. Some 2026 amounts are inflation-projected and may change before filing season.</p>
+            <p><strong>What's modeled:</strong> federal income tax (ordinary + capital-gains brackets), the standard vs. itemized choice, AMT, Net Investment Income Tax, Additional Medicare tax, Social Security/Medicare (FICA), self-employment tax, QBI, the major credits (Child Tax Credit, EITC, education, child/dependent care, Saver's, MCC), Social Security benefit taxation, ACA Premium Tax Credit, and OBBBA 2026 changes. State: <strong>Indiana in full</strong> (state + all 92 counties, exemptions, renter/property deductions, 529 credit, state EIC); other states via an optional flat-rate estimate; no-income-tax states as $0.</p>
+            <p><strong>What's NOT modeled (treat results as an estimate):</strong> states other than Indiana in detail; local/city taxes outside Indiana; part-year or multi-state residency; prior-year carryforwards (capital-loss, NOL, unused credits); the underpayment/estimated-tax penalty (Form 2210); rental depreciation, passive-activity limits, and K-1 pass-through detail; the QBI W-2-wage/property limit is simplified; AMT is approximate; foreign income/FEIE; estate/gift; and any situation needing professional judgment. The ACA benchmark premium is a rough age-based estimate — enter your exact figure from HealthCare.gov.</p>
+            <p><strong>Privacy:</strong> everything runs in your browser. No data is transmitted; entries are stored only in this browser's local storage on your device.</p>
+          </div>
+        </details>
+        <p style="margin-top:10px"><strong>Disclaimer:</strong> This is an educational modeling tool, <strong>not tax, legal, or financial advice</strong>, and not a substitute for a CPA or tax professional. Estimates may differ from your actual return; verify against official sources before filing or making decisions. Provided “as is,” with no warranty of accuracy. Updated <span id="footDate"></span>.</p>
       </footer>
     </div>
     <div id="modalRoot"></div>
@@ -229,11 +243,22 @@ const COUNTIES = [{"name":"Adams","rate":0.016},{"name":"Allen","rate":0.0159},{
 /* =========================================================================
    STATE
    ========================================================================= */
-const S = defaults();
+const APP={ taxYear:2026, updated:"January 2026", sources:"IRS Rev. Proc. 2025-32 · OBBBA (2025) · state DOR guidance" };
+const LS_KEY="taxModeler.2026", SCHEMA=3;
+const NOTAX_STATES=["Alaska","Florida","Nevada","South Dakota","Tennessee","Texas","Wyoming"];
+function loadState(){
+  const d=defaults();
+  try{ const raw=localStorage.getItem(LS_KEY); if(raw){ const saved=JSON.parse(raw);
+    if(saved&&saved._schema===SCHEMA){ for(const k of Object.keys(d)){ if(k in saved) d[k]=saved[k]; } } } }catch(e){}
+  return d;
+}
+function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(Object.assign({_schema:SCHEMA},S))); }catch(e){} }
+const S = loadState();
 function defaults(){
   return {
     filingStatus:"single", yourAge:29, spouseAge:29, youBlind:false, spouseBlind:false,
-    dependents:[], county:"Marion",
+    dependents:[], state:"IN", county:"Marion", stateName:"Texas", stateRateOverride:0,
+    uiMode:"simple",
     wages:0, wagesSpouse:0, interest:0, ordDiv:0, qualDiv:0, stcg:0, ltcg:0, rental:0, otherOrdinary:0,
     tips:0, overtime:0, ssBenefits:0, railroad:0, military:0, seNetProfit:0, seNetProfitSpouse:0,
     trad401k:0, trad401kSpouse:0, tradIRA:0, tradIRASpouse:0, rothIRA:0, rothIRASpouse:0,
@@ -469,8 +494,8 @@ function compute(s){
   const ssTax=Math.min(wYou,C.fica.ssWageBase)*C.fica.ssEmp+Math.min(wSpRaw,C.fica.ssWageBase)*C.fica.ssEmp;
   const medTax=medWages*C.fica.medEmp;
 
-  const indiana=computeIndiana(s,agi);
-  const inEITC=eitc*C.indiana.eitcRate; // Indiana EIC = 10% of federal, refundable
+  const indiana=computeState(s,agi);
+  const inEITC=(s.state==="IN")?eitc*C.indiana.eitcRate:0; // Indiana EIC = 10% of federal, refundable
 
   const totalTax=fedIncomeTax+indiana.stateTax+indiana.countyTax+seTax+ssTax+medTax-aca.netPtc-refundableExtras-inEITC;
   const payments=n(s.fedWithholding)+n(s.fedEstimated)+n(s.inWithholding);
@@ -542,7 +567,16 @@ function computePTC(s,agi,taxableSS){
   const expected=magi*applicable, ptc=Math.max(0,benchmark-expected), netPtc=ptc-n(s.advancePtc);
   return {applicable,fplPct,expected,ptc,benchmark,netPtc,exceedsCliff:false,eligible:true};
 }
-function computeIndiana(s,agi){
+function computeState(s,agi){
+  const zero={exemptions:0,renter:0,homeowner:0,base:0,stateTax:0,countyTax:0,credit529:0,countyRate:0,isEstimate:false};
+  if(s.state==="federal") return Object.assign({},zero,{kind:"federal",label:"No state tax (federal only)",name:""});
+  if(s.state==="notax")   return Object.assign({},zero,{kind:"notax",label:(s.stateName||"Your state")+" — no state income tax",name:s.stateName||""});
+  if(s.state==="other"){
+    const rate=Math.max(0,n(s.stateRateOverride))/100; const stateTax=Math.max(0,agi*rate);
+    return Object.assign({},zero,{kind:"other",base:agi,stateTax,isEstimate:true,countyRate:0,
+      label:(s.stateName||"Your state")+" (estimated at "+(n(s.stateRateOverride)||0)+"% of AGI)",name:s.stateName||""});
+  }
+  // Indiana (full detail)
   const inc=C.indiana;
   let exemptions=inc.ex.personal*(isMarried(s)?2:1);
   exemptions+=inc.ex.dependent*s.dependents.length;
@@ -555,7 +589,8 @@ function computeIndiana(s,agi){
   const stateTax=base*inc.rate;
   const county=COUNTIES.find(c=>c.name===s.county)||{rate:0}; const countyTax=base*county.rate;
   const credit529=Math.min(n(s.in529)*inc.credit529.rate,s.filingStatus==="mfs"?inc.credit529.maxMfs:inc.credit529.max);
-  return {exemptions,renter,homeowner,base,stateTax:Math.max(0,stateTax-credit529),countyTax,credit529,countyRate:county.rate};
+  return {kind:"IN",label:"Indiana (state + county)",name:"Indiana",isEstimate:false,
+    exemptions,renter,homeowner,base,stateTax:Math.max(0,stateTax-credit529),countyTax,credit529,countyRate:county.rate};
 }
 
 /* =========================================================================
@@ -620,7 +655,7 @@ function recommendations(s,r){
   // HSA not maxed
   if(s.hsaFamily || n(s.hsaContribution)>0){ const lim=limitHSA(s); const room=lim-Math.min(lim,n(s.hsaContribution)); if(room>200) recs.push(`<b>HSA room:</b> You can still contribute <b>${usd(room)}</b> to your HSA (limit ${usd(lim)}), saving roughly ${usd(room*(r.marginalOrd+0.0765))} in income + payroll tax if done through payroll.`); }
   // marginal pre-tax tip
-  if(r.marginalOrd>=0.22 && (n(s.trad401k)<limit401k(s.yourAge))){ const room=limit401k(s.yourAge)-n(s.trad401k); recs.push(`<b>Marginal rate ${(r.marginalOrd*100).toFixed(0)}%:</b> You have ${usd(room)} of unused 401(k) space; each $1,000 contributed saves about ${usd(1000*r.marginalOrd)} federal (plus ${pct(C.indiana.rate+r.indiana.countyRate)} Indiana).`); }
+  if(r.marginalOrd>=0.22 && (n(s.trad401k)<limit401k(s.yourAge))){ const room=limit401k(s.yourAge)-n(s.trad401k); const stateNote=s.state==="IN"?` (plus ${pct(C.indiana.rate+r.indiana.countyRate)} Indiana)`:(r.indiana.stateTax>0?` (plus your state tax)`:``); recs.push(`<b>Marginal rate ${(r.marginalOrd*100).toFixed(0)}%:</b> You have ${usd(room)} of unused 401(k) space; each $1,000 contributed saves about ${usd(1000*r.marginalOrd)} federal${stateNote}.`); }
   // saver's credit proximity
   const stiers=C.saver.tiers[status]; for(let i=0;i<stiers.length-1;i++){ if(r.agi>stiers[i].agi && r.agi<stiers[i].agi+3000 && stiers[i+1] && saverCredit(s,r.agi)===0 && (n(s.trad401k)+n(s.tradIRA)+n(s.rothIRA))>0){ recs.push(`<b>Saver's Credit:</b> You're just above a Saver's Credit income tier; reducing AGI by ${usd(Math.ceil((r.agi-stiers[i].agi)/100)*100)} could qualify you for a credit on retirement contributions.`); break; } }
   if(recs.length===0) recs.push(`No major cliffs or optimization flags detected at this income. Maxing tax-advantaged accounts (401(k), IRA, HSA) is usually still worthwhile.`);
@@ -658,12 +693,27 @@ function renderForm(){
   const countyOpts=COUNTIES.map(c=>`<option ${c.name===S.county?'selected':''}>${c.name}</option>`).join("");
   const depRows=S.dependents.map((d,i)=>`<div class="depRow"><span>Dependent ${i+1}</span><input type="number" data-dep="${i}" value="${d.age}" min="0" step="1" style="width:90px" title="age at year end"/> <button data-deldep="${i}">Remove</button></div>`).join("");
 
+  const full=S.uiMode!=="simple";
+  const stateSel=`<div class="row"><label class="lbl">State ${tipIcon("Federal tax is computed for everyone. Indiana is modeled in full (including county tax). For other states you can enter an approximate rate, or pick a no-income-tax state. Your federal numbers are always complete.")}</label>
+      <select data-key="state">
+        <option value="federal" ${S.state==="federal"?'selected':''}>Federal only (skip state tax)</option>
+        <option value="IN" ${S.state==="IN"?'selected':''}>Indiana — full detail</option>
+        <option value="notax" ${S.state==="notax"?'selected':''}>No-income-tax state (FL, TX, …)</option>
+        <option value="other" ${S.state==="other"?'selected':''}>Other state — estimate with a rate</option>
+      </select></div>
+    ${S.state==="IN"?`<div class="row"><label class="lbl">Indiana county ${tipIcon("Indiana charges a county income tax on top of the 2.95% state rate, set by your county of residence on Jan 1.")}</label><select data-key="county">${countyOpts}</select></div>`:''}
+    ${S.state==="notax"?`<div class="row"><label class="lbl">Your state</label><select data-key="stateName">${NOTAX_STATES.map(nm=>`<option ${S.stateName===nm?'selected':''}>${nm}</option>`).join('')}</select></div><div class="miniNote">No state income tax — your state line is $0. (Washington and New Hampshire have narrow exceptions not modeled here.)</div>`:''}
+    ${S.state==="other"?`<div class="row"><label class="lbl">State name</label><input type="text" data-key="stateName" value="${S.stateName||''}" placeholder="e.g. Ohio"/></div>
+      ${field("Your state's approximate tax rate (%)","stateRateOverride",{step:0.1,hint:"Rough flat rate × your AGI. Look up your state's effective rate for a better figure.",tip:"A simple estimate: rate × AGI. Real state taxes have their own brackets, deductions and credits, so treat this as a ballpark."})}
+      <div class="miniNote">⚠️ Rough estimate only — most states have brackets and their own deductions this can't capture.</div>`:''}
+    ${S.state==="federal"?`<div class="miniNote">State &amp; local income tax is not included — your federal results are still complete.</div>`:''}`;
   document.getElementById("form").innerHTML=`
+  <div class="modeToggle"><span style="font-size:12.5px;color:var(--muted)">View:</span><span class="seg"><button data-mode="simple" class="${S.uiMode==='simple'?'on':''}">Simple</button><button data-mode="full" class="${full?'on':''}">Detailed</button></span><span style="font-size:12px;color:var(--muted)">${full?'all deductions &amp; credits':'just the essentials'}</span></div>
   <details class="sec" open><summary>Household &amp; Filing <span class="sub" id="sub-household"></span></summary><div class="secbody">
     <div class="row"><label class="lbl">Filing status</label><select data-key="filingStatus">${Object.entries(C.filingNames).map(([k,v])=>`<option value="${k}" ${S.filingStatus===k?'selected':''}>${v}</option>`).join("")}</select></div>
     ${pairField("Age (at year end)","yourAge","spouseAge",{step:1,tip:"Age affects extra standard deduction (65+), the senior bonus deduction, HSA/401(k)/IRA catch-up limits, and more."})}
     <div class="inline" style="margin-bottom:12px">${check("You are blind","youBlind")} ${married?check("Spouse is blind","spouseBlind"):""}</div>
-    <div class="row"><label class="lbl">Indiana county ${tipIcon("Indiana charges a county income tax on top of the 2.95% state rate. Rate is set by your county of residence on Jan 1.")}</label><select data-key="county">${countyOpts}</select></div>
+    ${stateSel}
     <div class="row"><label class="lbl">Dependents ${tipIcon("Add each dependent's age. Under 17 = Child Tax Credit ($2,200); 17+ = Other Dependent Credit ($500); under 13 = eligible for child-care credit.")}</label>${depRows||'<div class="hint">None added.</div>'}<button class="moreToggle" id="addDep">+ Add dependent</button></div>
   </div></details>
 
@@ -705,7 +755,7 @@ function renderForm(){
     </div>
   </div></details>
 
-  <details class="sec" id="sec-qbi"><summary>Qualified Business Income (QBI) <span class="sub" id="sub-qbi"></span></summary><div class="secbody">
+  <details class="sec adv" id="sec-qbi"><summary>Qualified Business Income (QBI) <span class="sub" id="sub-qbi"></span></summary><div class="secbody">
     <div class="miniNote">Your self-employment profit is treated as QBI (a 20% deduction). The wage/property limits below only matter once taxable income passes ${usd(C.qbi.startT[S.filingStatus])}.</div>
     <div id="qbiAdvanced" class="hidden">
       ${field("QBI business W-2 wages paid","qbiW2Wages",{tip:"Above the income threshold, the QBI deduction is limited to the greater of 50% of W-2 wages, or 25% of wages + 2.5% of property (UBIA)."})}
@@ -714,7 +764,7 @@ function renderForm(){
     </div>
   </div></details>
 
-  <details class="sec"><summary>Health insurance &amp; ACA Marketplace <span class="sub" id="sub-health"></span></summary><div class="secbody">
+  <details class="sec advHealth"><summary>Health insurance &amp; ACA Marketplace <span class="sub" id="sub-health"></span></summary><div class="secbody">
     <div class="row"><label class="lbl">Health insurance source ${tipIcon("Marketplace coverage may qualify for a Premium Tax Credit (subsidy). Employer pre-tax premiums lower taxable wages instead.")}</label>
       <select data-key="healthInsuranceSource">
         <option value="employer" ${S.healthInsuranceSource==="employer"?'selected':''}>Employer (pre-tax payroll)</option>
@@ -731,7 +781,7 @@ function renderForm(){
     </div>
   </div></details>
 
-  <details class="sec"><summary>Itemized deductions &amp; mortgage <span class="sub" id="sub-ded"></span></summary><div class="secbody">
+  <details class="sec adv"><summary>Itemized deductions &amp; mortgage <span class="sub" id="sub-ded"></span></summary><div class="secbody">
     <div class="miniNote">We automatically use whichever is larger: your itemized total or the standard deduction.</div>
     ${field("Mortgage interest paid","mortgageInterest")}
     ${field("Current mortgage balance","mortgageBalance",{rowId:"row-mortbal",tip:"Interest is generally deductible on up to $750,000 of mortgage debt."})}
@@ -745,7 +795,7 @@ function renderForm(){
     <div id="mccRow" class="${S.hasMCC?'':'hidden'}">${field("MCC certificate rate (%)","mccRate",{step:1,hint:"From your MCC document.",tip:"The percentage on your MCC. If above 20%, the credit is capped at $2,000/yr."})}</div>
   </div></details>
 
-  <details class="sec"><summary>Tax credits <span class="sub" id="sub-cred"></span></summary><div class="secbody">
+  <details class="sec adv"><summary>Tax credits <span class="sub" id="sub-cred"></span></summary><div class="secbody">
     <div class="miniNote">Education: tell us about students, and we automatically pick the American Opportunity Credit (AOTC) or Lifetime Learning Credit (LLC).</div>
     ${field("# college students (AOTC track)","eduStudentsAOTC",{step:1,tip:"Count students in their first 4 years of college, enrolled at least half-time. These get the more generous AOTC (up to $2,500, 40% refundable)."})}
     <div id="aotcBlock" class="${S.eduStudentsAOTC>0?'':'hidden'}">
@@ -761,7 +811,7 @@ function renderForm(){
     </div>
   </div></details>
 
-  <details class="sec"><summary>Indiana-specific <span class="sub" id="sub-in"></span></summary><div class="secbody">
+  <details class="sec secIN"><summary>Indiana-specific <span class="sub" id="sub-in"></span></summary><div class="secbody">
     ${field("Indiana CollegeChoice 529 contribution","in529",{tip:"Indiana gives a 20% state tax credit on 529 contributions, up to $1,500 ($750 if filing separately).",hint:"20% Indiana credit, up to $1,500."})}
     <div class="inline">${check("I rent my principal residence in Indiana","inRented","Indiana renters can deduct up to $3,000 of rent paid.")}</div>
     <div id="rentRow" class="${S.inRented?'':'hidden'}">${field("Indiana rent paid (annual)","inRentPaid",{hint:"Renter's deduction up to $3,000."})}</div>
@@ -770,8 +820,16 @@ function renderForm(){
   <details class="sec"><summary>Withholding &amp; payments <span class="sub" id="sub-pay"></span></summary><div class="secbody">
     ${field("Federal withholding (YTD or estimate)","fedWithholding")}
     ${field("Federal estimated payments","fedEstimated")}
-    ${field("Indiana withholding + estimates","inWithholding")}
-  </div></details>`;
+    ${field(S.state==="IN"?"Indiana withholding + estimates":"State withholding + estimates","inWithholding")}
+  </div></details>
+  ${full?'':'<div class="miniNote" style="margin-top:10px">Simple view shows the essentials. Switch to <b>Detailed</b> at the top for itemized deductions, education &amp; child-care credits, QBI, ACA subsidies, and state-specific items.</div>'}`;
+  // visibility: Indiana section only for IN; advanced sections hidden in Simple mode
+  const setShow=(el,sh)=>{ if(el) el.style.display=sh?'':'none'; };
+  document.querySelectorAll('#form details.secIN').forEach(d=>setShow(d,S.state==='IN'&&full));
+  if(!full){
+    document.querySelectorAll('#form details.adv').forEach(d=>setShow(d,false));
+    document.querySelectorAll('#form details.advHealth').forEach(d=>setShow(d,S.healthInsuranceSource==='marketplace'));
+  }
   if(prevOpen.length) document.querySelectorAll('#form details.sec').forEach((d,i)=>{ if(prevOpen[i]!==undefined) d.open=prevOpen[i]; });
   wireForm();
 }
@@ -1120,12 +1178,12 @@ function renderSummaryTab(r){
   const adjRows=r.adj.map(a=>`<tr class="sub"><td style="padding-left:14px">${a.label}</td><td class="amt">−${usd(a.amount)}</td></tr>`).join('');
   const creditKids=[{label:'Child Tax Credit (nonrefundable)',amount:r.ctc},{label:'Dependent care',amount:r.depCare},{label:'AOTC (nonrefundable part)',amount:r.aotc*(1-C.aotc.refundPct)},{label:'Lifetime Learning',amount:r.llc},{label:"Saver's Credit",amount:r.saver},{label:'Mortgage Credit Certificate',amount:r.mcc}];
   const ficaKids=[{label:'Social Security 6.2%',amount:r.ssTax},{label:'Medicare 1.45%',amount:r.medTax}];
-  const inKids=[{label:'State 2.95%',amount:r.indiana.stateTax},{label:'County '+pct(r.indiana.countyRate),amount:r.indiana.countyTax},{text:`on Indiana base ${usd(r.indiana.base)} = AGI − ${usd(r.indiana.exemptions)} exemptions${(r.indiana.renter+r.indiana.homeowner)>0?' − '+usd(r.indiana.renter+r.indiana.homeowner)+' deductions':''}`}];
+  const inKids=r.indiana.kind==="IN"?[{label:'State 2.95%',amount:r.indiana.stateTax},{label:'County '+pct(r.indiana.countyRate),amount:r.indiana.countyTax},{text:`on Indiana base ${usd(r.indiana.base)} = AGI − ${usd(r.indiana.exemptions)} exemptions${(r.indiana.renter+r.indiana.homeowner)>0?' − '+usd(r.indiana.renter+r.indiana.homeowner)+' deductions':''}`}]:(r.indiana.isEstimate?[{text:'Rough estimate — replace with an actual state calculation before relying on it.'}]:[]);
   return `
     <div class="card">
       <div class="sub2">Estimated balance ${r.payments===0?'<span class="estTag" style="background:var(--warn-bg);color:var(--warn)">no withholding entered</span>':''}</div>
       <div class="bignum ${r.balance>=0?'good':'bad'}">${r.balance>=0?'Refund ':'You owe '}${usd(Math.abs(r.balance))}</div>
-      <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal <b>${(r.marginalOrd*100).toFixed(0)}%</b> federal / <b>~${(mc*100).toFixed(0)}%</b> all-in ${tipIcon("All-in marginal = federal + Indiana state + county tax on your next dollar of ordinary income (a payroll HSA dollar also saves 7.65% FICA on top).")}</div>
+      <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal <b>${(r.marginalOrd*100).toFixed(0)}%</b> federal / <b>~${(mc*100).toFixed(0)}%</b> all-in ${tipIcon("All-in marginal = federal + any state/local tax on your next dollar of ordinary income (a payroll HSA dollar also saves 7.65% FICA on top).")}</div>
     </div>
     <div class="card"><div class="h3">Income → Tax waterfall <span class="sub2" style="font-weight:400">— click ▸ rows to expand</span></div>
       <table class="water">
@@ -1147,7 +1205,7 @@ function renderSummaryTab(r){
         <tr><td><strong>Federal income tax</strong></td><td class="amt"><strong>${usd(r.fedIncomeTax)}</strong></td></tr>
         ${r.seTax>0?`<tr class="sub"><td>Self-employment tax</td><td class="amt">${usd(r.seTax)}</td></tr>`:''}
         ${xrow('fica','Employee Social Security + Medicare',r.ssTax+r.medTax,false,ficaKids)}
-        ${xrow('indiana','Indiana tax (state + county)',r.indiana.stateTax+r.indiana.countyTax,false,inKids)}
+        ${(r.indiana.stateTax+r.indiana.countyTax)>0||r.indiana.kind==="IN"?xrow('indiana',r.indiana.label,r.indiana.stateTax+r.indiana.countyTax,false,inKids):''}
         ${r.eitc>0?`<tr class="sub"><td>Earned Income Tax Credit (refundable)</td><td class="amt">−${usd(r.eitc)}</td></tr>`:""}
         ${(r.actc+r.aotc*C.aotc.refundPct)>0?`<tr class="sub"><td>Refundable CTC + AOTC</td><td class="amt">−${usd(r.actc+r.aotc*C.aotc.refundPct)}</td></tr>`:""}
         ${r.inEITC>0?`<tr class="sub"><td>Indiana EIC (10% of federal)</td><td class="amt">−${usd(r.inEITC)}</td></tr>`:""}
@@ -1162,6 +1220,7 @@ function renderSummaryTab(r){
     </div>`;
 }
 function renderResults(){
+  saveState();
   const r=compute(S);
   const tabs=`<div class="tabs">
     <button data-tab="summary" class="${S.resultsTab==='summary'?'active':''}">Summary</button>
@@ -1199,7 +1258,7 @@ function acaCard(r){
 /* =========================================================================
    EXPORT FOR AI REVIEW
    ========================================================================= */
-const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax','sbOn','sbRevenue','sbExpenses','sbHomeSqft','sbMiles','sbEquipment','sbHealth','sbRetire'];
+const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax','sbOn','sbRevenue','sbExpenses','sbHomeSqft','sbMiles','sbEquipment','sbHealth','sbRetire','uiMode'];
 function exportInputs(){ const inputs={};
   for(const k of Object.keys(S)){ if(k.startsWith('show')||UI_KEYS.includes(k))continue; const v=S[k]; if(v===0||v===false||(Array.isArray(v)&&v.length===0))continue; inputs[k]=v; }
   return inputs;
@@ -1220,7 +1279,8 @@ function buildExport(r,fmt){
   const lb=buildLeaderboard(S).slice(0,6);
   const opp=opportunities(S,r);
   const round=v=>Math.round(v);
-  if(fmt==="json"){ return JSON.stringify({taxYear:2026, jurisdiction:"US Federal + Indiana", filingStatus:S.filingStatus, county:S.county,
+  const jur="US Federal"+(r.indiana.kind==="IN"?" + Indiana":(r.indiana.name?" + "+r.indiana.name+(r.indiana.isEstimate?" (estimated)":""):" only"));
+  if(fmt==="json"){ return JSON.stringify({taxYear:2026, jurisdiction:jur, filingStatus:S.filingStatus, state:S.state, county:S.state==="IN"?S.county:undefined,
     assumptions:exportAssumptions(r), inputs,
     adjustments:r.adj.map(a=>({item:a.label,amount:round(a.amount)})),
     results:{ totalIncome:round(r.totalIncome), agi:round(r.agi), deduction:round(r.deduction), useItemized:r.useItemized,
@@ -1229,7 +1289,7 @@ function buildExport(r,fmt){
       credits:{childTaxCredit:round(r.ctc), refundableACTC:round(r.actc), eitc:round(r.eitc), aotc:round(r.aotc), llc:round(r.llc), dependentCare:round(r.depCare), saver:round(r.saver), mcc:round(r.mcc)},
       fedIncomeTax:round(r.fedIncomeTax), seTax:round(r.seTax),
       fica:{socialSecurity:round(r.ssTax), medicare:round(r.medTax)},
-      indiana:{state:round(r.indiana.stateTax), county:round(r.indiana.countyTax), countyRate:r.indiana.countyRate, taxableBase:round(r.indiana.base), exemptions:round(r.indiana.exemptions)},
+      stateTax:{label:r.indiana.label, isEstimate:r.indiana.isEstimate, state:round(r.indiana.stateTax), county:round(r.indiana.countyTax), countyRate:r.indiana.countyRate, taxableBase:round(r.indiana.base), exemptions:round(r.indiana.exemptions)},
       acaNetPTC:round(r.aca.netPtc), totalTax:round(r.totalTax), payments:round(r.payments), balance:round(r.balance),
       effectiveRate:r.totalIncome>0?+(r.totalTax/r.totalIncome).toFixed(4):0, marginalOrdinaryFederal:r.marginalOrd, marginalAllInOrdinary:+mc.toFixed(4) },
     headroom:{ zeroPctLTCGroom:round(h.gain0), fifteenPctLTCGroom:round(h.gain15), rothConversionRoomAtCurrentRate:round(h.bracketRoom), currentBracketRate:h.rate },
@@ -1239,7 +1299,7 @@ function buildExport(r,fmt){
   // ---- markdown ----
   const L=[]; const push=(...x)=>x.forEach(v=>L.push(v));
   push("# 2026 Tax Estimate — for AI review","",
-    "Please review this US **federal + Indiana** tax-year-2026 estimate. Check accuracy against current law (OBBBA, IRS Rev. Proc. 2025-32, Indiana DOR), flag errors, and suggest optimizations.","",
+    `Please review this **${jur}** tax-year-2026 estimate. Check accuracy against current law (OBBBA, IRS Rev. Proc. 2025-32${r.indiana.kind==="IN"?", Indiana DOR":""}), flag errors, and suggest optimizations.`,"",
     "## Assumptions & blanks to note");
   exportAssumptions(r).forEach(a=>push("- "+a));
   push("","## Inputs");
@@ -1261,16 +1321,17 @@ function buildExport(r,fmt){
     `| **Federal income tax** | **${usd(r.fedIncomeTax)}** |`,
     r.seTax>0?`| Self-employment tax | ${usd(r.seTax)} |`:"",
     `| FICA — Social Security ${usd(r.ssTax)} + Medicare ${usd(r.medTax)} | ${usd(r.ssTax+r.medTax)} |`,
-    `| Indiana state 2.95% | ${usd(r.indiana.stateTax)} |`,
-    `| Indiana county ${pct(r.indiana.countyRate)} | ${usd(r.indiana.countyTax)} |`,
-    `| — Indiana taxable base | ${usd(r.indiana.base)} (AGI − ${usd(r.indiana.exemptions)} exemptions) |`,
+    r.indiana.kind==="IN"?`| Indiana state 2.95% | ${usd(r.indiana.stateTax)} |`:"",
+    r.indiana.kind==="IN"?`| Indiana county ${pct(r.indiana.countyRate)} | ${usd(r.indiana.countyTax)} |`:"",
+    r.indiana.kind==="IN"?`| — Indiana taxable base | ${usd(r.indiana.base)} (AGI − ${usd(r.indiana.exemptions)} exemptions) |`:"",
+    (r.indiana.kind!=="IN"&&r.indiana.stateTax>0)?`| ${r.indiana.label} | ${usd(r.indiana.stateTax)} |`:"",
     r.eitc>0?`| EITC (refundable) | −${usd(r.eitc)} |`:"",
     r.inEITC>0?`| Indiana EIC | −${usd(r.inEITC)} |`:"",
     S.healthInsuranceSource==="marketplace"?`| ACA net PTC | −${usd(r.aca.netPtc)} |`:"",
     `| **Total tax** | **${usd(r.totalTax)}** |`,
     `| Payments | ${usd(r.payments)} |`,
     `| **Balance (refund + / owe −)** | **${usd(r.balance)}** |`,
-    "",`Effective rate: ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):"0%"} • Marginal on ordinary income: **${(r.marginalOrd*100).toFixed(0)}% federal / ~${(mc*100).toFixed(0)}% all-in** (federal + Indiana state + county; a payroll-HSA dollar also saves 7.65% FICA).`);
+    "",`Effective rate: ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):"0%"} • Marginal on ordinary income: **${(r.marginalOrd*100).toFixed(0)}% federal / ~${(mc*100).toFixed(0)}% all-in** (federal + any state/local; a payroll-HSA dollar also saves 7.65% FICA).`);
   push("","## Planning headroom",
     `- **0% capital-gains room:** ${usd(h.gain0)} of long-term gains could be realized tax-free this year.`,
     `- **15% capital-gains room:** ${usd(h.gain15)} before the 20% rate.`,
@@ -1347,7 +1408,7 @@ function wireForm(){
       if(key==="acaBenchmarkOverride")S.acaBenchmarkTouched=true;
       // Only rebuild the whole form for changes that add/remove fields (filing status,
       // family-HSA toggle). Everything else updates live so the input keeps focus.
-      if(["filingStatus","hsaFamily"].includes(key)){ renderForm(); }
+      if(["filingStatus","hsaFamily","state"].includes(key)){ renderForm(); }
       refresh();
     };
     el.addEventListener(el.tagName==="SELECT"||el.type==="checkbox"?"change":"input",handler);
@@ -1357,6 +1418,7 @@ function wireForm(){
   const a=document.getElementById("addDep"); if(a)a.addEventListener("click",()=>{ S.dependents.push({age:5}); renderForm(); refresh(); });
   const i=document.getElementById("toggleLessIncome"); if(i)i.addEventListener("click",()=>{ S.showLessIncome=!S.showLessIncome; renderForm(); refresh(); });
   const c=document.getElementById("toggleLessCredits"); if(c)c.addEventListener("click",()=>{ S.showLessCredits=!S.showLessCredits; renderForm(); refresh(); });
+  document.querySelectorAll("#form [data-mode]").forEach(el=>el.addEventListener("click",()=>{ S.uiMode=el.dataset.mode; renderForm(); refresh(); }));
 }
 function updateAutoFields(){
   const el=document.getElementById("f_acaBenchmarkOverride");
@@ -1374,6 +1436,9 @@ document.getElementById("presets").addEventListener("click",e=>{
   document.querySelectorAll("details.sec").forEach((d,idx)=>{ d.open=idx<2; });
 });
 
+// stamp data version / dates into the page
+(function(){ const set=(id,v)=>{ const e=document.getElementById(id); if(e)e.textContent=v; };
+  set("methDate",APP.updated); set("footDate",APP.updated); set("methSrc",APP.sources); })();
 renderForm(); refresh();
     </script>
   </body>

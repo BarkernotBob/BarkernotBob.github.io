@@ -191,6 +191,8 @@ const C = {
   aotc:{ max:2500, refundPct:.4, phase:{single:{s:80000,e:90000},hoh:{s:80000,e:90000},qss:{s:80000,e:90000},mfj:{s:160000,e:180000},mfs:{s:-1,e:-1}} },
   llc:{ max:2000, rate:.20, phase:{single:{s:80000,e:90000},hoh:{s:80000,e:90000},qss:{s:80000,e:90000},mfj:{s:160000,e:180000},mfs:{s:-1,e:-1}} },
   studentLoan:{ max:2500, phase:{single:{s:85000,e:100000},hoh:{s:85000,e:100000},qss:{s:85000,e:100000},mfj:{s:175000,e:205000},mfs:{s:-1,e:-1}} },
+  iraDeduct:{ single:{s:81000,e:91000}, hoh:{s:81000,e:91000}, qss:{s:129000,e:149000}, mfj:{s:129000,e:149000}, mfs:{s:0,e:10000} },
+  rothPhase:{ single:{s:153000,e:168000}, hoh:{s:153000,e:168000}, qss:{s:242000,e:252000}, mfj:{s:242000,e:252000}, mfs:{s:0,e:10000} },
   depCare:{ capOne:3000, capMulti:6000,
     singleTiers:[{u:15000,r:.50},{u:45000,r:-1},{u:75000,r:.35},{u:105000,r:-1},{u:Infinity,r:.20}],
     mfjTiers:[{u:15000,r:.50},{u:45000,r:-1},{u:150000,r:.35},{u:210000,r:-1},{u:Infinity,r:.20}] },
@@ -240,7 +242,7 @@ function defaults(){
     fedWithholding:0, fedEstimated:0, inWithholding:0,
     showLessIncome:false, showLessCredits:false,
     qbiW2Wages:0, qbiUbia:0, qbiSSTB:false,
-    resultsTab:"summary", explorerLever:"trad401k", explorerY:"tax", leaderboardSort:"savings",
+    resultsTab:"summary", explorerLever:"trad401k", explorerY:"tax", leaderboardSort:"savings", expandedRows:{},
   };
 }
 
@@ -340,6 +342,22 @@ function compute(s){
   const totalIncome=wages+ordinaryInvest+ltcgQ+n(s.tips)+n(s.overtime)+n(s.military)+n(s.railroad)+seNet+taxableSS;
   const aboveLine=aboveLineNoSe+seTaxDeduction;
   const agi=Math.max(0,totalIncome-aboveLine);
+  // adjustment line items (for the waterfall)
+  const adj=[];
+  const addAdj=(l,v)=>{ if(v>0.5) adj.push({label:l,amount:v}); };
+  addAdj(married?'401(k)/403(b) — you':'401(k)/403(b)', Math.min(limit401k(s.yourAge),Math.max(0,n(s.trad401k))));
+  if(married) addAdj('401(k) — spouse', Math.min(limit401k(s.spouseAge),Math.max(0,n(s.trad401kSpouse))));
+  addAdj(married?'Traditional IRA — you':'Traditional IRA', Math.min(limitIRA(s.yourAge),Math.max(0,n(s.tradIRA))));
+  if(married) addAdj('Traditional IRA — spouse', Math.min(limitIRA(s.spouseAge),Math.max(0,n(s.tradIRASpouse))));
+  addAdj('HSA', Math.min(limitHSA(s),Math.max(0,n(s.hsaContribution))));
+  addAdj('SEP-IRA', Math.min(C.retire.sepMax,Math.max(0,n(s.sep))));
+  addAdj('Solo 401(k)', Math.min(limit401k(s.yourAge),Math.max(0,n(s.soloK))));
+  addAdj('SIMPLE IRA', Math.min(limitSimple(s.yourAge),Math.max(0,n(s.simple))));
+  addAdj('Self-employed health', Math.max(0,n(s.seHealth)));
+  addAdj('Student-loan interest', Math.min(C.studentLoan.max,Math.max(0,n(s.studentLoanInterest)))*studentLoanFactor(s));
+  addAdj('Educator expenses', Math.max(0,n(s.educatorExpenses)));
+  addAdj('Pre-tax employer health', employerHealthPreTax);
+  addAdj('½ self-employment tax', seTaxDeduction);
 
   // Standard vs itemized
   let std=C.stdDed[status];
@@ -449,7 +467,7 @@ function compute(s){
 
   return { status,married,totalIncome,agi,deduction,useItemized,std,itemizedTotal,saltDed,saltCap:saltCapV,seniorBonus,nonItemizerCharity,
     qbiDeduction,taxableIncome,ordTaxable,ordinaryTax,ltcgTax,regularTax,amt,addlMedicare,niit,fedTaxBeforeCredits,
-    ctc,ctcGross,ctcPhase,actc,eitc,inEITC,aotc,llc,depCare,saver,mcc,fedIncomeTax,seTax,ssTax,medTax,taxableSS,indiana,aca,
+    adj,aboveLine,ctc,ctcGross,ctcPhase,actc,eitc,inEITC,aotc,llc,depCare,saver,mcc,fedIncomeTax,seTax,ssTax,medTax,taxableSS,indiana,aca,
     totalTax,payments,balance,refundableExtras,marginalOrd,hsaPayroll };
 }
 
@@ -893,11 +911,42 @@ function headroomHtml(h){
     <div class="rec">${h.gain0>0?`<b>Tax-free gains:</b> you can realize up to <b>${usd(h.gain0)}</b> of long-term capital gains at <b>0%</b> tax this year.`:`Your income is above the 0% capital-gains ceiling, so additional long-term gains are taxed at 15%+.`}</div>
     ${h.bracketRoom>0?`<div class="rec"><b>Roth headroom:</b> you can add about <b>${usd(h.bracketRoom)}</b> of ordinary income (e.g., a <b>Roth conversion</b>) before your rate rises past <b>${Math.round(h.rate*100)}%</b>.</div>`:''}`;
 }
+function combinedMarginal(s){ const b=compute(s).totalTax; const a=compute(Object.assign({},s,{otherOrdinary:n(s.otherOrdinary)+1000})).totalTax; return (a-b)/1000; }
+function opportunities(s,r){
+  const status=s.filingStatus, agi=r.agi, magi=agi, married=isMarried(s);
+  const room=planLevers(s).reduce((t,l)=>t+l.room,0);
+  const size=householdSize(s), fpl=fplFor(size);
+  const out=[];
+  const add=(name,income,limit,value,how)=>{ if(limit<0||income<=limit) return; const gap=income-limit; out.push({name,gap,reachable:gap<=room&&room>0,limit,income,value,how}); };
+  const contrib=Math.max(0,n(s.trad401k))+Math.max(0,n(s.tradIRA))+Math.max(0,n(s.rothIRA))+(married?(Math.max(0,n(s.trad401kSpouse))+Math.max(0,n(s.tradIRASpouse))+Math.max(0,n(s.rothIRASpouse))):0);
+  if(contrib>0){ const lim=C.saver.tiers[status][2].agi; add("Saver's Credit", agi, lim, '~'+usd(Math.round(Math.min(contrib,C.saver.maxContrib[status])*0.10))+'/yr credit', 'get AGI under '+usd(lim)); }
+  if(s.healthInsuranceSource==='marketplace'){ const lim=Math.round(fpl*4); const bench=n(s.acaBenchmarkOverride)>0?n(s.acaBenchmarkOverride):estimateBenchmarkAnnual(s); add('ACA premium subsidy', magi, lim, 'up to ~'+usd(Math.round(Math.max(0,bench-fpl*4*0.0996)))+'/yr', 'get under 400% FPL ('+usd(lim)+')'); }
+  if(n(s.eduStudentsAOTC)>0||n(s.eduExpensesLLC)>0){ const ph=C.aotc.phase[status]; add('Education credits', magi, ph.e, 'up to $2,500/student', 'get MAGI under '+usd(ph.e)); }
+  if(n(s.studentLoanInterest)>0){ const ph=C.studentLoan.phase[status]; add('Student-loan interest deduction', magi, ph.e, 'up to $2,500 deduction', 'get MAGI under '+usd(ph.e)); }
+  const covered=n(s.trad401k)>0||n(s.soloK)>0||n(s.simple)>0||n(s.sep)>0;
+  if(n(s.tradIRA)>0&&covered){ const ph=C.iraDeduct[status]; add('Full traditional-IRA deduction', magi, ph.e, 'deduct your IRA contribution', 'get MAGI under '+usd(ph.e)); }
+  if(n(s.rothIRA)>0){ const ph=C.rothPhase[status]; add('Roth IRA eligibility', magi, ph.e, 'keep contributing to Roth', 'get MAGI under '+usd(ph.e)); }
+  out.sort((a,b)=> (a.reachable===b.reachable)? a.gap-b.gap : (a.reachable?-1:1));
+  return {list:out, room};
+}
+function opportunitiesHtml(o){
+  if(!o.list.length) return '<div class="sub2">No income-tested benefits are being missed based on what you entered. 👍</div>';
+  const reach=o.list.filter(x=>x.reachable), far=o.list.filter(x=>!x.reachable);
+  const row=x=>`<div class="lbrow" style="cursor:default">
+      <div class="lbtop"><span class="lbname">${x.name}</span><span class="lbsave" style="color:${x.reachable?'var(--good)':'var(--muted)'}">${x.value}</span></div>
+      <div class="lbmeta"><span>you're <b>${usd(x.gap)}</b> over the ${usd(x.limit)} limit</span><span>${x.how}</span></div>
+    </div>`;
+  let html='';
+  if(reach.length) html+=`<div class="sub2" style="margin:2px 0 4px"><b style="color:var(--good)">Within reach</b> — your unused pre-tax room (${usd(o.room)}) could lower income enough:</div>`+reach.map(row).join('');
+  if(far.length) html+=`<div class="sub2" style="margin:12px 0 4px"><b>Bigger income change needed</b> — beyond your pre-tax room, but reachable if you can lower income another way (defer a bonus, realize fewer gains, etc.):</div>`+far.map(row).join('');
+  return html;
+}
 function renderOptimizeTab(r){
   const lb=buildLeaderboard(S);
   const E=buildExplorer(S); EXP=E; const svg=explorerSVG(E);
   const plan=optimalPlan(S);
   const h=buildHeadroom(S,r);
+  const opp=opportunities(S,r);
   return `
     <div class="card"><div class="h3">Your best moves, ranked ${tipIcon("Each row is computed by re-running your full return with that account filled. 'Saved per $1' is the tax cut on your next dollar; 'fill it all' is the total if you max it.")}</div>
       <div class="segctl" style="margin-bottom:8px"><span class="seg"><button data-sort="savings" class="${S.leaderboardSort==='savings'?'on':''}">Rank by total saved</button><button data-sort="roi" class="${S.leaderboardSort==='roi'?'on':''}">Rank by ¢ per $</button></span></div>
@@ -910,6 +959,7 @@ function renderOptimizeTab(r){
       <div class="readout" id="expReadout"></div>
     </div>
     <div class="card"><div class="h3">Your optimal plan</div>${planHtml(plan)}</div>
+    <div class="card"><div class="h3">Benefits within reach ${tipIcon("Income-tested benefits you're currently above the limit for, and how much you'd need to lower income to qualify. Closest first.")}</div>${opportunitiesHtml(opp)}</div>
     <div class="card"><div class="h3">Capital-gains &amp; Roth headroom ${tipIcon("How much room you have before key ceilings, based on your current taxable income.")}</div>${headroomHtml(h)}</div>`;
 }
 function wireOptimize(){
@@ -953,33 +1003,47 @@ function renderSummaryTab(r){
       <div class="cliffscale"><span>${usd(c.start)}</span><span>${c.end>c.start?usd(c.end):""}</span></div>
     </div>`).join("");
   const recs=recommendations(S,r).map(t=>`<div class="rec">${t}</div>`).join("");
+  const mc=combinedMarginal(S);
+  // expandable waterfall row helper: clickable parent with indented children when open
+  const exp=S.expandedRows;
+  const xrow=(key,label,amount,neg,children)=>{
+    const kids=(children||[]).filter(c=>c.text||Math.abs(c.amount)>0.5);
+    const open=!!exp[key], has=kids.length>0;
+    let h=`<tr class="sub" ${has?`data-exp="${key}" style="cursor:pointer"`:''}><td>${has?`<span style="color:var(--accent)">${open?'▾':'▸'}</span> `:''}${label}</td><td class="amt">${neg&&amount?'−':''}${usd(amount)}</td></tr>`;
+    if(has&&open) h+=kids.map(c=>c.text?`<tr class="sub"><td colspan="2" style="padding-left:24px;color:var(--muted);font-size:12px">${c.text}</td></tr>`:`<tr class="sub"><td style="padding-left:24px;color:var(--muted)">${c.label}</td><td class="amt" style="color:var(--muted)">${c.neg&&c.amount?'−':''}${usd(c.amount)}</td></tr>`).join('');
+    return h;
+  };
+  const adjRows=r.adj.map(a=>`<tr class="sub"><td style="padding-left:14px">${a.label}</td><td class="amt">−${usd(a.amount)}</td></tr>`).join('');
+  const creditKids=[{label:'Child Tax Credit (nonrefundable)',amount:r.ctc},{label:'Dependent care',amount:r.depCare},{label:'AOTC (nonrefundable part)',amount:r.aotc*(1-C.aotc.refundPct)},{label:'Lifetime Learning',amount:r.llc},{label:"Saver's Credit",amount:r.saver},{label:'Mortgage Credit Certificate',amount:r.mcc}];
+  const ficaKids=[{label:'Social Security 6.2%',amount:r.ssTax},{label:'Medicare 1.45%',amount:r.medTax}];
+  const inKids=[{label:'State 2.95%',amount:r.indiana.stateTax},{label:'County '+pct(r.indiana.countyRate),amount:r.indiana.countyTax},{text:`on Indiana base ${usd(r.indiana.base)} = AGI − ${usd(r.indiana.exemptions)} exemptions${(r.indiana.renter+r.indiana.homeowner)>0?' − '+usd(r.indiana.renter+r.indiana.homeowner)+' deductions':''}`}];
   return `
     <div class="card">
-      <div class="sub2">Estimated balance</div>
+      <div class="sub2">Estimated balance ${r.payments===0?'<span class="estTag" style="background:var(--warn-bg);color:var(--warn)">no withholding entered</span>':''}</div>
       <div class="bignum ${r.balance>=0?'good':'bad'}">${r.balance>=0?'Refund ':'You owe '}${usd(Math.abs(r.balance))}</div>
-      <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective rate ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal ${(r.marginalOrd*100).toFixed(0)}%</div>
+      <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal <b>${(r.marginalOrd*100).toFixed(0)}%</b> federal / <b>~${(mc*100).toFixed(0)}%</b> all-in ${tipIcon("All-in marginal = federal + Indiana state + county tax on your next dollar of ordinary income (a payroll HSA dollar also saves 7.65% FICA on top).")}</div>
     </div>
-    <div class="card"><div class="h3">Income → Tax waterfall</div>
+    <div class="card"><div class="h3">Income → Tax waterfall <span class="sub2" style="font-weight:400">— click ▸ rows to expand</span></div>
       <table class="water">
         <tr><td>Total income</td><td class="amt">${usd(r.totalIncome)}</td></tr>
-        <tr class="sub"><td>Taxable Social Security</td><td class="amt">${usd(r.taxableSS)}</td></tr>
-        <tr><td>AGI (after adjustments)</td><td class="amt">${usd(r.agi)}</td></tr>
+        ${r.taxableSS>0?`<tr class="sub"><td>Taxable Social Security</td><td class="amt">${usd(r.taxableSS)}</td></tr>`:''}
+        ${adjRows}
+        <tr><td><strong>AGI</strong> (after adjustments)</td><td class="amt"><strong>${usd(r.agi)}</strong></td></tr>
         <tr class="sub"><td>${r.useItemized?'Itemized':'Standard'} deduction</td><td class="amt">−${usd(r.deduction)}</td></tr>
         ${r.nonItemizerCharity>0?`<tr class="sub"><td>Non-itemizer charitable (OBBBA)</td><td class="amt">−${usd(r.nonItemizerCharity)}</td></tr>`:""}
-        <tr class="sub"><td>Senior bonus deduction</td><td class="amt">−${usd(r.seniorBonus)}</td></tr>
-        <tr class="sub"><td>QBI deduction</td><td class="amt">−${usd(r.qbiDeduction)}</td></tr>
+        ${r.seniorBonus>0?`<tr class="sub"><td>Senior bonus deduction</td><td class="amt">−${usd(r.seniorBonus)}</td></tr>`:''}
+        ${r.qbiDeduction>0?`<tr class="sub"><td>QBI deduction</td><td class="amt">−${usd(r.qbiDeduction)}</td></tr>`:''}
         <tr><td>Taxable income</td><td class="amt">${usd(r.taxableIncome)}</td></tr>
         <tr class="sub"><td>Ordinary income tax</td><td class="amt">${usd(r.ordinaryTax)}</td></tr>
-        <tr class="sub"><td>Long-term gains / qual. div tax</td><td class="amt">${usd(r.ltcgTax)}</td></tr>
-        <tr class="sub"><td>AMT (additional)</td><td class="amt">${usd(r.amt)}</td></tr>
-        <tr class="sub"><td>Additional Medicare 0.9%</td><td class="amt">${usd(r.addlMedicare)}</td></tr>
-        <tr class="sub"><td>Net Investment Income Tax 3.8%</td><td class="amt">${usd(r.niit)}</td></tr>
-        <tr class="sub"><td>Credits (CTC, education, care, saver, MCC)</td><td class="amt">−${usd(r.ctc+r.llc+r.depCare+r.saver+r.mcc+r.aotc)}</td></tr>
+        ${r.ltcgTax>0?`<tr class="sub"><td>Long-term gains / qual. div tax</td><td class="amt">${usd(r.ltcgTax)}</td></tr>`:''}
+        ${r.amt>0?`<tr class="sub"><td>AMT (additional)</td><td class="amt">${usd(r.amt)}</td></tr>`:''}
+        ${r.addlMedicare>0?`<tr class="sub"><td>Additional Medicare 0.9%</td><td class="amt">${usd(r.addlMedicare)}</td></tr>`:''}
+        ${r.niit>0?`<tr class="sub"><td>Net Investment Income Tax 3.8%</td><td class="amt">${usd(r.niit)}</td></tr>`:''}
+        ${xrow('credits','Credits applied',r.ctc+r.llc+r.depCare+r.saver+r.mcc+r.aotc,true,creditKids)}
         <tr><td><strong>Federal income tax</strong></td><td class="amt"><strong>${usd(r.fedIncomeTax)}</strong></td></tr>
-        <tr class="sub"><td>Self-employment tax</td><td class="amt">${usd(r.seTax)}</td></tr>
-        <tr class="sub"><td>Employee Social Security + Medicare</td><td class="amt">${usd(r.ssTax+r.medTax)}</td></tr>
-        <tr class="sub"><td>Indiana state tax (2.95%)</td><td class="amt">${usd(r.indiana.stateTax)}</td></tr>
-        <tr class="sub"><td>Indiana county tax (${pct(r.indiana.countyRate)})</td><td class="amt">${usd(r.indiana.countyTax)}</td></tr>
+        ${r.seTax>0?`<tr class="sub"><td>Self-employment tax</td><td class="amt">${usd(r.seTax)}</td></tr>`:''}
+        ${xrow('fica','Employee Social Security + Medicare',r.ssTax+r.medTax,false,ficaKids)}
+        ${xrow('indiana','Indiana tax (state + county)',r.indiana.stateTax+r.indiana.countyTax,false,inKids)}
         ${r.eitc>0?`<tr class="sub"><td>Earned Income Tax Credit (refundable)</td><td class="amt">−${usd(r.eitc)}</td></tr>`:""}
         ${(r.actc+r.aotc*C.aotc.refundPct)>0?`<tr class="sub"><td>Refundable CTC + AOTC</td><td class="amt">−${usd(r.actc+r.aotc*C.aotc.refundPct)}</td></tr>`:""}
         ${r.inEITC>0?`<tr class="sub"><td>Indiana EIC (10% of federal)</td><td class="amt">−${usd(r.inEITC)}</td></tr>`:""}
@@ -1007,6 +1071,7 @@ function renderResults(){
   document.getElementById("btnExport").addEventListener("click",()=>openExport(r,"md"));
   document.getElementById("btnExportJSON").addEventListener("click",()=>openExport(r,"json"));
   document.querySelectorAll('#results [data-tab]').forEach(b=>b.addEventListener('click',()=>{ S.resultsTab=b.dataset.tab; renderResults(); }));
+  document.querySelectorAll('#results [data-exp]').forEach(el=>el.addEventListener('click',()=>{ S.expandedRows[el.dataset.exp]=!S.expandedRows[el.dataset.exp]; renderResults(); }));
   if(S.resultsTab==='optimize') wireOptimize();
 }
 function acaCard(r){
@@ -1030,50 +1095,92 @@ function acaCard(r){
 /* =========================================================================
    EXPORT FOR AI REVIEW
    ========================================================================= */
+const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax'];
+function exportInputs(){ const inputs={};
+  for(const k of Object.keys(S)){ if(k.startsWith('show')||UI_KEYS.includes(k))continue; const v=S[k]; if(v===0||v===false||(Array.isArray(v)&&v.length===0))continue; inputs[k]=v; }
+  return inputs;
+}
+function exportAssumptions(r){
+  const a=[];
+  if(r.payments===0) a.push('No withholding/estimated payments entered — the balance shown is total tax owed, NOT an under/over-withholding result.');
+  if(isMarried(S) && n(S.wagesSpouse)===0 && n(S.wages)>0) a.push('All wages are under one spouse (spouse wages $0). If dual-income, split them — it affects the per-person Social Security cap and dependent-care eligibility.');
+  if(S.dependents.some(d=>n(d.age)<13) && n(S.depCareExpenses)===0) a.push('Has child(ren) under 13 but $0 child-care expenses entered — Child & Dependent Care Credit may be available if both spouses work.');
+  a.push(`HSA is treated as ${S.hsaThroughPayroll?'payroll pre-tax (also exempt from Social Security/Medicare)':'a direct contribution (income-tax deduction only, no FICA savings)'}; coverage = ${S.hsaFamily?'family':'self-only'}.`);
+  if(S.healthInsuranceSource==='employer') a.push(`Employer health premiums treated as ${S.premiumPreTax?'pre-tax (excluded from taxable + FICA wages)':'post-tax'}.`);
+  return a;
+}
 function buildExport(r,fmt){
-  const inputs={};
-  for(const k of Object.keys(S)){ if(k.startsWith("show"))continue; const v=S[k]; if(v===0||v===false||(Array.isArray(v)&&v.length===0))continue; inputs[k]=v; }
-  if(fmt==="json"){ return JSON.stringify({taxYear:2026, jurisdiction:"US Federal + Indiana", inputs, results:{
-    totalIncome:Math.round(r.totalIncome), agi:Math.round(r.agi), taxableIncome:Math.round(r.taxableIncome),
-    deduction:Math.round(r.deduction), useItemized:r.useItemized, qbiDeduction:Math.round(r.qbiDeduction),
-    ordinaryTax:Math.round(r.ordinaryTax), ltcgTax:Math.round(r.ltcgTax), amt:Math.round(r.amt),
-    additionalMedicare:Math.round(r.addlMedicare), niit:Math.round(r.niit), fedIncomeTax:Math.round(r.fedIncomeTax),
-    seTax:Math.round(r.seTax), ssMedicare:Math.round(r.ssTax+r.medTax),
-    indianaState:Math.round(r.indiana.stateTax), indianaCounty:Math.round(r.indiana.countyTax),
-    acaNetPTC:Math.round(r.aca.netPtc), totalTax:Math.round(r.totalTax), payments:Math.round(r.payments), balance:Math.round(r.balance),
-    effectiveRate:r.totalIncome>0?+(r.totalTax/r.totalIncome).toFixed(4):0, marginalOrdinaryRate:r.marginalOrd }},null,2); }
-  // markdown
-  const L=[]; L.push("# 2026 Tax Estimate — for AI review","",
-    "Please review this US **federal + Indiana** tax-year-2026 estimate. Check for accuracy against current law (OBBBA, IRS Rev. Proc. 2025-32, Indiana DOR), flag any errors, and suggest tax-planning optimizations.","",
-    "## Inputs");
-  for(const [k,v] of Object.entries(inputs)){ L.push(`- **${k}**: ${Array.isArray(v)?JSON.stringify(v):v}`); }
-  L.push("","## Computed results",
-    `| Line | Amount |`,`|---|---:|`,
-    `| Total income | ${usd(r.totalIncome)} |`,
-    `| AGI | ${usd(r.agi)} |`,
-    `| ${r.useItemized?"Itemized":"Standard"} deduction | ${usd(r.deduction)} |`,
-    r.nonItemizerCharity>0?`| Non-itemizer charitable | ${usd(r.nonItemizerCharity)} |`:"",
-    `| Senior bonus deduction | ${usd(r.seniorBonus)} |`,
-    `| QBI deduction | ${usd(r.qbiDeduction)} |`,
-    `| Taxable income | ${usd(r.taxableIncome)} |`,
+  const inputs=exportInputs();
+  const mc=combinedMarginal(S);
+  const h=buildHeadroom(S,r);
+  const lb=buildLeaderboard(S).slice(0,6);
+  const opp=opportunities(S,r);
+  const round=v=>Math.round(v);
+  if(fmt==="json"){ return JSON.stringify({taxYear:2026, jurisdiction:"US Federal + Indiana", filingStatus:S.filingStatus, county:S.county,
+    assumptions:exportAssumptions(r), inputs,
+    adjustments:r.adj.map(a=>({item:a.label,amount:round(a.amount)})),
+    results:{ totalIncome:round(r.totalIncome), agi:round(r.agi), deduction:round(r.deduction), useItemized:r.useItemized,
+      nonItemizerCharitable:round(r.nonItemizerCharity), seniorBonus:round(r.seniorBonus), qbiDeduction:round(r.qbiDeduction), taxableIncome:round(r.taxableIncome),
+      ordinaryTax:round(r.ordinaryTax), ltcgTax:round(r.ltcgTax), amt:round(r.amt), additionalMedicare:round(r.addlMedicare), niit:round(r.niit),
+      credits:{childTaxCredit:round(r.ctc), refundableACTC:round(r.actc), eitc:round(r.eitc), aotc:round(r.aotc), llc:round(r.llc), dependentCare:round(r.depCare), saver:round(r.saver), mcc:round(r.mcc)},
+      fedIncomeTax:round(r.fedIncomeTax), seTax:round(r.seTax),
+      fica:{socialSecurity:round(r.ssTax), medicare:round(r.medTax)},
+      indiana:{state:round(r.indiana.stateTax), county:round(r.indiana.countyTax), countyRate:r.indiana.countyRate, taxableBase:round(r.indiana.base), exemptions:round(r.indiana.exemptions)},
+      acaNetPTC:round(r.aca.netPtc), totalTax:round(r.totalTax), payments:round(r.payments), balance:round(r.balance),
+      effectiveRate:r.totalIncome>0?+(r.totalTax/r.totalIncome).toFixed(4):0, marginalOrdinaryFederal:r.marginalOrd, marginalAllInOrdinary:+mc.toFixed(4) },
+    headroom:{ zeroPctLTCGroom:round(h.gain0), fifteenPctLTCGroom:round(h.gain15), rothConversionRoomAtCurrentRate:round(h.bracketRoom), currentBracketRate:h.rate },
+    topMoves:lb.map(l=>({lever:l.label, roomLeft:round(l.room), centsPerDollar:Math.round(l.roi*100), totalSavedIfFilled:round(l.fillSave)})),
+    benefitsMissed:opp.list.map(o=>({name:o.name, overLimitBy:round(o.gap), reachableWithPretaxRoom:o.reachable, value:o.value}))
+  },null,2); }
+  // ---- markdown ----
+  const L=[]; const push=(...x)=>x.forEach(v=>L.push(v));
+  push("# 2026 Tax Estimate — for AI review","",
+    "Please review this US **federal + Indiana** tax-year-2026 estimate. Check accuracy against current law (OBBBA, IRS Rev. Proc. 2025-32, Indiana DOR), flag errors, and suggest optimizations.","",
+    "## Assumptions & blanks to note");
+  exportAssumptions(r).forEach(a=>push("- "+a));
+  push("","## Inputs");
+  for(const [k,v] of Object.entries(inputs)) push(`- **${k}**: ${Array.isArray(v)?JSON.stringify(v):v}`);
+  push("","## Computed results","| Line | Amount |","|---|---:|",`| Total income | ${usd(r.totalIncome)} |`);
+  r.adj.forEach(a=>push(`| — adj: ${a.label} | −${usd(a.amount)} |`));
+  push(`| **AGI** | **${usd(r.agi)}** |`,
+    `| ${r.useItemized?"Itemized":"Standard"} deduction | −${usd(r.deduction)} |`,
+    r.nonItemizerCharity>0?`| Non-itemizer charitable | −${usd(r.nonItemizerCharity)} |`:"",
+    r.seniorBonus>0?`| Senior bonus deduction | −${usd(r.seniorBonus)} |`:"",
+    r.qbiDeduction>0?`| QBI deduction | −${usd(r.qbiDeduction)} |`:"",
+    `| **Taxable income** | **${usd(r.taxableIncome)}** |`,
     `| Ordinary income tax | ${usd(r.ordinaryTax)} |`,
-    `| LTCG/qual-div tax | ${usd(r.ltcgTax)} |`,
-    `| AMT (additional) | ${usd(r.amt)} |`,
-    `| Additional Medicare 0.9% | ${usd(r.addlMedicare)} |`,
-    `| NIIT 3.8% | ${usd(r.niit)} |`,
-    `| Credits total | ${usd(r.ctc+r.llc+r.depCare+r.saver+r.mcc+r.aotc)} |`,
+    r.ltcgTax>0?`| LTCG/qual-div tax | ${usd(r.ltcgTax)} |`:"",
+    r.amt>0?`| AMT (additional) | ${usd(r.amt)} |`:"",
+    r.addlMedicare>0?`| Additional Medicare 0.9% | ${usd(r.addlMedicare)} |`:"",
+    r.niit>0?`| NIIT 3.8% | ${usd(r.niit)} |`:"",
+    `| Credits — CTC ${usd(r.ctc)}, dep-care ${usd(r.depCare)}, AOTC ${usd(r.aotc)}, LLC ${usd(r.llc)}, saver ${usd(r.saver)}, MCC ${usd(r.mcc)} | −${usd(r.ctc+r.llc+r.depCare+r.saver+r.mcc+r.aotc)} |`,
     `| **Federal income tax** | **${usd(r.fedIncomeTax)}** |`,
-    `| Self-employment tax | ${usd(r.seTax)} |`,
-    `| Employee SS + Medicare | ${usd(r.ssTax+r.medTax)} |`,
-    `| Indiana state (2.95%) | ${usd(r.indiana.stateTax)} |`,
-    `| Indiana county (${pct(r.indiana.countyRate)}) | ${usd(r.indiana.countyTax)} |`,
-    S.healthInsuranceSource==="marketplace"?`| ACA net PTC | -${usd(r.aca.netPtc)} |`:"",
+    r.seTax>0?`| Self-employment tax | ${usd(r.seTax)} |`:"",
+    `| FICA — Social Security ${usd(r.ssTax)} + Medicare ${usd(r.medTax)} | ${usd(r.ssTax+r.medTax)} |`,
+    `| Indiana state 2.95% | ${usd(r.indiana.stateTax)} |`,
+    `| Indiana county ${pct(r.indiana.countyRate)} | ${usd(r.indiana.countyTax)} |`,
+    `| — Indiana taxable base | ${usd(r.indiana.base)} (AGI − ${usd(r.indiana.exemptions)} exemptions) |`,
+    r.eitc>0?`| EITC (refundable) | −${usd(r.eitc)} |`:"",
+    r.inEITC>0?`| Indiana EIC | −${usd(r.inEITC)} |`:"",
+    S.healthInsuranceSource==="marketplace"?`| ACA net PTC | −${usd(r.aca.netPtc)} |`:"",
     `| **Total tax** | **${usd(r.totalTax)}** |`,
     `| Payments | ${usd(r.payments)} |`,
     `| **Balance (refund + / owe −)** | **${usd(r.balance)}** |`,
-    "",`Effective rate: ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):"0%"} • Marginal ordinary rate: ${(r.marginalOrd*100).toFixed(0)}%`,
-    "","## Tool's own recommendations");
-  recommendations(S,r).forEach(t=>L.push("- "+t.replace(/<\/?b>/g,"**").replace(/<[^>]+>/g,"")));
+    "",`Effective rate: ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):"0%"} • Marginal on ordinary income: **${(r.marginalOrd*100).toFixed(0)}% federal / ~${(mc*100).toFixed(0)}% all-in** (federal + Indiana state + county; a payroll-HSA dollar also saves 7.65% FICA).`);
+  push("","## Planning headroom",
+    `- **0% capital-gains room:** ${usd(h.gain0)} of long-term gains could be realized tax-free this year.`,
+    `- **15% capital-gains room:** ${usd(h.gain15)} before the 20% rate.`,
+    `- **Roth-conversion room:** ~${usd(h.bracketRoom)} of additional ordinary income (e.g., Roth conversion) before leaving the ${Math.round(h.rate*100)}% bracket.`);
+  push("","## Top tax-saving moves (by total saved)");
+  lb.forEach(l=>push(`- **${l.label}**: ${usd(l.room)} room left · ${Math.round(l.roi*100)}¢ saved per $1 · fill it → save ${usd(l.fillSave)}`));
+  if(opp.list.length){ push("","## Income-tested benefits currently missed");
+    opp.list.forEach(o=>push(`- **${o.name}** — ${usd(o.gap)} over the ${usd(o.limit)} limit (${o.reachable?'reachable with your '+usd(opp.room)+' of pre-tax room':'needs a bigger income change'}); ${o.value}`)); }
+  push("","## Opportunities the reviewer should specifically check");
+  push(`- Whether the ${usd(h.gain0)} of 0%-rate long-term-gain space and ${usd(h.bracketRoom)} of ${Math.round(h.rate*100)}%-bracket Roth-conversion space should be used this year.`);
+  if(S.dependents.some(d=>n(d.age)<13)) push("- Child & Dependent Care Credit (kids under 13 present).");
+  if(opp.list.length) push("- The missed income-tested benefits listed above (Saver's Credit, ACA, education, IRA/Roth) and whether lowering income to reach them is worthwhile.");
+  push("","## Tool's own recommendations");
+  recommendations(S,r).forEach(t=>push("- "+t.replace(/<\/?b>/g,"**").replace(/<[^>]+>/g,"")));
   return L.filter(x=>x!=="").join("\n");
 }
 function openExport(r,fmt){

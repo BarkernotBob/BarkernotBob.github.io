@@ -771,12 +771,15 @@ let EXP=null; // explorer state stashed for hover wiring
 
 function planLevers(s){
   const m=isMarried(s); const L=[];
+  const youWages=n(s.wages)>0, spWages=m&&n(s.wagesSpouse)>0;
+  const youEarned=youWages||n(s.seNetProfit)>0, spEarned=m&&(spWages||n(s.seNetProfitSpouse)>0);
+  const householdEarned=youEarned||spEarned;
   const add=(key,label,cap)=>{ const cur=Math.max(0,n(s[key])); if(cap>0) L.push({key,label,cap,cur,room:Math.max(0,cap-cur)}); };
   add('hsaContribution','HSA'+(s.hsaThroughPayroll?' (payroll)':''),limitHSA(s));
-  add('trad401k', m?'401(k) — you':'401(k)', limit401k(s.yourAge));
-  if(m) add('trad401kSpouse','401(k) — spouse', limit401k(s.spouseAge));
-  add('tradIRA', m?'Traditional IRA — you':'Traditional IRA', limitIRA(s.yourAge));
-  if(m) add('tradIRASpouse','Traditional IRA — spouse', limitIRA(s.spouseAge));
+  if(youWages) add('trad401k', m?'401(k) — you':'401(k)', limit401k(s.yourAge)); // 401(k) needs W-2 wages
+  if(spWages) add('trad401kSpouse','401(k) — spouse', limit401k(s.spouseAge));
+  if(m?householdEarned:youEarned) add('tradIRA', m?'Traditional IRA — you':'Traditional IRA', limitIRA(s.yourAge)); // spousal IRA OK if couple has earned income
+  if(m && householdEarned) add('tradIRASpouse','Traditional IRA — spouse', limitIRA(s.spouseAge));
   if(n(s.seNetProfit)>0){ add('sep','SEP-IRA', C.retire.sepMax); add('soloK','Solo 401(k) deferral', limit401k(s.yourAge)); }
   return L;
 }
@@ -862,7 +865,8 @@ function explorerSVG(E){
   return svg;
 }
 function explorerControls(s){
-  const opts=[['trad401k','401(k) — you'],['hsaContribution','HSA'],['tradIRA','Traditional IRA'],...(isMarried(s)?[['trad401kSpouse','401(k) — spouse'],['tradIRASpouse','IRA — spouse']]:[]),...(n(s.seNetProfit)>0?[['sep','SEP-IRA'],['soloK','Solo 401(k)']]:[]),['income','Wages (income)']];
+  const opts=planLevers(s).map(l=>[l.key,l.label]).concat([['income','Wages (income)']]);
+  if(!opts.some(o=>o[0]===s.explorerLever)) s.explorerLever=opts[0][0]; // selected lever no longer available
   const sel='<select id="expLever">'+opts.map(o=>`<option value="${o[0]}" ${s.explorerLever===o[0]?'selected':''}>${o[1]}</option>`).join('')+'</select>';
   const yb=[['tax','Total tax'],['takehome','Take-home'],['marginal','Marginal %']].map(o=>`<button data-y="${o[0]}" class="${s.explorerY===o[0]?'on':''}">${o[1]}</button>`).join('');
   return `<div class="segctl">${sel}<span class="seg">${yb}</span></div>`;

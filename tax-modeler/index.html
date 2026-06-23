@@ -189,7 +189,7 @@ function defaults(){
     saltIncome:0, saltProperty:0, charitableCash:0, charitableNonCash:0, medicalExpenses:0,
     eduStudentsAOTC:0, eduExpensesAOTC:0, aotcEligible:true, eduExpensesLLC:0, depCareExpenses:0,
     hasMCC:false, mccRate:0,
-    healthInsuranceSource:"employer", annualHealthPremium:0,
+    healthInsuranceSource:"employer", annualHealthPremium:0, premiumPreTax:true,
     acaBenchmarkOverride:0, acaBenchmarkTouched:false, advancePtc:0,
     in529:0, inRentPaid:0, inRented:false,
     fedWithholding:0, fedEstimated:0, inWithholding:0,
@@ -281,7 +281,10 @@ function compute(s){
   if(seNet>0){ const a=seComp(Math.max(0,n(s.seNetProfit)),wYouRaw); const b=married?seComp(Math.max(0,n(s.seNetProfitSpouse)),wSpRaw):{ss:0,med:0}; seTax=a.ss+a.med+b.ss+b.med; seTaxDeduction=seTax/2; }
 
   // Social Security taxability
-  const aboveLineNoSe=aboveLineExcludingSeHalf(s);
+  // Wages are entered GROSS (pre-everything). Pre-tax employer health premiums are excluded
+  // from both taxable wages and FICA wages; 401(k)/HSA are handled via the above-the-line bucket.
+  const employerHealthPreTax=(s.healthInsuranceSource==="employer"&&s.premiumPreTax)?Math.max(0,n(s.annualHealthPremium)):0;
+  const aboveLineNoSe=aboveLineExcludingSeHalf(s)+employerHealthPreTax;
   const provisionalOther=wages+ordinaryInvest+ltcgQ+n(s.tips)+n(s.overtime)+n(s.military)+seNet-seTaxDeduction-aboveLineNoSe;
   const ss=Math.max(0,n(s.ssBenefits)); let taxableSS=0;
   if(ss>0){ const b1=married?32000:25000, b2=married?44000:34000; const prov=provisionalOther+ss*0.5;
@@ -343,7 +346,7 @@ function compute(s){
 
   // Additional Medicare + NIIT
   const hsaPayroll=s.hsaThroughPayroll?Math.min(limitHSA(s),Math.max(0,n(s.hsaContribution))):0;
-  const wYou=Math.max(0,wYouRaw-hsaPayroll);
+  const wYou=Math.max(0,wYouRaw-hsaPayroll-employerHealthPreTax); // FICA-exempt pre-tax items
   const medWages=wYou+wSpRaw;
   const addlMedicare=Math.max(0,(medWages+Math.max(0,seNet*0.9235))-C.fica.addlMedThresh[status])*C.fica.addlMed;
   const niit=Math.max(0,Math.min(netInvestIncome,agi-C.niit.thresh[status]))*C.niit.rate;
@@ -589,7 +592,7 @@ function renderForm(){
   </div></details>
 
   <details class="sec" open><summary>Income <span class="sub" id="sub-income"></span></summary><div class="secbody">
-    ${pairField("W-2 wages (gross)","wages","wagesSpouse",{tip:"Box 1 of your W-2 (before tax, after pre-tax 401(k)/health). Enter gross pay; we handle pre-tax items separately."})}
+    ${pairField("Gross wages / salary","wages","wagesSpouse",{tip:"Your TOTAL pay before anything is taken out — before 401(k), health insurance, HSA, and taxes. This is your salary or the gross on your pay stub, NOT W-2 Box 1. The tool subtracts pre-tax items for you below.",hint:"Total pay before any deductions (not W-2 Box 1)."})}
     ${field("Interest income","interest")}
     ${field("Ordinary dividends","ordDiv")}
     ${field("Qualified dividends (subset of above)","qualDiv",{tip:"The portion of dividends taxed at the lower long-term capital-gains rates. Already included in 'ordinary dividends' above."})}
@@ -643,7 +646,8 @@ function renderForm(){
         <option value="medicaid" ${S.healthInsuranceSource==="medicaid"?'selected':''}>Medicaid / HIP</option>
         <option value="none" ${S.healthInsuranceSource==="none"?'selected':''}>None</option>
       </select></div>
-    <div id="premiumRow" class="${S.healthInsuranceSource==="none"||S.healthInsuranceSource==="medicaid"?'hidden':''}">${field("Annual health insurance premium you pay","annualHealthPremium")}</div>
+    <div id="premiumRow" class="${S.healthInsuranceSource==="none"||S.healthInsuranceSource==="medicaid"?'hidden':''}">${field("Annual health insurance premium you pay","annualHealthPremium",{tip:"Your share of the yearly premium. If paid pre-tax through an employer, it's excluded from your taxable wages and Social Security/Medicare wages."})}
+      <div id="premiumPreTaxRow" class="${S.healthInsuranceSource==="employer"?'':'hidden'}" style="margin-top:-4px">${check("Premiums are paid pre-tax through payroll","premiumPreTax","Standard for employer plans — the premium comes out before taxes, lowering taxable and FICA wages.")}</div></div>
     <div id="marketplaceBlock" class="${S.healthInsuranceSource==="marketplace"?'':'hidden'}">
       <div class="miniNote">Household size is filled automatically from your filing status and dependents: <strong id="autoHouseholdSize"></strong>.</div>
       ${field("Benchmark Silver annual premium","acaBenchmarkOverride",{est:true,value:S.acaBenchmarkTouched?S.acaBenchmarkOverride:estimateBenchmarkAnnual(S),tip:"The 2nd-lowest-cost Silver plan in your area — the basis for the subsidy. We pre-fill an estimate from ages; type your exact figure from HealthCare.gov to override it.",hint:"Pre-filled from ages. Type your exact benchmark to override."})}
@@ -855,6 +859,7 @@ function applyVisibility(){
   const se=n(S.seNetProfit)>0||n(S.seNetProfitSpouse)>0;
   show("seAdjust",se); show("sec-qbi",se);
   show("premiumRow",!(S.healthInsuranceSource==="none"||S.healthInsuranceSource==="medicaid"));
+  show("premiumPreTaxRow",S.healthInsuranceSource==="employer");
   show("marketplaceBlock",S.healthInsuranceSource==="marketplace");
   show("pmiRow",n(S.mortgageInterest)>0||n(S.mortgageBalance)>0);
   show("mccRow",S.hasMCC); show("aotcBlock",n(S.eduStudentsAOTC)>0); show("rentRow",S.inRented);

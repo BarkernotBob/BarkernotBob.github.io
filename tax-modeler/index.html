@@ -70,6 +70,8 @@
       table.water td.amt { text-align:right; }
       table.water tr.tot td { font-weight:700; border-bottom:none; border-top:2px solid var(--ink); padding-top:8px; }
       table.water tr.sub td { color:var(--muted); }
+      .ddl { font-size:11px; padding:1px 7px; border-radius:10px; background:var(--line); color:var(--muted); white-space:nowrap; }
+      .ddl.ddlUrgent { background:var(--warn-bg); color:var(--warn); font-weight:600; }
       .modeToggle { display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
       #form input[type=text] { padding:8px 9px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font-size:14px; }
       .sbgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
@@ -272,7 +274,7 @@ function defaults(){
     healthInsuranceSource:"employer", annualHealthPremium:0, premiumPreTax:true,
     acaBenchmarkOverride:0, acaBenchmarkTouched:false, advancePtc:0,
     in529:0, inRentPaid:0, inRented:false,
-    fedWithholding:0, fedEstimated:0, inWithholding:0,
+    fedWithholding:0, fedEstimated:0, inWithholding:0, priorYearTax:0, priorAgiHigh:false,
     showLessIncome:false, showLessCredits:false,
     qbiW2Wages:0, qbiUbia:0, qbiSSTB:false,
     resultsTab:"summary", explorerLever:"trad401k", explorerY:"tax", leaderboardSort:"savings", expandedRows:{},
@@ -821,6 +823,8 @@ function renderForm(){
     ${field("Federal withholding (YTD or estimate)","fedWithholding")}
     ${field("Federal estimated payments","fedEstimated")}
     ${field(S.state==="IN"?"Indiana withholding + estimates":"State withholding + estimates","inWithholding")}
+    ${field("Last year's total federal tax (optional)","priorYearTax",{tip:"From line 22 of your prior-year Form 1040 (total tax). Lets the safe-harbor check use the 100%/110%-of-last-year rule, which often means you can prepay less.",hint:"For the underpayment-penalty safe-harbor check."})}
+    <div class="inline">${check("Last year's AGI was over $150,000 ($75k if married-separate)","priorAgiHigh","Higher earners must prepay 110% of last year's tax (instead of 100%) to use that safe harbor.")}</div>
   </div></details>
   ${full?'':'<div class="miniNote" style="margin-top:10px">Simple view shows the essentials. Switch to <b>Detailed</b> at the top for itemized deductions, education &amp; child-care credits, QBI, ACA subsidies, and state-specific items.</div>'}`;
   // visibility: Indiana section only for IN; advanced sections hidden in Simple mode
@@ -875,7 +879,7 @@ function leaderboardHtml(rows){
   return rows.map(r=>`<div class="lbrow" data-lever="${r.key}">
     <div class="lbtop"><span class="lbname">${r.label}<span class="drill">explore ▸</span></span><span class="lbsave">save ${usd(r.fillSave)}</span></div>
     <div class="lbbartrack"><div class="lbbar" style="width:${Math.max(2,r.barPct).toFixed(0)}%"></div></div>
-    <div class="lbmeta"><span>room left <b>${usd(r.room)}</b></span><span><b>${Math.round(r.roi*100)}¢</b> saved per $1</span><span>fill it all → saves <b>${usd(r.fillSave)}</b></span></div>
+    <div class="lbmeta"><span>room left <b>${usd(r.room)}</b></span><span><b>${Math.round(r.roi*100)}¢</b> saved per $1</span><span>fill it all → saves <b>${usd(r.fillSave)}</b></span>${deadlineChip(r.key,S)}</div>
   </div>`).join('');
 }
 function classifyKink(a,b){
@@ -1157,6 +1161,64 @@ function defaultReadout(E){
 /* =========================================================================
    RESULTS
    ========================================================================= */
+/* ---- Plain-English summary, deadlines, and safe-harbor ---- */
+function plainEnglishSummary(s,r){
+  const fname=(C.filingNames[s.filingStatus]||'').toLowerCase();
+  const deps=s.dependents.length;
+  const stateBit=r.indiana.kind==='IN'?` in Indiana (${s.county} County)`:(r.indiana.name?` in ${r.indiana.name}`:'');
+  const adjTotal=r.adj.reduce((t,a)=>t+a.amount,0);
+  const ficaPart=r.ssTax+r.medTax+r.seTax, statePart=r.indiana.stateTax+r.indiana.countyTax;
+  const mc=combinedMarginal(s);
+  let p=`You're filing <b>${fname}</b>${deps?` with ${deps} dependent${deps>1?'s':''}`:''}${stateBit}. `;
+  p+=`You brought in <b>${usd(r.totalIncome)}</b>`;
+  p+=adjTotal>0.5?`, and ${usd(adjTotal)} of pre-tax contributions/adjustments bring your AGI (the IRS's measure of your income) to <b>${usd(r.agi)}</b>. `:`, which is also your AGI. `;
+  p+=`After the ${r.useItemized?'itemized':'standard'} deduction of ${usd(r.deduction)}${r.qbiDeduction>0?` and a ${usd(r.qbiDeduction)} QBI deduction`:''}, <b>${usd(r.taxableIncome)}</b> is actually taxed. `;
+  p+=`Your total tax is <b>${usd(r.totalTax)}</b> — roughly ${usd(r.fedIncomeTax)} federal income tax, ${usd(ficaPart)} Social Security/Medicare${statePart>0?`, and ${usd(statePart)} ${r.indiana.kind==='IN'?'Indiana':'state'}`:''}. `;
+  p+=r.payments>0?`With ${usd(r.payments)} already paid in, you'd ${r.balance>=0?`get a refund of <b>${usd(r.balance)}</b>`:`owe <b>${usd(-r.balance)}</b>`}. `:`No withholding is entered, so the full ${usd(r.totalTax)} would be due (minus whatever your employer already withholds). `;
+  p+=`Your average rate is ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'}, but your <b>next</b> dollar is taxed about <b>${(mc*100).toFixed(0)}%</b> — that higher number is the one that matters when deciding whether to save more pre-tax or take on extra income.`;
+  return p;
+}
+function deadlineFor(key,s){
+  const yr=APP.taxYear, nyr=yr+1;
+  if(key==='hsaContribution') return s.hsaThroughPayroll?{t:`By Dec 31, ${yr}`,u:true}:{t:`Until Apr 15, ${nyr}`,u:false};
+  const dec={trad401k:1,trad401kSpouse:1,soloK:1,depCareFsa:1,in529:1,simple:1};
+  const apr={tradIRA:1,tradIRASpouse:1,rothIRA:1,rothIRASpouse:1,sep:1};
+  if(dec[key]) return {t:`By Dec 31, ${yr}`,u:true};
+  if(apr[key]) return {t:`Until Apr 15, ${nyr}`,u:false};
+  return null;
+}
+function deadlineChip(key,s){ const d=deadlineFor(key,s); return d?`<span class="ddl ${d.u?'ddlUrgent':''}">${d.t}</span>`:''; }
+function safeHarbor(s,r){
+  const fedTax=Math.max(0, r.fedIncomeTax + r.seTax + r.addlMedicare + r.niit - r.refundableExtras);
+  const fedPaid=Math.max(0, n(s.fedWithholding)+n(s.fedEstimated));
+  const owe=fedTax-fedPaid;
+  const priorTax=Math.max(0,n(s.priorYearTax)); const hasPrior=priorTax>0;
+  const pctPrior=s.priorAgiHigh?1.10:1.00;
+  const need90=0.90*fedTax;
+  const needPrior=hasPrior?pctPrior*priorTax:Infinity;
+  const required=Math.min(need90,needPrior); // safe once you've paid the SMALLER of 90%-this-year or 100/110%-last-year
+  const under1000=owe<1000;
+  const meets=fedPaid>=required-1;
+  const safe=under1000||meets;
+  const shortfall=Math.max(0,required-fedPaid);
+  const penalty=Math.round(shortfall*0.08); // ~8% IRS underpayment rate, rough annualized
+  return {fedTax,fedPaid,owe,priorTax,hasPrior,pctPrior,need90,needPrior,required,under1000,meets,safe,shortfall,penalty};
+}
+function safeHarborHtml(s,r){
+  const h=safeHarbor(s,r);
+  if(h.fedTax<=0) return '<div class="sub2">No federal tax this year — nothing to prepay.</div>';
+  let body;
+  if(h.safe){
+    const why=h.under1000?`you'd owe less than $1,000 after what's paid in`:`you've already paid at least the required ${usd(Math.round(h.required))}`;
+    body=`<div class="rec" style="border-left:3px solid var(--good)"><b style="color:var(--good)">On track — no underpayment penalty expected.</b><br>You're inside the IRS "safe harbor" because ${why}.</div>`;
+  } else {
+    body=`<div class="rec" style="border-left:3px solid var(--warn)"><b style="color:var(--warn)">You may owe an underpayment penalty (~${usd(h.penalty)}).</b><br>
+      The IRS expects you to prepay the smaller of <b>${usd(Math.round(h.need90))}</b> (90% of this year's federal tax)${h.hasPrior?` or <b>${usd(Math.round(h.needPrior))}</b> (${Math.round(h.pctPrior*100)}% of last year's)`:''}. You've paid <b>${usd(Math.round(h.fedPaid))}</b>, about <b>${usd(Math.round(h.shortfall))}</b> short.<br>
+      <span class="sub2">Fix it before Dec 31 by raising your paycheck withholding — withholding counts as if paid evenly all year, so it can erase the penalty even late in the year. An estimated payment also helps but only from its payment date forward.</span></div>`;
+  }
+  if(!h.hasPrior) body+=`<div class="sub2" style="margin-top:6px">💡 Enter <b>last year's total federal tax</b> in the Withholding section for a more precise check (the 100%/110%-of-last-year safe harbor, which often lets you prepay less).</div>`;
+  return body;
+}
 function renderSummaryTab(r){
   const acaCardHtml=S.healthInsuranceSource==="marketplace"?acaCard(r):"";
   const cliffs=buildCliffs(S,r).map(c=>`<div class="cliff ${c.cls}">
@@ -1180,11 +1242,13 @@ function renderSummaryTab(r){
   const ficaKids=[{label:'Social Security 6.2%',amount:r.ssTax},{label:'Medicare 1.45%',amount:r.medTax}];
   const inKids=r.indiana.kind==="IN"?[{label:'State 2.95%',amount:r.indiana.stateTax},{label:'County '+pct(r.indiana.countyRate),amount:r.indiana.countyTax},{text:`on Indiana base ${usd(r.indiana.base)} = AGI − ${usd(r.indiana.exemptions)} exemptions${(r.indiana.renter+r.indiana.homeowner)>0?' − '+usd(r.indiana.renter+r.indiana.homeowner)+' deductions':''}`}]:(r.indiana.isEstimate?[{text:'Rough estimate — replace with an actual state calculation before relying on it.'}]:[]);
   return `
+    <div class="card"><div class="h3">Your situation in plain English</div><div style="font-size:13.5px;line-height:1.55">${plainEnglishSummary(S,r)}</div></div>
     <div class="card">
       <div class="sub2">Estimated balance ${r.payments===0?'<span class="estTag" style="background:var(--warn-bg);color:var(--warn)">no withholding entered</span>':''}</div>
       <div class="bignum ${r.balance>=0?'good':'bad'}">${r.balance>=0?'Refund ':'You owe '}${usd(Math.abs(r.balance))}</div>
       <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal <b>${(r.marginalOrd*100).toFixed(0)}%</b> federal / <b>~${(mc*100).toFixed(0)}%</b> all-in ${tipIcon("All-in marginal = federal + any state/local tax on your next dollar of ordinary income (a payroll HSA dollar also saves 7.65% FICA on top).")}</div>
     </div>
+    <div class="card"><div class="h3">Estimated-tax safe harbor ${tipIcon("Whether you've prepaid enough (through withholding and estimated payments) to avoid the IRS underpayment penalty. Federal only.")}</div>${safeHarborHtml(S,r)}</div>
     <div class="card"><div class="h3">Income → Tax waterfall <span class="sub2" style="font-weight:400">— click ▸ rows to expand</span></div>
       <table class="water">
         <tr><td>Total income</td><td class="amt">${usd(r.totalIncome)}</td></tr>
@@ -1293,13 +1357,15 @@ function buildExport(r,fmt){
       acaNetPTC:round(r.aca.netPtc), totalTax:round(r.totalTax), payments:round(r.payments), balance:round(r.balance),
       effectiveRate:r.totalIncome>0?+(r.totalTax/r.totalIncome).toFixed(4):0, marginalOrdinaryFederal:r.marginalOrd, marginalAllInOrdinary:+mc.toFixed(4) },
     headroom:{ zeroPctLTCGroom:round(h.gain0), fifteenPctLTCGroom:round(h.gain15), rothConversionRoomAtCurrentRate:round(h.bracketRoom), currentBracketRate:h.rate },
-    topMoves:lb.map(l=>({lever:l.label, roomLeft:round(l.room), centsPerDollar:Math.round(l.roi*100), totalSavedIfFilled:round(l.fillSave)})),
-    benefitsMissed:opp.list.map(o=>({name:o.name, overLimitBy:round(o.gap), reachableWithPretaxRoom:o.reachable, value:o.value}))
+    topMoves:lb.map(l=>({lever:l.label, roomLeft:round(l.room), centsPerDollar:Math.round(l.roi*100), totalSavedIfFilled:round(l.fillSave), deadline:(deadlineFor(l.key,S)||{}).t||null})),
+    benefitsMissed:opp.list.map(o=>({name:o.name, overLimitBy:round(o.gap), reachableWithPretaxRoom:o.reachable, value:o.value})),
+    safeHarbor:(()=>{ const sh=safeHarbor(S,r); return {federalTax:round(sh.fedTax), federalPaid:round(sh.fedPaid), safe:sh.safe, requiredPrepayment:isFinite(sh.required)?round(sh.required):round(sh.need90), shortfall:round(sh.shortfall), estimatedPenalty:round(sh.penalty)}; })()
   },null,2); }
   // ---- markdown ----
   const L=[]; const push=(...x)=>x.forEach(v=>L.push(v));
   push("# 2026 Tax Estimate — for AI review","",
     `Please review this **${jur}** tax-year-2026 estimate. Check accuracy against current law (OBBBA, IRS Rev. Proc. 2025-32${r.indiana.kind==="IN"?", Indiana DOR":""}), flag errors, and suggest optimizations.`,"",
+    "## Plain-English summary", plainEnglishSummary(S,r).replace(/<\/?b>/g,"**").replace(/<[^>]+>/g,""),"",
     "## Assumptions & blanks to note");
   exportAssumptions(r).forEach(a=>push("- "+a));
   push("","## Inputs");
@@ -1332,12 +1398,16 @@ function buildExport(r,fmt){
     `| Payments | ${usd(r.payments)} |`,
     `| **Balance (refund + / owe −)** | **${usd(r.balance)}** |`,
     "",`Effective rate: ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):"0%"} • Marginal on ordinary income: **${(r.marginalOrd*100).toFixed(0)}% federal / ~${(mc*100).toFixed(0)}% all-in** (federal + any state/local; a payroll-HSA dollar also saves 7.65% FICA).`);
+  { const sh=safeHarbor(S,r); push("","## Estimated-tax safe harbor (federal)",
+    sh.safe?`- On track — no underpayment penalty expected (${sh.under1000?"would owe under $1,000":"prepayments meet the required "+usd(Math.round(sh.required))}).`
+      :`- ⚠️ Possible underpayment penalty ~${usd(sh.penalty)}: required prepayment ${usd(Math.round(isFinite(sh.required)?sh.required:sh.need90))}, paid ${usd(Math.round(sh.fedPaid))}, short ${usd(Math.round(sh.shortfall))}. Raising paycheck withholding before Dec 31 counts as paid evenly all year and can erase it.`,
+    sh.hasPrior?`- Using prior-year tax ${usd(sh.priorTax)} at ${Math.round(sh.pctPrior*100)}%.`:`- Prior-year tax not provided; only the 90%-of-this-year test was applied.`); }
   push("","## Planning headroom",
     `- **0% capital-gains room:** ${usd(h.gain0)} of long-term gains could be realized tax-free this year.`,
     `- **15% capital-gains room:** ${usd(h.gain15)} before the 20% rate.`,
     `- **Roth-conversion room:** ~${usd(h.bracketRoom)} of additional ordinary income (e.g., Roth conversion) before leaving the ${Math.round(h.rate*100)}% bracket.`);
   push("","## Top tax-saving moves (by total saved)");
-  lb.forEach(l=>push(`- **${l.label}**: ${usd(l.room)} room left · ${Math.round(l.roi*100)}¢ saved per $1 · fill it → save ${usd(l.fillSave)}`));
+  lb.forEach(l=>{ const d=deadlineFor(l.key,S); push(`- **${l.label}**: ${usd(l.room)} room left · ${Math.round(l.roi*100)}¢ saved per $1 · fill it → save ${usd(l.fillSave)}${d?` · _${d.t}_`:''}`); });
   if(opp.list.length){ push("","## Income-tested benefits currently missed");
     opp.list.forEach(o=>push(`- **${o.name}** — ${usd(o.gap)} over the ${usd(o.limit)} limit (${o.reachable?'reachable with your '+usd(opp.room)+' of pre-tax room':'needs a bigger income change'}); ${o.value}`)); }
   push("","## Opportunities the reviewer should specifically check");

@@ -18,7 +18,7 @@ global.document = { getElementById:()=>_el, querySelector:()=>_el, querySelector
 global.window = {}; global.navigator = { clipboard:{ writeText(){} } }; global.setTimeout = ()=>{};
 global.localStorage = { getItem:()=>null, setItem(){}, removeItem(){} };
 
-const api = new Function(js + ";return {compute,defaults,computeState,planLevers,opportunities,sideBusiness,buildExport,combinedMarginal};")();
+const api = new Function(js + ";return {compute,defaults,computeState,planLevers,opportunities,sideBusiness,buildExport,combinedMarginal,plainEnglishSummary,deadlineFor,safeHarbor};")();
 
 let pass = 0, fail = 0;
 const approx = (a,b,tol=1) => Math.abs(a-b) <= tol;
@@ -127,6 +127,37 @@ function base(over={}) { return Object.assign(api.defaults(), over); }
   const s = base({ filingStatus:"mfj", wages:140000, state:"IN", county:"Allen" });
   const r = api.compute(s);
   check("all-in marginal ≥ federal marginal", api.combinedMarginal(s) >= r.marginalOrd - 0.001);
+}
+
+// 13. Plain-English summary produces a non-trivial narrative referencing the balance
+{
+  const s = base({ filingStatus:"single", wages:75000, fedWithholding:9000, state:"IN" });
+  const txt = api.plainEnglishSummary(s, api.compute(s));
+  check("plain-English summary is a substantial string", typeof txt==="string" && txt.length>120);
+  check("plain-English mentions refund or owe", /refund|owe/.test(txt));
+}
+
+// 14. Deadline mapping: 401(k) is year-end, IRA is filing-deadline
+{
+  const s = base({});
+  check("401(k) deadline is Dec 31 (urgent)", api.deadlineFor("trad401k", s).u === true);
+  check("Traditional IRA deadline is not urgent (April)", api.deadlineFor("tradIRA", s).u === false);
+  check("payroll HSA is year-end, direct HSA is April",
+    api.deadlineFor("hsaContribution", base({hsaThroughPayroll:true})).u === true &&
+    api.deadlineFor("hsaContribution", base({hsaThroughPayroll:false})).u === false);
+}
+
+// 15. Safe harbor: under $1,000 owed = safe; large unpaid SE tax = not safe; prior-year lowers the bar
+{
+  const fullyPaid = api.safeHarbor(base({ wages:80000, fedWithholding:30000 }), api.compute(base({ wages:80000, fedWithholding:30000 })));
+  check("fully-withheld filer is in safe harbor", fullyPaid.safe === true);
+  const sUnpaid = base({ seNetProfit:150000, fedWithholding:0, fedEstimated:0 });
+  const unpaid = api.safeHarbor(sUnpaid, api.compute(sUnpaid));
+  check("big unpaid SE income is NOT safe", unpaid.safe === false && unpaid.shortfall > 0);
+  // prior-year tax of $1 (tiny) makes the required prepayment tiny → safe
+  const sPrior = base({ seNetProfit:150000, fedWithholding:200, priorYearTax:100 });
+  const withPrior = api.safeHarbor(sPrior, api.compute(sPrior));
+  check("low prior-year tax lowers the required prepayment (becomes safe)", withPrior.safe === true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

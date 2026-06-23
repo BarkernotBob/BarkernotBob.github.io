@@ -784,11 +784,11 @@ function leaderboardHtml(rows){
   </div>`).join('');
 }
 function classifyKink(a,b){
-  if((a.niit>0)!==(b.niit>0)) return 'NIIT 3.8%';
+  if((a.niit>0)!==(b.niit>0)) return 'NIIT';
   if(a.cliff!==b.cliff) return 'ACA cliff';
-  if((a.am>0)!==(b.am>0)) return "Add'l Medicare";
-  if(Math.round(a.mo*100)!==Math.round(b.mo*100)) return Math.round(b.mo*100)+'% bracket';
-  return 'threshold';
+  if((a.am>0)!==(b.am>0)) return 'Medicare +';
+  if(Math.round(a.mo*100)!==Math.round(b.mo*100)) return Math.round(b.mo*100)+'%';
+  return ''; // generic threshold: draw the line, no label
 }
 function buildExplorer(s){
   const key=s.explorerLever, yMode=s.explorerY, N=80;
@@ -801,26 +801,35 @@ function buildExplorer(s){
     const locked=LOCKED_KEYS.reduce((t,k)=>t+(k===cKey?x:Math.max(0,n(s[k]))),0);
     pts.push({x,tax:rr.totalTax,take:rr.totalIncome-rr.totalTax-locked,niit:rr.niit,mo:rr.marginalOrd,cliff:rr.aca?rr.aca.exceedsCliff:false,am:rr.addlMedicare}); }
   for(let i=0;i<pts.length;i++){ const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)]; const dx=b.x-a.x; pts[i].marg=dx?(b.tax-a.tax)/dx:0; }
-  const markers=[];
-  for(let i=2;i<pts.length;i++){ if(Math.abs(pts[i].marg-pts[i-1].marg)>0.015){ if(!markers.some(m=>Math.abs(m.x-pts[i].x)<(xMax-xMin)/16)) markers.push({x:pts[i].x,label:classifyKink(pts[i-1],pts[i])}); } }
+  // kink markers: collect candidates, keep the strongest, spaced apart, then stagger labels
+  let cand=[];
+  for(let i=2;i<pts.length-1;i++){ const d=Math.abs(pts[i].marg-pts[i-1].marg); if(d>0.012) cand.push({x:pts[i].x,d,label:classifyKink(pts[i-1],pts[i])}); }
+  cand.sort((a,b)=>b.d-a.d);
+  const markers=[]; const minGap=(xMax-xMin)/8;
+  for(const c of cand){ if(markers.length>=6) break; if(!markers.some(m=>Math.abs(m.x-c.x)<minGap)) markers.push(c); }
+  markers.sort((a,b)=>a.x-b.x); markers.forEach((m,i)=>m.tier=i%2);
   let sweet=null;
   if(key!=='income'){ let best=0; pts.forEach(p=>{ if(-p.marg>best)best=-p.marg; }); if(best>0.01){ const inB=pts.filter(p=>-p.marg>=best*0.92); if(inB.length){ const x0=Math.min(...inB.map(p=>p.x)),x1=Math.max(...inB.map(p=>p.x)); if((x1-x0)<(xMax-xMin)*0.7) sweet={x0,x1}; } } }
-  const yv=pts.map(p=> yMode==='marginal'?Math.abs(p.marg)*100 : yMode==='takehome'?p.take : p.tax );
+  const yv=pts.map(p=> yMode==='marginal'?Math.round(Math.abs(p.marg)*1000)/10 : yMode==='takehome'?p.take : p.tax ); // round marginal to 0.1% to kill jitter
   return {key,yMode,pts,yv,xMin,xMax,yMin:Math.min(...yv),yMax:Math.max(...yv),hereX,markers,sweet};
 }
 function explorerSVG(E){
-  const W=340,H=180,pL=12,pR=12,pT=16,pB=20,plotW=W-pL-pR,plotH=H-pT-pB;
-  const span=(E.yMax-E.yMin)||1;
+  const W=340,H=180,pL=12,pR=12,pT=18,pB=20,plotW=W-pL-pR,plotH=H-pT-pB;
+  // Floor the y-range so a nearly-flat metric renders flat (not amplified noise), else pad it.
+  let yLo=E.yMin, yHi=E.yMax; const raw=yHi-yLo; const floor=Math.max(Math.abs(yHi),1)*0.06;
+  if(raw<floor){ const mid=(yLo+yHi)/2; yLo=mid-floor; yHi=mid+floor; } else { const pad=raw*0.12; yLo-=pad; yHi+=pad; }
+  E.yMin=yLo; E.yMax=yHi; const span=(yHi-yLo)||1;
   const X=x=>pL+(x-E.xMin)/((E.xMax-E.xMin)||1)*plotW;
-  const Y=v=>pT+(1-(v-E.yMin)/span)*plotH;
+  const Y=v=>pT+(1-(v-yLo)/span)*plotH;
   E.layout={W,H,pL,pR,pT,pB,plotW,plotH};
   const line=E.pts.map((p,i)=>X(p.x).toFixed(1)+','+Y(E.yv[i]).toFixed(1)).join(' ');
   const baseY=(pT+plotH).toFixed(1);
   const area=X(E.pts[0].x).toFixed(1)+','+baseY+' '+line+' '+X(E.pts[E.pts.length-1].x).toFixed(1)+','+baseY;
-  let svg='<svg class="chart-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" id="expSvg">';
+  let svg='<svg class="chart-svg" viewBox="0 0 '+W+' '+H+'" id="expSvg">';
   svg+='<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".22"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
   if(E.sweet){ const x0=X(E.sweet.x0),x1=X(E.sweet.x1); svg+='<rect class="chart-sweet" x="'+x0.toFixed(1)+'" y="'+pT+'" width="'+Math.max(2,x1-x0).toFixed(1)+'" height="'+plotH+'"/>'; }
-  E.markers.forEach(m=>{ const x=X(m.x); svg+='<line class="chart-mk" x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+plotH)+'"/>'; svg+='<text class="chart-mklabel" x="'+x.toFixed(1)+'" y="'+(pT-5)+'" text-anchor="middle">'+m.label+'</text>'; });
+  E.markers.forEach(m=>{ const x=X(m.x); svg+='<line class="chart-mk" x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+plotH)+'"/>';
+    if(m.label){ const ly=m.tier?pT-3:pT-11; const tx=Math.max(16,Math.min(W-16,x)); svg+='<text class="chart-mklabel" x="'+tx.toFixed(1)+'" y="'+ly+'" text-anchor="middle">'+m.label+'</text>'; } });
   svg+='<polygon class="chart-area" points="'+area+'" fill="url(#cg)"/>';
   svg+='<polyline class="chart-line" points="'+line+'"/>';
   // axis labels
@@ -876,10 +885,10 @@ function headroomHtml(h){
   const scaleMax=Math.max(h.lt.fifteen*1.04, h.ti*1.1, 1);
   const pos=v=>Math.min(100,v/scaleMax*100);
   const here=pos(h.ti);
-  return `<div class="gauge">
-      <div class="seg" style="left:${pos(h.lt.zero)}%"></div><div class="lab" style="left:${pos(h.lt.zero)}%">0% ceiling<br>${usd(h.lt.zero)}</div>
-      <div class="seg" style="left:${pos(h.lt.fifteen)}%"></div><div class="lab" style="left:${pos(h.lt.fifteen)}%">15% ceiling</div>
-      <div class="here" style="left:${here}%"></div><div class="herelab" style="left:${here}%">you ${usd(h.ti)}</div>
+  return `<div class="gauge" style="margin-bottom:26px">
+      <div class="seg" style="left:${pos(h.lt.zero)}%"></div><div class="lab" style="left:${pos(h.lt.zero)}%">0% ceiling ${usd(h.lt.zero)}</div>
+      <div class="seg" style="left:${pos(h.lt.fifteen)}%"></div><div class="lab" style="left:${pos(h.lt.fifteen)}%">15% ceiling ${usd(h.lt.fifteen)}</div>
+      <div class="here" style="left:${here}%"></div><div class="herelab" style="left:${here}%;top:38px">you · ${usd(h.ti)}</div>
     </div>
     <div class="rec">${h.gain0>0?`<b>Tax-free gains:</b> you can realize up to <b>${usd(h.gain0)}</b> of long-term capital gains at <b>0%</b> tax this year.`:`Your income is above the 0% capital-gains ceiling, so additional long-term gains are taxed at 15%+.`}</div>
     ${h.bracketRoom>0?`<div class="rec"><b>Roth headroom:</b> you can add about <b>${usd(h.bracketRoom)}</b> of ordinary income (e.g., a <b>Roth conversion</b>) before your rate rises past <b>${Math.round(h.rate*100)}%</b>.</div>`:''}`;

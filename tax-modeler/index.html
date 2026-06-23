@@ -90,6 +90,51 @@
       .modal footer { border-top:1px solid var(--line); padding:12px 16px; display:flex; gap:8px; justify-content:flex-end; margin:0; }
       .modal button { border:1px solid var(--accent); background:var(--accent); color:#fff; padding:9px 14px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; }
       .modal button.ghost { background:#fff; color:var(--accent); }
+      /* ---- Optimize tab ---- */
+      .tabs { display:flex; gap:6px; margin-bottom:12px; background:var(--chip); padding:4px; border-radius:10px; }
+      .tabs button { flex:1; border:none; background:none; padding:9px 10px; border-radius:7px; cursor:pointer; font-size:13px; font-weight:600; color:var(--muted); }
+      .tabs button.active { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+      .lbrow { display:grid; gap:4px; padding:10px 0; border-bottom:1px dashed var(--line); cursor:pointer; }
+      .lbrow:last-child { border-bottom:none; }
+      .lbrow:hover .lbname { color:var(--accent); }
+      .lbrow:hover { background:#fbfcfe; }
+      .lbtop { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+      .lbname { font-weight:600; font-size:13.5px; }
+      .lbname .drill { color:var(--muted); font-weight:400; font-size:11px; margin-left:4px; }
+      .lbsave { font-weight:700; font-variant-numeric:tabular-nums; color:var(--good); white-space:nowrap; }
+      .lbbartrack { height:9px; border-radius:5px; background:var(--chip); overflow:hidden; }
+      .lbbar { height:9px; border-radius:5px; background:linear-gradient(90deg,#1f9d63,#14794a); }
+      .lbmeta { display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .lbmeta b { color:var(--ink); font-weight:600; }
+      .chart-svg { width:100%; height:auto; display:block; touch-action:none; }
+      .chart-line { fill:none; stroke:var(--accent); stroke-width:2.5; stroke-linejoin:round; }
+      .chart-here { fill:var(--ink); }
+      .chart-herehalo { fill:var(--accent); opacity:.18; }
+      .chart-mk { stroke:#b9b1c9; stroke-width:1; stroke-dasharray:3 3; }
+      .chart-mklabel { font-size:8.5px; fill:var(--muted); }
+      .chart-sweet { fill:var(--good); opacity:.10; }
+      .chart-axis { font-size:9px; fill:var(--muted); }
+      .chart-hover { stroke:var(--accent); stroke-width:1; opacity:0; }
+      .chart-hovdot { fill:var(--accent); opacity:0; }
+      .segctl { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+      .segctl select { width:auto; padding:6px 8px; font-size:12.5px; }
+      .segctl .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+      .segctl .seg button { border:none; background:#fff; color:var(--muted); font-size:11.5px; padding:6px 10px; cursor:pointer; }
+      .segctl .seg button.on { background:var(--accent); color:#fff; }
+      .readout { font-size:12px; color:var(--ink); background:var(--chip); border-radius:7px; padding:7px 10px; margin-top:9px; font-variant-numeric:tabular-nums; min-height:16px; }
+      .readout b { color:var(--accent); }
+      .wstep { display:grid; grid-template-columns:1fr auto; gap:3px 10px; align-items:center; padding:8px 0; border-bottom:1px dashed var(--line); }
+      .wstep .wlab { font-size:13px; }
+      .wstep .wlab small { color:var(--muted); }
+      .wstep .wsave { color:var(--good); font-weight:700; font-variant-numeric:tabular-nums; }
+      .wstep .wbartrack { grid-column:1/3; height:7px; border-radius:4px; background:var(--chip); overflow:hidden; }
+      .wstep .wbar { height:7px; border-radius:4px; background:linear-gradient(90deg,#1f9d63,#14794a); }
+      .wsum { display:flex; justify-content:space-between; font-weight:700; padding-top:10px; margin-top:4px; border-top:2px solid var(--ink); font-variant-numeric:tabular-nums; }
+      .gauge { position:relative; height:32px; border-radius:7px; margin:26px 0 8px; background:linear-gradient(90deg,#e7f6ee 0%,#e7f6ee 35%,#eaf1ff 100%); border:1px solid var(--line); }
+      .gauge .seg { position:absolute; top:0; bottom:0; border-left:2px solid var(--ink); opacity:.55; }
+      .gauge .lab { position:absolute; top:-16px; font-size:9.5px; color:var(--muted); transform:translateX(-50%); white-space:nowrap; }
+      .gauge .here { position:absolute; top:-5px; width:3px; height:42px; background:var(--accent); border-radius:2px; }
+      .gauge .herelab { position:absolute; top:-16px; font-size:9.5px; color:var(--accent); font-weight:700; transform:translateX(-50%); white-space:nowrap; }
     </style>
   </head>
   <body>
@@ -195,6 +240,7 @@ function defaults(){
     fedWithholding:0, fedEstimated:0, inWithholding:0,
     showLessIncome:false, showLessCredits:false,
     qbiW2Wages:0, qbiUbia:0, qbiSSTB:false,
+    resultsTab:"summary", explorerLever:"trad401k", explorerY:"tax", leaderboardSort:"savings",
   };
 }
 
@@ -700,10 +746,197 @@ function renderForm(){
 }
 
 /* =========================================================================
+   OPTIMIZE TAB — leaderboard, lever explorer, optimal plan, headroom gauge
+   ========================================================================= */
+const LOCKED_KEYS=['trad401k','trad401kSpouse','tradIRA','tradIRASpouse','rothIRA','rothIRASpouse','hsaContribution','sep','soloK','simple'];
+let EXP=null; // explorer state stashed for hover wiring
+
+function planLevers(s){
+  const m=isMarried(s); const L=[];
+  const add=(key,label,cap)=>{ const cur=Math.max(0,n(s[key])); if(cap>0) L.push({key,label,cap,cur,room:Math.max(0,cap-cur)}); };
+  add('hsaContribution','HSA'+(s.hsaThroughPayroll?' (payroll)':''),limitHSA(s));
+  add('trad401k', m?'401(k) — you':'401(k)', limit401k(s.yourAge));
+  if(m) add('trad401kSpouse','401(k) — spouse', limit401k(s.spouseAge));
+  add('tradIRA', m?'Traditional IRA — you':'Traditional IRA', limitIRA(s.yourAge));
+  if(m) add('tradIRASpouse','Traditional IRA — spouse', limitIRA(s.spouseAge));
+  if(n(s.seNetProfit)>0){ add('sep','SEP-IRA', C.retire.sepMax); add('soloK','Solo 401(k) deferral', limit401k(s.yourAge)); }
+  return L;
+}
+function totalTaxWith(s,key,val){ return compute(Object.assign({},s,{[key]:val})).totalTax; }
+function buildLeaderboard(s){
+  const base=compute(s).totalTax;
+  let rows=planLevers(s).filter(l=>l.room>0).map(l=>{
+    const fillSave=Math.max(0,base-totalTaxWith(s,l.key,l.cap));
+    const probe=Math.min(200,l.room); const roi=probe>0?Math.max(0,(base-totalTaxWith(s,l.key,l.cur+probe))/probe):0;
+    return Object.assign(l,{fillSave,roi});
+  });
+  const mx=Math.max(1,...rows.map(r=>r.fillSave));
+  rows.forEach(r=>r.barPct=r.fillSave/mx*100);
+  rows.sort(s.leaderboardSort==='roi'?(a,b)=>b.roi-a.roi:(a,b)=>b.fillSave-a.fillSave);
+  return rows;
+}
+function leaderboardHtml(rows){
+  if(!rows.length) return '<div class="sub2">No unused pre-tax contribution room to model. Nice — you may already be maxed out.</div>';
+  return rows.map(r=>`<div class="lbrow" data-lever="${r.key}">
+    <div class="lbtop"><span class="lbname">${r.label}<span class="drill">explore ▸</span></span><span class="lbsave">save ${usd(r.fillSave)}</span></div>
+    <div class="lbbartrack"><div class="lbbar" style="width:${Math.max(2,r.barPct).toFixed(0)}%"></div></div>
+    <div class="lbmeta"><span>room left <b>${usd(r.room)}</b></span><span><b>${Math.round(r.roi*100)}¢</b> saved per $1</span><span>fill it all → saves <b>${usd(r.fillSave)}</b></span></div>
+  </div>`).join('');
+}
+function classifyKink(a,b){
+  if((a.niit>0)!==(b.niit>0)) return 'NIIT 3.8%';
+  if(a.cliff!==b.cliff) return 'ACA cliff';
+  if((a.am>0)!==(b.am>0)) return "Add'l Medicare";
+  if(Math.round(a.mo*100)!==Math.round(b.mo*100)) return Math.round(b.mo*100)+'% bracket';
+  return 'threshold';
+}
+function buildExplorer(s){
+  const key=s.explorerLever, yMode=s.explorerY, N=80;
+  const cKey=key==='income'?'wages':key; // the actual engine field this lever drives
+  let xMin=0,xMax,hereX;
+  if(key==='income'){ const cur=Math.max(0,n(s.wages)); xMax=Math.max(cur*2,100000); hereX=cur; }
+  else { const cap=capFor(key,s)??10000; xMax=cap; hereX=Math.max(0,Math.min(cap,n(s[key]))); }
+  const pts=[];
+  for(let i=0;i<=N;i++){ const x=xMin+(xMax-xMin)*i/N; const rr=compute(Object.assign({},s,{[cKey]:x}));
+    const locked=LOCKED_KEYS.reduce((t,k)=>t+(k===cKey?x:Math.max(0,n(s[k]))),0);
+    pts.push({x,tax:rr.totalTax,take:rr.totalIncome-rr.totalTax-locked,niit:rr.niit,mo:rr.marginalOrd,cliff:rr.aca?rr.aca.exceedsCliff:false,am:rr.addlMedicare}); }
+  for(let i=0;i<pts.length;i++){ const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)]; const dx=b.x-a.x; pts[i].marg=dx?(b.tax-a.tax)/dx:0; }
+  const markers=[];
+  for(let i=2;i<pts.length;i++){ if(Math.abs(pts[i].marg-pts[i-1].marg)>0.015){ if(!markers.some(m=>Math.abs(m.x-pts[i].x)<(xMax-xMin)/16)) markers.push({x:pts[i].x,label:classifyKink(pts[i-1],pts[i])}); } }
+  let sweet=null;
+  if(key!=='income'){ let best=0; pts.forEach(p=>{ if(-p.marg>best)best=-p.marg; }); if(best>0.01){ const inB=pts.filter(p=>-p.marg>=best*0.92); if(inB.length){ const x0=Math.min(...inB.map(p=>p.x)),x1=Math.max(...inB.map(p=>p.x)); if((x1-x0)<(xMax-xMin)*0.7) sweet={x0,x1}; } } }
+  const yv=pts.map(p=> yMode==='marginal'?Math.abs(p.marg)*100 : yMode==='takehome'?p.take : p.tax );
+  return {key,yMode,pts,yv,xMin,xMax,yMin:Math.min(...yv),yMax:Math.max(...yv),hereX,markers,sweet};
+}
+function explorerSVG(E){
+  const W=340,H=180,pL=12,pR=12,pT=16,pB=20,plotW=W-pL-pR,plotH=H-pT-pB;
+  const span=(E.yMax-E.yMin)||1;
+  const X=x=>pL+(x-E.xMin)/((E.xMax-E.xMin)||1)*plotW;
+  const Y=v=>pT+(1-(v-E.yMin)/span)*plotH;
+  E.layout={W,H,pL,pR,pT,pB,plotW,plotH};
+  const line=E.pts.map((p,i)=>X(p.x).toFixed(1)+','+Y(E.yv[i]).toFixed(1)).join(' ');
+  const baseY=(pT+plotH).toFixed(1);
+  const area=X(E.pts[0].x).toFixed(1)+','+baseY+' '+line+' '+X(E.pts[E.pts.length-1].x).toFixed(1)+','+baseY;
+  let svg='<svg class="chart-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" id="expSvg">';
+  svg+='<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".22"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
+  if(E.sweet){ const x0=X(E.sweet.x0),x1=X(E.sweet.x1); svg+='<rect class="chart-sweet" x="'+x0.toFixed(1)+'" y="'+pT+'" width="'+Math.max(2,x1-x0).toFixed(1)+'" height="'+plotH+'"/>'; }
+  E.markers.forEach(m=>{ const x=X(m.x); svg+='<line class="chart-mk" x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+plotH)+'"/>'; svg+='<text class="chart-mklabel" x="'+x.toFixed(1)+'" y="'+(pT-5)+'" text-anchor="middle">'+m.label+'</text>'; });
+  svg+='<polygon class="chart-area" points="'+area+'" fill="url(#cg)"/>';
+  svg+='<polyline class="chart-line" points="'+line+'"/>';
+  // axis labels
+  svg+='<text class="chart-axis" x="'+pL+'" y="'+(H-6)+'">'+usd(E.xMin)+'</text>';
+  svg+='<text class="chart-axis" x="'+(W-pR)+'" y="'+(H-6)+'" text-anchor="end">'+usd(E.xMax)+'</text>';
+  // here marker
+  let hi=0,hd=1e15; E.pts.forEach((p,i)=>{ const d=Math.abs(p.x-E.hereX); if(d<hd){hd=d;hi=i;} });
+  const hx=X(E.pts[hi].x),hy=Y(E.yv[hi]);
+  svg+='<circle class="chart-herehalo" cx="'+hx.toFixed(1)+'" cy="'+hy.toFixed(1)+'" r="7"/><circle class="chart-here" cx="'+hx.toFixed(1)+'" cy="'+hy.toFixed(1)+'" r="3.5"/>';
+  svg+='<line class="chart-hover" id="expHline" x1="0" y1="'+pT+'" x2="0" y2="'+(pT+plotH)+'"/><circle class="chart-hovdot" id="expHdot" r="3.5" cx="0" cy="0"/>';
+  svg+='</svg>';
+  return svg;
+}
+function explorerControls(s){
+  const opts=[['trad401k','401(k) — you'],['hsaContribution','HSA'],['tradIRA','Traditional IRA'],...(isMarried(s)?[['trad401kSpouse','401(k) — spouse'],['tradIRASpouse','IRA — spouse']]:[]),...(n(s.seNetProfit)>0?[['sep','SEP-IRA'],['soloK','Solo 401(k)']]:[]),['income','Wages (income)']];
+  const sel='<select id="expLever">'+opts.map(o=>`<option value="${o[0]}" ${s.explorerLever===o[0]?'selected':''}>${o[1]}</option>`).join('')+'</select>';
+  const yb=[['tax','Total tax'],['takehome','Take-home'],['marginal','Marginal %']].map(o=>`<button data-y="${o[0]}" class="${s.explorerY===o[0]?'on':''}">${o[1]}</button>`).join('');
+  return `<div class="segctl">${sel}<span class="seg">${yb}</span></div>`;
+}
+function optimalPlan(s){
+  let cur=Object.assign({},s); const base=compute(cur).totalTax; const steps=[];
+  let avail=planLevers(s).filter(l=>l.room>0);
+  let guard=0;
+  while(avail.length && guard++<14){
+    let baseNow=compute(cur).totalTax;
+    avail.forEach(l=>{ const curV=Math.max(0,n(cur[l.key])); const probe=Math.min(200,l.cap-curV); l._roi=probe>0?(baseNow-totalTaxWith(cur,l.key,curV+probe))/probe:0; });
+    avail.sort((a,b)=>b._roi-a._roi);
+    const l=avail[0]; if(!l||l._roi<=0.0001){ break; }
+    const before=baseNow; cur=Object.assign({},cur,{[l.key]:l.cap}); const after=compute(cur).totalTax;
+    steps.push({label:l.label, add:l.cap-Math.max(0,n(s[l.key])), save:Math.max(0,before-after)});
+    avail=avail.slice(1);
+  }
+  const final=compute(cur).totalTax;
+  return {base, steps, final, totalSaved:Math.max(0,base-final), addTotal:steps.reduce((t,x)=>t+x.add,0)};
+}
+function planHtml(p){
+  if(!p.steps.length) return '<div class="sub2">No further pre-tax moves reduce your tax right now.</div>';
+  const mx=Math.max(1,...p.steps.map(s=>s.save));
+  const rows=p.steps.map(s=>`<div class="wstep"><div class="wlab">${s.label} <small>(+${usd(s.add)})</small></div><div class="wsave">−${usd(s.save)}</div><div class="wbartrack"><div class="wbar" style="width:${Math.max(3,s.save/mx*100).toFixed(0)}%"></div></div></div>`).join('');
+  return `<div class="sub2" style="margin-bottom:8px">If you funded these accounts in the most tax-efficient order:</div>${rows}
+    <div class="wsum"><span>Put in ${usd(p.addTotal)} →</span><span class="lbsave">save ${usd(p.totalSaved)}</span></div>
+    <div class="sub2" style="margin-top:6px">Tax goes from ${usd(p.base)} to ${usd(p.final)}. (These are pre-tax savings dollars — still yours, just invested.)</div>`;
+}
+function buildHeadroom(s,r){
+  const lt=C.ltcg[s.filingStatus], ti=r.taxableIncome;
+  const gain0=Math.max(0,lt.zero-ti), gain15=Math.max(0,lt.fifteen-Math.max(ti,lt.zero));
+  const br=C.brackets[s.filingStatus]; let top=Infinity,rate=r.marginalOrd;
+  for(const b of br){ if(r.ordTaxable<b.u){ top=b.u; rate=b.r; break; } }
+  const bracketRoom=isFinite(top)?Math.max(0,top-r.ordTaxable):0;
+  return {ti,lt,gain0,gain15,bracketRoom,bracketTop:top,rate};
+}
+function headroomHtml(h){
+  const scaleMax=Math.max(h.lt.fifteen*1.04, h.ti*1.1, 1);
+  const pos=v=>Math.min(100,v/scaleMax*100);
+  const here=pos(h.ti);
+  return `<div class="gauge">
+      <div class="seg" style="left:${pos(h.lt.zero)}%"></div><div class="lab" style="left:${pos(h.lt.zero)}%">0% ceiling<br>${usd(h.lt.zero)}</div>
+      <div class="seg" style="left:${pos(h.lt.fifteen)}%"></div><div class="lab" style="left:${pos(h.lt.fifteen)}%">15% ceiling</div>
+      <div class="here" style="left:${here}%"></div><div class="herelab" style="left:${here}%">you ${usd(h.ti)}</div>
+    </div>
+    <div class="rec">${h.gain0>0?`<b>Tax-free gains:</b> you can realize up to <b>${usd(h.gain0)}</b> of long-term capital gains at <b>0%</b> tax this year.`:`Your income is above the 0% capital-gains ceiling, so additional long-term gains are taxed at 15%+.`}</div>
+    ${h.bracketRoom>0?`<div class="rec"><b>Roth headroom:</b> you can add about <b>${usd(h.bracketRoom)}</b> of ordinary income (e.g., a <b>Roth conversion</b>) before your rate rises past <b>${Math.round(h.rate*100)}%</b>.</div>`:''}`;
+}
+function renderOptimizeTab(r){
+  const lb=buildLeaderboard(S);
+  const E=buildExplorer(S); EXP=E; const svg=explorerSVG(E);
+  const plan=optimalPlan(S);
+  const h=buildHeadroom(S,r);
+  return `
+    <div class="card"><div class="h3">Your best moves, ranked ${tipIcon("Each row is computed by re-running your full return with that account filled. 'Saved per $1' is the tax cut on your next dollar; 'fill it all' is the total if you max it.")}</div>
+      <div class="segctl" style="margin-bottom:8px"><span class="seg"><button data-sort="savings" class="${S.leaderboardSort==='savings'?'on':''}">Rank by total saved</button><button data-sort="roi" class="${S.leaderboardSort==='roi'?'on':''}">Rank by ¢ per $</button></span></div>
+      ${leaderboardHtml(lb)}
+      <div class="sub2" style="margin-top:8px">Tap any lever to map it below ▾</div>
+    </div>
+    <div class="card"><div class="h3">Lever explorer ${tipIcon("The whole curve is your return re-run at every level of this lever. Slope = how fast tax changes. Shaded = the highest-savings 'sweet spot'. Dashed lines = thresholds you cross.")}</div>
+      ${explorerControls(S)}
+      <div class="chartwrap" style="margin-top:10px">${svg}</div>
+      <div class="readout" id="expReadout"></div>
+    </div>
+    <div class="card"><div class="h3">Your optimal plan</div>${planHtml(plan)}</div>
+    <div class="card"><div class="h3">Capital-gains &amp; Roth headroom ${tipIcon("How much room you have before key ceilings, based on your current taxable income.")}</div>${headroomHtml(h)}</div>`;
+}
+function wireOptimize(){
+  document.querySelectorAll('#results [data-lever]').forEach(el=>el.addEventListener('click',()=>{ S.explorerLever=el.dataset.lever; renderResults(); document.getElementById('expSvg')?.scrollIntoView({behavior:'smooth',block:'center'}); }));
+  document.querySelectorAll('#results [data-sort]').forEach(el=>el.addEventListener('click',()=>{ S.leaderboardSort=el.dataset.sort; renderResults(); }));
+  const lev=document.getElementById('expLever'); if(lev) lev.addEventListener('change',()=>{ S.explorerLever=lev.value; renderResults(); });
+  document.querySelectorAll('#results [data-y]').forEach(el=>el.addEventListener('click',()=>{ S.explorerY=el.dataset.y; renderResults(); }));
+  const svg=document.getElementById('expSvg'); const ro=document.getElementById('expReadout');
+  if(svg&&EXP&&EXP.layout){ const E=EXP,L=E.layout;
+    const fmtY=(v)=> E.yMode==='marginal'?(v.toFixed(0)+'%'):usd(v);
+    const move=(clientX)=>{ const rect=svg.getBoundingClientRect(); const vbX=(clientX-rect.left)/rect.width*L.W;
+      const frac=Math.max(0,Math.min(1,(vbX-L.pL)/L.plotW)); const dataX=E.xMin+frac*(E.xMax-E.xMin);
+      let bi=0,bd=1e15; E.pts.forEach((p,i)=>{ const d=Math.abs(p.x-dataX); if(d<bd){bd=d;bi=i;} });
+      const p=E.pts[bi]; const px=L.pL+(p.x-E.xMin)/((E.xMax-E.xMin)||1)*L.plotW; const py=L.pT+(1-(E.yv[bi]-E.yMin)/((E.yMax-E.yMin)||1))*L.plotH;
+      const hl=document.getElementById('expHline'), hd=document.getElementById('expHdot');
+      if(hl){hl.setAttribute('x1',px);hl.setAttribute('x2',px);hl.style.opacity=1;} if(hd){hd.setAttribute('cx',px);hd.setAttribute('cy',py);hd.style.opacity=1;}
+      const cpd=Math.round(Math.abs(p.marg)*100);
+      const leverName=E.key==='income'?'income':'this account';
+      ro.innerHTML=`At <b>${usd(p.x)}</b> in ${leverName}: total tax <b>${usd(p.tax)}</b> · take-home <b>${usd(p.take)}</b> · next $1 ${E.key==='income'?'taxed':'saves'} <b>${cpd}¢</b>`;
+    };
+    svg.addEventListener('mousemove',e=>move(e.clientX));
+    svg.addEventListener('touchmove',e=>{ if(e.touches[0]) move(e.touches[0].clientX); });
+    svg.addEventListener('mouseleave',()=>{ const hl=document.getElementById('expHline'),hd=document.getElementById('expHdot'); if(hl)hl.style.opacity=0; if(hd)hd.style.opacity=0; ro.innerHTML=defaultReadout(E); });
+    ro.innerHTML=defaultReadout(E);
+  }
+}
+function defaultReadout(E){
+  let hi=0,hd=1e15; E.pts.forEach((p,i)=>{ const d=Math.abs(p.x-E.hereX); if(d<hd){hd=d;hi=i;} });
+  const p=E.pts[hi]; const cpd=Math.round(Math.abs(p.marg)*100);
+  return `You're at <b>${usd(p.x)}</b>: total tax <b>${usd(p.tax)}</b> · take-home <b>${usd(p.take)}</b> · next $1 ${E.key==='income'?'taxed':'saves'} <b>${cpd}¢</b>. Drag across the chart to explore.`;
+}
+
+/* =========================================================================
    RESULTS
    ========================================================================= */
-function renderResults(){
-  const r=compute(S);
+function renderSummaryTab(r){
   const acaCardHtml=S.healthInsuranceSource==="marketplace"?acaCard(r):"";
   const cliffs=buildCliffs(S,r).map(c=>`<div class="cliff ${c.cls}">
       <div class="cliffhead"><span>${c.name} ${tipIcon(c.tip)}<br><span class="sub2">${c.detail}</span></span><span class="st">${c.st}</span></div>
@@ -711,18 +944,12 @@ function renderResults(){
       <div class="cliffscale"><span>${usd(c.start)}</span><span>${c.end>c.start?usd(c.end):""}</span></div>
     </div>`).join("");
   const recs=recommendations(S,r).map(t=>`<div class="rec">${t}</div>`).join("");
-
-  document.getElementById("results").innerHTML=`
-    <div class="resbtns">
-      <button id="btnExport">⤓ Export for AI review</button>
-      <button class="ghost" id="btnExportJSON">Copy raw data</button>
-    </div>
+  return `
     <div class="card">
       <div class="sub2">Estimated balance</div>
       <div class="bignum ${r.balance>=0?'good':'bad'}">${r.balance>=0?'Refund ':'You owe '}${usd(Math.abs(r.balance))}</div>
       <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective rate ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal ${(r.marginalOrd*100).toFixed(0)}%</div>
     </div>
-
     <div class="card"><div class="h3">Income → Tax waterfall</div>
       <table class="water">
         <tr><td>Total income</td><td class="amt">${usd(r.totalIncome)}</td></tr>
@@ -752,13 +979,26 @@ function renderResults(){
       </table>
     </div>
     ${acaCardHtml}
-    <div class="card"><div class="h3">Recommendations</div>${recs}</div>
+    <div class="card"><div class="h3">Recommendations <span class="sub2" style="font-weight:400">— see the Optimize tab for the full picture</span></div>${recs}</div>
     <div class="card"><div class="h3">Cliffs &amp; phase-outs</div>${cliffs}
       <div class="sub2" style="margin-top:6px">The bar shows where you sit between each threshold's start and end. Dimmed = far from any threshold.</div>
     </div>`;
+}
+function renderResults(){
+  const r=compute(S);
+  const tabs=`<div class="tabs">
+    <button data-tab="summary" class="${S.resultsTab==='summary'?'active':''}">Summary</button>
+    <button data-tab="optimize" class="${S.resultsTab==='optimize'?'active':''}">Optimize ✦</button></div>`;
+  const body=S.resultsTab==='optimize'?renderOptimizeTab(r):renderSummaryTab(r);
+  document.getElementById("results").innerHTML=`
+    <div class="resbtns">
+      <button id="btnExport">⤓ Export for AI review</button>
+      <button class="ghost" id="btnExportJSON">Copy raw data</button>
+    </div>${tabs}${body}`;
   document.getElementById("btnExport").addEventListener("click",()=>openExport(r,"md"));
   document.getElementById("btnExportJSON").addEventListener("click",()=>openExport(r,"json"));
-  document.querySelectorAll("#results .info").forEach(x=>x);
+  document.querySelectorAll('#results [data-tab]').forEach(b=>b.addEventListener('click',()=>{ S.resultsTab=b.dataset.tab; renderResults(); }));
+  if(S.resultsTab==='optimize') wireOptimize();
 }
 function acaCard(r){
   const a=r.aca; let tier,bg;

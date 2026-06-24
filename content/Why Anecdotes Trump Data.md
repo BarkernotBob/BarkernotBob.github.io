@@ -10,7 +10,7 @@ tags:
   - wip
 words: "16"
 domain: youtube.com
-publish: true
+publish: false
 ---
 #flashcards/bible
 For most people, going from the particular to the general is the most effective way to internalize a truth. Trying to present data on averages or statistical probabilities then having people internalize that to particulars is much harder.

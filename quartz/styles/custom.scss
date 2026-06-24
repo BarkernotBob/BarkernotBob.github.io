@@ -1,3 +1,112 @@
 @use "./variables.scss" as *;
 
-// put your custom CSS here!
+// ============================================================
+//  Home splash page (Pop theme) — custom landing in front of
+//  the notes site. Scoped to pages containing .home-splash.
+// ============================================================
+
+// Full-bleed: hide the notes-site chrome on the home page only,
+// and keep the splash in its bright Pop look even in dark mode.
+body:has(.home-splash) {
+  background: #fff6ea !important;
+
+  & .sidebar,
+  & .page-header,
+  & .breadcrumb-container,
+  & .article-title,
+  & .note-properties,
+  & .content-meta,
+  & .page-footer,
+  & footer { display: none !important; }
+
+  & #quartz-body { display: block; }
+  & .center { max-width: 1080px; width: 100%; margin: 0 auto; padding: 0 1.5rem; }
+  & article { max-width: none; }
+}
+
+.home-splash {
+  --c-games: #ff5a4d;
+  --c-tools: #2f7bff;
+  --c-notes: #1fb86b;
+  --c-yt: #ff9f1c;
+  --ink: #1c1430;
+  --muted: #6b6280;
+  font-family: "Outfit", system-ui, sans-serif;
+  color: var(--ink);
+  padding: 10px 0 48px;
+
+  & .splash-top { margin-bottom: 56px; }
+  & .splash-mark {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700; font-size: 20px; letter-spacing: -0.5px;
+    display: inline-flex; align-items: center; gap: 9px; color: var(--ink);
+  }
+  & .splash-dot {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: #ff5a4d; border: 2px solid var(--ink);
+  }
+
+  & .splash-hero { max-width: 760px; margin-bottom: 48px; }
+  & .splash-kicker {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 500; font-size: 15px; letter-spacing: 3px;
+    text-transform: uppercase; color: #ff5a4d; margin-bottom: 16px;
+  }
+  & .splash-title {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700; font-size: 60px; line-height: 1.03;
+    letter-spacing: -2px; margin: 0 0 18px; color: var(--ink); border: none;
+  }
+  & .splash-accent { color: #ff5a4d; }
+  & .splash-lede { font-size: 20px; line-height: 1.5; color: var(--muted); max-width: 620px; }
+
+  & .splash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  & .splash-card {
+    position: relative; background: #ffffff; border: 2.5px solid var(--ink);
+    border-radius: 16px; padding: 26px; display: flex; flex-direction: column;
+    gap: 12px; min-height: 172px; text-decoration: none; color: var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  & .splash-card:hover { transform: translate(-2px, -2px); box-shadow: 9px 9px 0 var(--ink); }
+  & .splash-bar { display: none; }
+  & .splash-ic {
+    width: 50px; height: 50px; border-radius: 14px; display: flex;
+    align-items: center; justify-content: center; font-size: 26px;
+    background: var(--accent); border: 2px solid var(--ink);
+  }
+  & .splash-card .splash-h {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700; font-size: 24px; letter-spacing: -0.5px; margin: 0; color: var(--ink);
+  }
+  & .splash-card p { font-size: 15px; line-height: 1.45; color: var(--muted); margin: 0; }
+  & .splash-go { margin-top: auto; font-weight: 600; font-size: 14px; color: var(--ink); }
+
+  & .splash-card.games { --accent: var(--c-games); }
+  & .splash-card.tools { --accent: var(--c-tools); }
+  & .splash-card.notes { --accent: var(--c-notes); }
+  & .splash-card.yt { --accent: var(--c-yt); }
+}
+
+@media (max-width: 750px) {
+  .home-splash .splash-title { font-size: 40px; }
+  .home-splash .splash-grid { grid-template-columns: 1fr; }
+}
+
+// Reusable responsive 16:9 video embed (for YouTube notes, etc.)
+.video-embed {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  height: 0;
+  margin: 1.2rem 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--dark);
+}
+.video-embed iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: 0;
+}

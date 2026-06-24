@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=./quartz/plugins/quartz-plugins.schema.json
 configuration:
-  pageTitle: Quartz 5
+  pageTitle: Isaiah Barker
   pageTitleSuffix: ""
   enableSPA: true
   enablePopovers: true
@@ -16,30 +16,30 @@ configuration:
     fontOrigin: googleFonts
     cdnCaching: true
     typography:
-      header: "DM Serif Display"
-      body: "Inter"
+      header: "Space Grotesk"
+      body: "Outfit"
       code: "JetBrains Mono"
     colors:
       lightMode:
-        light: "#f8f6f1"          # warm parchment background
-        lightgray: "#e8e4dc"      # soft warm dividers
-        gray: "#a89f94"           # muted warm gray
-        darkgray: "#4a4540"       # warm near-black text
-        dark: "#1e1b18"           # heading color, very dark brown
-        secondary: "#5c4a32"      # warm brown — links, accents
-        tertiary: "#8a6e52"       # lighter warm tone for hover/active
-        highlight: "rgba(140, 120, 90, 0.12)"
-        textHighlight: "#f5d79088"
+        light: "#fff6ea"          # Pop — warm cream background
+        lightgray: "#efe3d0"      # soft warm dividers
+        gray: "#6b6280"           # muted ink-gray
+        darkgray: "#1c1430"       # body text — deep ink
+        dark: "#1c1430"           # headings — deep ink
+        secondary: "#e8443a"      # bold red — links & accents
+        tertiary: "#2f7bff"       # blue — hover/secondary accent
+        highlight: "rgba(255, 159, 28, 0.18)"   # warm amber highlight
+        textHighlight: "#ffd24d88"
       darkMode:
-        light: "#16140f"          # very dark warm brown-black
-        lightgray: "#2e2a24"      # dark surface
-        gray: "#5c5650"           # mid warm gray
-        darkgray: "#ccc5bb"       # light warm text
-        dark: "#f0ebe3"           # near white warm
-        secondary: "#c9a97a"      # warm gold — links in dark
-        tertiary: "#a07d58"       # muted brown
-        highlight: "rgba(180, 150, 100, 0.12)"
-        textHighlight: "#a07d5888"
+        light: "#1c1430"          # deep ink background
+        lightgray: "#2e2740"      # dark surface
+        gray: "#9a93b0"           # muted gray
+        darkgray: "#e9e4f6"       # light text
+        dark: "#ffffff"           # headings — white
+        secondary: "#ff7a6e"      # lighter red for dark mode
+        tertiary: "#6aa0ff"       # lighter blue
+        highlight: "rgba(255, 159, 28, 0.15)"
+        textHighlight: "#ffd24d55"
 plugins:
   - source: github:quartz-community/created-modified-date
     enabled: true

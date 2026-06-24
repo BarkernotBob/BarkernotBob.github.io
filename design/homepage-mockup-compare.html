@@ -1,0 +1,399 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#222} .lbl{color:#fff;font:600 15px system-ui;padding:14px 18px 6px;letter-spacing:.5px} iframe{width:100%;height:820px;border:0;display:block;border-bottom:4px solid #000}</style><title>Homepage mockup — 3 themes</title></head><body>
+<div class="lbl">Neon — arcade on dark</div>
+<iframe srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;Landing prototype&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Outfit:wght@400;600;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --font-display:&#x27;Space Grotesk&#x27;,system-ui,sans-serif;
+    --font-body:&#x27;Outfit&#x27;,system-ui,sans-serif;
+  }
+  /* ---------- NEON (arcade on dark) ---------- */
+  html[data-theme=&quot;neon&quot;]{
+    --bg:#0a0b1e; --bg-accent:radial-gradient(1200px 600px at 80% -10%, #1b1750 0%, #0a0b1e 60%);
+    --fg:#eaf2ff; --muted:#8a93c7; --card-bg:#13153a; --card-border:rgba(255,255,255,.08);
+    --wordmark:#eaf2ff; --hero-accent:#19f0ff;
+    --c-games:#19f0ff; --c-tools:#b8ff3a; --c-notes:#ff4fd8; --c-yt:#ff5a3c;
+    --card-radius:18px; --glow:1;
+  }
+  /* ---------- VAPOR (80s sunset) ---------- */
+  html[data-theme=&quot;vapor&quot;]{
+    --bg:#1a0938; --bg-accent:linear-gradient(165deg,#2a0e61 0%,#6b2d8f 42%,#c84b8c 74%,#ff8a5c 100%);
+    --fg:#fff2fb; --muted:#e9c6ff; --card-bg:rgba(255,255,255,.10); --card-border:rgba(255,255,255,.30);
+    --wordmark:#fff2fb; --hero-accent:#2ce5d6;
+    --c-games:#2ce5d6; --c-tools:#ffd24d; --c-notes:#ff5ca8; --c-yt:#b06bff;
+    --card-radius:18px; --glow:1;
+  }
+  /* ---------- POP (bright neo-brutalist) ---------- */
+  html[data-theme=&quot;pop&quot;]{
+    --bg:#fff6ea; --bg-accent:none;
+    --fg:#1c1430; --muted:#6b6280; --card-bg:#ffffff; --card-border:#1c1430;
+    --wordmark:#1c1430; --hero-accent:#ff5a4d;
+    --c-games:#ff5a4d; --c-tools:#2f7bff; --c-notes:#1fb86b; --c-yt:#ff9f1c;
+    --card-radius:16px; --glow:0;
+  }
+  body{font-family:var(--font-body);background:var(--bg);color:var(--fg);min-height:100vh;
+    background-image:var(--bg-accent);background-attachment:fixed;}
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 40px 60px;}
+  /* top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:70px;}
+  .wordmark{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.5px;color:var(--wordmark);display:flex;align-items:center;gap:9px;}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--hero-accent);}
+  html[data-theme=&quot;pop&quot;] .dot{border:2px solid #1c1430;}
+  .navlinks{display:flex;gap:24px;font-weight:600;font-size:15px;color:var(--muted);}
+  /* hero */
+  .hero{margin-bottom:54px;max-width:760px;}
+  .kicker{font-family:var(--font-display);font-weight:500;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--hero-accent);margin-bottom:18px;}
+  h1{font-family:var(--font-display);font-weight:700;font-size:64px;line-height:1.02;letter-spacing:-2px;margin-bottom:20px;}
+  h1 .pop-accent{color:var(--hero-accent);}
+  .lede{font-size:21px;line-height:1.5;color:var(--muted);max-width:620px;}
+  /* cards */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+  .card{position:relative;background:var(--card-bg);border:1.5px solid var(--card-border);border-radius:var(--card-radius);
+    padding:26px 26px 24px;display:flex;flex-direction:column;gap:12px;min-height:172px;cursor:pointer;
+    transition:transform .16s ease, box-shadow .16s ease;text-decoration:none;color:inherit;overflow:hidden;}
+  html[data-theme=&quot;pop&quot;] .card{border-width:2.5px;box-shadow:6px 6px 0 #1c1430;}
+  .card .ic{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;
+    background:color-mix(in srgb, var(--accent) 22%, transparent);border:1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);}
+  html[data-theme=&quot;pop&quot;] .card .ic{background:var(--accent);border:2px solid #1c1430;}
+  .card h3{font-family:var(--font-display);font-weight:700;font-size:25px;letter-spacing:-.5px;}
+  .card p{font-size:15px;line-height:1.45;color:var(--muted);}
+  .card .go{margin-top:auto;font-weight:600;font-size:14px;color:var(--accent);display:flex;align-items:center;gap:6px;}
+  html[data-theme=&quot;pop&quot;] .card .go{color:#1c1430;}
+  .card .bar{position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent);}
+  html[data-theme=&quot;pop&quot;] .card .bar{display:none;}
+  .card:hover{transform:translateY(-5px);}
+  html[data-theme=&quot;neon&quot;] .card:hover,html[data-theme=&quot;vapor&quot;] .card:hover{box-shadow:0 0 0 1.5px var(--accent), 0 14px 40px -10px color-mix(in srgb,var(--accent) 55%, transparent);}
+  html[data-theme=&quot;pop&quot;] .card:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 #1c1430;}
+  .card.games{--accent:var(--c-games)} .card.tools{--accent:var(--c-tools)}
+  .card.notes{--accent:var(--c-notes)} .card.yt{--accent:var(--c-yt)}
+  .foot{margin-top:46px;font-size:14px;color:var(--muted);display:flex;gap:18px;justify-content:center;}
+  /* theme label chip */
+  .themechip{position:fixed;top:16px;right:18px;font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:1.5px;
+    text-transform:uppercase;padding:7px 13px;border-radius:30px;background:var(--hero-accent);color:#0a0b1e;}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;themechip&quot; id=&quot;chip&quot;&gt;neon&lt;/div&gt;
+  &lt;div class=&quot;wrap&quot;&gt;
+    &lt;div class=&quot;top&quot;&gt;
+      &lt;div class=&quot;wordmark&quot;&gt;&lt;span class=&quot;dot&quot;&gt;&lt;/span&gt;Isaiah Barker&lt;/div&gt;
+      &lt;div class=&quot;navlinks&quot;&gt;&lt;span&gt;Games&lt;/span&gt;&lt;span&gt;Notes&lt;/span&gt;&lt;span&gt;About&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;hero&quot;&gt;
+      &lt;div class=&quot;kicker&quot;&gt;welcome in&lt;/div&gt;
+      &lt;h1&gt;Play, build,&lt;br&gt;&lt;span class=&quot;pop-accent&quot;&gt;and think out loud.&lt;/span&gt;&lt;/h1&gt;
+      &lt;p class=&quot;lede&quot;&gt;My corner of the internet — 3D games I&#x27;ve built, tools I actually use, notes I&#x27;m working through, and videos worth your time.&lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;grid&quot;&gt;
+      &lt;a class=&quot;card games&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;🎮&lt;/div&gt;
+        &lt;h3&gt;Games&lt;/h3&gt;
+        &lt;p&gt;BlockChain &amp;amp; HexChain — 3D multiplayer strategy in your browser.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Enter the arcade →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card tools&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;🛠️&lt;/div&gt;
+        &lt;h3&gt;Tools&lt;/h3&gt;
+        &lt;p&gt;The Tax Modeler and other little apps that do real work.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Open the toolbox →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card notes&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;📓&lt;/div&gt;
+        &lt;h3&gt;Notes&lt;/h3&gt;
+        &lt;p&gt;A growing garden of essays and ideas, linked together.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Start reading →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card yt&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;▶️&lt;/div&gt;
+        &lt;h3&gt;Curated YouTube&lt;/h3&gt;
+        &lt;p&gt;Videos I found worth saving — with a note on why.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Watch the picks →&lt;/span&gt;
+      &lt;/a&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;foot&quot;&gt;&lt;span&gt;github&lt;/span&gt;&lt;span&gt;·&lt;/span&gt;&lt;span&gt;email&lt;/span&gt;&lt;span&gt;·&lt;/span&gt;&lt;span&gt;rss&lt;/span&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;script&gt;
+  const t = new URLSearchParams(location.search).get(&#x27;theme&#x27;) || &#x27;neon&#x27;;
+  document.documentElement.setAttribute(&#x27;data-theme&#x27;, t);
+  document.getElementById(&#x27;chip&#x27;).textContent = t;
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+<div class="lbl">Vapor — 80s sunset gradient</div>
+<iframe srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;Landing prototype&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Outfit:wght@400;600;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --font-display:&#x27;Space Grotesk&#x27;,system-ui,sans-serif;
+    --font-body:&#x27;Outfit&#x27;,system-ui,sans-serif;
+  }
+  /* ---------- NEON (arcade on dark) ---------- */
+  html[data-theme=&quot;neon&quot;]{
+    --bg:#0a0b1e; --bg-accent:radial-gradient(1200px 600px at 80% -10%, #1b1750 0%, #0a0b1e 60%);
+    --fg:#eaf2ff; --muted:#8a93c7; --card-bg:#13153a; --card-border:rgba(255,255,255,.08);
+    --wordmark:#eaf2ff; --hero-accent:#19f0ff;
+    --c-games:#19f0ff; --c-tools:#b8ff3a; --c-notes:#ff4fd8; --c-yt:#ff5a3c;
+    --card-radius:18px; --glow:1;
+  }
+  /* ---------- VAPOR (80s sunset) ---------- */
+  html[data-theme=&quot;vapor&quot;]{
+    --bg:#1a0938; --bg-accent:linear-gradient(165deg,#2a0e61 0%,#6b2d8f 42%,#c84b8c 74%,#ff8a5c 100%);
+    --fg:#fff2fb; --muted:#e9c6ff; --card-bg:rgba(255,255,255,.10); --card-border:rgba(255,255,255,.30);
+    --wordmark:#fff2fb; --hero-accent:#2ce5d6;
+    --c-games:#2ce5d6; --c-tools:#ffd24d; --c-notes:#ff5ca8; --c-yt:#b06bff;
+    --card-radius:18px; --glow:1;
+  }
+  /* ---------- POP (bright neo-brutalist) ---------- */
+  html[data-theme=&quot;pop&quot;]{
+    --bg:#fff6ea; --bg-accent:none;
+    --fg:#1c1430; --muted:#6b6280; --card-bg:#ffffff; --card-border:#1c1430;
+    --wordmark:#1c1430; --hero-accent:#ff5a4d;
+    --c-games:#ff5a4d; --c-tools:#2f7bff; --c-notes:#1fb86b; --c-yt:#ff9f1c;
+    --card-radius:16px; --glow:0;
+  }
+  body{font-family:var(--font-body);background:var(--bg);color:var(--fg);min-height:100vh;
+    background-image:var(--bg-accent);background-attachment:fixed;}
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 40px 60px;}
+  /* top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:70px;}
+  .wordmark{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.5px;color:var(--wordmark);display:flex;align-items:center;gap:9px;}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--hero-accent);}
+  html[data-theme=&quot;pop&quot;] .dot{border:2px solid #1c1430;}
+  .navlinks{display:flex;gap:24px;font-weight:600;font-size:15px;color:var(--muted);}
+  /* hero */
+  .hero{margin-bottom:54px;max-width:760px;}
+  .kicker{font-family:var(--font-display);font-weight:500;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--hero-accent);margin-bottom:18px;}
+  h1{font-family:var(--font-display);font-weight:700;font-size:64px;line-height:1.02;letter-spacing:-2px;margin-bottom:20px;}
+  h1 .pop-accent{color:var(--hero-accent);}
+  .lede{font-size:21px;line-height:1.5;color:var(--muted);max-width:620px;}
+  /* cards */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+  .card{position:relative;background:var(--card-bg);border:1.5px solid var(--card-border);border-radius:var(--card-radius);
+    padding:26px 26px 24px;display:flex;flex-direction:column;gap:12px;min-height:172px;cursor:pointer;
+    transition:transform .16s ease, box-shadow .16s ease;text-decoration:none;color:inherit;overflow:hidden;}
+  html[data-theme=&quot;pop&quot;] .card{border-width:2.5px;box-shadow:6px 6px 0 #1c1430;}
+  .card .ic{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;
+    background:color-mix(in srgb, var(--accent) 22%, transparent);border:1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);}
+  html[data-theme=&quot;pop&quot;] .card .ic{background:var(--accent);border:2px solid #1c1430;}
+  .card h3{font-family:var(--font-display);font-weight:700;font-size:25px;letter-spacing:-.5px;}
+  .card p{font-size:15px;line-height:1.45;color:var(--muted);}
+  .card .go{margin-top:auto;font-weight:600;font-size:14px;color:var(--accent);display:flex;align-items:center;gap:6px;}
+  html[data-theme=&quot;pop&quot;] .card .go{color:#1c1430;}
+  .card .bar{position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent);}
+  html[data-theme=&quot;pop&quot;] .card .bar{display:none;}
+  .card:hover{transform:translateY(-5px);}
+  html[data-theme=&quot;neon&quot;] .card:hover,html[data-theme=&quot;vapor&quot;] .card:hover{box-shadow:0 0 0 1.5px var(--accent), 0 14px 40px -10px color-mix(in srgb,var(--accent) 55%, transparent);}
+  html[data-theme=&quot;pop&quot;] .card:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 #1c1430;}
+  .card.games{--accent:var(--c-games)} .card.tools{--accent:var(--c-tools)}
+  .card.notes{--accent:var(--c-notes)} .card.yt{--accent:var(--c-yt)}
+  .foot{margin-top:46px;font-size:14px;color:var(--muted);display:flex;gap:18px;justify-content:center;}
+  /* theme label chip */
+  .themechip{position:fixed;top:16px;right:18px;font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:1.5px;
+    text-transform:uppercase;padding:7px 13px;border-radius:30px;background:var(--hero-accent);color:#0a0b1e;}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;themechip&quot; id=&quot;chip&quot;&gt;neon&lt;/div&gt;
+  &lt;div class=&quot;wrap&quot;&gt;
+    &lt;div class=&quot;top&quot;&gt;
+      &lt;div class=&quot;wordmark&quot;&gt;&lt;span class=&quot;dot&quot;&gt;&lt;/span&gt;Isaiah Barker&lt;/div&gt;
+      &lt;div class=&quot;navlinks&quot;&gt;&lt;span&gt;Games&lt;/span&gt;&lt;span&gt;Notes&lt;/span&gt;&lt;span&gt;About&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;hero&quot;&gt;
+      &lt;div class=&quot;kicker&quot;&gt;welcome in&lt;/div&gt;
+      &lt;h1&gt;Play, build,&lt;br&gt;&lt;span class=&quot;pop-accent&quot;&gt;and think out loud.&lt;/span&gt;&lt;/h1&gt;
+      &lt;p class=&quot;lede&quot;&gt;My corner of the internet — 3D games I&#x27;ve built, tools I actually use, notes I&#x27;m working through, and videos worth your time.&lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;grid&quot;&gt;
+      &lt;a class=&quot;card games&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;🎮&lt;/div&gt;
+        &lt;h3&gt;Games&lt;/h3&gt;
+        &lt;p&gt;BlockChain &amp;amp; HexChain — 3D multiplayer strategy in your browser.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Enter the arcade →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card tools&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;🛠️&lt;/div&gt;
+        &lt;h3&gt;Tools&lt;/h3&gt;
+        &lt;p&gt;The Tax Modeler and other little apps that do real work.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Open the toolbox →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card notes&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;📓&lt;/div&gt;
+        &lt;h3&gt;Notes&lt;/h3&gt;
+        &lt;p&gt;A growing garden of essays and ideas, linked together.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Start reading →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card yt&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;▶️&lt;/div&gt;
+        &lt;h3&gt;Curated YouTube&lt;/h3&gt;
+        &lt;p&gt;Videos I found worth saving — with a note on why.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Watch the picks →&lt;/span&gt;
+      &lt;/a&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;foot&quot;&gt;&lt;span&gt;github&lt;/span&gt;&lt;span&gt;·&lt;/span&gt;&lt;span&gt;email&lt;/span&gt;&lt;span&gt;·&lt;/span&gt;&lt;span&gt;rss&lt;/span&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;script&gt;
+  const t = new URLSearchParams(location.search).get(&#x27;theme&#x27;) || &#x27;vapor&#x27;;
+  document.documentElement.setAttribute(&#x27;data-theme&#x27;, t);
+  document.getElementById(&#x27;chip&#x27;).textContent = t;
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+<div class="lbl">Pop — bright neo-brutalist</div>
+<iframe srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;Landing prototype&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Outfit:wght@400;600;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --font-display:&#x27;Space Grotesk&#x27;,system-ui,sans-serif;
+    --font-body:&#x27;Outfit&#x27;,system-ui,sans-serif;
+  }
+  /* ---------- NEON (arcade on dark) ---------- */
+  html[data-theme=&quot;neon&quot;]{
+    --bg:#0a0b1e; --bg-accent:radial-gradient(1200px 600px at 80% -10%, #1b1750 0%, #0a0b1e 60%);
+    --fg:#eaf2ff; --muted:#8a93c7; --card-bg:#13153a; --card-border:rgba(255,255,255,.08);
+    --wordmark:#eaf2ff; --hero-accent:#19f0ff;
+    --c-games:#19f0ff; --c-tools:#b8ff3a; --c-notes:#ff4fd8; --c-yt:#ff5a3c;
+    --card-radius:18px; --glow:1;
+  }
+  /* ---------- VAPOR (80s sunset) ---------- */
+  html[data-theme=&quot;vapor&quot;]{
+    --bg:#1a0938; --bg-accent:linear-gradient(165deg,#2a0e61 0%,#6b2d8f 42%,#c84b8c 74%,#ff8a5c 100%);
+    --fg:#fff2fb; --muted:#e9c6ff; --card-bg:rgba(255,255,255,.10); --card-border:rgba(255,255,255,.30);
+    --wordmark:#fff2fb; --hero-accent:#2ce5d6;
+    --c-games:#2ce5d6; --c-tools:#ffd24d; --c-notes:#ff5ca8; --c-yt:#b06bff;
+    --card-radius:18px; --glow:1;
+  }
+  /* ---------- POP (bright neo-brutalist) ---------- */
+  html[data-theme=&quot;pop&quot;]{
+    --bg:#fff6ea; --bg-accent:none;
+    --fg:#1c1430; --muted:#6b6280; --card-bg:#ffffff; --card-border:#1c1430;
+    --wordmark:#1c1430; --hero-accent:#ff5a4d;
+    --c-games:#ff5a4d; --c-tools:#2f7bff; --c-notes:#1fb86b; --c-yt:#ff9f1c;
+    --card-radius:16px; --glow:0;
+  }
+  body{font-family:var(--font-body);background:var(--bg);color:var(--fg);min-height:100vh;
+    background-image:var(--bg-accent);background-attachment:fixed;}
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 40px 60px;}
+  /* top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:70px;}
+  .wordmark{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.5px;color:var(--wordmark);display:flex;align-items:center;gap:9px;}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--hero-accent);}
+  html[data-theme=&quot;pop&quot;] .dot{border:2px solid #1c1430;}
+  .navlinks{display:flex;gap:24px;font-weight:600;font-size:15px;color:var(--muted);}
+  /* hero */
+  .hero{margin-bottom:54px;max-width:760px;}
+  .kicker{font-family:var(--font-display);font-weight:500;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--hero-accent);margin-bottom:18px;}
+  h1{font-family:var(--font-display);font-weight:700;font-size:64px;line-height:1.02;letter-spacing:-2px;margin-bottom:20px;}
+  h1 .pop-accent{color:var(--hero-accent);}
+  .lede{font-size:21px;line-height:1.5;color:var(--muted);max-width:620px;}
+  /* cards */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+  .card{position:relative;background:var(--card-bg);border:1.5px solid var(--card-border);border-radius:var(--card-radius);
+    padding:26px 26px 24px;display:flex;flex-direction:column;gap:12px;min-height:172px;cursor:pointer;
+    transition:transform .16s ease, box-shadow .16s ease;text-decoration:none;color:inherit;overflow:hidden;}
+  html[data-theme=&quot;pop&quot;] .card{border-width:2.5px;box-shadow:6px 6px 0 #1c1430;}
+  .card .ic{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;
+    background:color-mix(in srgb, var(--accent) 22%, transparent);border:1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);}
+  html[data-theme=&quot;pop&quot;] .card .ic{background:var(--accent);border:2px solid #1c1430;}
+  .card h3{font-family:var(--font-display);font-weight:700;font-size:25px;letter-spacing:-.5px;}
+  .card p{font-size:15px;line-height:1.45;color:var(--muted);}
+  .card .go{margin-top:auto;font-weight:600;font-size:14px;color:var(--accent);display:flex;align-items:center;gap:6px;}
+  html[data-theme=&quot;pop&quot;] .card .go{color:#1c1430;}
+  .card .bar{position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent);}
+  html[data-theme=&quot;pop&quot;] .card .bar{display:none;}
+  .card:hover{transform:translateY(-5px);}
+  html[data-theme=&quot;neon&quot;] .card:hover,html[data-theme=&quot;vapor&quot;] .card:hover{box-shadow:0 0 0 1.5px var(--accent), 0 14px 40px -10px color-mix(in srgb,var(--accent) 55%, transparent);}
+  html[data-theme=&quot;pop&quot;] .card:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 #1c1430;}
+  .card.games{--accent:var(--c-games)} .card.tools{--accent:var(--c-tools)}
+  .card.notes{--accent:var(--c-notes)} .card.yt{--accent:var(--c-yt)}
+  .foot{margin-top:46px;font-size:14px;color:var(--muted);display:flex;gap:18px;justify-content:center;}
+  /* theme label chip */
+  .themechip{position:fixed;top:16px;right:18px;font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:1.5px;
+    text-transform:uppercase;padding:7px 13px;border-radius:30px;background:var(--hero-accent);color:#0a0b1e;}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;themechip&quot; id=&quot;chip&quot;&gt;neon&lt;/div&gt;
+  &lt;div class=&quot;wrap&quot;&gt;
+    &lt;div class=&quot;top&quot;&gt;
+      &lt;div class=&quot;wordmark&quot;&gt;&lt;span class=&quot;dot&quot;&gt;&lt;/span&gt;Isaiah Barker&lt;/div&gt;
+      &lt;div class=&quot;navlinks&quot;&gt;&lt;span&gt;Games&lt;/span&gt;&lt;span&gt;Notes&lt;/span&gt;&lt;span&gt;About&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;hero&quot;&gt;
+      &lt;div class=&quot;kicker&quot;&gt;welcome in&lt;/div&gt;
+      &lt;h1&gt;Play, build,&lt;br&gt;&lt;span class=&quot;pop-accent&quot;&gt;and think out loud.&lt;/span&gt;&lt;/h1&gt;
+      &lt;p class=&quot;lede&quot;&gt;My corner of the internet — 3D games I&#x27;ve built, tools I actually use, notes I&#x27;m working through, and videos worth your time.&lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;grid&quot;&gt;
+      &lt;a class=&quot;card games&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;🎮&lt;/div&gt;
+        &lt;h3&gt;Games&lt;/h3&gt;
+        &lt;p&gt;BlockChain &amp;amp; HexChain — 3D multiplayer strategy in your browser.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Enter the arcade →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card tools&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;🛠️&lt;/div&gt;
+        &lt;h3&gt;Tools&lt;/h3&gt;
+        &lt;p&gt;The Tax Modeler and other little apps that do real work.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Open the toolbox →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card notes&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;📓&lt;/div&gt;
+        &lt;h3&gt;Notes&lt;/h3&gt;
+        &lt;p&gt;A growing garden of essays and ideas, linked together.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Start reading →&lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class=&quot;card yt&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;bar&quot;&gt;&lt;/span&gt;
+        &lt;div class=&quot;ic&quot;&gt;▶️&lt;/div&gt;
+        &lt;h3&gt;Curated YouTube&lt;/h3&gt;
+        &lt;p&gt;Videos I found worth saving — with a note on why.&lt;/p&gt;
+        &lt;span class=&quot;go&quot;&gt;Watch the picks →&lt;/span&gt;
+      &lt;/a&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;foot&quot;&gt;&lt;span&gt;github&lt;/span&gt;&lt;span&gt;·&lt;/span&gt;&lt;span&gt;email&lt;/span&gt;&lt;span&gt;·&lt;/span&gt;&lt;span&gt;rss&lt;/span&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;script&gt;
+  const t = new URLSearchParams(location.search).get(&#x27;theme&#x27;) || &#x27;pop&#x27;;
+  document.documentElement.setAttribute(&#x27;data-theme&#x27;, t);
+  document.getElementById(&#x27;chip&#x27;).textContent = t;
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body></html>

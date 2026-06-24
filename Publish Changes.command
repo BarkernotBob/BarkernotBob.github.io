@@ -32,10 +32,15 @@ done
 #     Drop an .html file into quartz/static and a matching menu page appears
 #     that jumps straight into it full-screen. Existing pages are never touched.
 SITE_ORIGIN="https://isaiahmail97-oss.github.io"
+# Which menu folder each app belongs in (default: games). Add a line per new app.
+typeset -A LAUNCH_FOLDER
+LAUNCH_FOLDER=(Blockchain games Hexchain games Tax-Modeler tools)
 for f in quartz/static/*.html(N); do
   fname="${f:t}"; base="${f:t:r}"
-  note="content/${base}.md"
+  folder="${LAUNCH_FOLDER[$base]:-games}"
+  note="content/${folder}/${base}.md"
   if [ ! -f "$note" ]; then
+    mkdir -p "content/${folder}"
     cat > "$note" <<EOF
 ---
 title: ${base}
@@ -44,7 +49,7 @@ publish: true
 
 Loading **${base}**… if it doesn't open automatically, <a href="${SITE_ORIGIN}/static/${fname}" data-static-redirect="/static/${fname}" data-router-ignore>click here</a>.
 EOF
-    echo "Created a menu launcher for ${fname}."
+    echo "Created a menu launcher for ${fname} in ${folder}/."
   fi
 done
 echo ""

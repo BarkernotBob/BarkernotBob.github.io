@@ -71,12 +71,12 @@
   .modal-card button{width:100%;margin-bottom:8px}
   .modal-card .row{margin-bottom:0}
   .modal-card .row button{margin-bottom:0}
-  .tablewrap{overflow:auto;-webkit-overflow-scrolling:touch;margin-top:8px;border:1px solid var(--line);border-radius:10px}
-  .tablewrap table{min-width:1180px}
-  .tablewrap th,.tablewrap td{white-space:nowrap;padding:7px 8px}
+  .tablewrap{overflow-x:hidden;overflow-y:auto;margin-top:8px;border:1px solid var(--line);border-radius:10px}
+  .tablewrap table{width:100%;table-layout:fixed;border-collapse:collapse}
+  .tablewrap th,.tablewrap td{padding:6px 5px;font-size:11px;word-break:break-word;overflow-wrap:anywhere;vertical-align:top}
   .tablewrap thead th{background:#f3f5f2}
-  .tablewrap th.sortable{cursor:pointer;user-select:none}
-  .tablewrap th input{font-size:12px;padding:5px 6px;min-width:90px;font-weight:400;text-transform:none;letter-spacing:0}
+  .tablewrap th.sortable{cursor:pointer;user-select:none;line-height:1.2}
+  .tablewrap th input{width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px;font-weight:400;text-transform:none;letter-spacing:0}
   .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
   .toast.show{opacity:.97}
   .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
@@ -230,6 +230,8 @@ async function loadAll(){
   D.reminders=await loadJson(FILES.reminders, []);
   D.needs   = await loadJson(FILES.needs, []);
   D.config  = await loadJson(FILES.config, {members:[],currency:'USD'});
+  // self-heal: clear any leftover "_unclear" flags whose field is now filled & resolved
+  if(purgeStaleFlags()){ try{ await saveJson(FILES.items, D.items, 'Clear stale review flags'); }catch(e){} }
   updateBadges();
 }
 function updateBadges(){
@@ -421,21 +423,23 @@ function runSearch(){
     const spent=arr.reduce((s,i)=>s+(+i.price||0),0);
     const qty=arr.reduce((s,i)=>s+(+i.qty||0),0);
     const last=arr[0]?(arr[0].purchasedAt||''):'';
-    const active=arr.filter(i=>i.status==='active').length;
     const g=D.groups[k];
     return `<div class="card grp" onclick="this.classList.toggle('open')">
       <div class="flex">
         <div><b>${esc(groupLabel(k))}</b> ${g&&g.hsaEligible?'<span class="pill hsa">HSA</span>':''} ${g&&g.perishable?'<span class="pill gray">perishable</span>':''}
           <div class="small muted">${arr.length} purchase(s) · ${qty} bought · last ${esc(last||'—')}</div></div>
-        <div style="text-align:right"><div class="big" style="font-size:18px">${money(spent)}</div><div class="small muted">${active} on hand</div></div>
+        <div style="text-align:right"><div class="big" style="font-size:18px">${money(spent)}</div><div class="small muted">total spent</div></div>
       </div>
       <div class="body">
-        ${arr.map(i=>`<div class="item flex">
+        ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" onclick="event.stopPropagation();viewReceipt('${esc(i.receiptId)}')"`:''}>
           <div><div>${esc(i.name||i.rawName)} <span class="small muted">${esc(i.rawName&&i.rawName!==i.name?'('+i.rawName+')':'')}</span></div>
             <div class="small muted">${esc(i.purchasedAt||'')} · ${esc(i.store||'')} · ${money(i.price)} ${i.qty?('· qty '+i.qty):''}
             ${i.status==='thrown_away'?'· <span style="color:var(--danger)">thrown away</span>':i.status==='consumed'?'· used up':''}
             ${i.useByDate?('· use by '+i.useByDate):''}</div></div>
-          ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" onclick="event.stopPropagation();markWaste('${i.id}')">🗑 Waste</button>`:''}
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" onclick="event.stopPropagation();markWaste('${i.id}')">🗑 Waste</button>`:''}
+            ${i.receiptId?'<span class="muted" aria-hidden="true">🧾›</span>':''}
+          </div>
         </div>`).join('')}
       </div>
     </div>`;
@@ -465,12 +469,31 @@ async function markWaste(itemId){
     toast('Logged as waste 🗑'); updateBadges(); runSearch();
   }catch(e){ toast(String(e.message||e)); }
 }
+/* Show every item on the same receipt as the tapped item, plus the photo. */
+function viewReceipt(receiptId){
+  const r=(D.receipts||[]).find(x=>x.id===receiptId);
+  const items=(D.items||[]).filter(i=>i.receiptId===receiptId)
+    .sort((a,b)=>(a.name||a.rawName||'').localeCompare(b.name||b.rawName||''));
+  if(!r && !items.length){ toast('No receipt details saved for this item yet'); return; }
+  const head = r ? `${esc(r.store||'Receipt')} · ${esc((r.purchasedAt||r.capturedAt||'').slice(0,10))}` : 'Receipt';
+  const rows = items.length ? items.map(i=>`<div class="item">
+      <div class="flex"><div>${esc(i.name||i.rawName||'Item')} ${i.qty?`<span class="small muted">×${esc(i.qty)}</span>`:''}</div><div><b>${money(i.price)}</b></div></div>
+      <div class="small muted">${esc(i.rawName||'')}${i.category?(' · '+esc(i.category)):''}${i.status==='thrown_away'?' · <span style="color:var(--danger)">thrown away</span>':''}${i.useByDate?(' · use by '+esc(i.useByDate)):''}</div>
+    </div>`).join('') : '<p class="muted small">No line items recorded for this receipt.</p>';
+  const totals = r ? `${r.subtotal!=null?`<div class="kv"><span>Subtotal</span><b>${money(r.subtotal)}</b></div>`:''}${r.tax!=null?`<div class="kv"><span>Tax</span><b>${money(r.tax)}</b></div>`:''}${r.total!=null?`<div class="kv"><span>Total</span><b>${money(r.total)}</b></div>`:''}` : '';
+  modal(`<h2 style="margin:0 0 2px">🧾 ${head}</h2>
+    <p class="small muted" style="margin:0 0 10px">${items.length} item(s) on this receipt${r&&r.capturedBy?(' · snapped by '+esc(r.capturedBy)):''}</p>
+    <div style="max-height:48vh;overflow:auto">${rows}</div>
+    ${totals}
+    ${r&&r.photo?`<button class="sec" data-mval="photo" style="margin-top:12px">View receipt photo</button>`:''}
+    <button class="link" data-mcancel style="width:100%;margin-top:4px">Close</button>`)
+    .then(v=>{ if(v==='photo' && r && r.photo) viewPhoto(r.photo); });
+}
 
 /* =========================================================================
    TABLE  (full sortable + filterable view of every item field)
    ========================================================================= */
 const TABLE_COLS = [
-  {key:'id',         label:'ID',         type:'text'},
   {key:'rawName',    label:'Raw name',   type:'text'},
   {key:'name',       label:'Name',       type:'text'},
   {key:'groupId',    label:'Group',      type:'text'},
@@ -515,7 +538,7 @@ function renderTable(){
   $('#main').innerHTML = `
   <div class="card">
     <div class="flex"><h2 style="margin:0">📑 All items</h2><div class="small muted" id="tcount"></div></div>
-    <p class="small muted" style="margin:6px 0 0">Every stored field. Tap a column title to sort (tap again to reverse); type in the box under any column to filter. Scroll sideways to see more columns →</p>
+    <p class="small muted" style="margin:6px 0 0">Every stored field. Tap a column title to sort (tap again to reverse); type in the box under any column to filter.</p>
     <button class="link" onclick="clearTableFilters()" style="margin-top:6px">Clear all filters</button>
     <div class="tablewrap">
       <table id="ttable">
@@ -662,15 +685,54 @@ async function viewPhoto(path){
   o.innerHTML=`<img src="${url}" style="max-width:100%;max-height:100%;border-radius:8px"/>`;
   o.onclick=()=>o.remove(); document.body.appendChild(o);
 }
+/* A review flag's "field" (price, qty, name, store, date…) → the real item property. */
+function itemFieldFor(field){
+  const k=String(field||'').toLowerCase();
+  return ({date:'purchasedAt', purchaseddate:'purchasedAt', purchased:'purchasedAt',
+           useby:'useByDate', use_by:'useByDate', usebydate:'useByDate'})[k] || field;
+}
+/* Which item property does an "_unclear"-style flag refer to? (null if unrecognized) */
+function flagItemField(flag){
+  const f=String(flag).toLowerCase();
+  const map=[['purchasedat','purchasedAt'],['date','purchasedAt'],['usebydate','useByDate'],['useby','useByDate'],
+    ['unitprice','unitPrice'],['price','price'],['quantity','qty'],['qty','qty'],
+    ['rawname','rawName'],['name','name'],['store','store'],['category','category']];
+  for(const [tok,prop] of map){ if(f.includes(tok)) return prop; }
+  return null;
+}
+function valueFilled(it, prop){ const v=it[prop]; return !(v==null || v==='' || (typeof v==='number' && isNaN(v))); }
+function hasOpenNeed(itemId, prop){
+  return (D.needs||[]).some(n=>n.status==='open' && n.itemId===itemId && itemFieldFor(n.field)===prop);
+}
+/* Drop any field-uncertainty flag whose field now has a value and no open review.
+   Returns true if it changed anything. */
+function purgeStaleFlags(){
+  let changed=false;
+  (D.items||[]).forEach(it=>{
+    if(!Array.isArray(it.flags) || !it.flags.length) return;
+    const kept=it.flags.filter(fl=>{
+      const prop=flagItemField(fl);
+      if(!prop) return true;                                  // unrecognized flag: leave it alone
+      if(valueFilled(it,prop) && !hasOpenNeed(it.id,prop)) return false; // resolved → purge
+      return true;
+    });
+    if(kept.length!==it.flags.length){ it.flags=kept; changed=true; }
+  });
+  return changed;
+}
 async function resolveFlag(id, dismiss){
   const n=D.needs.find(x=>x.id===id); if(!n) return;
   const val=dismiss?null:($('#fix_'+id)?$('#fix_'+id).value.trim():'');
+  let itemsChanged=false;
   if(!dismiss && val && n.itemId && n.field){
     const it=D.items.find(i=>i.id===n.itemId);
-    if(it){ let v=val; if(['price','qty','unitPrice','tax','subtotal','total'].includes(n.field)) v=parseFloat(val)||0; it[n.field]=v; it.flags=(it.flags||[]).filter(f=>!f.includes(n.field)); }
-    await saveJson(FILES.items, D.items, 'Apply review fix to '+n.field);
+    if(it){ const prop=itemFieldFor(n.field); let v=val;
+      if(['price','qty','unitPrice','tax','subtotal','total'].includes(prop)) v=parseFloat(val)||0;
+      it[prop]=v; itemsChanged=true; }
   }
   n.status='resolved'; n.resolvedAt=new Date().toISOString(); n.resolvedBy=LS.me;
+  if(purgeStaleFlags()) itemsChanged=true;                    // clear the now-resolved "_unclear" flag(s)
+  if(itemsChanged) await saveJson(FILES.items, D.items, 'Apply review fix / clear resolved flags');
   await saveJson(FILES.needs, D.needs, 'Resolve review flag');
   toast(dismiss?'Dismissed':'Saved'); updateBadges(); renderReview();
 }

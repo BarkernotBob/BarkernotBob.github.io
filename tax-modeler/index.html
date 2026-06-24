@@ -56,8 +56,8 @@
       .miniNote { font-size:12px; color:var(--muted); background:var(--chip); padding:6px 9px; border-radius:7px; margin:4px 0 10px; }
       /* tooltip */
       .info { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:var(--accent-soft); color:var(--accent); font-size:11px; font-weight:700; cursor:help; margin-left:6px; position:relative; border:1px solid #cfe0ff; flex:0 0 auto; }
-      .info:hover::after, .info:focus::after { content:attr(data-tip); position:absolute; left:50%; bottom:150%; transform:translateX(-50%); background:#1d2230; color:#fff; padding:8px 10px; border-radius:8px; width:250px; font-size:12px; font-weight:400; line-height:1.4; z-index:20; box-shadow:0 6px 20px rgba(0,0,0,.18); }
-      .info:hover::before, .info:focus::before { content:''; position:absolute; left:50%; bottom:140%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#1d2230; z-index:20; }
+      #ttip { position:fixed; max-width:min(280px,92vw); background:#1d2230; color:#fff; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:400; line-height:1.4; z-index:1000; box-shadow:0 6px 20px rgba(0,0,0,.25); pointer-events:none; opacity:0; transition:opacity .08s; }
+      #ttip.on { opacity:1; }
       .estTag { font-size:11px; color:var(--accent); background:var(--accent-soft); border-radius:6px; padding:1px 6px; margin-left:6px; }
       .capTag { font-size:11px; color:#9a6700; margin-left:6px; }
       /* results */
@@ -183,6 +183,7 @@
       </footer>
     </div>
     <div id="modalRoot"></div>
+    <div id="ttip"></div>
 
     <script>
 /* =========================================================================
@@ -274,7 +275,7 @@ function defaults(){
     healthInsuranceSource:"employer", annualHealthPremium:0, premiumPreTax:true,
     acaBenchmarkOverride:0, acaBenchmarkTouched:false, advancePtc:0,
     in529:0, inRentPaid:0, inRented:false,
-    fedWithholding:0, fedEstimated:0, inWithholding:0, priorYearTax:0, priorAgiHigh:false,
+    fedWithholding:0, fedEstimated:0, inWithholding:0, ficaWithheld:0, ficaWithheldTouched:false, priorYearTax:0, priorAgiHigh:false,
     showLessIncome:false, showLessCredits:false,
     qbiW2Wages:0, qbiUbia:0, qbiSSTB:false,
     resultsTab:"summary", explorerLever:"trad401k", explorerY:"tax", leaderboardSort:"savings", expandedRows:{},
@@ -500,14 +501,17 @@ function compute(s){
   const inEITC=(s.state==="IN")?eitc*C.indiana.eitcRate:0; // Indiana EIC = 10% of federal, refundable
 
   const totalTax=fedIncomeTax+indiana.stateTax+indiana.countyTax+seTax+ssTax+medTax-aca.netPtc-refundableExtras-inEITC;
-  const payments=n(s.fedWithholding)+n(s.fedEstimated)+n(s.inWithholding);
+  // Employee Social Security + Medicare is auto-withheld from W-2 pay, so it counts as already paid
+  // (defaults to the computed amount; the user can override). Self-employment tax is NOT auto-withheld.
+  const ficaPaid=s.ficaWithheldTouched?Math.max(0,n(s.ficaWithheld)):(ssTax+medTax);
+  const payments=n(s.fedWithholding)+n(s.fedEstimated)+n(s.inWithholding)+ficaPaid;
   const balance=payments-totalTax;
   const marginalOrd=marginalOrdRate(ordTaxable,status);
 
   return { status,married,totalIncome,agi,deduction,useItemized,std,itemizedTotal,saltDed,saltCap:saltCapV,seniorBonus,nonItemizerCharity,
     qbiDeduction,taxableIncome,ordTaxable,ordinaryTax,ltcgTax,regularTax,amt,addlMedicare,niit,fedTaxBeforeCredits,
     adj,aboveLine,ctc,ctcGross,ctcPhase,actc,eitc,inEITC,aotc,llc,depCare,saver,mcc,fedIncomeTax,seTax,ssTax,medTax,taxableSS,indiana,aca,
-    totalTax,payments,balance,refundableExtras,marginalOrd,hsaPayroll };
+    totalTax,payments,balance,refundableExtras,marginalOrd,hsaPayroll,ficaPaid };
 }
 
 function netCapital(st,lt){
@@ -820,8 +824,9 @@ function renderForm(){
   </div></details>
 
   <details class="sec"><summary>Withholding &amp; payments <span class="sub" id="sub-pay"></span></summary><div class="secbody">
-    ${field("Federal withholding (YTD or estimate)","fedWithholding")}
+    ${field("Federal income-tax withholding (YTD or estimate)","fedWithholding")}
     ${field("Federal estimated payments","fedEstimated")}
+    ${field("Social Security + Medicare (FICA) withheld","ficaWithheld",{est:!S.ficaWithheldTouched,value:S.ficaWithheldTouched?S.ficaWithheld:Math.round(compute(S).ssTax+compute(S).medTax),tip:"The Social Security (6.2%) and Medicare (1.45%) tax taken from your paychecks. It's auto-filled from your wages because employers withhold it automatically — leave it unless you know your exact figure. Self-employment tax is handled separately and is NOT auto-paid.",hint:"Auto-filled from wages; it's already taken out of your paychecks."})}
     ${field(S.state==="IN"?"Indiana withholding + estimates":"State withholding + estimates","inWithholding")}
     ${field("Last year's total federal tax (optional)","priorYearTax",{tip:"From line 22 of your prior-year Form 1040 (total tax). Lets the safe-harbor check use the 100%/110%-of-last-year rule, which often means you can prepay less.",hint:"For the underpayment-penalty safe-harbor check."})}
     <div class="inline">${check("Last year's AGI was over $150,000 ($75k if married-separate)","priorAgiHigh","Higher earners must prepay 110% of last year's tax (instead of 100%) to use that safe harbor.")}</div>
@@ -1030,20 +1035,26 @@ function sideBusiness(s){
   const miles=Math.round(Math.max(0,n(s.sbMiles))*C.business.mileageRate);
   const equip=Math.max(0,n(s.sbEquipment)), health=Math.max(0,n(s.sbHealth));
   const totalDeductions=exp+home+miles+equip;
-  const netProfit=Math.max(0,rev-totalDeductions);
-  const halfSe=netProfit>0?(netProfit*0.9235*0.153)/2:0;
+  const netProfit=rev-totalDeductions;       // may be negative — a deductible business loss
+  const isLoss=netProfit<0, pos=Math.max(0,netProfit);
+  const halfSe=pos>0?(pos*0.9235*0.153)/2:0;
   const remainingDeferral=Math.max(0,limit401k(s.yourAge)-Math.max(0,n(s.trad401k))-Math.max(0,n(s.soloK)));
-  const employerShare=Math.max(0,Math.round((netProfit-halfSe)*C.business.sepProfitPct));
-  const soloRoom=Math.max(0,Math.min(C.retire.sepMax, remainingDeferral+employerShare));
+  const earningsCap=Math.max(0,pos-halfSe); // can't shelter more than net SE earnings — $0 profit → $0 room
+  const employerShare=Math.max(0,Math.round(earningsCap*C.business.sepProfitPct));
+  const soloRoom=Math.max(0,Math.min(C.retire.sepMax, remainingDeferral+employerShare, earningsCap));
   const retire=Math.min(Math.max(0,n(s.sbRetire)), soloRoom);
   const base=compute(s);
-  const s2=Object.assign({},s,{ seNetProfit:Math.max(0,n(s.seNetProfit))+netProfit, seHealth:Math.max(0,n(s.seHealth))+health, sep:Math.max(0,n(s.sep))+retire });
+  const s2=Object.assign({},s,{
+    seNetProfit:Math.max(0,n(s.seNetProfit))+pos,             // a profit triggers SE tax + QBI
+    otherOrdinary:n(s.otherOrdinary)+Math.min(0,netProfit),   // a loss offsets other ordinary income
+    seHealth:Math.max(0,n(s.seHealth))+health,
+    sep:Math.max(0,n(s.sep))+retire });
   const withBiz=compute(s2);
   const dTax=withBiz.totalTax-base.totalTax, dSe=withBiz.seTax-base.seTax, dQbi=withBiz.qbiDeduction-base.qbiDeduction;
-  return {rev,exp,home,miles,equip,health,totalDeductions,netProfit,soloRoom,retire,dTax,dSe,dQbi,effRate:netProfit>0?dTax/netProfit:0,takeHome:netProfit-dTax,active:rev>0||totalDeductions>0};
+  return {rev,exp,home,miles,equip,health,totalDeductions,netProfit,isLoss,soloRoom,retire,dTax,dSe,dQbi,
+    effRate:netProfit>0?dTax/netProfit:0, takeHome:netProfit-dTax, taxSaved:-dTax, active:rev>0||totalDeductions>0};
 }
 function sideBusinessHtml(s){
-  const b=sideBusiness(s);
   const f=(label,key,hint)=>`<div class="sbf"><span>${label}</span><input type="number" inputmode="numeric" data-sb="${key}" value="${n(s[key])||''}" placeholder="0">${hint?`<div class="sbhint">${hint}</div>`:''}</div>`;
   const inputs=`<div class="sbgrid">
     ${f('Business revenue / gross income','sbRevenue')}
@@ -1052,23 +1063,34 @@ function sideBusinessHtml(s){
     ${f('Business miles driven','sbMiles',`Deducted at $${C.business.mileageRate}/mile (the IRS standard rate).`)}
     ${f('Equipment / computer (Sec. 179)','sbEquipment','Tools, a laptop, a desk — often fully deductible the year you buy them.')}
     ${f('Self-employed health premiums','sbHealth','If you pay your own health insurance, the premiums are deductible against this income.')}
-    ${f('Solo 401(k) / SEP contribution','sbRetire',`You could shelter up to ${usd(b.soloRoom)} here — far above the ${usd(limit401k(s.yourAge))} employee 401(k) limit.`)}
+    ${f('Solo 401(k) / SEP contribution','sbRetire',`A Solo 401(k)/SEP can shelter far more than the ${usd(limit401k(s.yourAge))} employee 401(k) limit once you have net profit — see the figure below.`)}
   </div>`;
-  if(!b.active) return inputs+`<div class="sub2" style="margin-top:8px">Enter a revenue figure above to see what a side business would do to your taxes — including which everyday costs become deductible and how much retirement space it unlocks.</div>`;
+  return inputs+`<div id="sbResult">${sideBusinessResultHtml(s)}</div>`;
+}
+function sideBusinessResultHtml(s){
+  const b=sideBusiness(s);
+  if(!b.active) return `<div class="sub2" style="margin-top:8px">Enter a revenue figure (and your expenses) above to see what a side business would do to your taxes — which everyday costs become deductible, the self-employment-tax trade-off, and the retirement space it unlocks. You can even model a break-even or loss year.</div>`;
   const sub=(l,v)=>v>0?`<tr class="sub"><td>${l}</td><td class="amt">−${usd(v)}</td></tr>`:'';
-  return inputs+`<table class="water" style="margin-top:10px">
-    <tr><td>Business revenue</td><td class="amt">${usd(b.rev)}</td></tr>
-    ${sub('Expenses (supplies, phone, etc.)',b.exp)}
-    ${sub('Home office',b.home)}
-    ${sub('Mileage',b.miles)}
-    ${sub('Equipment',b.equip)}
-    <tr><td><strong>Net profit (Schedule C)</strong></td><td class="amt"><strong>${usd(b.netProfit)}</strong></td></tr>
-    <tr class="sub"><td>Self-employment tax added</td><td class="amt">${usd(b.dSe)}</td></tr>
+  const profitRow=b.isLoss
+    ? `<tr><td><strong>Net loss (Schedule C)</strong></td><td class="amt"><strong style="color:var(--good)">−${usd(-b.netProfit)}</strong></td></tr>`
+    : `<tr><td><strong>Net profit (Schedule C)</strong></td><td class="amt"><strong>${usd(b.netProfit)}</strong></td></tr>`;
+  let rows=`<tr><td>Business revenue</td><td class="amt">${usd(b.rev)}</td></tr>
+    ${sub('Expenses (supplies, phone, etc.)',b.exp)}${sub('Home office',b.home)}${sub('Mileage',b.miles)}${sub('Equipment',b.equip)}
+    ${profitRow}`;
+  if(!b.isLoss) rows+=`<tr class="sub"><td>Self-employment tax added</td><td class="amt">${usd(b.dSe)}</td></tr>
     <tr class="sub"><td>QBI 20% deduction gained</td><td class="amt">−${usd(b.dQbi)}</td></tr>
-    ${b.retire>0?`<tr class="sub"><td>Solo 401(k)/SEP sheltered</td><td class="amt">−${usd(b.retire)}</td></tr>`:''}
-    <tr class="tot"><td>Net added tax (federal + Indiana)</td><td class="amt">${usd(b.dTax)}</td></tr>
-  </table>
-  <div class="rec" style="margin-top:8px">On ${usd(b.netProfit)} of net profit you'd keep <b>${usd(b.takeHome)}</b> after an effective <b>${pct(b.effRate)}</b> — and you could move up to <b>${usd(b.soloRoom)}</b> into a Solo 401(k)/SEP (vs. the ${usd(limit401k(s.yourAge))} employee limit). Costs you already pay personally — part of your home, phone, internet, car — become deductions once they're for the business. Keep records and a separate account; the business must be real and profit-seeking, not a hobby.</div>`;
+    ${b.retire>0?`<tr class="sub"><td>Solo 401(k)/SEP sheltered</td><td class="amt">−${usd(b.retire)}</td></tr>`:''}`;
+  rows+=`<tr class="tot"><td>${b.dTax>=0?'Net added tax':'Net tax saved'} (federal + state)</td><td class="amt"${b.dTax<0?' style="color:var(--good)"':''}>${b.dTax>=0?usd(b.dTax):'−'+usd(-b.dTax)}</td></tr>`;
+  const table=`<table class="water" style="margin-top:10px">${rows}</table>`;
+  let note;
+  if(b.isLoss){
+    const outOfPocket=Math.max(0,(-b.netProfit)-b.taxSaved);
+    note=`<div class="rec" style="margin-top:8px">This models a <b>business loss of ${usd(-b.netProfit)}</b> — deductions exceed revenue. That loss offsets your other income and cuts your tax by about <b>${usd(b.taxSaved)}</b> this year. But the cash is real: after the tax break you'd still be out roughly <b>${usd(outOfPocket)}</b> of your own money, so a loss only pays off if the spending builds a genuine, profit-seeking business. The IRS disallows ongoing "hobby" losses, the home-office deduction can't itself create a loss (it carries forward instead), and repeated losses invite scrutiny.</div>`;
+  } else {
+    const soloBit=b.soloRoom>0?` and you could move up to <b>${usd(b.soloRoom)}</b> into a Solo 401(k)/SEP${b.soloRoom>limit401k(s.yourAge)?` — more than the ${usd(limit401k(s.yourAge))} employee 401(k) limit`:''}`:'';
+    note=`<div class="rec" style="margin-top:8px">On ${usd(b.netProfit)} of net profit you'd keep <b>${usd(b.takeHome)}</b> after an effective <b>${pct(b.effRate)}</b>${soloBit}. Costs you already pay personally — part of your home, phone, internet, car — become deductions once they're genuinely for the business. Keep records and a separate account; it must be real and profit-seeking, not a hobby.</div>`;
+  }
+  return table+note;
 }
 /* ---- Creative moves ---- */
 function creativeMoves(s,r){
@@ -1076,7 +1098,9 @@ function creativeMoves(s,r){
   const rothEnd=C.rothPhase[status]?C.rothPhase[status].e:Infinity;
   if(magi>rothEnd) t.push(['Backdoor Roth IRA',`Your income (~${usd(magi)}) is above the ${usd(rothEnd)} Roth limit, so you can't contribute to a Roth directly. A "backdoor Roth" — put up to $7,000/person into a <i>non-deductible</i> traditional IRA, then convert it to Roth — legally sidesteps the limit. Cleanest if you don't already hold pre-tax IRA money (the "pro-rata rule" can tax the conversion otherwise).`]);
   const giving=Math.max(0,n(s.charitableCash))+Math.max(0,n(s.charitableNonCash));
-  if(!r.useItemized && giving>0) t.push(['Bunch your charitable giving',`You're taking the ${usd(r.deduction)} standard deduction, so your ${usd(giving)} of donations adds no extra deduction this year. Combine two or more years of giving into one year — ideally through a <b>donor-advised fund</b> (give once, grant to charities over time) — to clear the standard deduction and itemize that year, then take the standard deduction the next.`]);
+  const nonItemCap=C.charityNonItemizer[status]||0;
+  // Only worth bunching if giving exceeds what's already deductible above the line (the OBBBA non-itemizer cash deduction)
+  if(!r.useItemized && giving>nonItemCap) t.push(['Bunch your charitable giving',`You're taking the standard deduction. The first ${usd(r.nonItemizerCharity)} of your cash giving is already deducted above the line (the 2026 non-itemizer rule), but the remaining ~${usd(giving-r.nonItemizerCharity)} adds nothing this year. Combining two or more years of giving into one — ideally through a <b>donor-advised fund</b> (give once, grant to charities over time) — can push you past the ${usd(r.deduction)} standard deduction so the rest counts, then take the standard deduction the next year.`]);
   const gains=Math.max(0,n(s.ltcg))+Math.max(0,n(s.stcg));
   if(gains>0) t.push(['Tax-loss harvesting',`You're showing ${usd(gains)} of capital gains. Selling other taxable investments that are <i>down</i> ("harvesting losses") offsets those gains dollar-for-dollar, and up to $3,000 of leftover loss offsets ordinary income (the rest carries to future years). Don't rebuy the same security within 30 days — that triggers the "wash-sale" rule and voids the loss.`]);
   const lev=planLevers(s).filter(l=>l.lowersIncome);
@@ -1128,7 +1152,7 @@ function renderOptimizeTab(r){
     <div class="card"><div class="h3">Capital-gains &amp; Roth headroom ${tipIcon("How much room you have before key ceilings, based on your current taxable income.")}</div>${headroomHtml(h)}</div>`;
 }
 function wireOptimize(){
-  document.querySelectorAll('#results [data-sb]').forEach(el=>el.addEventListener('input',()=>{ const k=el.dataset.sb; S[k]=el.value===''?0:+el.value; renderResults(); const f=document.querySelector('#results [data-sb="'+k+'"]'); if(f) f.focus(); }));
+  document.querySelectorAll('#results [data-sb]').forEach(el=>el.addEventListener('input',()=>{ S[el.dataset.sb]=el.value===''?0:+el.value; const out=document.getElementById('sbResult'); if(out) out.innerHTML=sideBusinessResultHtml(S); saveState(); }));
   document.querySelectorAll('#results [data-lever]').forEach(el=>el.addEventListener('click',()=>{ S.explorerLever=el.dataset.lever; renderResults(); document.getElementById('expSvg')?.scrollIntoView({behavior:'smooth',block:'center'}); }));
   document.querySelectorAll('#results [data-sort]').forEach(el=>el.addEventListener('click',()=>{ S.leaderboardSort=el.dataset.sort; renderResults(); }));
   const lev=document.getElementById('expLever'); if(lev) lev.addEventListener('change',()=>{ S.explorerLever=lev.value; renderResults(); });
@@ -1244,7 +1268,7 @@ function renderSummaryTab(r){
   return `
     <div class="card"><div class="h3">Your situation in plain English</div><div style="font-size:13.5px;line-height:1.55">${plainEnglishSummary(S,r)}</div></div>
     <div class="card">
-      <div class="sub2">Estimated balance ${r.payments===0?'<span class="estTag" style="background:var(--warn-bg);color:var(--warn)">no withholding entered</span>':''}</div>
+      <div class="sub2">Estimated balance ${(n(S.fedWithholding)+n(S.fedEstimated)+n(S.inWithholding))===0?'<span class="estTag" style="background:var(--warn-bg);color:var(--warn)">no income-tax withholding entered</span>':''}</div>
       <div class="bignum ${r.balance>=0?'good':'bad'}">${r.balance>=0?'Refund ':'You owe '}${usd(Math.abs(r.balance))}</div>
       <div class="sub2">Total tax ${usd(r.totalTax)} − payments ${usd(r.payments)} • Effective ${r.totalIncome>0?pct(r.totalTax/r.totalIncome):'0%'} • Marginal <b>${(r.marginalOrd*100).toFixed(0)}%</b> federal / <b>~${(mc*100).toFixed(0)}%</b> all-in ${tipIcon("All-in marginal = federal + any state/local tax on your next dollar of ordinary income (a payroll HSA dollar also saves 7.65% FICA on top).")}</div>
     </div>
@@ -1329,7 +1353,7 @@ function exportInputs(){ const inputs={};
 }
 function exportAssumptions(r){
   const a=[];
-  if(r.payments===0) a.push('No withholding/estimated payments entered — the balance shown is total tax owed, NOT an under/over-withholding result.');
+  if((n(S.fedWithholding)+n(S.fedEstimated)+n(S.inWithholding))===0) a.push('No income-tax withholding/estimated payments entered (employee FICA is auto-counted) — the balance mostly reflects income tax owed, not an under/over-withholding result.');
   if(isMarried(S) && n(S.wagesSpouse)===0 && n(S.wages)>0) a.push('All wages are under one spouse (spouse wages $0). If dual-income, split them — it affects the per-person Social Security cap and dependent-care eligibility.');
   if(S.dependents.some(d=>n(d.age)<13) && n(S.depCareExpenses)===0) a.push('Has child(ren) under 13 but $0 child-care expenses entered — Child & Dependent Care Credit may be available if both spouses work.');
   a.push(`HSA is treated as ${S.hsaThroughPayroll?'payroll pre-tax (also exempt from Social Security/Medicare)':'a direct contribution (income-tax deduction only, no FICA savings)'}; coverage = ${S.hsaFamily?'family':'self-only'}.`);
@@ -1476,6 +1500,7 @@ function wireForm(){
       else if(el.type==="number")S[key]=n(el.value);
       else S[key]=el.value;
       if(key==="acaBenchmarkOverride")S.acaBenchmarkTouched=true;
+      if(key==="ficaWithheld")S.ficaWithheldTouched=true;
       // Only rebuild the whole form for changes that add/remove fields (filing status,
       // family-HSA toggle). Everything else updates live so the input keeps focus.
       if(["filingStatus","hsaFamily","state"].includes(key)){ renderForm(); }
@@ -1493,6 +1518,8 @@ function wireForm(){
 function updateAutoFields(){
   const el=document.getElementById("f_acaBenchmarkOverride");
   if(el && !S.acaBenchmarkTouched) el.value=estimateBenchmarkAnnual(S); // keep estimate live until user overrides
+  const fe=document.getElementById("f_ficaWithheld");
+  if(fe && !S.ficaWithheldTouched){ const r=compute(S); fe.value=Math.round(r.ssTax+r.medTax); } // FICA auto-fills from wages
 }
 function refresh(){ applyCaps(); applyVisibility(); updateAutoFields(); updateSubtotals(); renderResults(); }
 
@@ -1506,6 +1533,27 @@ document.getElementById("presets").addEventListener("click",e=>{
   document.querySelectorAll("details.sec").forEach((d,idx)=>{ d.open=idx<2; });
 });
 
+// viewport-clamped tooltips (replaces CSS ::after so they never clip off-screen)
+(function(){
+  const tt=document.getElementById("ttip"); if(!tt) return;
+  let cur=null;
+  function place(el){
+    const tip=el.getAttribute("data-tip"); if(!tip) return; cur=el;
+    tt.textContent=tip; tt.classList.add("on"); tt.style.left="0px"; tt.style.top="0px";
+    const r=el.getBoundingClientRect(), b=tt.getBoundingClientRect(), m=8;
+    let left=r.left+r.width/2-b.width/2;
+    left=Math.max(m, Math.min(left, window.innerWidth-b.width-m));
+    let top=r.top-b.height-8; // prefer above
+    if(top<m) top=r.bottom+8;  // flip below if it would clip the top
+    tt.style.left=left+"px"; tt.style.top=top+"px";
+  }
+  function hide(){ cur=null; tt.classList.remove("on"); }
+  document.addEventListener("mouseover",e=>{ const el=e.target.closest&&e.target.closest(".info[data-tip]"); if(el) place(el); });
+  document.addEventListener("mouseout",e=>{ const el=e.target.closest&&e.target.closest(".info[data-tip]"); if(el&&el===cur) hide(); });
+  document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest(".info[data-tip]"); if(el) place(el); });
+  document.addEventListener("focusout",hide);
+  window.addEventListener("scroll",hide,true);
+})();
 // stamp data version / dates into the page
 (function(){ const set=(id,v)=>{ const e=document.getElementById(id); if(e)e.textContent=v; };
   set("methDate",APP.updated); set("footDate",APP.updated); set("methSrc",APP.sources); })();

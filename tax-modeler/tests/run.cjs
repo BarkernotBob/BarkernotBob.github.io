@@ -15,7 +15,7 @@ const js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 const _el = { innerHTML:"", textContent:"", value:0, max:0, style:{}, dataset:{}, classList:{toggle(){},add(){},remove(){}},
   addEventListener(){}, setAttribute(){}, select(){}, scrollIntoView(){}, getBoundingClientRect(){return{left:0,width:340};}, focus(){} };
 global.document = { getElementById:()=>_el, querySelector:()=>_el, querySelectorAll:()=>[], addEventListener(){}, createElement:()=>_el };
-global.window = {}; global.navigator = { clipboard:{ writeText(){} } }; global.setTimeout = ()=>{};
+global.window = { addEventListener(){}, innerWidth:1024, innerHeight:768 }; global.navigator = { clipboard:{ writeText(){} } }; global.setTimeout = ()=>{};
 global.localStorage = { getItem:()=>null, setItem(){}, removeItem(){} };
 
 const api = new Function(js + ";return {compute,defaults,computeState,planLevers,opportunities,sideBusiness,buildExport,combinedMarginal,plainEnglishSummary,deadlineFor,safeHarbor};")();
@@ -158,6 +158,25 @@ function base(over={}) { return Object.assign(api.defaults(), over); }
   const sPrior = base({ seNetProfit:150000, fedWithholding:200, priorYearTax:100 });
   const withPrior = api.safeHarbor(sPrior, api.compute(sPrior));
   check("low prior-year tax lowers the required prepayment (becomes safe)", withPrior.safe === true);
+}
+
+// 16. Side business can run at a loss that reduces tax
+{
+  const profit = api.sideBusiness(base({ yourAge:35, sbRevenue:40000, sbExpenses:6000 }));
+  check("profitable side business adds tax", profit.isLoss===false && profit.dTax>0);
+  const loss = api.sideBusiness(base({ yourAge:35, wages:90000, sbRevenue:5000, sbExpenses:20000 }));
+  check("loss is negative net profit", loss.isLoss===true && loss.netProfit===-15000);
+  check("loss reduces tax (dTax negative / taxSaved positive)", loss.dTax<0 && loss.taxSaved>0);
+  check("Solo room hint isn't claimed above the limit when zero", api.sideBusiness(base({sbRevenue:0})).soloRoom===0);
+}
+
+// 17. Employee FICA is auto-counted as paid (balance not inflated by already-withheld FICA)
+{
+  const r = api.compute(base({ wages:80000, fedWithholding:9000 }));
+  check("ficaPaid defaults to computed employee FICA", approx(r.ficaPaid, r.ssTax+r.medTax, 1));
+  check("payments include income-tax withholding + FICA", approx(r.payments, 9000 + r.ssTax + r.medTax, 1));
+  const over = api.compute(base({ wages:80000, fedWithholding:9000, ficaWithheld:1234, ficaWithheldTouched:true }));
+  check("user can override FICA withheld", approx(over.payments, 9000+1234, 1));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

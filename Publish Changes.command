@@ -8,9 +8,35 @@ cd "$(dirname "$0")" || exit 1
 echo "Publishing your changes to the website..."
 echo ""
 
-# 1. Get any changes that were made elsewhere (e.g. on the website editor)
-#    so your computer is up to date first. This avoids conflicts.
-echo "Step 1 of 3: Checking for any newer changes online..."
+# 0. Pull in the latest blockchain game from your Obsidian vault so the newest
+#    version gets published. (If the vault file isn't found, we keep the current
+#    one and carry on.)
+GAME_SRC="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html"
+GAME_DST="quartz/static/Blockchain.html"
+if [ -f "$GAME_SRC" ]; then
+  if ! cmp -s "$GAME_SRC" "$GAME_DST" 2>/dev/null; then
+    cp "$GAME_SRC" "$GAME_DST" && echo "Picked up your latest blockchain game."
+  fi
+else
+  echo "Note: couldn't find your game file in the vault (it may still be syncing) —"
+  echo "      publishing the version already in the site folder."
+fi
+echo ""
+
+# 1. Save (commit) everything you've changed locally FIRST. Git won't let us
+#    sync with the online copy while there are unsaved changes lying around.
+echo "Step 1 of 3: Saving your changes..."
+git add -A
+if git diff --cached --quiet; then
+  echo "  Nothing new since last time — checking the online copy anyway."
+else
+  git commit -m "Update notes"
+  echo "  Saved."
+fi
+
+# 2. Combine with any newer changes made elsewhere (e.g. GitHub's web editor).
+echo ""
+echo "Step 2 of 3: Checking for any newer changes online..."
 if ! git pull --rebase; then
   echo ""
   echo "⚠️  Couldn't automatically combine your changes with the online ones."
@@ -20,16 +46,6 @@ if ! git pull --rebase; then
   echo "Press Return to close this window."
   read
   exit 1
-fi
-
-# 2. Save (commit) everything you've changed locally.
-echo ""
-echo "Step 2 of 3: Saving your changes..."
-git add -A
-if git diff --cached --quiet; then
-  echo "Nothing new to publish — your website is already up to date."
-else
-  git commit -m "Update notes"
 fi
 
 # 3. Send the saved changes up to GitHub (this triggers the website rebuild).
@@ -42,8 +58,13 @@ if git push; then
   echo "   https://isaiahmail97-oss.github.io"
 else
   echo ""
-  echo "⚠️  Couldn't send the changes. Check your internet connection,"
-  echo "    or ask Claude for help."
+  echo "⚠️  Couldn't send the changes to GitHub."
+  echo "    If this is your first time, you probably need to log in once. Open a"
+  echo "    NEW Terminal window and run this command, then follow the prompts:"
+  echo ""
+  echo "        gh auth login -h github.com -p https -w"
+  echo ""
+  echo "    After logging in, just run this Publish file again. Or ask Claude."
 fi
 
 echo ""

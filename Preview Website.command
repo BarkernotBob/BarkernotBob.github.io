@@ -32,6 +32,20 @@ if [ ! -L node_modules ] || [ ! -e "node_modules/preact/package.json" ]; then
   rm -rf node_modules.old.*(N) 2>/dev/null &
 fi
 
+# --- Pull in the latest blockchain game from your Obsidian vault, so the
+# --- preview always shows your newest version. (If the vault file isn't found
+# --- — e.g. iCloud is still syncing — we just use whatever's already here.)
+GAME_SRC="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html"
+GAME_DST="quartz/static/Blockchain.html"
+if [ -f "$GAME_SRC" ]; then
+  if ! cmp -s "$GAME_SRC" "$GAME_DST" 2>/dev/null; then
+    cp "$GAME_SRC" "$GAME_DST" && echo "Updated the blockchain game to your latest version."
+  fi
+else
+  echo "Note: couldn't find your game file in the vault (it may still be syncing) —"
+  echo "      showing the version already in the site folder."
+fi
+
 echo "Building your website and starting the preview..."
 echo "When you see a web address (http://localhost:8080), it's ready."
 echo ""

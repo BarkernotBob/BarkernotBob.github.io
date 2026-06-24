@@ -22,9 +22,15 @@ You don't need to know any code to use it. This guide explains everything in pla
   ---
   ```
 
-  This is a safety switch so nothing goes public by accident. No `publish: true` = it
-  stays private and won't show on the site. (Right now, "Why Anecdotes Trump Data" is
-  *not* published because it's missing this line.)
+  This is a safety switch so nothing goes public by accident. Only `publish: true` puts a
+  note on the site. `publish: false`, or no `publish` line at all, keeps it private. (To
+  take a page *back down* after it's been live, see **"Removing or hiding a page"** below.)
+
+  > ⚠️ **Don't confuse `publish:` with `published:`.** Some notes (especially saved web
+  > clippings) have a `published:` line — that's just a *date* the original was posted, and
+  > it does **nothing** to your site. The on/off switch is `publish:` (with no "ed"), set to
+  > `true` or `false`. It's often near the **bottom** of the note's settings block, so scroll
+  > the whole block, not just the top.
 
 ### 2. Preview it on your own computer (private)
 - **Double-click `Preview Website.command`** in this folder.
@@ -52,6 +58,43 @@ new version live. You don't manage any of that — it just happens.
 You can watch a publish happen here (optional):
 **https://github.com/isaiahmail97-oss/isaiahmail97-oss.github.io/actions** — a green
 check ✅ means it published successfully.
+
+---
+
+## Removing or hiding a page (unpublish)
+
+You do **not** have to delete a note to take it off the website. To hide a page but keep
+the note in your folder:
+
+1. Open the note in the **`content`** folder (the real note — see the warnings below).
+2. Change its switch to **`publish: false`** (or delete the `publish: true` line entirely).
+3. **Double-click `Publish Changes.command`.**
+4. Wait **1–2 minutes**, then refresh the page. It's gone from the site; the note is still
+   safe in your folder.
+
+To delete it for good (off the site *and* out of your folder), just delete the `.md` file
+from the `content` folder and Publish.
+
+### Three traps that make "it won't come down!" happen
+
+These are exactly the things that can make a removed page keep showing:
+
+1. **Edit the note in `content`, never in `public`.** The `public` folder is a throwaway
+   copy the site rebuilds from scratch every time. Deleting something from `public` does
+   nothing — it comes right back. The real note lives in `content`.
+2. **`publish:` not `published:`.** `published:` is a date and is ignored. The switch is
+   `publish: true` / `publish: false`. It's often the **last line** of the settings block.
+3. **It's not instant.** After you Publish, the site takes ~1–2 minutes to rebuild, and your
+   browser may show the old copy for a few more minutes. Force a fresh load with
+   **Command + Shift + R**, or open the page in a private/incognito window.
+
+### One exception: the game pages
+
+The **BlockChain**, **HexChain**, and **Tax-Modeler** menu pages are special — they're
+**rebuilt automatically** every time you Preview or Publish, so setting `publish: false` on
+them won't stick. To remove one of those, delete its `.html` file from the `quartz/static`
+folder **and** delete its line from the `GAMES` list inside both `Preview Website.command`
+and `Publish Changes.command`. (Ask Claude if you want one pulled — it's a 30-second change.)
 
 ---
 

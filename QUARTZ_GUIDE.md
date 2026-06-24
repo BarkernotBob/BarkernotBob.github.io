@@ -84,6 +84,31 @@ After editing it: **Preview** to check it looks right, then **Publish**.
 
 ---
 
+## Adding apps or games (like BlockChain 3D)
+
+A self-contained app/game is a single `.html` file. To put one on your site:
+
+1. **Drop the `.html` file into the `quartz/static` folder.** (Your BlockChain game also
+   copies itself in automatically from your vault every time you Preview or Publish.)
+2. **Preview or Publish.** That's it.
+
+When you do, two things happen automatically:
+- The file is served untouched at `https://isaiahmail97-oss.github.io/static/<FileName>.html`.
+- A **menu entry** appears for it. Clicking that entry takes you **straight into the
+  app full-screen** — no in-between page.
+
+So any future game you add to `quartz/static` behaves exactly like BlockChain 3D, with
+zero extra setup. (If you ever *don't* want a menu entry for one, delete the matching
+`.md` file that got created in the `content` folder.)
+
+> Why a file and not a normal note: these apps run their own special start-up code that
+> only works when the page loads fresh. A regular Quartz note wraps pages in the site's
+> layout and uses fast in-place swapping, which stops that code from running. Serving the
+> file raw (and jumping straight to it) avoids that — which is why the menu now routes you
+> directly to the game.
+
+---
+
 ## Behind-the-scenes notes (you can ignore these)
 
 - The actual website pages are generated into a `public` folder. You never edit that —

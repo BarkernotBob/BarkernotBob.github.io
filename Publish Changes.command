@@ -21,6 +21,26 @@ else
   echo "Note: couldn't find your game file in the vault (it may still be syncing) —"
   echo "      publishing the version already in the site folder."
 fi
+
+# 0b. Auto-create a menu launcher for any standalone app/game in quartz/static.
+#     Drop an .html file into quartz/static and a matching menu page appears
+#     that jumps straight into it full-screen. Existing pages are never touched.
+SITE_ORIGIN="https://isaiahmail97-oss.github.io"
+for f in quartz/static/*.html(N); do
+  fname="${f:t}"; base="${f:t:r}"
+  note="content/${base}.md"
+  if [ ! -f "$note" ]; then
+    cat > "$note" <<EOF
+---
+title: ${base}
+publish: true
+---
+
+Loading **${base}**… if it doesn't open automatically, <a href="${SITE_ORIGIN}/static/${fname}" data-static-redirect="/static/${fname}" data-router-ignore>click here</a>.
+EOF
+    echo "Created a menu launcher for ${fname}."
+  fi
+done
 echo ""
 
 # 1. Save (commit) everything you've changed locally FIRST. Git won't let us

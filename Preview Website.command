@@ -46,6 +46,26 @@ else
   echo "      showing the version already in the site folder."
 fi
 
+# --- Auto-create a menu launcher for any standalone app/game in quartz/static.
+# --- Drop an .html file into quartz/static and a matching menu page appears
+# --- that jumps straight into it full-screen. Existing pages are never touched.
+SITE_ORIGIN="https://isaiahmail97-oss.github.io"
+for f in quartz/static/*.html(N); do
+  fname="${f:t}"; base="${f:t:r}"
+  note="content/${base}.md"
+  if [ ! -f "$note" ]; then
+    cat > "$note" <<EOF
+---
+title: ${base}
+publish: true
+---
+
+Loading **${base}**… if it doesn't open automatically, <a href="${SITE_ORIGIN}/static/${fname}" data-static-redirect="/static/${fname}" data-router-ignore>click here</a>.
+EOF
+    echo "Created a menu launcher for ${fname}."
+  fi
+done
+
 echo "Building your website and starting the preview..."
 echo "When you see a web address (http://localhost:8080), it's ready."
 echo ""

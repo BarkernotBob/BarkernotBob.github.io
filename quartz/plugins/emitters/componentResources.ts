@@ -258,6 +258,24 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     `)
   }
 
+  // --- Static-file launchers (custom) ---------------------------------------
+  // Any page containing an element with data-static-redirect="/static/<file>"
+  // sends the browser straight to that raw file. This lets standalone apps or
+  // games dropped into quartz/static open full-screen directly from the menu,
+  // while keeping smooth SPA navigation everywhere else. Pushed before the SPA
+  // router so its "nav" listener is registered before the first nav fires.
+  componentResources.afterDOMLoaded.push(`
+    function quartzStaticRedirect() {
+      const el = document.querySelector("[data-static-redirect]")
+      if (!el) return
+      const target = el.getAttribute("data-static-redirect")
+      if (target) window.location.replace(target)
+    }
+    document.addEventListener("nav", quartzStaticRedirect)
+    quartzStaticRedirect()
+  `)
+  // --------------------------------------------------------------------------
+
   if (cfg.enableSPA) {
     componentResources.afterDOMLoaded.push(spaRouterScript)
   } else {

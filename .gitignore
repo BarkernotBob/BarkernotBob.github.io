@@ -18,3 +18,8 @@ content/private/
 .obsidian/
 content/Blockchain.html
 .claude/
+
+# Obsidian "Smart Connections" data — contains private note paths/metadata.
+# Must never be published. (Removed from the repo during the security review.)
+.smart-env/
+content/.smart-env/

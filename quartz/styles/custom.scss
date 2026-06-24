@@ -64,6 +64,8 @@ body:has(.home-splash) {
     letter-spacing: -2px; margin: 0 0 18px; color: var(--ink); border: none;
   }
   & .splash-accent { color: #ff5a4d; }
+  // Hide Quartz's auto heading-anchor (chain) icon on the splash
+  & a[role="anchor"] { display: none !important; }
   & .splash-lede { font-size: 20px; line-height: 1.5; color: var(--muted); max-width: 620px; }
 
   & .splash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }

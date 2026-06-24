@@ -116,6 +116,84 @@ After editing it: **Preview** to check it looks right, then **Publish**.
 
 ---
 
+## Editing the wording on your site (in Obsidian)
+
+All your words are plain text you edit in **Obsidian**. Open your vault (the `content`
+folder) in Obsidian, then:
+
+**The homepage words** (headline, intro, the card text):
+1. Open the note named **`index`** (top level of `content`).
+2. Switch to **source/edit mode** if it looks like a finished webpage (on desktop/iPad
+   Obsidian, use the `⋯` menu → "Edit", or the `<>` toggle). You'll see the words mixed
+   with some `<tags>`.
+3. Type over the words you want to change — **leave the `<...>` bits alone**. For example:
+   the headline `Play, build,` … `and think out loud.`, the intro starting
+   `My corner of the internet —`, or a card line like `BlockChain & HexChain — …`.
+4. Save, then double-click **Publish Changes.command**.
+
+**A section's heading or intro** (Games / Tools / Notes / YouTube): open the **`index`**
+note *inside* that folder (e.g. `content/games/index`) and edit the text there.
+
+**Rename what shows at the top of a page:** change the `title:` line in the note's
+settings block (between the `---` lines at the very top).
+
+> If a homepage card ever looks broken after an edit, you probably changed a `<tag>` by
+> accident. Ask Claude — it's a quick fix.
+
+---
+
+## Adding a video to Curated YouTube (in Obsidian)
+
+1. In Obsidian, open the **`youtube`** folder (inside `content`). The example note
+   **"The first-ever YouTube video"** shows the exact pattern.
+2. **Make a new note there** — easiest: right-click the example → **Make a copy**, then
+   rename it. (Copying means the embed code is already in place.)
+3. Change the **`title:`** line at the top.
+4. **Get the video's ID:** on YouTube, open the video → **Share** → copy the link. The ID
+   is the code after `watch?v=` (or after `youtu.be/`). In
+   `youtube.com/watch?v=abc123XYZ`, the ID is `abc123XYZ`.
+5. In the note, replace the old ID in the embed line with yours (keep the rest):
+   `<div class="video-embed"><iframe src="https://www.youtube.com/embed/PASTE_ID_HERE" title="My note" allowfullscreen></iframe></div>`
+6. Write your thoughts underneath in normal text. Make sure the top has `publish: true`.
+7. Double-click **Publish Changes.command**.
+
+The video plays right on the page, with your note beneath it, and it auto-appears in the
+list at `/youtube`. (Prefer a plain link instead of an inline player? Skip the embed line
+and just paste a normal link to the video.)
+
+---
+
+## Adding a new card to the homepage
+
+The homepage has four cards (Games, Tools, Notes, Curated YouTube). To add another:
+
+1. Open the **`index`** note (top level of `content`) in Obsidian, in source/edit mode.
+2. Find one of the existing card blocks — it looks like this:
+   ```
+   <a class="splash-card games" href="/games"><span class="splash-bar"></span>
+     <div class="splash-ic">🎮</div>
+     <div class="splash-h">Games</div>
+     <p>BlockChain &amp; HexChain — 3D multiplayer strategy in your browser.</p>
+     <span class="splash-go">Enter the arcade →</span>
+   </a>
+   ```
+3. **Copy the whole block** (from `<a` to `</a>`) and paste it just before the closing
+   `</div>` of the card grid. Then change four things in your new copy:
+   - the **emoji** between `splash-ic` tags,
+   - the **title** between `splash-h` tags,
+   - the **description** in the `<p>`,
+   - the **link** in `href="…"` and the **button text** in `splash-go`.
+4. Point the `href` at wherever the card should go (an existing page, a new folder, or a
+   full web link like `href="https://…"`).
+5. Save and **Publish**.
+
+> The four colored accents come from the word after `splash-card` (`games`, `tools`,
+> `notes`, `yt`). For a brand-new color, ask Claude to add one — it's a tiny style tweak.
+> Also: keep card titles as `<div class="splash-h">`, **not** a heading like `##` or
+> `<h3>` — headings break the card layout.
+
+---
+
 ## If something goes wrong
 
 - **A publish shows a ⚠️ warning about "conflicts" or "couldn't combine changes":**

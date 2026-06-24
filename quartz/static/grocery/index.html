@@ -65,6 +65,18 @@
   .badge{position:absolute;top:4px;margin-left:18px;background:var(--danger);color:#fff;font-size:10px;border-radius:999px;padding:0 5px;font-weight:700}
   .preview{width:100%;border-radius:10px;border:1px solid var(--line);margin-top:10px;max-height:360px;object-fit:contain;background:#fafafa}
   .hidden{display:none!important}
+  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:center;justify-content:center;padding:18px}
+  .modal-card{background:var(--card);border-radius:14px;padding:18px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .modal-card h2{margin:0 0 4px;font-size:17px}
+  .modal-card button{width:100%;margin-bottom:8px}
+  .modal-card .row{margin-bottom:0}
+  .modal-card .row button{margin-bottom:0}
+  .tablewrap{overflow:auto;-webkit-overflow-scrolling:touch;margin-top:8px;border:1px solid var(--line);border-radius:10px}
+  .tablewrap table{min-width:1180px}
+  .tablewrap th,.tablewrap td{white-space:nowrap;padding:7px 8px}
+  .tablewrap thead th{background:#f3f5f2}
+  .tablewrap th.sortable{cursor:pointer;user-select:none}
+  .tablewrap th input{font-size:12px;padding:5px 6px;min-width:90px;font-weight:400;text-transform:none;letter-spacing:0}
   .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
   .toast.show{opacity:.97}
   .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
@@ -93,6 +105,7 @@
   <button data-tab="search" onclick="show('search')"><span class="ic">🔎</span>Search</button>
   <button data-tab="reports" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
   <button data-tab="review" onclick="show('review')"><span class="ic">📋</span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
+  <button data-tab="table" onclick="show('table')"><span class="ic">📑</span>Table</button>
   <button data-tab="settings" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
 </nav>
 
@@ -113,6 +126,8 @@ const LS = {
   set token(v){ localStorage.setItem('gt_token', v) },
   get me(){ return localStorage.getItem('gt_me') || '' },            // "Isaiah" / "Wife"
   set me(v){ localStorage.setItem('gt_me', v) },
+  get device(){ return localStorage.getItem('gt_device') || '' },    // "Isaiah's iPhone" — names THIS device's sign-in
+  set device(v){ localStorage.setItem('gt_device', v) },
 };
 
 const API = 'https://api.github.com';
@@ -125,6 +140,25 @@ const money = n => (n==null||isNaN(n)) ? '—' : '$'+Number(n).toFixed(2);
 const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const todayISO = () => new Date().toISOString().slice(0,10);
 function toast(msg, ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
+/* In-app modal — replaces window.prompt/confirm, which are blocked in installed
+   (home-screen) PWAs and many in-app browsers. Returns a Promise that resolves to
+   the chosen [data-mval] value, or null if cancelled/backdrop-tapped. */
+function modal(innerHtml){
+  return new Promise(resolve=>{
+    const o=el('div',{class:'modal-ov'});
+    o.innerHTML=`<div class="modal-card">${innerHtml}</div>`;
+    const close=(val)=>{ if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    o.addEventListener('click', e=>{ if(e.target===o) close(null); });
+    document.body.appendChild(o);
+    o.querySelectorAll('[data-mval]').forEach(b=> b.addEventListener('click', ()=>close(b.getAttribute('data-mval'))));
+    o.querySelectorAll('[data-mcancel]').forEach(b=> b.addEventListener('click', ()=>close(null)));
+  });
+}
+function confirmModal(message, okLabel='OK', danger=false){
+  return modal(`<p style="margin:0 0 14px">${esc(message)}</p>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button class="${danger?'danger':''}" data-mval="yes">${esc(okLabel)}</button></div>`)
+    .then(v=>v==='yes');
+}
 function uid(p){ return p+'_'+Math.floor(Date.now()/1000)+'_'+Math.random().toString(36).slice(2,6); }
 function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
 function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
@@ -221,13 +255,14 @@ async function show(tab){
     else if(tab==='search') renderSearch();
     else if(tab==='reports') renderReports();
     else if(tab==='review') renderReview();
+    else if(tab==='table') renderTable();
     else if(tab==='settings') renderSettings();
   }catch(e){
     m.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted small">${esc(String(e))}</p>
       <p class="small">If this mentions 401/403, your access key (token) may be wrong or expired. Open Settings to re-enter it.</p>
       <button class="sec" onclick="show('settings')">Open Settings</button></div>`;
   }
-  $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me) : '';
+  $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me + (LS.device?(' · '+LS.device):'')) : '';
 }
 function isConfigured(){ return LS.repo && LS.token && LS.me; }
 
@@ -242,6 +277,8 @@ function renderSetup(){
     See the <b>SETUP guide</b> in your repo if you haven't created the private data folder + key yet.</p>
     <label>Your name (so we know who snapped each receipt)</label>
     <select id="su_me"><option value="">Choose…</option><option>Isaiah</option><option>Wife</option></select>
+    <label>This device's name (so your phone and computer can both stay signed in)</label>
+    <input id="su_device" placeholder="e.g. Isaiah's iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
     <label>Private data repository (looks like <code>owner/name</code>)</label>
     <input id="su_repo" placeholder="isaiahmail97-oss/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <label>Access key (your private token — like a house key)</label>
@@ -252,8 +289,9 @@ function renderSetup(){
 }
 async function saveSetup(){
   const me=$('#su_me').value.trim(), repo=$('#su_repo').value.trim(), token=$('#su_token').value.trim();
-  if(!me||!repo||!token){ toast('Please fill in all three fields'); return; }
-  LS.me=me; LS.repo=repo; LS.token=token;
+  const device=$('#su_device').value.trim();
+  if(!me||!repo||!token){ toast('Please fill in your name, repository and key'); return; }
+  LS.me=me; LS.repo=repo; LS.token=token; LS.device=device||(me+"'s device");
   toast('Checking your connection…');
   try{
     const r = await fetch(`${API}/repos/${repo}`, {headers:ghHeaders()});
@@ -403,9 +441,16 @@ function runSearch(){
     </div>`;
   }).join('');
 }
+function chooseWasteReason(it){
+  const reasons=['spoiled','expired','leftover','other'];
+  return modal(`<h2>🗑 Throw away</h2>
+    <p class="small muted" style="margin:0 0 12px">"${esc(it.name||it.rawName)}" — why are you tossing it?</p>
+    ${reasons.map(r=>`<button class="sec" data-mval="${r}">${r[0].toUpperCase()+r.slice(1)}</button>`).join('')}
+    <button class="link" data-mcancel style="width:100%">Cancel</button>`);
+}
 async function markWaste(itemId){
   const it=D.items.find(i=>i.id===itemId); if(!it) return;
-  const reason=prompt(`Mark "${it.name||it.rawName}" as thrown away.\nReason? (spoiled / expired / leftover / other)`,'spoiled');
+  const reason=await chooseWasteReason(it);   // in-app picker (works in installed PWAs, unlike prompt())
   if(reason===null) return;
   it.status='thrown_away';
   const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
@@ -420,6 +465,93 @@ async function markWaste(itemId){
     toast('Logged as waste 🗑'); updateBadges(); runSearch();
   }catch(e){ toast(String(e.message||e)); }
 }
+
+/* =========================================================================
+   TABLE  (full sortable + filterable view of every item field)
+   ========================================================================= */
+const TABLE_COLS = [
+  {key:'id',         label:'ID',         type:'text'},
+  {key:'rawName',    label:'Raw name',   type:'text'},
+  {key:'name',       label:'Name',       type:'text'},
+  {key:'groupId',    label:'Group',      type:'text'},
+  {key:'category',   label:'Category',   type:'text'},
+  {key:'qty',        label:'Qty',        type:'num'},
+  {key:'unit',       label:'Unit',       type:'text'},
+  {key:'unitPrice',  label:'Unit price', type:'num'},
+  {key:'price',      label:'Price',      type:'num'},
+  {key:'store',      label:'Store',      type:'text'},
+  {key:'purchasedAt',label:'Purchased',  type:'text'},
+  {key:'perishable', label:'Perishable', type:'bool'},
+  {key:'useByDate',  label:'Use by',     type:'text'},
+  {key:'hsaEligible',label:'HSA',        type:'bool'},
+  {key:'status',     label:'Status',     type:'text'},
+  {key:'flags',      label:'Flags',      type:'list'},
+];
+let TS = { field:'purchasedAt', dir:'desc', filters:{} };
+function cellText(it, col){
+  const v=it[col.key];
+  if(col.type==='bool') return v?'yes':'no';
+  if(col.type==='list') return Array.isArray(v)?v.join(', '):(v==null?'':String(v));
+  return v==null?'':String(v);
+}
+function cellSort(it, col){
+  const v=it[col.key];
+  if(col.type==='num') return (v==null||v==='')? -Infinity : Number(v);
+  if(col.type==='bool') return v?1:0;
+  return cellText(it,col).toLowerCase();
+}
+function tableRows(){
+  let rows=D.items.slice();
+  for(const c of TABLE_COLS){
+    const f=(TS.filters[c.key]||'').trim().toLowerCase();
+    if(f) rows=rows.filter(it=>cellText(it,c).toLowerCase().includes(f));
+  }
+  const col=TABLE_COLS.find(c=>c.key===TS.field);
+  if(col) rows.sort((a,b)=>{ const x=cellSort(a,col), y=cellSort(b,col);
+    if(x<y) return TS.dir==='asc'?-1:1; if(x>y) return TS.dir==='asc'?1:-1; return 0; });
+  return rows;
+}
+function renderTable(){
+  $('#main').innerHTML = `
+  <div class="card">
+    <div class="flex"><h2 style="margin:0">📑 All items</h2><div class="small muted" id="tcount"></div></div>
+    <p class="small muted" style="margin:6px 0 0">Every stored field. Tap a column title to sort (tap again to reverse); type in the box under any column to filter. Scroll sideways to see more columns →</p>
+    <button class="link" onclick="clearTableFilters()" style="margin-top:6px">Clear all filters</button>
+    <div class="tablewrap">
+      <table id="ttable">
+        <thead>
+          <tr>${TABLE_COLS.map(c=>`<th class="sortable ${c.type==='num'?'n':''}" onclick="sortTable('${c.key}')">${esc(c.label)}<span class="sortarrow" data-col="${c.key}"></span></th>`).join('')}</tr>
+          <tr>${TABLE_COLS.map(c=>`<th><input data-f="${c.key}" placeholder="filter" oninput="setTableFilter('${c.key}',this.value)" autocapitalize="off" autocorrect="off" spellcheck="false"/></th>`).join('')}</tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>`;
+  // restore any active filter text into the inputs
+  document.querySelectorAll('#ttable input[data-f]').forEach(i=>{ i.value=TS.filters[i.getAttribute('data-f')]||''; });
+  updateSortArrows(); drawTableBody();
+}
+function drawTableBody(){
+  const tb=$('#tbody'); if(!tb) return;
+  const rows=tableRows();
+  tb.innerHTML = rows.length
+    ? rows.map(it=>`<tr>${TABLE_COLS.map(c=>{ const t=cellText(it,c);
+        return `<td class="${c.type==='num'?'n':''}">${t!==''?esc(t):'<span class="muted">—</span>'}</td>`; }).join('')}</tr>`).join('')
+    : `<tr><td colspan="${TABLE_COLS.length}" class="muted small" style="padding:14px">No items match these filters.</td></tr>`;
+  const cnt=$('#tcount'); if(cnt) cnt.textContent = rows.length+' of '+D.items.length+' shown';
+}
+function updateSortArrows(){
+  document.querySelectorAll('#ttable .sortarrow').forEach(s=>{
+    s.textContent = TS.field===s.getAttribute('data-col') ? (TS.dir==='asc'?' ▲':' ▼') : '';
+  });
+}
+function sortTable(field){
+  if(TS.field===field) TS.dir = TS.dir==='asc'?'desc':'asc';
+  else { TS.field=field; TS.dir='asc'; }
+  updateSortArrows(); drawTableBody();   // header inputs untouched → keeps focus/values
+}
+function setTableFilter(field, val){ TS.filters[field]=val; drawTableBody(); }
+function clearTableFilters(){ TS.filters={}; document.querySelectorAll('#ttable input[data-f]').forEach(i=>i.value=''); drawTableBody(); }
 
 /* =========================================================================
    REPORTS
@@ -581,12 +713,20 @@ function renderSettings(){
     <h2>This device</h2>
     <label>Your name</label>
     <select id="set_me">${['Isaiah','Wife'].map(n=>`<option ${LS.me===n?'selected':''}>${n}</option>`).join('')}</select>
+    <label>Device name</label>
+    <input id="set_device" value="${esc(LS.device)}" placeholder="e.g. Isaiah's iPhone" autocapitalize="words" autocorrect="off" spellcheck="false"/>
     <label>Data repository</label>
     <input id="set_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <label>Access key (token)</label>
     <input id="set_token" type="password" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <div class="row" style="margin-top:10px"><button class="sec" onclick="testConn()">Test connection</button><button onclick="saveSettings()">Save</button></div>
     <button class="link danger" style="color:var(--danger)" onclick="signOut()">Sign out / forget key on this device</button>
+  </div>
+  <div class="card">
+    <h2>📱💻 Using more than one device</h2>
+    <p class="small muted">Yes — you can stay signed in on your phone <b>and</b> your computer at the same time. There's no central login server: each device keeps its <b>own</b> access key (token) in its own browser, and GitHub happily lets many keys work at once for the same account.</p>
+    <p class="small muted"><b>To add another device:</b> on that device, create a <b>brand-new</b> token (GitHub → Settings → Developer settings → Fine-grained tokens → <i>Generate new token</i>, give it the <code>grocery-data</code> repo with Contents = Read &amp; write) and paste that one into its setup screen.</p>
+    <p class="small muted"><b>The thing that kicks a device out:</b> pressing <i>Regenerate</i> on an existing token — that changes the key's value, so whatever device was using the old value stops working. Making a <i>new</i> token never affects your other devices. Give each device its own token and its own name above, and they'll all stay signed in.</p>
   </div>
   ${D.config? `<div class="card">
     <h2>Who gets notified (emails)</h2>
@@ -608,12 +748,12 @@ function testConn(){
   fetch(`${API}/repos/${$('#set_repo').value.trim()}`, {headers:{...ghHeaders(),'Authorization':'Bearer '+$('#set_token').value.trim()}})
     .then(r=>toast(r.ok?'Connection works ✓':'Failed: '+r.status));
 }
-function saveSettings(){ LS.me=$('#set_me').value; LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
+function saveSettings(){ LS.me=$('#set_me').value; LS.device=$('#set_device').value.trim(); LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
 async function saveConfig(){
   (D.config.members||[]).forEach((m,idx)=>{ const v=$('#mem_'+idx); if(v) m.email=v.value.trim(); });
   await saveJson(FILES.config, D.config, 'Update notification emails'); toast('Emails saved');
 }
-function signOut(){ if(confirm('Forget the access key on this device? You can re-enter it anytime.')){ localStorage.removeItem('gt_token'); toast('Signed out'); show('settings'); } }
+async function signOut(){ if(await confirmModal('Forget the access key on this device? You can re-enter it anytime. Your other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); toast('Signed out'); show('settings'); } }
 
 /* ---------- boot ---------- */
 window.addEventListener('load', ()=>{ show(isConfigured()?'capture':'settings'); });

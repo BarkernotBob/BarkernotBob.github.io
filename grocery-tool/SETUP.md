@@ -77,10 +77,32 @@ This is the fiddliest step. Go slowly.
    - **Access key:** paste the token from Step 3.
    - Tap **Connect.**
 4. The first time, it automatically creates the data files inside your folder. Done!
+5. The setup screen also asks for a **device name** (like "Isaiah's iPhone"). This is
+   just a label so you can tell your devices apart — type anything.
 
 Repeat Step 4 on **your wife's phone**, choosing **Wife** as the name and using her
-own token (she makes one the same way in Step 3, or you can share yours — but
-separate tokens are safer).
+own token (she makes one the same way in Step 3).
+
+### Staying signed in on several devices at once (phone *and* computer)
+
+You can be signed in on as many devices as you like at the same time — your phone,
+your laptop, a tablet. There is **no central login**: each device simply keeps its
+own access key (token) saved in its own browser, and GitHub is happy to have many
+keys working for the same account.
+
+The one rule that matters:
+
+- ✅ **Give each device its own token.** On the new device, make a *brand-new* token
+  (Step 3) and paste that one in. A new token never disturbs your other devices.
+- ❌ **Never press "Regenerate" on a token you're already using.** Regenerating
+  changes that token's secret value, so the device still holding the old value
+  suddenly stops working (it looks like it "got signed out"). If you ever need to
+  replace a token, make a *new* one and update just that device — leave the others
+  alone.
+
+> Why this matters: in the past, reusing one token across devices and regenerating it
+> was what kicked your phone off when you set things up on the computer. Separate
+> tokens per device fixes that for good.
 
 ---
 

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "r_1719240000_zz01",
+    "status": "processed",
+    "photo": "receipts/r_1719240000_zz01.jpg",
+    "capturedAt": "2026-06-20T18:32:00Z",
+    "capturedBy": "Isaiah",
+    "store": "Costco",
+    "storeId": "costco",
+    "purchasedAt": "2026-06-20",
+    "subtotal": 8.48,
+    "tax": 0.0,
+    "total": 8.48,
+    "currency": "USD",
+    "itemIds": ["i_1719240000_ab12", "i_1719240000_cd34"],
+    "notes": ""
+  },
+  {
+    "id": "r_1719300000_zz02",
+    "status": "unprocessed",
+    "photo": "inbox/r_1719300000_zz02.jpg",
+    "capturedAt": "2026-06-24T13:10:00Z",
+    "capturedBy": "Wife",
+    "store": null,
+    "storeId": null,
+    "purchasedAt": null,
+    "subtotal": null,
+    "tax": null,
+    "total": null,
+    "currency": "USD",
+    "itemIds": [],
+    "notes": ""
+  }
+]

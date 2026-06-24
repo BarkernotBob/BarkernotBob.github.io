@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#2f7d4f" />
+<title>Grocery Tracker</title>
+<style>
+  :root{
+    --green:#2f7d4f; --green-d:#256340; --bg:#f5f6f4; --card:#fff;
+    --ink:#1f2421; --muted:#6b736d; --line:#e4e7e3; --warn:#b4690e; --danger:#b3261e;
+    --shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%;
+    padding-bottom:72px; line-height:1.45;
+  }
+  header{
+    position:sticky; top:0; z-index:20; background:var(--green); color:#fff;
+    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px; box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .who{font-size:12px;opacity:.9}
+  main{padding:16px;max-width:760px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
+  .card h2{font-size:16px;margin:0 0 10px}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+  input,select,textarea{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    font-size:16px;background:#fff;color:var(--ink)
+  }
+  button{
+    font-size:15px;font-weight:600;border:0;border-radius:10px;padding:12px 14px;
+    background:var(--green);color:#fff;cursor:pointer;width:100%
+  }
+  button.sec{background:#eef1ee;color:var(--ink);border:1px solid var(--line)}
+  button.warn{background:var(--warn)} button.danger{background:var(--danger)}
+  button.link{background:none;color:var(--green);width:auto;padding:6px 0;font-weight:600}
+  button:disabled{opacity:.5}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+  .pill.warn{background:#fbecd6;color:#7a4708}
+  .pill.ok{background:#dcefe2;color:#1d5e39}
+  .pill.gray{background:#eceee9;color:#5a615b}
+  .pill.hsa{background:#e2e8fb;color:#2a3a83}
+  .item{border-top:1px solid var(--line);padding:10px 0}
+  .item:first-child{border-top:0}
+  .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .grp{cursor:pointer}
+  .grp .body{display:none;margin-top:8px}
+  .grp.open .body{display:block}
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom)
+  }
+  nav button{background:none;color:var(--muted);border-radius:0;font-size:11px;font-weight:600;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  nav button .ic{font-size:20px;line-height:1}
+  nav button.active{color:var(--green)}
+  .badge{position:absolute;top:4px;margin-left:18px;background:var(--danger);color:#fff;font-size:10px;border-radius:999px;padding:0 5px;font-weight:700}
+  .preview{width:100%;border-radius:10px;border:1px solid var(--line);margin-top:10px;max-height:360px;object-fit:contain;background:#fafafa}
+  .hidden{display:none!important}
+  .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
+  .toast.show{opacity:.97}
+  .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
+  .kv b{font-weight:650}
+  .big{font-size:28px;font-weight:750}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  td.n,th.n{text-align:right}
+  a{color:var(--green)}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r .7s linear infinite;vertical-align:-3px}
+  @keyframes r{to{transform:rotate(360deg)}}
+  details summary{cursor:pointer;font-weight:600;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🛒 Grocery Tracker</h1><div class="who" id="whoami"></div></div>
+  <button class="link" style="color:#fff" onclick="show('settings')">⚙︎ Settings</button>
+</header>
+
+<main id="main"></main>
+
+<nav id="nav">
+  <button data-tab="capture" onclick="show('capture')"><span class="ic">📷</span>Capture</button>
+  <button data-tab="search" onclick="show('search')"><span class="ic">🔎</span>Search</button>
+  <button data-tab="reports" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
+  <button data-tab="review" onclick="show('review')"><span class="ic">📋</span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
+  <button data-tab="settings" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   Grocery Tracker — single-file app.
+   Stores everything in a PRIVATE GitHub repo (the "data repo") via the GitHub
+   API. No data lives in this file. Settings (repo + token + your name) live in
+   this browser only (localStorage).
+   ========================================================================= */
+
+const LS = {
+  get repo(){ return localStorage.getItem('gt_repo') || '' },        // "owner/name"
+  set repo(v){ localStorage.setItem('gt_repo', v) },
+  get token(){ return localStorage.getItem('gt_token') || '' },
+  set token(v){ localStorage.setItem('gt_token', v) },
+  get me(){ return localStorage.getItem('gt_me') || '' },            // "Isaiah" / "Wife"
+  set me(v){ localStorage.setItem('gt_me', v) },
+};
+
+const API = 'https://api.github.com';
+const DB = {}; // in-memory cache: { 'db/items.json': {value, sha} , ... }
+
+/* ---------- tiny helpers ---------- */
+const $ = sel => document.querySelector(sel);
+const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
+const money = n => (n==null||isNaN(n)) ? '—' : '$'+Number(n).toFixed(2);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const todayISO = () => new Date().toISOString().slice(0,10);
+function toast(msg, ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
+function uid(p){ return p+'_'+Math.floor(Date.now()/1000)+'_'+Math.random().toString(36).slice(2,6); }
+function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
+function norm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+
+/* ---------- GitHub API ---------- */
+function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
+async function ghContents(path){
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return r.json();
+}
+async function ghPut(path, contentB64, sha, message){
+  const body = { message, content:contentB64 };
+  if(sha) body.sha = sha;
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {method:'PUT', headers:ghHeaders(), body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(`Save failed ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return r.json();
+}
+async function ghDelete(path, sha, message){
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {method:'DELETE', headers:ghHeaders(), body:JSON.stringify({message,sha})});
+  if(!r.ok) throw new Error(`Delete failed ${r.status}`);
+  return r.json();
+}
+/* Read a JSON file (cached). fallback used if file missing. */
+async function loadJson(path, fallback){
+  const c = await ghContents(path);
+  if(c===null){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
+  const value = JSON.parse(b64decode(c.content));
+  DB[path] = {value, sha:c.sha};
+  return value;
+}
+/* Write a JSON file with one auto-retry on sha conflict. */
+async function saveJson(path, value, message){
+  let sha = DB[path] ? DB[path].sha : null;
+  try{
+    const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
+    DB[path] = {value, sha:res.content.sha};
+  }catch(e){
+    if(String(e).includes('409')||String(e).includes('422')){ // stale sha: re-read and retry once
+      const c = await ghContents(path); sha = c? c.sha : null;
+      const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
+      DB[path] = {value, sha:res.content.sha};
+    } else throw e;
+  }
+}
+async function getImageDataUrl(path){
+  const c = await ghContents(path);
+  if(!c) return null;
+  if(c.content) return 'data:image/jpeg;base64,'+c.content.replace(/\n/g,'');
+  if(c.download_url){ const r=await fetch(c.download_url, {headers:ghHeaders()}); const b=await r.blob(); return URL.createObjectURL(b); }
+  return null;
+}
+
+/* ---------- data load ---------- */
+const FILES = {
+  items:'db/items.json', receipts:'db/receipts.json', groups:'db/item_groups.json',
+  stores:'db/stores.json', waste:'db/waste.json', reminders:'db/reminders.json',
+  needs:'db/needs_attention.json', config:'db/config.json'
+};
+let D = {}; // loaded data
+async function loadAll(){
+  D.items   = await loadJson(FILES.items, []);
+  D.receipts= await loadJson(FILES.receipts, []);
+  D.groups  = await loadJson(FILES.groups, {});
+  D.stores  = await loadJson(FILES.stores, {});
+  D.waste   = await loadJson(FILES.waste, []);
+  D.reminders=await loadJson(FILES.reminders, []);
+  D.needs   = await loadJson(FILES.needs, []);
+  D.config  = await loadJson(FILES.config, {members:[],currency:'USD'});
+  updateBadges();
+}
+function updateBadges(){
+  const open = (D.needs||[]).filter(n=>n.status==='open').length
+             + (D.reminders||[]).filter(r=>r.status==='pending' && r.dueDate<=todayISO()).length;
+  const b=$('#reviewBadge');
+  if(open>0){ b.textContent=open; b.classList.remove('hidden'); } else b.classList.add('hidden');
+}
+
+/* =========================================================================
+   ROUTER
+   ========================================================================= */
+let CUR='capture';
+async function show(tab){
+  CUR=tab;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  if(!isConfigured() && tab!=='settings'){ return renderSetup(); }
+  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:#2f7d4f;border-top-color:transparent"></span> Loading…</div>';
+  try{
+    if(!isConfigured()){ renderSetup(); return; }
+    if(!D.items) await loadAll(); // first load
+    if(tab==='capture') renderCapture();
+    else if(tab==='search') renderSearch();
+    else if(tab==='reports') renderReports();
+    else if(tab==='review') renderReview();
+    else if(tab==='settings') renderSettings();
+  }catch(e){
+    m.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted small">${esc(String(e))}</p>
+      <p class="small">If this mentions 401/403, your access key (token) may be wrong or expired. Open Settings to re-enter it.</p>
+      <button class="sec" onclick="show('settings')">Open Settings</button></div>`;
+  }
+  $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me) : '';
+}
+function isConfigured(){ return LS.repo && LS.token && LS.me; }
+
+/* =========================================================================
+   SETUP (first run)
+   ========================================================================= */
+function renderSetup(){
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>Welcome — let's connect your tool</h2>
+    <p class="small muted">This is a one-time setup on this phone/computer. Your wife does the same on hers.
+    See the <b>SETUP guide</b> in your repo if you haven't created the private data folder + key yet.</p>
+    <label>Your name (so we know who snapped each receipt)</label>
+    <select id="su_me"><option value="">Choose…</option><option>Isaiah</option><option>Wife</option></select>
+    <label>Private data repository (looks like <code>owner/name</code>)</label>
+    <input id="su_repo" placeholder="isaiahmail97-oss/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label>Access key (your private token — like a house key)</label>
+    <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
+    <button onclick="saveSetup()">Connect</button>
+  </div>`;
+}
+async function saveSetup(){
+  const me=$('#su_me').value.trim(), repo=$('#su_repo').value.trim(), token=$('#su_token').value.trim();
+  if(!me||!repo||!token){ toast('Please fill in all three fields'); return; }
+  LS.me=me; LS.repo=repo; LS.token=token;
+  toast('Checking your connection…');
+  try{
+    const r = await fetch(`${API}/repos/${repo}`, {headers:ghHeaders()});
+    if(!r.ok) throw new Error('Could not open that repository ('+r.status+'). Check the name and key.');
+    await ensureInitialized();
+    D={}; for(const k in DB) delete DB[k];
+    await loadAll();
+    toast('Connected! 🎉');
+    show('capture');
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function ensureInitialized(){
+  // create any missing db files so later writes have something to update
+  const seed = {
+    'db/items.json':[], 'db/receipts.json':[], 'db/waste.json':[], 'db/reminders.json':[],
+    'db/needs_attention.json':[], 'db/item_groups.json':{}, 'db/stores.json':{},
+    'db/config.json':{household:'Our Household',currency:'USD',timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',
+      members:[{name:'Isaiah',email:'',notify:true},{name:'Wife',email:'',notify:true}],
+      reminders:{useByLeadDays:0,sendReviewEmails:true,sendUseByEmails:true}}
+  };
+  for(const path in seed){
+    const c = await ghContents(path);
+    if(c===null){ await ghPut(path, b64encode(JSON.stringify(seed[path],null,2)), null, 'Initialize '+path); }
+  }
+}
+
+/* =========================================================================
+   CAPTURE
+   ========================================================================= */
+let pendingImg=null;
+function renderCapture(){
+  const recent=[...D.receipts].sort((a,b)=>(b.capturedAt||'').localeCompare(a.capturedAt||'')).slice(0,8);
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>Snap a receipt</h2>
+    <p class="small muted">Take a clear photo of the whole receipt. It saves to your shared folder; Claude reads it on the next run.</p>
+    <input id="cap_file" type="file" accept="image/*" capture="environment" class="hidden" onchange="onPick(event)"/>
+    <button onclick="document.getElementById('cap_file').click()">📷 Open camera / choose photo</button>
+    <img id="cap_prev" class="preview hidden"/>
+    <div id="cap_actions" class="hidden" style="margin-top:10px">
+      <label>Store (optional — Claude will read it, but you can hint)</label>
+      <input id="cap_store" placeholder="e.g. Costco"/>
+      <div class="row" style="margin-top:10px">
+        <button class="sec" onclick="resetCapture()">Retake</button>
+        <button id="cap_save" onclick="saveReceipt()">Save receipt</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Recent captures</h2>
+    ${recent.length? recent.map(r=>{
+      const st = r.status==='processed'?'<span class="pill ok">read</span>'
+               : r.status==='needs_review'?'<span class="pill warn">needs review</span>'
+               : '<span class="pill gray">waiting for Claude</span>';
+      return `<div class="item flex"><div><b>${esc(r.store||'Unread receipt')}</b><div class="small muted">${esc((r.purchasedAt||r.capturedAt||'').slice(0,10))} · by ${esc(r.capturedBy||'?')}${r.total!=null?' · '+money(r.total):''}</div></div>${st}</div>`;
+    }).join('') : '<p class="muted small">No receipts yet. Snap your first one above.</p>'}
+    <p class="small muted" style="margin-top:10px">${D.receipts.filter(r=>r.status==='unprocessed').length} waiting to be read. In a Claude session say: <b>“process my receipts.”</b></p>
+  </div>`;
+}
+function onPick(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const img=new Image();
+  img.onload=()=>{
+    const max=1600, scale=Math.min(1, max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas'); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    pendingImg = c.toDataURL('image/jpeg', 0.7);
+    const p=$('#cap_prev'); p.src=pendingImg; p.classList.remove('hidden');
+    $('#cap_actions').classList.remove('hidden');
+  };
+  img.src=URL.createObjectURL(f);
+}
+function resetCapture(){ pendingImg=null; $('#cap_prev').classList.add('hidden'); $('#cap_actions').classList.add('hidden'); $('#cap_file').value=''; }
+async function saveReceipt(){
+  if(!pendingImg) return;
+  const btn=$('#cap_save'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saving…';
+  try{
+    const id=uid('r'); const path='inbox/'+id+'.jpg';
+    const b64=pendingImg.split(',')[1];
+    await ghPut(path, b64, null, 'Add receipt photo '+id);
+    const rec={ id, status:'unprocessed', photo:path, capturedAt:new Date().toISOString(), capturedBy:LS.me,
+      store:($('#cap_store').value.trim()||null), storeId:null, purchasedAt:null, subtotal:null, tax:null, total:null,
+      currency:(D.config.currency||'USD'), itemIds:[], notes:'' };
+    D.receipts.push(rec);
+    await saveJson(FILES.receipts, D.receipts, 'Add unprocessed receipt '+id);
+    toast('Saved! Claude will read it next run. 📷');
+    resetCapture(); renderCapture();
+  }catch(e){ toast(String(e.message||e)); }
+  finally{ btn.disabled=false; btn.innerHTML='Save receipt'; }
+}
+
+/* =========================================================================
+   SEARCH  (group similar names; mark thrown away)
+   ========================================================================= */
+function groupKeyFor(item){ return item.groupId || ('raw:'+norm(item.name||item.rawName)); }
+function groupLabel(key){
+  if(key.startsWith('raw:')) return key.slice(4);
+  const g=D.groups[key]; return g? g.canonical : key;
+}
+function matchesQuery(item, q){
+  if(!q) return true;
+  const hay = [item.name,item.rawName, groupLabel(groupKeyFor(item))].map(norm).join(' ');
+  const g=D.groups[item.groupId];
+  const aliases = g? (g.aliases||[]).map(norm).join(' ') : '';
+  return (hay+' '+aliases).includes(norm(q));
+}
+function renderSearch(){
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>Search items</h2>
+    <input id="sq" placeholder="Type an item, e.g. milk, chicken, bananas" oninput="runSearch()"/>
+    <p class="small muted" style="margin-top:6px">Similar names are grouped together. Tap a group to see each purchase and mark waste.</p>
+  </div>
+  <div id="sresults"></div>`;
+  runSearch();
+}
+function runSearch(){
+  const q=$('#sq')?$('#sq').value.trim():'';
+  const items=D.items.filter(i=>matchesQuery(i,q));
+  const groups={};
+  for(const it of items){ const k=groupKeyFor(it); (groups[k]=groups[k]||[]).push(it); }
+  const keys=Object.keys(groups).sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)));
+  const wrap=$('#sresults');
+  if(keys.length===0){ wrap.innerHTML='<div class="card"><p class="muted small">No matching items yet.</p></div>'; return; }
+  wrap.innerHTML = keys.map(k=>{
+    const arr=groups[k].sort((a,b)=>(b.purchasedAt||'').localeCompare(a.purchasedAt||''));
+    const spent=arr.reduce((s,i)=>s+(+i.price||0),0);
+    const qty=arr.reduce((s,i)=>s+(+i.qty||0),0);
+    const last=arr[0]?(arr[0].purchasedAt||''):'';
+    const active=arr.filter(i=>i.status==='active').length;
+    const g=D.groups[k];
+    return `<div class="card grp" onclick="this.classList.toggle('open')">
+      <div class="flex">
+        <div><b>${esc(groupLabel(k))}</b> ${g&&g.hsaEligible?'<span class="pill hsa">HSA</span>':''} ${g&&g.perishable?'<span class="pill gray">perishable</span>':''}
+          <div class="small muted">${arr.length} purchase(s) · ${qty} bought · last ${esc(last||'—')}</div></div>
+        <div style="text-align:right"><div class="big" style="font-size:18px">${money(spent)}</div><div class="small muted">${active} on hand</div></div>
+      </div>
+      <div class="body">
+        ${arr.map(i=>`<div class="item flex">
+          <div><div>${esc(i.name||i.rawName)} <span class="small muted">${esc(i.rawName&&i.rawName!==i.name?'('+i.rawName+')':'')}</span></div>
+            <div class="small muted">${esc(i.purchasedAt||'')} · ${esc(i.store||'')} · ${money(i.price)} ${i.qty?('· qty '+i.qty):''}
+            ${i.status==='thrown_away'?'· <span style="color:var(--danger)">thrown away</span>':i.status==='consumed'?'· used up':''}
+            ${i.useByDate?('· use by '+i.useByDate):''}</div></div>
+          ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" onclick="event.stopPropagation();markWaste('${i.id}')">🗑 Waste</button>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function markWaste(itemId){
+  const it=D.items.find(i=>i.id===itemId); if(!it) return;
+  const reason=prompt(`Mark "${it.name||it.rawName}" as thrown away.\nReason? (spoiled / expired / leftover / other)`,'spoiled');
+  if(reason===null) return;
+  it.status='thrown_away';
+  const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
+    thrownAt:todayISO(), reason:(reason.trim()||'other'), estCost:(+it.price||0), by:LS.me };
+  D.waste.push(w);
+  // resolve any pending reminder for this item
+  D.reminders.forEach(r=>{ if(r.itemId===it.id && r.status==='pending'){ r.status='done'; }});
+  try{
+    await saveJson(FILES.items, D.items, 'Mark item thrown away');
+    await saveJson(FILES.waste, D.waste, 'Add waste record');
+    await saveJson(FILES.reminders, D.reminders, 'Close reminder (wasted)');
+    toast('Logged as waste 🗑'); updateBadges(); runSearch();
+  }catch(e){ toast(String(e.message||e)); }
+}
+
+/* =========================================================================
+   REPORTS
+   ========================================================================= */
+function monthStart(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10); }
+function inRange(date, from, to){ if(!date) return false; return date>=from && date<=to; }
+function renderReports(){
+  const from=monthStart(), to=todayISO();
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>Reports</h2>
+    <div class="row">
+      <div><label>From</label><input id="rf" type="date" value="${from}" onchange="runReports()"/></div>
+      <div><label>To</label><input id="rt" type="date" value="${to}" onchange="runReports()"/></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="sec" onclick="setRange('month')">This month</button>
+      <button class="sec" onclick="setRange('30')">Last 30 days</button>
+      <button class="sec" onclick="setRange('year')">This year</button>
+    </div>
+  </div>
+  <div id="rout"></div>`;
+  runReports();
+}
+function setRange(kind){
+  const t=new Date(); let f;
+  if(kind==='month') f=new Date(t.getFullYear(),t.getMonth(),1);
+  else if(kind==='30'){ f=new Date(); f.setDate(f.getDate()-30); }
+  else f=new Date(t.getFullYear(),0,1);
+  $('#rf').value=f.toISOString().slice(0,10); $('#rt').value=todayISO(); runReports();
+}
+function runReports(){
+  const from=$('#rf').value, to=$('#rt').value;
+  const items=D.items.filter(i=>inRange(i.purchasedAt,from,to));
+  const total=items.reduce((s,i)=>s+(+i.price||0),0);
+  // per store
+  const byStore={}; items.forEach(i=>{ const k=i.store||'Unknown'; byStore[k]=(byStore[k]||0)+(+i.price||0); });
+  const storeRows=Object.entries(byStore).sort((a,b)=>b[1]-a[1]);
+  // per group (top spend)
+  const byGroup={}; items.forEach(i=>{ const k=groupLabel(groupKeyFor(i)); byGroup[k]=(byGroup[k]||0)+(+i.price||0); });
+  const groupRows=Object.entries(byGroup).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  // HSA
+  const hsa=items.filter(i=>i.hsaEligible); const hsaTotal=hsa.reduce((s,i)=>s+(+i.price||0),0);
+  // waste
+  const waste=D.waste.filter(w=>inRange(w.thrownAt,from,to)); const wasteCost=waste.reduce((s,w)=>s+(+w.estCost||0),0);
+
+  $('#rout').innerHTML = `
+  <div class="card"><div class="small muted">Total spend ${esc(from)} → ${esc(to)}</div><div class="big">${money(total)}</div>
+    <div class="small muted">${items.length} items across ${storeRows.length} store(s)</div></div>
+
+  <div class="card"><h2>Spend per store</h2>
+    ${storeRows.length?`<table><tr><th>Store</th><th class="n">Spent</th></tr>${storeRows.map(([s,v])=>`<tr><td>${esc(s)}</td><td class="n">${money(v)}</td></tr>`).join('')}</table>`:'<p class="muted small">No data in range.</p>'}
+  </div>
+
+  <div class="card"><h2>Top items by spend</h2>
+    ${groupRows.length?`<table><tr><th>Item</th><th class="n">Spent</th></tr>${groupRows.map(([s,v])=>`<tr><td>${esc(s)}</td><td class="n">${money(v)}</td></tr>`).join('')}</table>`:'<p class="muted small">No data in range.</p>'}
+    <p class="small muted" style="margin-top:8px">Tip: use the <b>Search</b> tab to see the full history and price of any one item.</p>
+  </div>
+
+  <div class="card"><h2>💙 HSA reimbursement</h2>
+    <div class="kv"><span>Eligible spend in range</span><b>${money(hsaTotal)}</b></div>
+    ${hsa.length?`<table><tr><th>Item</th><th>Date</th><th class="n">Price</th></tr>${hsa.map(i=>`<tr><td>${esc(i.name||i.rawName)}</td><td>${esc(i.purchasedAt||'')}</td><td class="n">${money(i.price)}</td></tr>`).join('')}</table>
+      <p class="small muted" style="margin-top:8px">Keep these for your HSA records — receipt photos are saved in your data folder.</p>`:'<p class="muted small">No HSA-eligible items flagged in range.</p>'}
+  </div>
+
+  <div class="card"><h2>🗑 Waste</h2>
+    <div class="kv"><span>Estimated money wasted</span><b>${money(wasteCost)}</b></div>
+    <div class="kv"><span>Items thrown away</span><b>${waste.length}</b></div>
+    ${waste.length?`<table><tr><th>Item</th><th>Date</th><th>Reason</th><th class="n">Cost</th></tr>${waste.map(w=>`<tr><td>${esc(w.name)}</td><td>${esc(w.thrownAt)}</td><td>${esc(w.reason)}</td><td class="n">${money(w.estCost)}</td></tr>`).join('')}</table>`:'<p class="muted small">Nothing wasted in range — nice.</p>'}
+  </div>`;
+}
+
+/* =========================================================================
+   REVIEW  (needs attention + freshness reminders)
+   ========================================================================= */
+function renderReview(){
+  const open=D.needs.filter(n=>n.status==='open');
+  const dueRem=D.reminders.filter(r=>r.status==='pending').sort((a,b)=>(a.dueDate||'').localeCompare(b.dueDate||''));
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>📋 Needs attention ${open.length?`<span class="pill warn">${open.length}</span>`:''}</h2>
+    <p class="small muted">Things Claude couldn't read or wants you to confirm.</p>
+    ${open.length? open.map(renderFlag).join('') : '<p class="muted small">All clear — nothing to review. 🎉</p>'}
+  </div>
+  <div class="card">
+    <h2>🥦 Freshness reminders</h2>
+    <p class="small muted">Perishables and their estimated use-by dates. Act on them here.</p>
+    ${dueRem.length? dueRem.map(renderRem).join('') : '<p class="muted small">No active reminders.</p>'}
+  </div>`;
+}
+function renderFlag(n){
+  return `<div class="item" id="flag_${n.id}">
+    <div class="flex"><b>${esc(n.field||n.kind||'Review')}</b><span class="pill gray">${esc(n.kind||'')}</span></div>
+    <div class="small">${esc(n.message||'')}</div>
+    ${n.photo?`<button class="link" onclick="viewPhoto('${esc(n.photo)}')">View receipt photo</button>`:''}
+    <div class="row" style="margin-top:6px">
+      <input id="fix_${n.id}" placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
+      <button style="flex:0 0 auto;width:auto" onclick="resolveFlag('${n.id}')">Save</button>
+    </div>
+    <button class="link" onclick="resolveFlag('${n.id}', true)">Dismiss (no change)</button>
+  </div>`;
+}
+async function viewPhoto(path){
+  toast('Loading photo…');
+  const url=await getImageDataUrl(path);
+  if(!url){ toast('Could not load photo'); return; }
+  const o=el('div',{style:'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px'});
+  o.innerHTML=`<img src="${url}" style="max-width:100%;max-height:100%;border-radius:8px"/>`;
+  o.onclick=()=>o.remove(); document.body.appendChild(o);
+}
+async function resolveFlag(id, dismiss){
+  const n=D.needs.find(x=>x.id===id); if(!n) return;
+  const val=dismiss?null:($('#fix_'+id)?$('#fix_'+id).value.trim():'');
+  if(!dismiss && val && n.itemId && n.field){
+    const it=D.items.find(i=>i.id===n.itemId);
+    if(it){ let v=val; if(['price','qty','unitPrice','tax','subtotal','total'].includes(n.field)) v=parseFloat(val)||0; it[n.field]=v; it.flags=(it.flags||[]).filter(f=>!f.includes(n.field)); }
+    await saveJson(FILES.items, D.items, 'Apply review fix to '+n.field);
+  }
+  n.status='resolved'; n.resolvedAt=new Date().toISOString(); n.resolvedBy=LS.me;
+  await saveJson(FILES.needs, D.needs, 'Resolve review flag');
+  toast(dismiss?'Dismissed':'Saved'); updateBadges(); renderReview();
+}
+function renderRem(r){
+  const due=r.dueDate||''; const overdue=due && due<=todayISO();
+  return `<div class="item">
+    <div class="flex"><div><b>${esc(r.name||'Item')}</b>
+      <div class="small ${overdue?'':'muted'}" style="${overdue?'color:var(--warn);font-weight:600':''}">use by ${esc(due)}${overdue?' — check now':''}</div></div></div>
+    <div class="row" style="margin-top:6px">
+      <button class="sec" onclick="remAction('${r.id}','kept')">Still good</button>
+      <button class="sec" onclick="remAction('${r.id}','consumed')">Used it</button>
+      <button class="warn" onclick="remAction('${r.id}','wasted')">Threw away</button>
+    </div>
+  </div>`;
+}
+async function remAction(id, action){
+  const r=D.reminders.find(x=>x.id===id); if(!r) return;
+  const it=r.itemId?D.items.find(i=>i.id===r.itemId):null;
+  if(action==='kept'){ r.status='done'; r.note='kept '+todayISO(); }
+  else if(action==='consumed'){ r.status='done'; if(it) it.status='consumed'; }
+  else if(action==='wasted'){
+    r.status='done';
+    if(it){ it.status='thrown_away';
+      D.waste.push({id:uid('w'),itemId:it.id,groupId:it.groupId||null,name:it.name||it.rawName,qty:it.qty||1,thrownAt:todayISO(),reason:'spoiled',estCost:(+it.price||0),by:LS.me});
+      await saveJson(FILES.waste, D.waste, 'Add waste from reminder');
+    }
+  }
+  if(it) await saveJson(FILES.items, D.items, 'Update item status from reminder');
+  await saveJson(FILES.reminders, D.reminders, 'Update reminder');
+  toast('Updated'); updateBadges(); renderReview();
+}
+
+/* =========================================================================
+   SETTINGS
+   ========================================================================= */
+function renderSettings(){
+  const cfg = D.config || {members:[]};
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>This device</h2>
+    <label>Your name</label>
+    <select id="set_me">${['Isaiah','Wife'].map(n=>`<option ${LS.me===n?'selected':''}>${n}</option>`).join('')}</select>
+    <label>Data repository</label>
+    <input id="set_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label>Access key (token)</label>
+    <input id="set_token" type="password" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <div class="row" style="margin-top:10px"><button class="sec" onclick="testConn()">Test connection</button><button onclick="saveSettings()">Save</button></div>
+    <button class="link danger" style="color:var(--danger)" onclick="signOut()">Sign out / forget key on this device</button>
+  </div>
+  ${D.config? `<div class="card">
+    <h2>Who gets notified (emails)</h2>
+    <p class="small muted">Claude emails these people for reviews and freshness reminders. Saved in your shared config.</p>
+    ${(cfg.members||[]).map((m,idx)=>`
+      <label>${esc(m.name)} email</label>
+      <input id="mem_${idx}" value="${esc(m.email||'')}" placeholder="name@example.com" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    `).join('')}
+    <button style="margin-top:10px" onclick="saveConfig()">Save emails</button>
+  </div>`:''}
+  <div class="card">
+    <h2>How this works</h2>
+    <p class="small muted">Snap receipts here → they save to your private folder → in a Claude session say
+    <b>“process my receipts”</b> (or let the weekly auto-run do it). Claude reads them, fills the database,
+    flags anything unclear, and emails reminders. Full guide: <b>grocery-tool/SETUP.md</b> in your repo.</p>
+  </div>`;
+}
+function testConn(){
+  fetch(`${API}/repos/${$('#set_repo').value.trim()}`, {headers:{...ghHeaders(),'Authorization':'Bearer '+$('#set_token').value.trim()}})
+    .then(r=>toast(r.ok?'Connection works ✓':'Failed: '+r.status));
+}
+function saveSettings(){ LS.me=$('#set_me').value; LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
+async function saveConfig(){
+  (D.config.members||[]).forEach((m,idx)=>{ const v=$('#mem_'+idx); if(v) m.email=v.value.trim(); });
+  await saveJson(FILES.config, D.config, 'Update notification emails'); toast('Emails saved');
+}
+function signOut(){ if(confirm('Forget the access key on this device? You can re-enter it anytime.')){ localStorage.removeItem('gt_token'); toast('Signed out'); show('settings'); } }
+
+/* ---------- boot ---------- */
+window.addEventListener('load', ()=>{ show(isConfigured()?'capture':'settings'); });
+</script>
+</body>
+</html>

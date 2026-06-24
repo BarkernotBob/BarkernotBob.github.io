@@ -1,0 +1,42 @@
+[
+  {
+    "id": "i_1719240000_ab12",
+    "receiptId": "r_1719240000_zz01",
+    "rawName": "GV ORG WHL MLK",
+    "name": "Organic Whole Milk",
+    "groupId": "milk_whole",
+    "category": "dairy",
+    "qty": 1,
+    "unit": "gal",
+    "unitPrice": 4.99,
+    "price": 4.99,
+    "store": "Costco",
+    "storeId": "costco",
+    "purchasedAt": "2026-06-20",
+    "perishable": true,
+    "useByDate": "2026-06-30",
+    "hsaEligible": false,
+    "status": "active",
+    "flags": []
+  },
+  {
+    "id": "i_1719240000_cd34",
+    "receiptId": "r_1719240000_zz01",
+    "rawName": "BANDAGES 30CT",
+    "name": "Adhesive Bandages 30ct",
+    "groupId": "bandages",
+    "category": "pharmacy",
+    "qty": 1,
+    "unit": "ea",
+    "unitPrice": 3.49,
+    "price": 3.49,
+    "store": "Costco",
+    "storeId": "costco",
+    "purchasedAt": "2026-06-20",
+    "perishable": false,
+    "useByDate": null,
+    "hsaEligible": true,
+    "status": "active",
+    "flags": []
+  }
+]

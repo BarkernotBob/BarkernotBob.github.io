@@ -1,0 +1,14 @@
+[
+  {
+    "id": "rem_1719240000_aa01",
+    "type": "use_by",
+    "itemId": "i_1719240000_ab12",
+    "groupId": "milk_whole",
+    "name": "Organic Whole Milk",
+    "dueDate": "2026-06-30",
+    "status": "pending",
+    "note": "Check the milk for freshness (smell/taste) before using.",
+    "createdAt": "2026-06-20T18:40:00Z",
+    "notifiedAt": null
+  }
+]

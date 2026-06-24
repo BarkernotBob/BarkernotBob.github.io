@@ -8,19 +8,25 @@ cd "$(dirname "$0")" || exit 1
 echo "Publishing your changes to the website..."
 echo ""
 
-# 0. Pull in the latest blockchain game from your Obsidian vault so the newest
-#    version gets published. (If the vault file isn't found, we keep the current
-#    one and carry on.)
-GAME_SRC="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html"
-GAME_DST="quartz/static/Blockchain.html"
-if [ -f "$GAME_SRC" ]; then
-  if ! cmp -s "$GAME_SRC" "$GAME_DST" 2>/dev/null; then
-    cp "$GAME_SRC" "$GAME_DST" && echo "Picked up your latest blockchain game."
+# 0. Pull in the latest game builds from your folders so the newest versions get
+#    published. (If a game file isn't found, we keep the current one and carry on.)
+#    To add a future game, copy one line below: "<where the game file lives>|<Name>.html".
+GAMES=(
+  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html|Blockchain.html"
+  "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Claude.Hexchain/Hexchain.standalone.html|Hexchain.html"
+  "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
+)
+for entry in "${GAMES[@]}"; do
+  src="${entry%%|*}"; dst="quartz/static/${entry##*|}"; name="${dst:t:r}"
+  if [ -f "$src" ]; then
+    if ! cmp -s "$src" "$dst" 2>/dev/null; then
+      cp "$src" "$dst" && echo "Picked up your latest ${name} game."
+    fi
+  else
+    echo "Note: couldn't find your ${name} game file (it may still be syncing) —"
+    echo "      publishing the version already in the site folder."
   fi
-else
-  echo "Note: couldn't find your game file in the vault (it may still be syncing) —"
-  echo "      publishing the version already in the site folder."
-fi
+done
 
 # 0b. Auto-create a menu launcher for any standalone app/game in quartz/static.
 #     Drop an .html file into quartz/static and a matching menu page appears

@@ -179,5 +179,15 @@ function base(over={}) { return Object.assign(api.defaults(), over); }
   check("user can override FICA withheld", approx(over.payments, 9000+1234, 1));
 }
 
+// 18. Indiana first-year dependent child exemption ($3,000 vs $1,500 = +$1,500)
+{
+  const reg = api.computeState(base({ state:"IN", dependents:[{age:3}] }), 80000);
+  const fy  = api.computeState(base({ state:"IN", dependents:[{age:3, firstYear:true}] }), 80000);
+  check("first-year child adds $1,500 more IN exemption", approx(fy.exemptions - reg.exemptions, 1500, 1),
+    "delta="+(fy.exemptions-reg.exemptions));
+  const fedHasNone = api.computeState(base({ state:"federal", dependents:[{age:3, firstYear:true}] }), 80000);
+  check("first-year flag does nothing outside Indiana", fedHasNone.stateTax===0);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

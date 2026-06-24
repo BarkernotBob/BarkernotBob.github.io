@@ -1,0 +1,26 @@
+{
+  "milk_whole": {
+    "canonical": "Whole Milk",
+    "aliases": ["whole milk", "gv org whl mlk", "wht milk", "organic whole milk", "vit d milk"],
+    "category": "dairy",
+    "perishable": true,
+    "defaultShelfLifeDays": 10,
+    "hsaEligible": false
+  },
+  "bananas": {
+    "canonical": "Bananas",
+    "aliases": ["bananas", "banana", "bnana", "org bananas"],
+    "category": "produce",
+    "perishable": true,
+    "defaultShelfLifeDays": 5,
+    "hsaEligible": false
+  },
+  "bandages": {
+    "canonical": "Adhesive Bandages",
+    "aliases": ["bandages", "band aid", "band-aid", "adhesive bandages 30ct"],
+    "category": "pharmacy",
+    "perishable": false,
+    "defaultShelfLifeDays": null,
+    "hsaEligible": true
+  }
+}

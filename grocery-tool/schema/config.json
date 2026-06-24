@@ -1,0 +1,14 @@
+{
+  "household": "The Mail Family",
+  "currency": "USD",
+  "timezone": "America/New_York",
+  "members": [
+    { "name": "Isaiah", "email": "isaiahmail97@gmail.com", "notify": true },
+    { "name": "Wife", "email": "REPLACE_WITH_WIFE_EMAIL", "notify": true }
+  ],
+  "reminders": {
+    "useByLeadDays": 0,
+    "sendReviewEmails": true,
+    "sendUseByEmails": true
+  }
+}

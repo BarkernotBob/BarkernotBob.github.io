@@ -1,0 +1,14 @@
+[
+  {
+    "id": "na_1719300000_bb01",
+    "receiptId": "r_1719300000_zz02",
+    "itemId": null,
+    "kind": "unreadable_field",
+    "field": "price",
+    "message": "The price for 'STRWBRY' was smudged and unreadable. Please check the receipt photo and enter the correct price.",
+    "photo": "receipts/r_1719300000_zz02.jpg",
+    "suggested": { "price": 4.99 },
+    "status": "open",
+    "createdAt": "2026-06-24T13:15:00Z"
+  }
+]

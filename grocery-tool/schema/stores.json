@@ -1,0 +1,4 @@
+{
+  "costco": { "id": "costco", "name": "Costco", "aliases": ["costco", "costco whse", "costco wholesale"] },
+  "kroger": { "id": "kroger", "name": "Kroger", "aliases": ["kroger", "krogr"] }
+}

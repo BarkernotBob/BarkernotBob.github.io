@@ -329,12 +329,12 @@ function renderCapture(){
   $('#main').innerHTML = `
   <div class="card">
     <h2>Snap a receipt</h2>
-    <p class="small muted">Take a clear photo of the whole receipt. It saves to your shared folder; Claude reads it on the next run.</p>
+    <p class="small muted">Take a clear photo of the whole receipt. It saves to your private folder and is read automatically a minute or two later.</p>
     <input id="cap_file" type="file" accept="image/*" capture="environment" class="hidden" onchange="onPick(event)"/>
     <button onclick="document.getElementById('cap_file').click()">📷 Open camera / choose photo</button>
     <img id="cap_prev" class="preview hidden"/>
     <div id="cap_actions" class="hidden" style="margin-top:10px">
-      <label>Store (optional — Claude will read it, but you can hint)</label>
+      <label>Store (optional — it's read from the photo, but you can hint)</label>
       <input id="cap_store" placeholder="e.g. Costco"/>
       <div class="row" style="margin-top:10px">
         <button class="sec" onclick="resetCapture()">Retake</button>
@@ -347,10 +347,10 @@ function renderCapture(){
     ${recent.length? recent.map(r=>{
       const st = r.status==='processed'?'<span class="pill ok">read</span>'
                : r.status==='needs_review'?'<span class="pill warn">needs review</span>'
-               : '<span class="pill gray">waiting for Claude</span>';
+               : '<span class="pill gray">reading…</span>';
       return `<div class="item flex"><div><b>${esc(r.store||'Unread receipt')}</b><div class="small muted">${esc((r.purchasedAt||r.capturedAt||'').slice(0,10))} · by ${esc(r.capturedBy||'?')}${r.total!=null?' · '+money(r.total):''}</div></div>${st}</div>`;
     }).join('') : '<p class="muted small">No receipts yet. Snap your first one above.</p>'}
-    <p class="small muted" style="margin-top:10px">${D.receipts.filter(r=>r.status==='unprocessed').length} waiting to be read. In a Claude session say: <b>“process my receipts.”</b></p>
+    <p class="small muted" style="margin-top:10px">${D.receipts.filter(r=>r.status==='unprocessed').length} still being read. New receipts are read automatically a minute or two after you snap them.</p>
   </div>`;
 }
 function onPick(ev){
@@ -379,7 +379,7 @@ async function saveReceipt(){
       currency:(D.config.currency||'USD'), itemIds:[], notes:'' };
     D.receipts.push(rec);
     await saveJson(FILES.receipts, D.receipts, 'Add unprocessed receipt '+id);
-    toast('Saved! Claude will read it next run. 📷');
+    toast('Saved! It will be read automatically in a minute or two. 📷');
     resetCapture(); renderCapture();
   }catch(e){ toast(String(e.message||e)); }
   finally{ btn.disabled=false; btn.innerHTML='Save receipt'; }
@@ -801,9 +801,9 @@ function renderSettings(){
   </div>`:''}
   <div class="card">
     <h2>How this works</h2>
-    <p class="small muted">Snap receipts here → they save to your private folder → in a Claude session say
-    <b>“process my receipts”</b> (or let the weekly auto-run do it). Claude reads them, fills the database,
-    flags anything unclear, and emails reminders. Full guide: <b>grocery-tool/SETUP.md</b> in your repo.</p>
+    <p class="small muted">Snap receipts here → they save to your private folder → a robot reads each one automatically
+    (a minute or two later), fills the database, and flags anything unclear for your Review tab. Setup for the
+    automatic reader: <b>grocery-tool/automation/README.md</b> in your repo.</p>
   </div>`;
 }
 function testConn(){

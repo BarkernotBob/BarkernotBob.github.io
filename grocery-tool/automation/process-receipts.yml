@@ -1,0 +1,79 @@
+name: Process grocery receipts
+
+# Runs automatically whenever the app uploads a new receipt photo (to inbox/),
+# and can also be started by hand from the Actions tab ("Run workflow").
+on:
+  push:
+    paths:
+      - 'inbox/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write          # lets the robot save the extracted data back
+
+concurrency:               # don't let two runs fight over the same files
+  group: process-receipts
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read new receipts with Claude (Haiku) and update the data
+        uses: anthropics/claude-code-action@v1
+        env:
+          # Your Claude subscription "login pass" — stored as a hidden repo secret.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        with:
+          claude_args: "--model claude-haiku-4-5 --max-turns 40"
+          prompt: |
+            You process grocery receipts stored in THIS repository, using vision.
+            Work carefully and NEVER invent prices, dates, or items.
+
+            FIND WORK
+            - Read db/receipts.json (a JSON array; treat a missing file as []). Each
+              receipt with "status":"unprocessed" has a "photo" path like
+              "inbox/r_xxx.jpg".
+            - Also list any image files under inbox/ that have no receipt entry; for
+              those, create a receipt object first (status "unprocessed", photo set).
+            - If there are no unprocessed receipts, do nothing and stop.
+
+            FOR EACH UNPROCESSED RECEIPT
+            1. OPEN AND READ ITS PHOTO WITH VISION. Extract the store name (cleaned,
+               e.g. "COSTCO WHSE #1021" -> "Costco"), the purchase date (YYYY-MM-DD),
+               every line item (raw printed name, quantity, unit if shown, unit price
+               if shown, line total), and the subtotal, tax, and total.
+            2. For each line item, append an object to db/items.json (JSON array;
+               missing -> []):
+               {"id","receiptId","rawName","name","groupId","category","qty","unit",
+                "unitPrice","price","store","storeId","purchasedAt","perishable",
+                "useByDate","hsaEligible","status":"active","flags":[]}
+               - id: "i_<unix-seconds>_<4 random lowercase letters/digits>"
+               - name: a clean human name expanded from rawName
+               - groupId: a stable slug from the clean name (e.g. "whole_milk").
+                 Reuse an existing group in db/item_groups.json whose canonical or
+                 aliases match (case-insensitive); otherwise add a new entry keyed by
+                 groupId: {"canonical","aliases":[...],"category","perishable",
+                 "hsaEligible"}.
+               - category: one of dairy / produce / meat / deli / bakery / pantry /
+                 frozen / household / pharmacy / beverage / other.
+               - perishable + useByDate: if perishable, set useByDate = purchasedAt plus
+                 a sensible shelf life (milk ~10d, fresh produce ~5d, raw meat ~3d,
+                 cooked/deli ~4d); otherwise perishable=false and useByDate=null.
+               - hsaEligible: true only for clearly medical/health items (bandages,
+                 medicine, first aid); otherwise false.
+               - If any field is unreadable, put your best guess AND add that field's
+                 name to "flags" (e.g. "price_unclear"). All money values are numbers.
+            3. Update the receipt object in db/receipts.json: set "status":"processed",
+               fill store/storeId/purchasedAt/subtotal/tax/total, and set "itemIds" to
+               the ids you created for it.
+            4. Move the photo from inbox/ to receipts/ (same filename), create the
+               receipts/ folder if needed, and update the receipt's "photo" path.
+
+            FINISH
+            - Do NOT send any emails or notifications — only update the JSON files and
+              move the photos.
+            - Write valid, 2-space-indented JSON. Commit and push ALL changes to this
+              branch with the message "Process receipts (automated)".

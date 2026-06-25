@@ -40,11 +40,12 @@ body:has(.home-splash) {
     padding: 1rem 0 0.5rem !important;
     background: transparent !important;
   }
-  // Top-bar order: wordmark first, then the menu (☰) button just to its right,
-  // then search/theme pushed to the far right edge.
+  // Top-bar layout: wordmark alone on the left (margin-right auto pushes
+  // everything else to the right), then the menu (☰) button, search, and theme
+  // grouped together on the right.
   & .left.sidebar > * { order: 5; }
-  & .left.sidebar .page-title { order: 0; margin: 0 !important; }
-  & .left.sidebar .explorer { order: 1; margin-right: auto !important; }
+  & .left.sidebar .page-title { order: 0; margin: 0 auto 0 0 !important; }
+  & .left.sidebar .explorer { order: 1; margin: 0 !important; }
   & .left.sidebar .spacer,
   & .left.sidebar .mobile-only { display: none !important; }
 

@@ -57,7 +57,7 @@ If a community member engages in unacceptable behavior, the community organizers
 
 ## 7. Reporting Guidelines
 
-If you are subject to or witness unacceptable behavior, or have any other concerns, please report it privately to the repository owner through GitHub's [private reporting on the Security tab](https://github.com/isaiahmail97-oss/isaiahmail97-oss.github.io/security) or by opening an issue.
+If you are subject to or witness unacceptable behavior, or have any other concerns, please report it privately to the repository owner through GitHub's [private reporting on the Security tab](https://github.com/BarkernotBob/barkernotbob.github.io/security) or by opening an issue.
 
 Additionally, community organizers are available to help community members engage with local law enforcement or to otherwise help those experiencing unacceptable behavior feel safe. In the context of in-person events, organizers will also provide escorts as desired by the person experiencing distress.
 
@@ -73,7 +73,7 @@ This code of conduct and its related procedures also applies to unacceptable beh
 
 ## 10. Contact info
 
-Please use GitHub to contact the repository owner: open an issue, or use the repository's [Security tab](https://github.com/isaiahmail97-oss/isaiahmail97-oss.github.io/security) for private reports.
+Please use GitHub to contact the repository owner: open an issue, or use the repository's [Security tab](https://github.com/BarkernotBob/barkernotbob.github.io/security) for private reports.
 
 ## 11. License and attribution
 

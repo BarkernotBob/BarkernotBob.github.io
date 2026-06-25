@@ -105,6 +105,24 @@ body:has(.home-splash) {
   .home-splash .splash-grid { grid-template-columns: 1fr; }
 }
 
+// Explorer: keep the file tree collapsed by default (one click away), and
+// style the injected "Random page" button that sits at the top of the tree.
+.explorer.collapsed .explorer-content { display: none !important; }
+.random-page-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: 500 14px "Space Grotesk", system-ui, sans-serif;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--secondary);
+  padding: 2px 0 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--lightgray);
+}
+.random-page-btn:hover { color: var(--tertiary); }
+
 // Reusable responsive 16:9 video embed (for YouTube notes, etc.)
 .video-embed {
   position: relative;

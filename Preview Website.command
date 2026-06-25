@@ -78,6 +78,12 @@ EOF
   fi
 done
 
+# Make search match within words (substring), not just from word-starts.
+# (The search plugin ships with word-start matching; this flips it to substring.)
+sed -i '' 's/tokenize:"forward"/tokenize:"full"/g' \
+  .quartz/plugins/search/dist/index.js \
+  .quartz/plugins/search/dist/components/index.js 2>/dev/null
+
 echo "Building your website and starting the preview..."
 echo "When you see a web address (http://localhost:8080), it's ready."
 echo ""

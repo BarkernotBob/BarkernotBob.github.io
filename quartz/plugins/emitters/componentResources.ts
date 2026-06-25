@@ -276,6 +276,47 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   `)
   // --------------------------------------------------------------------------
 
+  // --- Explorer extras (custom): collapse the file tree by default and add a
+  // --- "Random page" button inside it. Keeps navigation one click away rather
+  // --- than a permanently-open tree.
+  componentResources.afterDOMLoaded.push(`
+    async function quartzRandomPage() {
+      try {
+        const res = await fetch("/static/contentIndex.json")
+        const idx = await res.json()
+        const slugs = Object.keys(idx).filter(
+          (s) => s !== "index" && !s.endsWith("/index") && !s.startsWith("tags/"),
+        )
+        if (!slugs.length) return
+        const slug = slugs[Math.floor(Math.random() * slugs.length)]
+        window.location.href = "/" + slug
+      } catch (e) {
+        console.error("[random-page]", e)
+      }
+    }
+    function quartzExplorerExtras() {
+      document.querySelectorAll(".explorer-content").forEach((content) => {
+        if (content.querySelector(".random-page-btn")) return
+        const b = document.createElement("button")
+        b.className = "random-page-btn"
+        b.type = "button"
+        b.textContent = "\\u{1F3B2} Random page"
+        b.addEventListener("click", quartzRandomPage)
+        content.prepend(b)
+      })
+    }
+    function quartzCollapseExplorer() {
+      document.querySelectorAll(".explorer:not(.collapsed)").forEach((exp) => {
+        exp.classList.add("collapsed")
+        const t = exp.querySelector(".desktop-explorer")
+        if (t) t.setAttribute("aria-expanded", "false")
+      })
+    }
+    document.addEventListener("nav", () => { quartzExplorerExtras(); quartzCollapseExplorer() })
+    quartzExplorerExtras(); quartzCollapseExplorer()
+  `)
+  // --------------------------------------------------------------------------
+
   if (cfg.enableSPA) {
     componentResources.afterDOMLoaded.push(spaRouterScript)
   } else {

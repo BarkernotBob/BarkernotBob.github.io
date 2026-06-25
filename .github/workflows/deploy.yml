@@ -33,6 +33,11 @@ jobs:
       - run: npm ci
       - name: Install Quartz plugins
         run: npx quartz plugin install
+      - name: Make search match within words (substring), not just word-starts
+        run: |
+          sed -i 's/tokenize:"forward"/tokenize:"full"/g' \
+            .quartz/plugins/search/dist/index.js \
+            .quartz/plugins/search/dist/components/index.js
       - name: Build
         run: npx quartz build
       - uses: actions/upload-pages-artifact@v3

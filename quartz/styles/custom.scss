@@ -39,7 +39,10 @@ body:has(.home-splash) {
     padding: 1rem 0 0.5rem !important;
     background: transparent !important;
   }
-  & .left.sidebar .page-title { margin: 0 auto 0 0 !important; }
+  // Top-bar order: wordmark, then Explorer (left), then search/theme pushed right.
+  & .left.sidebar > * { order: 5; }
+  & .left.sidebar .page-title { order: 0; margin: 0 !important; }
+  & .left.sidebar .explorer { order: 1; margin-right: auto !important; }
   & .left.sidebar .spacer,
   & .left.sidebar .mobile-only { display: none !important; }
 

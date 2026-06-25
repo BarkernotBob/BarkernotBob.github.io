@@ -1367,6 +1367,14 @@ function coreHostRevert(mesh) { /* no geometry swap for square */ }
 // materials + textures) is safe everywhere. (Hex must skip its shared geometry caches.)
 function disposeRemovable(obj) { disposeMesh(obj); }
 
+// --- Setup board-builder grid (the clickable footprint editor) ---
+// Square lays cells out in a CSS grid of squares. (Hex uses absolute offset rows + a hex clip-path.)
+function fpGridInit(g, W, D) {
+    g.style.gridTemplateColumns = `repeat(${W},1fr)`;
+    g.style.maxWidth = `${W * 44}px`;
+}
+function fpCellLayout(el, x, z, W, D) { /* CSS grid positions square cells; nothing to do */ }
+
 // --- Firebase backend (square = the Blockchain project) ---
 const firebaseConfig = {
     apiKey: "AIzaSyCcg82Do9USg0puk9tO40JT-61bSc5jje4",
@@ -2108,8 +2116,7 @@ let html = '';
     c.innerHTML = html;
     const g=document.createElement('div');
     g.className='footprint-grid';
-    g.style.gridTemplateColumns=`repeat(${W},1fr)`;
-    g.style.maxWidth=`${W*44}px`;
+    fpGridInit(g, W, D);
     for(let z=0;z<D;z++) for(let x=0;x<W;x++){
         const el=document.createElement('div');
         el.className='footprint-cell active';
@@ -2144,6 +2151,7 @@ let html = '';
                 this.textContent = '';
             }
         };
+        fpCellLayout(el, x, z, W, D);
         g.appendChild(el);
     }
     c.appendChild(g);

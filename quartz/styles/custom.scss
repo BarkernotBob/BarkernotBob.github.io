@@ -10,7 +10,7 @@
 body:has(.home-splash) {
   background: #fff6ea !important;
 
-  & .sidebar,
+  & .right.sidebar,
   & .page-header,
   & .breadcrumb-container,
   & .article-title,
@@ -19,7 +19,7 @@ body:has(.home-splash) {
   & .page-footer,
   & footer { display: none !important; }
 
-  & #quartz-body { display: block !important; padding: 0 !important; margin: 0 !important; }
+  & #quartz-body { display: block !important; position: relative; padding: 0 !important; margin: 0 !important; }
   & .center {
     max-width: 1080px !important;
     width: 100% !important;
@@ -28,6 +28,64 @@ body:has(.home-splash) {
     box-sizing: border-box !important;
   }
   & article { max-width: none !important; margin: 0 !important; }
+
+  // Slim top-right toolbar on the home page: search, dark mode, file tree.
+  & .left.sidebar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.4rem;
+    position: absolute;
+    top: 1.4rem;
+    right: 1.5rem;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    z-index: 10;
+  }
+  & .left.sidebar .page-title,
+  & .left.sidebar .spacer,
+  & .left.sidebar .mobile-only,
+  & .left.sidebar .readermode { display: none !important; }
+  & .left.sidebar .flex-component { margin: 0 !important; }
+
+  // File tree as a dropdown panel toggled by the "Explorer" button
+  & .explorer { position: relative; width: auto !important; margin: 0 !important; overflow: visible !important; }
+  & .explorer .mobile-explorer { display: none !important; }
+  & .explorer .desktop-explorer {
+    display: inline-flex !important;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
+  & .explorer .desktop-explorer h2 { font-size: 14px; margin: 0; font-weight: 500; }
+  & .explorer .explorer-content {
+    display: none;
+    position: absolute !important;
+    inset: auto 0 auto auto !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    width: 17rem !important;
+    height: auto !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    background: #ffffff;
+    border: 2px solid var(--dark);
+    border-radius: 12px;
+    box-shadow: 4px 4px 0 var(--dark);
+    padding: 14px 16px !important;
+    margin-top: 10px;
+    z-index: 50;
+    text-align: left;
+  }
+  & .explorer:not(.collapsed) .explorer-content { display: block !important; }
 }
 
 .home-splash {
@@ -96,9 +154,39 @@ body:has(.home-splash) {
   & .splash-card.yt { --accent: var(--c-yt); }
 }
 
+// Dark-mode variant of the splash (so the dark/light toggle works on the home page)
+:root[saved-theme="dark"] body:has(.home-splash) { background: #1c1430 !important; }
+:root[saved-theme="dark"] .home-splash {
+  --ink: #f3ead9;
+  --muted: #a79fc0;
+}
+:root[saved-theme="dark"] .home-splash .splash-card { background: #251f3a; }
+:root[saved-theme="dark"] .home-splash .explorer-content { background: #251f3a; }
+
 @media (max-width: 750px) {
   .home-splash .splash-title { font-size: 40px; }
   .home-splash .splash-grid { grid-template-columns: 1fr; }
+
+  // On mobile, give the toolbar its own row at the top (no overlap with wordmark)
+  body:has(.home-splash) .left.sidebar {
+    position: static !important;
+    width: 100% !important;
+    max-width: 1080px !important;
+    margin: 0 auto !important;
+    padding: 0.75rem 1.5rem 0 !important;
+    justify-content: flex-end;
+  }
+  body:has(.home-splash) .search-button p { display: none; }
+  body:has(.home-splash) .splash-top { margin-bottom: 32px; }
+  // pin the file-tree dropdown to the viewport so it's never clipped on mobile
+  body:has(.home-splash) .explorer .explorer-content {
+    position: fixed !important;
+    top: 3.5rem !important;
+    right: 1rem !important;
+    left: auto !important;
+    width: calc(100vw - 2rem) !important;
+    max-width: 18rem !important;
+  }
 }
 
 // Reusable responsive 16:9 video embed (for YouTube notes, etc.)

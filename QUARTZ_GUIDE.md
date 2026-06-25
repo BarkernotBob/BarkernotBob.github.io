@@ -51,9 +51,7 @@ You don't need to know any code to use it. This guide explains everything in pla
 
 ## How publishing works (the short version)
 
-When you double-click **Publish Changes**, your notes are sent to **GitHub** (a website
-that stores your files online). GitHub then automatically rebuilds your site and puts the
-new version live. You don't manage any of that — it just happens.
+- [ ] When you double-click **Publish Changes**, your notes are sent to **GitHub** and GitHub then automatically rebuilds your site and puts the new version live. You don't manage any of that — it just happens.
 
 You can watch a publish happen here (optional):
 **https://github.com/isaiahmail97-oss/isaiahmail97-oss.github.io/actions** — a green

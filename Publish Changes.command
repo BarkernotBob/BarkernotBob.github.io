@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Double-click this file to PUBLISH your latest notes to your live website.
 # It saves your changes and sends them to GitHub, which rebuilds the public
-# site at https://isaiahmail97-oss.github.io (this usually takes 1-2 minutes).
+# site at https://barkernotbob.github.io (this usually takes 1-2 minutes).
 
 cd "$(dirname "$0")" || exit 1
 
@@ -31,7 +31,7 @@ done
 # 0b. Auto-create a menu launcher for any standalone app/game in quartz/static.
 #     Drop an .html file into quartz/static and a matching menu page appears
 #     that jumps straight into it full-screen. Existing pages are never touched.
-SITE_ORIGIN="https://isaiahmail97-oss.github.io"
+SITE_ORIGIN="https://barkernotbob.github.io"
 # Which menu folder each app belongs in (default: games). Add a line per new app.
 typeset -A LAUNCH_FOLDER
 LAUNCH_FOLDER=(Blockchain games Hexchain games Tax-Modeler tools)
@@ -86,7 +86,7 @@ if git push; then
   echo ""
   echo "✅ Done! Your changes are on their way."
   echo "   Your live site will update in about 1-2 minutes:"
-  echo "   https://isaiahmail97-oss.github.io"
+  echo "   https://barkernotbob.github.io"
 else
   echo ""
   echo "⚠️  Couldn't send the changes to GitHub."

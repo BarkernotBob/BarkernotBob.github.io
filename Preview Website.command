@@ -56,7 +56,7 @@ done
 # --- Auto-create a menu launcher for any standalone app/game in quartz/static.
 # --- Drop an .html file into quartz/static and a matching menu page appears
 # --- that jumps straight into it full-screen. Existing pages are never touched.
-SITE_ORIGIN="https://isaiahmail97-oss.github.io"
+SITE_ORIGIN="https://barkernotbob.github.io"
 # Which menu folder each app belongs in (default: games). Add a line per new app.
 typeset -A LAUNCH_FOLDER
 LAUNCH_FOLDER=(Blockchain games Hexchain games Tax-Modeler tools)

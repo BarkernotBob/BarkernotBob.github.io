@@ -1,6 +1,6 @@
 # Your Website Guide
 
-This folder runs your personal website, **https://isaiahmail97-oss.github.io**, using
+This folder runs your personal website, **https://barkernotbob.github.io**, using
 a tool called **Quartz**. Quartz turns plain text notes into web pages automatically.
 
 You don't need to know any code to use it. This guide explains everything in plain words.
@@ -54,7 +54,7 @@ You don't need to know any code to use it. This guide explains everything in pla
 - [ ] When you double-click **Publish Changes**, your notes are sent to **GitHub** and GitHub then automatically rebuilds your site and puts the new version live. You don't manage any of that — it just happens.
 
 You can watch a publish happen here (optional):
-**https://github.com/isaiahmail97-oss/isaiahmail97-oss.github.io/actions** — a green
+**https://github.com/BarkernotBob/barkernotbob.github.io/actions** — a green
 check ✅ means it published successfully.
 
 ---
@@ -212,7 +212,7 @@ A self-contained app/game is a single `.html` file. To put one on your site:
 2. **Preview or Publish.** That's it.
 
 When you do, two things happen automatically:
-- The file is served untouched at `https://isaiahmail97-oss.github.io/static/<FileName>.html`.
+- The file is served untouched at `https://barkernotbob.github.io/static/<FileName>.html`.
 - A **menu entry** appears for it. Clicking that entry takes you **straight into the
   app full-screen** — no in-between page.
 

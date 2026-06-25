@@ -305,7 +305,11 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
         content.prepend(b)
       })
     }
-    function quartzCollapseExplorer() {
+    // On the HOME page only, the explorer is a slide-over drawer: start it
+    // closed, and close it when clicking outside. Other pages keep the tree open.
+    function quartzIsHome() { return !!document.querySelector(".home-splash") }
+    function quartzCloseDrawer() {
+      if (!quartzIsHome()) return
       document.querySelectorAll(".explorer:not(.collapsed)").forEach((exp) => {
         exp.classList.add("collapsed")
         const t = exp.querySelector(".desktop-explorer")
@@ -313,12 +317,15 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       })
     }
     document.addEventListener("click", (e) => {
+      if (!quartzIsHome()) return
+      // Ignore clicks on the explorer/toggle itself; only close when clicking away.
+      if (e.target.closest && e.target.closest(".explorer")) return
       document.querySelectorAll(".explorer:not(.collapsed)").forEach((exp) => {
-        if (!exp.contains(e.target)) exp.classList.add("collapsed")
+        exp.classList.add("collapsed")
       })
     })
-    document.addEventListener("nav", () => { quartzExplorerExtras(); quartzCollapseExplorer() })
-    quartzExplorerExtras(); quartzCollapseExplorer()
+    document.addEventListener("nav", () => { quartzExplorerExtras(); quartzCloseDrawer() })
+    quartzExplorerExtras(); quartzCloseDrawer()
   `)
   // --------------------------------------------------------------------------
 

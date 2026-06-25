@@ -33,14 +33,11 @@ jobs:
       - run: npm ci
       - name: Install Quartz plugins
         run: npx quartz plugin install
-      - name: Patch plugins (substring search + slide-over file-tree at all widths)
+      - name: Make search match within words (substring), not just word-starts
         run: |
           sed -i 's/tokenize:"forward"/tokenize:"full"/g' \
             .quartz/plugins/search/dist/index.js \
             .quartz/plugins/search/dist/components/index.js
-          sed -i 's/max-width: *800px/max-width: 99999px/g' \
-            .quartz/plugins/explorer/dist/index.js \
-            .quartz/plugins/explorer/dist/components/index.js
       - name: Build
         run: npx quartz build
       - uses: actions/upload-pages-artifact@v3

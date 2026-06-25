@@ -1238,6 +1238,18 @@ let DIRS = SQUARE_DIRS;
 function getActiveDirs() { return SQUARE_DIRS; }
 function refreshActiveDirs() { DIRS = SQUARE_DIRS; }
 
+// --- Coordinate transforms ---
+// Square grid: cell (cx,cz) maps linearly to world via the cell pitch SP. These functions reproduce
+// the exact arithmetic the square game previously inlined (cx*SP / cz*SP / (G.bW-1)/2*SP), so routing
+// main.js through them is behaviour-preserving by construction. Hex's counterparts do real axial math.
+function wX(cx, cz) { return cx * SP; }   // cz unused for square (kept for API parity with hex)
+function wZ(cz) { return cz * SP; }
+function worldToAxial(x, z) { return { q: Math.round(x / SP), r: Math.round(z / SP) }; }
+// World translation mapping the board onto its wrapped copy (dx,dz) in The Grid.
+function gridWrapOffset(dx, dz) { return { x: dx * G.bW * SP, z: dz * G.bD * SP }; }
+// Camera-centring point: the centre of the full square board.
+function getCenter() { return { x: (G.bW - 1) / 2 * SP, z: (G.bD - 1) / 2 * SP }; }
+
 // serialize.js — canonical game-state serialization for Firebase sync + the round-trip
 // self-test. No DOM and no game-engine coupling: serializeState / deserializeCore operate
 // purely on the passed-in state object and plain data. disposeMesh is the one THREE touch
@@ -3490,7 +3502,7 @@ function _tutHighlight(cx,cz,lvl){
         const geo = new THREE.TorusGeometry(PS*0.62, 0.05, 12, 32);
         const mat = new THREE.MeshBasicMaterial({ color:0x38bdf8, transparent:true, opacity:0.9 });
         const ring = new THREE.Mesh(geo, mat); ring.rotation.x = Math.PI/2;
-        ring.position.set(cx*SP, pieceY(useLvl), cz*SP);
+        ring.position.set(wX(cx,cz), pieceY(useLvl), wZ(cz));
         ring.userData.isTutRing = true; scene.add(ring); _tut.ring = ring;
     } catch(e){}
 }
@@ -4507,7 +4519,7 @@ function setupListener() {
                             const boxMat = new THREE.LineBasicMaterial({color: 0x888888, transparent: true, opacity: 0.5});
                             for(let i=0; i<G.heightCap; i++) {
                                 const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), boxMat);
-                                edges.position.set(rcx*SP, pieceY(i), rcz*SP);
+                                edges.position.set(wX(rcx,rcz), pieceY(i), wZ(rcz));
                                 edges.userData = { originalY: pieceY(i) };
                                 scene.add(edges);
                                 columnMeshes.push(edges);
@@ -4529,7 +4541,7 @@ function setupListener() {
                                 });
                             } else {
                                 const portalNode = createElectricVoid();
-                                portalNode.position.set(rcx*SP, -0.15, rcz*SP);
+                                portalNode.position.set(wX(rcx,rcz), -0.15, wZ(rcz));
                                 scene.add(portalNode);
                                 G.animations.push({ type: 'removeX', progress: 0, speed: 0.015 / columnMeshes.length, meshes: columnMeshes, portal: portalNode });
                             }
@@ -4559,9 +4571,9 @@ function setupListener() {
                         m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x7090b0})));
 
                         if (_fx && _fx.kind === 'undo') {
-                            m.position.set(acx*SP, -0.09, acz*SP); // undo: snap in, no rise animation
+                            m.position.set(wX(acx,acz), -0.09, wZ(acz)); // undo: snap in, no rise animation
                         } else {
-                            m.position.set(acx*SP, 15, acz*SP);
+                            m.position.set(wX(acx,acz), 15, wZ(acz));
                             G.animations.push({ type: 'addEE', progress: 0, mesh: m, targetY: -0.09 });
                         }
                     }
@@ -5225,8 +5237,8 @@ function buildBackground(){
 // lives in envGroup (+ the table in tableGroup) so the space theme can hide it and
 // "The Grid" wrap mode renders it ONCE instead of tiling it with the board.
 function buildTabletop(){
-    const cxC=(G.bW-1)/2*SP, czC=(G.bD-1)/2*SP;
-    const hx=(G.bW-1)/2*SP + PS*0.7, hz=(G.bD-1)/2*SP + PS*0.7;
+    const cxC=getCenter().x, czC=getCenter().z;
+    const hx=getCenter().x + PS*0.7, hz=getCenter().z + PS*0.7;
     const cornerDist=Math.hypot(hx,hz);
     // topY is the tabletop plank centre; +thick/2 is its top surface. The board's tiles
     // sit with their underside at y=-0.18, so place the plank top just beneath that
@@ -5589,7 +5601,7 @@ function initThree(){
     G.hoverEffectsGroup = new THREE.Group();
     scene.add(G.hoverEffectsGroup);
 
-    const cx = (G.bW-1)/2*SP, cz = (G.bD-1)/2*SP;
+    const cx = getCenter().x, cz = getCenter().z;
     setOrbit(new OrbitControls(camera, renderer.domElement));
     orbit.target.set(cx, 0, cz);
     orbit.enablePan = true;
@@ -5740,11 +5752,11 @@ function initThree(){
                     else if (idx === activeIdx) {
                         m.scale.set(1.2, Math.max(0.15, 1 - localP*3), 1.2);
                         m.position.y = m.userData.originalY - (PS * Math.max(0.15, 1 - localP*3) / 2);
-                        m.position.x = m.userData.cx !== undefined ? (m.userData.cx*SP) + (Math.random()-0.5)*0.2 : m.position.x + (Math.random()-0.5)*0.2;
-                        m.position.z = m.userData.cz !== undefined ? (m.userData.cz*SP) + (Math.random()-0.5)*0.2 : m.position.z + (Math.random()-0.5)*0.2;
+                        m.position.x = m.userData.cx !== undefined ? (wX(m.userData.cx,m.userData.cz)) + (Math.random()-0.5)*0.2 : m.position.x + (Math.random()-0.5)*0.2;
+                        m.position.z = m.userData.cz !== undefined ? (wZ(m.userData.cz)) + (Math.random()-0.5)*0.2 : m.position.z + (Math.random()-0.5)*0.2;
                         m.visible = true;
                     } else {
-                        m.position.set(m.userData.cx !== undefined ? m.userData.cx*SP : m.position.x, m.userData.originalY, m.userData.cz !== undefined ? m.userData.cz*SP : m.position.z); 
+                        m.position.set(m.userData.cx !== undefined ? wX(m.userData.cx,m.userData.cz) : m.position.x, m.userData.originalY, m.userData.cz !== undefined ? wZ(m.userData.cz) : m.position.z); 
                         m.scale.set(1,1,1); m.visible = true;
                     }
                 });
@@ -6045,7 +6057,7 @@ function initThree(){
                     if (G.mainDecorations) G.mainDecorations.visible = isMain;
                     if (G.mirrorBoards) G.mirrorBoards.visible = isMain;
                     boardObjs.forEach(p => { p.visible = isMain || shouldRender(p, dx, dz); });
-                    scene.position.set(origX + dx * G.bW * SP, 0, origZ + dz * G.bD * SP);
+                    scene.position.set(origX + gridWrapOffset(dx,dz).x, 0, origZ + gridWrapOffset(dx,dz).z);
                     scene.updateMatrixWorld(true);
                     renderer.render(scene, camera);
                 }
@@ -6071,8 +6083,8 @@ function initThree(){
 
 function applyCamera(){
     camPhi=THREE.MathUtils.clamp(camPhi,0.04,Math.PI/2-0.04);
-    const targetX = orbit ? orbit.target.x : (G.bW-1)/2*SP;
-    const targetZ = orbit ? orbit.target.z : (G.bD-1)/2*SP;
+    const targetX = orbit ? orbit.target.x : getCenter().x;
+    const targetZ = orbit ? orbit.target.z : getCenter().z;
     camera.position.set(targetX+camR*Math.sin(camPhi)*Math.sin(camTheta), camR*Math.cos(camPhi), targetZ+camR*Math.sin(camPhi)*Math.cos(camTheta));
     camera.lookAt(targetX,0,targetZ);
     if(orbit){ orbit.update(); }
@@ -6091,8 +6103,8 @@ window.panCamera = function(dx, dz) {
 
 window.checkCameraOffset = function() {
     if (!orbit) return;
-    const cx = (G.bW-1)/2*SP;
-    const cz = (G.bD-1)/2*SP;
+    const cx = getCenter().x;
+    const cz = getCenter().z;
     const distSq = Math.pow(orbit.target.x - cx, 2) + Math.pow(orbit.target.z - cz, 2);
     const resetBtn = document.getElementById('quickResetCamBtn');
     if (resetBtn) {
@@ -6149,8 +6161,8 @@ function getRayIntersections(e, targets) {
                 if (dx === 0 && dz === 0) continue;
 
                 const offsetRay = getRay(e);
-                offsetRay.ray.origin.x -= dx * G.bW * SP;
-                offsetRay.ray.origin.z -= dz * G.bD * SP;
+                offsetRay.ray.origin.x -= gridWrapOffset(dx,dz).x;
+                offsetRay.ray.origin.z -= gridWrapOffset(dx,dz).z;
                 const mHits = offsetRay.intersectObjects(targets, true);
                 
                 if (mHits.length > 0 && mHits[0].distance < bestDist) {
@@ -6232,7 +6244,7 @@ let zgGridGroup = null;
 function showZeroGravityGrid(cx, cz) {
     hideZeroGravityGrid();
     zgGridGroup = new THREE.Group();
-    zgGridGroup.position.set(cx * SP, 0, cz * SP);
+    zgGridGroup.position.set(wX(cx,cz), 0, wZ(cz));
     const boxGeo = new THREE.BoxGeometry(PS, PS, PS);
     const boxMat = new THREE.LineBasicMaterial({color: 0x888888, transparent: true, opacity: 0.5});
     for (let i = 0; i < G.heightCap; i++) {
@@ -6327,7 +6339,7 @@ function buildBoard(){
         tileMat.emissiveIntensity = 0;
 
         const m=new THREE.Mesh(geo,tileMat);
-        m.position.set(cx*SP,-0.09,cz*SP);
+        m.position.set(wX(cx,cz),-0.09,wZ(cz));
         m.receiveShadow = true;
         m.userData={type:'tile',cx,cz};
         scene.add(m); G.tileObjects.push(m);
@@ -6556,7 +6568,7 @@ function updateColumnLabel(cx, cz, animateMode) {
     
     if (totalCost > 0 || isNewlyAdded) {
         const group = new THREE.Group();
-        group.position.set(cx * SP, 0, cz * SP);
+        group.position.set(wX(cx,cz), 0, wZ(cz));
         
         let lvl = topLevel(cx, cz);
         if (lvl === -1) lvl = G.heightCap;
@@ -6788,8 +6800,8 @@ function applyHoverVisuals(activeArray, potentials, solidLinks, faintLinks) {
     });
 
     function buildLink(p1, p2, isFaint) {
-        const v1 = new THREE.Vector3(p1.cx*SP, pieceY(p1.lvl !== undefined ? p1.lvl : p1.cy), p1.cz*SP);
-        const v2 = new THREE.Vector3(p2.cx*SP, pieceY(p2.lvl !== undefined ? p2.lvl : p2.cy), p2.cz*SP);
+        const v1 = new THREE.Vector3(wX(p1.cx,p1.cz), pieceY(p1.lvl !== undefined ? p1.lvl : p1.cy), wZ(p1.cz));
+        const v2 = new THREE.Vector3(wX(p2.cx,p2.cz), pieceY(p2.lvl !== undefined ? p2.lvl : p2.cy), wZ(p2.cz));
         const dist = v1.distanceTo(v2);
         const dir = v2.clone().sub(v1).normalize();
 
@@ -6817,7 +6829,7 @@ function applyHoverVisuals(activeArray, potentials, solidLinks, faintLinks) {
     faintLinks.forEach(l => buildLink(l.p1, l.p2, true));
 
     potentials.forEach(pos => {
-        const pX = pos.cx * SP, pY = pieceY(pos.cy), pZ = pos.cz * SP;
+        const pX = wX(pos.cx,pos.cz), pY = pieceY(pos.cy), pZ = wZ(pos.cz);
         const layerText = `L${pos.cy + 1}`; 
         
         const group = new THREE.Group();
@@ -6937,9 +6949,9 @@ function handleHover(e){
         if (G.sel && G.selHeight === null) {
             // Step 2 Zero Gravity: Select Height based on vertical mouse movement
             const ray = getRay(e);
-            const planeNormal = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(G.sel.cx*SP, 0, G.sel.cz*SP)).setY(0).normalize();
+            const planeNormal = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(wX(G.sel.cx,G.sel.cz), 0, wZ(G.sel.cz))).setY(0).normalize();
             if (planeNormal.lengthSq() < 0.001) planeNormal.set(0, 0, 1);
-            const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, new THREE.Vector3(G.sel.cx*SP, 0, G.sel.cz*SP));
+            const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, new THREE.Vector3(wX(G.sel.cx,G.sel.cz), 0, wZ(G.sel.cz)));
             const target = new THREE.Vector3();
             ray.ray.intersectPlane(plane, target);
             
@@ -7143,7 +7155,7 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
                     innerMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(innerGeo), new THREE.LineBasicMaterial({color: 0xffffff, transparent: true, opacity: hover ? 0.3 : 0.9})));
                     G.ghost.add(innerMesh);
 
-                    G.ghost.position.set(cx*SP, pieceY(forcedLvl), cz*SP);
+                    G.ghost.position.set(wX(cx,cz), pieceY(forcedLvl), wZ(cz));
                     G.ghost.userData = {type:'ghost', cx, cz, lvl: forcedLvl, hover};
                     scene.add(G.ghost);
                     return;
@@ -7153,7 +7165,7 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
         const geo = new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
         const mat = new THREE.MeshBasicMaterial({color: 0x33dd66, transparent: true, opacity: hover ? 0.5 : 0.8});
         G.ghost = new THREE.Mesh(geo, mat);
-        G.ghost.position.set(cx*SP, -0.09, cz*SP);
+        G.ghost.position.set(wX(cx,cz), -0.09, wZ(cz));
         G.ghost.userData = {type:'ghost', cx, cz, hover};
         scene.add(G.ghost);
         return;
@@ -7163,7 +7175,7 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
         // Ghost preview = a translucent version of the real chains-and-padlock
         // lock effect (instead of a small floating padlock icon).
         const group = new THREE.Group();
-        group.position.set(cx*SP, 0, cz*SP);
+        group.position.set(wX(cx,cz), 0, wZ(cz));
         buildChainsAndLocks(group, cx, cz, 1, true);
         G.ghost = group;
         G.ghost.userData = {type:'ghost', cx, cz, hover};
@@ -7196,7 +7208,7 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
         spark.position.set(0.14, R*0.92 + 0.27, 0);
         G.ghost.add(spark);
 
-        G.ghost.position.set(cx*SP, pieceY(lvl), cz*SP);
+        G.ghost.position.set(wX(cx,cz), pieceY(lvl), wZ(cz));
         G.ghost.userData = {type:'ghost', cx, cz, lvl, hover};
         scene.add(G.ghost);
         return;
@@ -7253,18 +7265,18 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             blockerShapes.forEach(s => { s.visible = false; G.ghost.add(s); });
             blockerShapes[0].visible = true;
 
-            G.ghost.position.set(cx*SP, pieceY(lvl), cz*SP);
+            G.ghost.position.set(wX(cx,cz), pieceY(lvl), wZ(cz));
         } else {
             G.ghost=new THREE.Mesh(geo,mat);
             if(G.mode==='removeCol') {
                 const cHeight = G.rules.gravityOff ? lvl * SP : lvl * PS;
-                G.ghost.position.set(cx*SP, cHeight/2 - PS/2, cz*SP);
+                G.ghost.position.set(wX(cx,cz), cHeight/2 - PS/2, wZ(cz));
                 const costStr = `${Math.max(2, lvl * 2)} 🪙`;
                 const sprite = createTextSprite(costStr, false);
                 sprite.position.set(0, cHeight/2 + 0.6, 0); 
                 G.ghost.add(sprite);
             } else {
-                G.ghost.position.set(cx*SP,pieceY(lvl),cz*SP);
+                G.ghost.position.set(wX(cx,cz),pieceY(lvl),wZ(cz));
                 G.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:hover?0.3:0.9})));
             }
         }
@@ -7479,7 +7491,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             tileMat.emissive.setHex(0x000000);
             tileMat.emissiveIntensity = 0;
             const m=new THREE.Mesh(geo,tileMat);
-            m.position.set(cx*SP, 15, cz*SP); 
+            m.position.set(wX(cx,cz), 15, wZ(cz)); 
             m.receiveShadow = true;
             m.userData={type:'tile',cx,cz};
             scene.add(m); G.tileObjects.push(m);
@@ -7684,7 +7696,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             const boxMat = new THREE.LineBasicMaterial({color: 0x888888, transparent: true, opacity: 0.5});
             for(let i=0; i<G.heightCap; i++) {
                 const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), boxMat);
-                edges.position.set(cx*SP, pieceY(i), cz*SP);
+                edges.position.set(wX(cx,cz), pieceY(i), wZ(cz));
                 edges.userData = { originalY: pieceY(i) };
                 scene.add(edges);
                 columnMeshes.push(edges);
@@ -7693,7 +7705,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
 
         if (columnMeshes.length > 0) {
             const portalNode = createElectricVoid();
-            portalNode.position.set(cx*SP, -0.15, cz*SP);
+            portalNode.position.set(wX(cx,cz), -0.15, wZ(cz));
             scene.add(portalNode);
             G.animations.push({ type: 'removeX', progress: 0, speed: 0.015 / columnMeshes.length, meshes: columnMeshes, portal: portalNode });
         }
@@ -7868,7 +7880,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             blockerShapes.forEach(s => { s.visible = false; group.add(s); });
             baseBlocker.visible = true; // visible immediately — the glitch only *reveals* it when Live Animations is on, so off must still show the base
 
-            group.position.set(cx*SP, pieceY(lvl), cz*SP);
+            group.position.set(wX(cx,cz), pieceY(lvl), wZ(cz));
             group.userData = {type:'piece', cx, cz, lvl, pid, hex: col, targetY: pieceY(lvl), velY: 0, isWinning: false, animatingRecent: false, isBlocker: true, shapes: blockerShapes, state: 'base', isGlitching: true, animStart: Date.now(), nextSwap: 0};
             scene.add(group); G.pieces.push(group);
             G.board.set(`${cx},${cz},${lvl}`,{pid,hex:col});
@@ -7878,7 +7890,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         const mat=new THREE.MeshStandardMaterial({color:col, roughness:0.5, metalness:0.3});
         mat.emissive.setHex(col); mat.emissiveIntensity = 0.2;
         const m=new THREE.Mesh(geo,mat);
-        m.position.set(cx*SP, startY, cz*SP);
+        m.position.set(wX(cx,cz), startY, wZ(cz));
         m.userData={type:'piece', cx, cz, lvl, pid, hex: col, targetY: pieceY(lvl), velY: 0, isWinning: false, animatingRecent: false, isBlocker: false};
         m.castShadow = true; m.receiveShadow = true;
         scene.add(m); G.pieces.push(m);
@@ -7979,7 +7991,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         sprite.visible = (bombState.turnsLeft != null);
         group.add(sprite);
 
-        group.position.set(cx * SP, startY, cz * SP);
+        group.position.set(wX(cx,cz), startY, wZ(cz));
         group.userData = {
             type: 'piece', cx, cz, lvl,
             pid: 'timebomb', hex: 0x16181d,
@@ -8026,7 +8038,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
     window.updateBombLabels = updateBombLabels;
 
     function _spawnExplosionFX(cx, cz, lvl) {
-        const wx = cx * SP, wy = pieceY(lvl), wz = cz * SP;
+        const wx = wX(cx,cz), wy = pieceY(lvl), wz = wZ(cz);
 
         // Flash point light
         const flashLight = new THREE.PointLight(0xff4400, 8, 10);
@@ -8210,7 +8222,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         _bakeWildRainbow(geo);
         const mat = new THREE.MeshStandardMaterial({color:0xffffff, emissive:0xffffff, emissiveIntensity:0.6, roughness:0.4, metalness:0.2, transparent: true, opacity: 0});
         const m = new THREE.Mesh(geo,mat);
-        m.position.set(cx*SP, pieceY(lvl), cz*SP);
+        m.position.set(wX(cx,cz), pieceY(lvl), wZ(cz));
         m.scale.setScalar(0.01);
         m.userData={type:'piece', cx, cz, lvl, pid:'wild', hex: 0xffffff, targetY: pieceY(lvl), velY: 0, isWinning: false, animatingRecent: false, isBlocker: false, isPhasingIn: true, animStart: Date.now()};
         m.castShadow = true; m.receiveShadow = true;
@@ -8492,8 +8504,8 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
     };
 
     function drawLink(cx1, cz1, ly1, cx2, cz2, ly2, hex1, hex2) {
-        const p1 = new THREE.Vector3(cx1 * SP, pieceY(ly1), cz1 * SP);
-        const p2 = new THREE.Vector3(cx2 * SP, pieceY(ly2), cz2 * SP);
+        const p1 = new THREE.Vector3(wX(cx1,cz1), pieceY(ly1), wZ(cz1));
+        const p2 = new THREE.Vector3(wX(cx2,cz2), pieceY(ly2), wZ(cz2));
         const distance = p1.distanceTo(p2);
         const dir = p2.clone().sub(p1).normalize();
         const group = new THREE.Group();
@@ -8611,7 +8623,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                     }
                     if (isConnected) {
                         const group = new THREE.Group();
-                        group.position.set(cx*SP, -0.07, cz*SP); // Raised slightly to avoid floor clipping
+                        group.position.set(wX(cx,cz), -0.07, wZ(cz)); // Raised slightly to avoid floor clipping
                         
                         const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), lineMat);
                         const fill = new THREE.Mesh(boxGeo, fillMat);
@@ -8898,7 +8910,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             const geo=new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
             const tileMat=new THREE.MeshStandardMaterial({color:0x33dd66, roughness:0.5});
             const m=new THREE.Mesh(geo,tileMat);
-            m.position.set(h.cx*SP,-0.09,h.cz*SP);
+            m.position.set(wX(h.cx,h.cz),-0.09,wZ(h.cz));
             m.receiveShadow = true; m.userData={type:'tile',cx:h.cx,cz:h.cz};
             scene.add(m); G.tileObjects.push(m);
         } else if(h.type === 'removeCol') {
@@ -9067,7 +9079,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             const tileMat = new THREE.MeshStandardMaterial({color: colHex, roughness: 0.5, metalness: 0.2});
             tileMat.emissive.setHex(0x000000); tileMat.emissiveIntensity = 0;
             const m = new THREE.Mesh(geo, tileMat);
-            m.position.set(cx*SP, -0.09, cz*SP);
+            m.position.set(wX(cx,cz), -0.09, wZ(cz));
             m.receiveShadow = true; m.userData = {type: 'tile', cx, cz};
             scene.add(m); G.tileObjects.push(m);
             m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color: 0x7090b0})));
@@ -9129,7 +9141,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                         const tileMat = new THREE.MeshStandardMaterial({color: colHex, roughness: 0.5, metalness: 0.2});
                         tileMat.emissive.setHex(0x000000); tileMat.emissiveIntensity = 0;
                         const tm = new THREE.Mesh(geo, tileMat);
-                        tm.position.set(ex.cx*SP, -0.09, ex.cz*SP);
+                        tm.position.set(wX(ex.cx,ex.cz), -0.09, wZ(ex.cz));
                         tm.receiveShadow = true; tm.userData = {type:'tile', cx:ex.cx, cz:ex.cz};
                         scene.add(tm); G.tileObjects.push(tm);
                         tm.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color: 0x7090b0})));
@@ -9202,7 +9214,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
     window.toggleMenu=function(){ if (window._tutLock && _tutLock('menu')) return; document.getElementById('menuOverlay').classList.toggle('active'); };
     window.recenterCamera=function(){
         if(orbit) {
-            orbit.target.set((G.bW-1)/2*SP, 0, (G.bD-1)/2*SP);
+            orbit.target.set(getCenter().x, 0, getCenter().z);
         }
         applyCamera();
         checkCameraOffset();
@@ -9213,7 +9225,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         document.getElementById('rotSlider').value=0; document.getElementById('htSlider').value=45;
         document.getElementById('rotVal').textContent='0°'; document.getElementById('htVal').textContent='45%';
         if(orbit) {
-            orbit.target.set((G.bW-1)/2*SP, 0, (G.bD-1)/2*SP);
+            orbit.target.set(getCenter().x, 0, getCenter().z);
         }
         applyCamera();
         checkCameraOffset();

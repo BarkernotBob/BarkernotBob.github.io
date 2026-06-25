@@ -5,8 +5,8 @@ are already filled in. Plain-language version of `SETUP.md`.
 
 **Your values (copy these exactly):**
 - Data folder name: **`grocery-data`**
-- Full data folder address (you'll type this in the app): **`isaiahmail97-oss/grocery-data`**
-- App web address: **`https://isaiahmail97-oss.github.io/static/grocery/`**
+- Full data folder address (you'll type this in the app): **`BarkernotBob/grocery-data`**
+- App web address: **`https://barkernotbob.github.io/static/grocery/`**
 
 > 💡 Steps 1, 2, and 3 work right now. Step 4 (opening the app) only works after
 > the app is **published** — tell Claude **"publish it"** and it'll handle that.
@@ -22,7 +22,7 @@ are already filled in. Plain-language version of `SETUP.md`.
 4. ☐ Check the box **Add a README file.**
 5. ☐ Click the green **Create repository** button.
 
-✅ *Result:* you now have a private folder at `isaiahmail97-oss/grocery-data`.
+✅ *Result:* you now have a private folder at `BarkernotBob/grocery-data`.
 
 ---
 
@@ -66,11 +66,11 @@ This is the fiddly one. Go slowly — it's just clicking.
 
 *(Tell Claude "publish it" first, then come back here.)*
 
-1. ☐ On your phone, open **https://isaiahmail97-oss.github.io/static/grocery/**
+1. ☐ On your phone, open **https://barkernotbob.github.io/static/grocery/**
 2. ☐ Tap your browser's **Share / menu** → **Add to Home Screen** (makes it feel like a real app).
 3. ☐ On the welcome screen:
    - **Your name:** choose **Isaiah**
-   - **Private data repository:** type  `isaiahmail97-oss/grocery-data`
+   - **Private data repository:** type  `BarkernotBob/grocery-data`
    - **Access key:** paste your token from Step 3
 4. ☐ Tap **Connect.** (It sets up your data files automatically the first time.)
 
@@ -83,7 +83,7 @@ This is the fiddly one. Go slowly — it's just clicking.
 1. ☐ She makes her **own** access key by doing **Step 3** on her phone/computer
    (safer than sharing yours — but sharing yours also works in a pinch).
 2. ☐ She opens the same app address, chooses **Wife** as the name, types the same
-   `isaiahmail97-oss/grocery-data`, pastes her key, taps **Connect.**
+   `BarkernotBob/grocery-data`, pastes her key, taps **Connect.**
 
 ---
 
@@ -107,6 +107,6 @@ This is the fiddly one. Go slowly — it's just clicking.
 
 ### Quick troubleshooting
 - **App says 401 / 403** → key is wrong or expired. Settings → re-paste, or remake (Step 3).
-- **"Could not open that repository"** → check the spelling `isaiahmail97-oss/grocery-data`.
+- **"Could not open that repository"** → check the spelling `BarkernotBob/grocery-data`.
 - **Wife sees nothing** → she must Accept the invite (Step 2) and use the exact folder name.
 - **Stuck anywhere** → open a Claude session, describe what's on your screen, and ask.

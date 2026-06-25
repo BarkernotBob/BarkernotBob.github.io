@@ -66,14 +66,14 @@ This is the fiddliest step. Go slowly.
 
 ## Step 4 — Open the app and connect it
 
-1. On your phone, open: **https://isaiahmail97-oss.github.io/static/grocery/**
+1. On your phone, open: **https://barkernotbob.github.io/static/grocery/**
    (This page goes live after these changes are published to your website — see
    "Publishing" at the bottom.)
 2. Tap the browser menu → **Add to Home Screen** so it feels like a real app.
 3. In the setup screen:
    - **Your name:** choose Isaiah.
    - **Private data repository:** type `your-username/grocery-data`
-     (for example `isaiahmail97-oss/grocery-data`).
+     (for example `BarkernotBob/grocery-data`).
    - **Access key:** paste the token from Step 3.
    - Tap **Connect.**
 4. The first time, it automatically creates the data files inside your folder. Done!
@@ -152,7 +152,7 @@ Claude subscription — no paid service. Two ways it happens:
 
 Your website is built from the **`v5`** branch. The grocery app files were added on a
 working branch called `claude/grocery-tracking-tool-0tep34`. To make the app live at
-`https://isaiahmail97-oss.github.io/static/grocery/`, those changes need to be merged
+`https://barkernotbob.github.io/static/grocery/`, those changes need to be merged
 into `v5` (your live branch). I can walk you through that, or do it when you say so.
 Until then, nothing is public and no data is exposed.
 

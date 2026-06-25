@@ -7,7 +7,7 @@
 > never invent data — when unsure, flag for review.
 
 ## 0. Inputs you need each run
-- **Data repo:** the private repository named in setup (e.g. `isaiahmail97-oss/grocery-data`).
+- **Data repo:** the private repository named in setup (e.g. `BarkernotBob/grocery-data`).
   Everything below lives there. Read/write it with the GitHub tools.
 - **Reference files (in THIS public repo, `grocery-tool/`):**
   - `reference/perishables.md` — shelf-life table for use-by dates
@@ -111,7 +111,7 @@ Do this every run, even if no new receipts:
 - **To:** all notify-enabled member emails. **From:** the connected Gmail.
 - **Freshness reminder subject:** `🥦 Grocery check: <item> — use by today`
   Body: friendly, lists the item(s), purchase date, store, and a link to the app
-  (`https://isaiahmail97-oss.github.io/static/grocery/#review`). Tell them to
+  (`https://barkernotbob.github.io/static/grocery/#review`). Tell them to
   check freshness and, in the app, mark it kept / consumed / thrown away.
 - **Review subject:** `📋 Grocery review needed: <n> item(s)` Body: list each
   flag's plain-language `message` and a link to the app's Needs Attention tab.

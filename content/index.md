@@ -7,7 +7,10 @@ publish: true
 
 <div class="splash-top"><span class="splash-mark"><span class="splash-dot"></span>Isaiah Barker</span></div>
 
-  <p class="splash-lede"></p>
+<div class="splash-hero">
+  <div class="splash-kicker">welcome in</div>
+  <h1 class="splash-title">Play, build,<br><span class="splash-accent">and think out loud.</span></h1>
+  <p class="splash-lede">My corner of the internet — 3D games I've built, tools I actually use, notes I'm working through, and videos worth your time.</p>
 </div>
 
 <div class="splash-grid">

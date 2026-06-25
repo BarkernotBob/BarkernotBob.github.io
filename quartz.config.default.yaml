@@ -7,7 +7,7 @@ configuration:
   analytics:
     provider: plausible
   locale: en-US
-  baseUrl: isaiahmail97-oss.github.io
+  baseUrl: barkernotbob.github.io
   ignorePatterns:
     - private
     - templates

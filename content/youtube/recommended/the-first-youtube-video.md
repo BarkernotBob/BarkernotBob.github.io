@@ -13,7 +13,7 @@ This is an example entry so you can see how a curated video looks. The video pla
 
 ### How to add your own (delete this section when you're done)
 
-1. In the **`content/youtube`** folder, copy this file and rename it (e.g. `my-favorite-talk.md`).
+1. Pick the right section folder inside **`content/youtube`** — `subscriptions`, `recommended`, `chapel-messages`, or `my-content` — then copy this file into it and rename it (e.g. `my-favorite-talk.md`).
 2. Change the `title:` at the top.
 3. On YouTube, open the video → **Share** → copy the link. Grab the part after `watch?v=` (or after `youtu.be/`) — that's the **video ID**.
 4. Paste the ID into the embed line below, replacing `VIDEO_ID`:

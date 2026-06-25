@@ -1195,9 +1195,11 @@ const activeColors = [new THREE.Color(0x0080ff), new THREE.Color(0x00d26a), new 
 const BLOCKER_HEX = 0x222233;
 const PAID_ORANGE = 0xff8822;
 
-const SP = 1.64;
-const PS = 0.82; 
-const CHAIN_RADIUS = 0.04; 
+const CHAIN_RADIUS = 0.04;
+
+// NOTE: SP (cell pitch), PS (piece size), and the line-direction vectors used to live here,
+// but they DIFFER between the square (Blockchain) and hex (Hexchain) games — so they moved to
+// the per-variant seam files (variant.square.js / variant.hex.js). Import them from './variant.js'.
 
 const ironMat = new THREE.MeshStandardMaterial({color: 0x2a2e33, metalness: 0.8, roughness: 0.6});
 const steelMat = new THREE.MeshStandardMaterial({color: 0x5a6370, metalness: 0.9, roughness: 0.4});
@@ -1207,11 +1209,34 @@ const ironMatGhost = new THREE.MeshStandardMaterial({color: 0x2a2e33, metalness:
 const steelMatGhost = new THREE.MeshStandardMaterial({color: 0x5a6370, metalness: 0.9, roughness: 0.4, transparent: true, opacity: 0.45});
 const blackMetalMatGhost = new THREE.MeshStandardMaterial({color: 0x11151a, metalness: 0.6, roughness: 0.8, transparent: true, opacity: 0.45});
 
-const DIRS = [
-    [1,0,0], [0,1,0], [0,0,1], 
-    [1,1,0], [1,-1,0], [1,0,1], [1,0,-1], [0,1,1], [0,1,-1], 
+// variant.square.js — the SQUARE-grid (Blockchain) game seam.
+//
+// Everything that differs between the two games lives in a variant.<v>.js file. The build inlines
+// exactly one of them (chosen by `python3 build.py --variant=square|hex`) right after constants.js,
+// so the shared main.js can call these symbols by bare name. variant.js is a dev-only shim that
+// re-exports the active variant for `app/index.html`'s ES-module loading.
+//
+// SquARE seam contents (grows as main.js collapses to a single shared body):
+//   - board geometry constants (SP, PS)
+//   - line-direction vectors + the (no-op for square) active-dir API
+//
+// Hex's counterpart (variant.hex.js) provides the same symbol names with hex bodies.
+
+// --- Board geometry constants ---
+const SP = 1.64;   // cell pitch — world units between neighbouring column centres
+const PS = 0.82;   // piece size — edge length of a placed cube
+
+// --- Line-direction vectors: the 13 axes a 4-in-a-row can run along (incl. 3D diagonals) ---
+const SQUARE_DIRS = [
+    [1,0,0], [0,1,0], [0,0,1],
+    [1,1,0], [1,-1,0], [1,0,1], [1,0,-1], [0,1,1], [0,1,-1],
     [1,1,1], [1,1,-1], [1,-1,1], [-1,1,1]
 ];
+// Square has no corner-connection toggle, so the active set is fixed. getActiveDirs/refreshActiveDirs
+// exist for API parity with hex (where the corner rule re-derives DIRS); here they are constant.
+let DIRS = SQUARE_DIRS;
+function getActiveDirs() { return SQUARE_DIRS; }
+function refreshActiveDirs() { DIRS = SQUARE_DIRS; }
 
 // serialize.js — canonical game-state serialization for Firebase sync + the round-trip
 // self-test. No DOM and no game-engine coupling: serializeState / deserializeCore operate

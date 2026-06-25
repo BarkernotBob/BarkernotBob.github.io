@@ -13,8 +13,8 @@ echo ""
 #    To add a future game, copy one line below: "<where the game file lives>|<Name>.html".
 GAMES=(
   "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html|Blockchain.html"
-  "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Claude.Hexchain/Hexchain.standalone.html|Hexchain.html"
-  "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
+  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Hexchain.standalone.html|Hexchain.html"
+  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
 )
 for entry in "${GAMES[@]}"; do
   src="${entry%%|*}"; dst="quartz/static/${entry##*|}"; name="${dst:t:r}"

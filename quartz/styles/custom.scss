@@ -206,3 +206,57 @@ body:has(.home-splash) {
 // (.page-listing), so this leaves individual video/note pages untouched —
 // they keep their own dates.
 body:has(.page-listing) .content-meta { display: none !important; }
+
+// ============================================================
+//  Persistent left sidebar on INNER pages.
+//  The explorer is patched into a "drawer at all screen widths" so the
+//  HOME page can show its click-to-open file tree. That same patch strips
+//  the always-visible sidebar from every OTHER page. Here we undo the
+//  drawer behaviour on non-home pages at tablet/desktop widths, restoring
+//  the default Quartz sidebar — while leaving the home drawer and the real
+//  mobile menu (< 800px) untouched.
+// ============================================================
+@media all and (min-width: 801px) {
+  body:not(:has(.home-splash)) {
+    // Show the desktop file tree; hide the mobile hamburger toggle.
+    .explorer button.mobile-explorer { display: none !important; }
+    .explorer button.desktop-explorer { display: flex !important; }
+
+    // Undo the collapsed-drawer sizing/position so the tree sits in the
+    // sidebar and is always visible.
+    .explorer {
+      order: initial !important;
+      overflow: visible !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    .explorer.collapsed { flex: initial !important; }
+    // The drawer puts the tree in an absolutely-positioned, full-page
+    // overlay. Put it back in normal flow inside the sidebar column.
+    .explorer .explorer-content,
+    .explorer.collapsed > .explorer-content {
+      position: static !important;
+      transform: none !important;
+      visibility: visible !important;
+      display: block !important;
+      // The tree is a scroll-container that collapses to a sliver inside the
+      // flex column; `overflow: visible` lets it expand to its full height.
+      overflow: visible !important;
+      width: auto !important;
+      height: auto !important;
+      max-height: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+    .hide-until-loaded ~ .explorer-content { display: block !important; }
+
+    // Let the tree grow to its natural height (the drawer animation pins it
+    // to a tiny max-height, which squashes the list to a sliver).
+    .explorer-content,
+    .explorer-ul {
+      max-height: none !important;
+      height: auto !important;
+    }
+  }
+}

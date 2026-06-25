@@ -1264,6 +1264,45 @@ function unitGeo()         { return new THREE.BoxGeometry(PS, PS, PS); }        
 function columnGeo(height) { return new THREE.BoxGeometry(PS, height, PS); }             // column highlight column
 function columnSelGeo(cHeight) { return new THREE.BoxGeometry(PS + 0.1, cHeight + 0.1, PS + 0.1); } // full-column selector ghost
 
+// --- Core-host treatment ---
+// Square reveals an inserted core by ALPHA-MASKING the (still-solid) outer piece — a square window
+// punched in the material's alpha. (Hex instead swaps the outer geometry to a holed shell.)
+let sharedAlphaMaskTex = null;
+function getAlphaMask() {
+    if (sharedAlphaMaskTex) return sharedAlphaMaskTex;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.roundRect(136, 136, 240, 240, 30);
+    ctx.fill();
+    sharedAlphaMaskTex = new THREE.CanvasTexture(canvas);
+    if (renderer) sharedAlphaMaskTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return sharedAlphaMaskTex;
+}
+// Turn the core-host treatment ON for a piece that has a core.
+function coreHostApply(mesh) {
+    mesh.material.alphaMap = getAlphaMask();
+    mesh.material.transparent = true;
+    mesh.material.alphaTest = 0.5;
+    mesh.material.side = THREE.DoubleSide;
+    mesh.material.needsUpdate = true;
+}
+// Conditional form used when rebuilding pieces from a snapshot.
+function coreHostState(mesh, hasCore) {
+    mesh.material.alphaMap = hasCore ? getAlphaMask() : null;
+    mesh.material.transparent = hasCore ? true : false;
+    mesh.material.alphaTest = hasCore ? 0.5 : 0;
+    mesh.material.side = hasCore ? THREE.DoubleSide : THREE.FrontSide;
+    mesh.material.needsUpdate = true;
+}
+// Turn it OFF: square just keeps the solid geometry (the shared material reset in
+// _removeCoreVisually clears the mask), so nothing extra to do here.
+function coreHostRevert(mesh) { /* no geometry swap for square */ }
+
 // serialize.js — canonical game-state serialization for Firebase sync + the round-trip
 // self-test. No DOM and no game-engine coupling: serializeState / deserializeCore operate
 // purely on the passed-in state object and plain data. disposeMesh is the one THREE touch
@@ -1635,22 +1674,7 @@ let visualsOpen = false;
 let unreadChatCount = 0;
 
 
-let sharedAlphaMaskTex = null;
-function getAlphaMask() {
-    if (sharedAlphaMaskTex) return sharedAlphaMaskTex;
-    const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.roundRect(136, 136, 240, 240, 30);
-    ctx.fill();
-    sharedAlphaMaskTex = new THREE.CanvasTexture(canvas);
-    if(renderer) sharedAlphaMaskTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    return sharedAlphaMaskTex;
-}
+// getAlphaMask() + sharedAlphaMaskTex moved to variant.square.js (core-host treatment is per-game).
 
 // Remove a core from an existing piece and revert the host piece's material. Shared by
 // undo and by the authoritative apply (when the snapshot shows a piece whose core is gone).
@@ -1659,6 +1683,7 @@ window._removeCoreVisually = function(cx, cz, lvl) {
     if (!m) return;
     const coreMesh = m.children.find(c => c.userData && c.userData.isCore);
     if (coreMesh) { m.remove(coreMesh); disposeMesh(coreMesh); }
+    coreHostRevert(m);
     if (m.material) {
         m.material.alphaMap = null;
         m.material.transparent = false;
@@ -1678,11 +1703,7 @@ window._insertCoreVisually = function(cx, cz, lvl, coreHex, animate = false) {
     });
     if(hasCoreMesh) return;
 
-    mesh.material.alphaMap = getAlphaMask();
-    mesh.material.transparent = true;
-    mesh.material.alphaTest = 0.5;
-    mesh.material.side = THREE.DoubleSide;
-    mesh.material.needsUpdate = true;
+    coreHostApply(mesh);
 
     const innerGeo = coreInnerGeo();
     const innerMat = new THREE.MeshStandardMaterial({color: coreHex, roughness: 0.5, metalness: 0.3, emissive: coreHex, emissiveIntensity: 0.2});
@@ -6661,11 +6682,7 @@ function clearHoverEffects() {
             const cState = G.board.get(`${p.userData.cx},${p.userData.cz},${p.userData.lvl}`);
             const hasCore = cState && cState.corePid != null;
 
-            p.material.alphaMap = hasCore ? getAlphaMask() : null;
-            p.material.transparent = hasCore ? true : false;
-            p.material.alphaTest = hasCore ? 0.5 : 0;
-            p.material.side = hasCore ? THREE.DoubleSide : THREE.FrontSide;
-            p.material.needsUpdate = true;
+            coreHostState(p, hasCore);
 
             p.material.opacity = 1.0;
             p.material.emissiveIntensity = 0.2;
@@ -6925,11 +6942,7 @@ function handleHover(e){
         if (G.sel && G.selHeight !== null) {
             const targetPiece = G.pieces.find(px => px.userData.type === 'piece' && px.userData.cx === G.sel.cx && px.userData.cz === G.sel.cz && px.userData.lvl === G.selHeight);
             if(targetPiece) {
-                targetPiece.material.alphaMap = getAlphaMask();
-                targetPiece.material.transparent = true;
-                targetPiece.material.alphaTest = 0.5;
-                targetPiece.material.side = THREE.DoubleSide;
-                targetPiece.material.needsUpdate = true;
+                coreHostApply(targetPiece);
             }
             return;
         }
@@ -6947,11 +6960,7 @@ function handleHover(e){
             
             const targetPiece = G.pieces.find(px => px.userData.type === 'piece' && px.userData.cx === pData.cx && px.userData.cz === pData.cz && px.userData.lvl === pData.lvl);
             if(targetPiece) {
-                targetPiece.material.alphaMap = getAlphaMask();
-                targetPiece.material.transparent = true;
-                targetPiece.material.alphaTest = 0.5;
-                targetPiece.material.side = THREE.DoubleSide;
-                targetPiece.material.needsUpdate = true;
+                coreHostApply(targetPiece);
             }
         } else {
             if(G.ghost) { scene.remove(G.ghost); G.ghost = null; }
@@ -7036,11 +7045,7 @@ function handleClick(e){
                 
                 const targetPiece = G.pieces.find(px => px.userData.type === 'piece' && px.userData.cx === pData.cx && px.userData.cz === pData.cz && px.userData.lvl === pData.lvl);
                 if(targetPiece) {
-                    targetPiece.material.alphaMap = getAlphaMask();
-                    targetPiece.material.transparent = true;
-                    targetPiece.material.alphaTest = 0.5;
-                    targetPiece.material.side = THREE.DoubleSide;
-                    targetPiece.material.needsUpdate = true;
+                    coreHostApply(targetPiece);
                 }
                 showActionButton();
             } else {

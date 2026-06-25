@@ -38,6 +38,15 @@ jobs:
           sed -i 's/tokenize:"forward"/tokenize:"full"/g' \
             .quartz/plugins/search/dist/index.js \
             .quartz/plugins/search/dist/components/index.js
+      - name: Make the file-tree explorer a slide-over drawer (matches local preview)
+        # The home page uses a click-to-open drawer, which needs the explorer in
+        # its "collapsed by default" mode at all widths. custom.scss then restores
+        # the always-visible sidebar on every non-home page. Keep this in sync with
+        # the same patch in "Preview Website.command" / "Publish Changes.command".
+        run: |
+          sed -i 's/max-width: *800px/max-width: 99999px/g' \
+            .quartz/plugins/explorer/dist/index.js \
+            .quartz/plugins/explorer/dist/components/index.js
       - name: Build
         run: npx quartz build
       - uses: actions/upload-pages-artifact@v3

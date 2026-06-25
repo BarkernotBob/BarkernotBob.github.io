@@ -1250,6 +1250,65 @@ function gridWrapOffset(dx, dz) { return { x: dx * G.bW * SP, z: dz * G.bD * SP 
 // Camera-centring point: the centre of the full square board.
 function getCenter() { return { x: (G.bW - 1) / 2 * SP, z: (G.bD - 1) / 2 * SP }; }
 
+// Neighbour adjacency (used for footprint connectivity when adding a column). Square = the 8-cell
+// Chebyshev neighbourhood (incl. diagonals). Hex = the 6 axial neighbours.
+function isAdjacent(ecx, ecz, cx, cz) { return Math.abs(ecx - cx) <= 1 && Math.abs(ecz - cz) <= 1; }
+
+// --- Board frame (outline + The-Grid mirror copies) ---
+// Square draws an axis-aligned rectangular border; hex draws a sheared parallelogram. Called by the
+// shared buildBoard() after it creates G.mainDecorations; the rest of buildBoard (floor + tiles) is shared.
+function buildBoardFrame() {
+    const cx = (G.bW-1)/2 * SP;
+    const cz = (G.bD-1)/2 * SP;
+    const pWidth = G.bW * SP;
+    const pDepth = G.bD * SP;
+
+    const mirrorMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.65 });
+    const thickness = 0.12;
+
+    const createBorderGroup = (mWidth, mDepth) => {
+        const mGroup = new THREE.Group();
+        const tGeo = new THREE.BoxGeometry(mWidth + thickness, 0.02, thickness);
+        const lGeo = new THREE.BoxGeometry(thickness, 0.02, mDepth + thickness);
+        const top = new THREE.Mesh(tGeo, mirrorMat); top.position.set(0, 0, -mDepth/2);
+        const bot = new THREE.Mesh(tGeo, mirrorMat); bot.position.set(0, 0, mDepth/2);
+        const left = new THREE.Mesh(lGeo, mirrorMat); left.position.set(-mWidth/2, 0, 0);
+        const right = new THREE.Mesh(lGeo, mirrorMat); right.position.set(mWidth/2, 0, 0);
+        mGroup.add(top, bot, left, right);
+        return mGroup;
+    };
+
+    const mainBorder = createBorderGroup(pWidth, pDepth);
+    mainBorder.position.set(cx, -0.14, cz);
+    G.mainDecorations.add(mainBorder);
+
+    if (G.rules && G.rules.theGridEnabled) {
+        if (G.mirrorBoards) scene.remove(G.mirrorBoards);
+        G.mirrorBoards = new THREE.Group();
+        scene.add(G.mirrorBoards);
+
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                if (dx === 0 && dz === 0) continue;
+
+                const minX = dx === 1 ? 0 : (dx === -1 ? Math.max(0, G.bW - 3) : 0);
+                const maxX = dx === 1 ? Math.min(G.bW - 1, 2) : (dx === -1 ? G.bW - 1 : G.bW - 1);
+                const minZ = dz === 1 ? 0 : (dz === -1 ? Math.max(0, G.bD - 3) : 0);
+                const maxZ = dz === 1 ? Math.min(G.bD - 1, 2) : (dz === -1 ? G.bD - 1 : G.bD - 1);
+
+                const mWidth = (maxX - minX + 1) * SP;
+                const mDepth = (maxZ - minZ + 1) * SP;
+                const locCx = ((minX + maxX) / 2) * SP;
+                const locCz = ((minZ + maxZ) / 2) * SP;
+
+                const mGroup = createBorderGroup(mWidth, mDepth);
+                mGroup.position.set(locCx + dx * pWidth, -0.14, locCz + dz * pDepth);
+                G.mirrorBoards.add(mGroup);
+            }
+        }
+    }
+}
+
 // --- Piece / mesh geometry ---
 // Square builds a FRESH geometry per mesh (so each piece owns its geometry and can be disposed
 // individually). Each function reproduces exactly what the square game inlined; hex's counterparts
@@ -2320,7 +2379,7 @@ function playAITurn(botPlayer) {
                 let isConnected = false;
                 for (const key of G.footprint) {
                     const [ecx, ecz] = key.split(',').map(Number);
-                    if (Math.abs(ecx - cx) <= 1 && Math.abs(ecz - cz) <= 1) { isConnected = true; break; }
+                    if (isAdjacent(ecx, ecz, cx, cz)) { isConnected = true; break; }
                 }
                 if (isConnected) validMoves.push({cx, cz, type: 'freeAddCol', cost: 0});
             }
@@ -6240,12 +6299,13 @@ function getColumn(e){
         if (G.floorPlane) {
             const hits = getRayIntersections(e, [G.floorPlane]);
             if (hits.length > 0) {
-                const cx = Math.round(hits[0].point.x / SP);
-                const cz = Math.round(hits[0].point.z / SP);
+                const _ax = worldToAxial(hits[0].point.x, hits[0].point.z);
+                const cx = _ax.q;
+                const cz = _ax.r;
                 let isConnected = false;
                 for (const key of G.footprint) {
                     const [ecx, ecz] = key.split(',').map(Number);
-                    if (Math.abs(ecx - cx) <= 1 && Math.abs(ecz - cz) <= 1) {
+                    if (isAdjacent(ecx, ecz, cx, cz)) {
                         isConnected = true;
                         break;
                     }
@@ -6304,55 +6364,7 @@ function buildBoard(){
     G.mainDecorations = new THREE.Group();
     scene.add(G.mainDecorations);
 
-    const cx = (G.bW-1)/2 * SP;
-    const cz = (G.bD-1)/2 * SP;
-    const pWidth = G.bW * SP;
-    const pDepth = G.bD * SP;
-
-    const mirrorMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.65 });
-    const thickness = 0.12;
-
-    const createBorderGroup = (mWidth, mDepth) => {
-        const mGroup = new THREE.Group();
-        const tGeo = new THREE.BoxGeometry(mWidth + thickness, 0.02, thickness);
-        const lGeo = new THREE.BoxGeometry(thickness, 0.02, mDepth + thickness);
-        const top = new THREE.Mesh(tGeo, mirrorMat); top.position.set(0, 0, -mDepth/2);
-        const bot = new THREE.Mesh(tGeo, mirrorMat); bot.position.set(0, 0, mDepth/2);
-        const left = new THREE.Mesh(lGeo, mirrorMat); left.position.set(-mWidth/2, 0, 0);
-        const right = new THREE.Mesh(lGeo, mirrorMat); right.position.set(mWidth/2, 0, 0);
-        mGroup.add(top, bot, left, right);
-        return mGroup;
-    };
-
-    const mainBorder = createBorderGroup(pWidth, pDepth);
-    mainBorder.position.set(cx, -0.14, cz);
-    G.mainDecorations.add(mainBorder);
-
-    if (G.rules && G.rules.theGridEnabled) {
-        if (G.mirrorBoards) scene.remove(G.mirrorBoards);
-        G.mirrorBoards = new THREE.Group();
-        scene.add(G.mirrorBoards);
-        
-        for (let dx = -1; dx <= 1; dx++) {
-            for (let dz = -1; dz <= 1; dz++) {
-                if (dx === 0 && dz === 0) continue;
-                
-                const minX = dx === 1 ? 0 : (dx === -1 ? Math.max(0, G.bW - 3) : 0);
-                const maxX = dx === 1 ? Math.min(G.bW - 1, 2) : (dx === -1 ? G.bW - 1 : G.bW - 1);
-                const minZ = dz === 1 ? 0 : (dz === -1 ? Math.max(0, G.bD - 3) : 0);
-                const maxZ = dz === 1 ? Math.min(G.bD - 1, 2) : (dz === -1 ? G.bD - 1 : G.bD - 1);
-                
-                const mWidth = (maxX - minX + 1) * SP;
-                const mDepth = (maxZ - minZ + 1) * SP;
-                const locCx = ((minX + maxX) / 2) * SP;
-                const locCz = ((minZ + maxZ) / 2) * SP;
-                
-                const mGroup = createBorderGroup(mWidth, mDepth);
-                mGroup.position.set(locCx + dx * pWidth, -0.14, locCz + dz * pDepth);
-                G.mirrorBoards.add(mGroup);
-            }
-        }
-    }
+    buildBoardFrame();
 
     const planeGeo = new THREE.PlaneGeometry(100, 100);
     planeGeo.rotateX(-Math.PI / 2);
@@ -8638,7 +8650,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                     let isConnected = false;
                     for (const key of G.footprint) {
                         const [ecx, ecz] = key.split(',').map(Number);
-                        if (Math.abs(ecx - cx) <= 1 && Math.abs(ecz - cz) <= 1) { isConnected = true; break; }
+                        if (isAdjacent(ecx, ecz, cx, cz)) { isConnected = true; break; }
                     }
                     if (isConnected) {
                         const group = new THREE.Group();

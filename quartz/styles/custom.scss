@@ -17,7 +17,8 @@ body:has(.home-splash) {
   & .content-meta,
   & .page-footer,
   & footer,
-  & .splash-top { display: none !important; }
+  & .splash-top,
+  & .page-listing { display: none !important; }
 
   // Full-width content (the left sidebar becomes a top bar).
   & #quartz-body { display: block !important; }
@@ -39,10 +40,11 @@ body:has(.home-splash) {
     padding: 1rem 0 0.5rem !important;
     background: transparent !important;
   }
-  // Top-bar order: wordmark, then Explorer (left), then search/theme pushed right.
+  // Top-bar order: Explorer menu button FAR LEFT, then wordmark, then
+  // search/theme pushed to the right edge.
   & .left.sidebar > * { order: 5; }
-  & .left.sidebar .page-title { order: 0; margin: 0 !important; }
-  & .left.sidebar .explorer { order: 1; margin-right: auto !important; }
+  & .left.sidebar .explorer { order: 0; margin: 0 0.6rem 0 0 !important; }
+  & .left.sidebar .page-title { order: 1; margin: 0 auto 0 0 !important; }
   & .left.sidebar .spacer,
   & .left.sidebar .mobile-only { display: none !important; }
 

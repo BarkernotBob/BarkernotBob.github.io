@@ -1168,8 +1168,8 @@ window.GameAudio = (function () {
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 
 // constants.js — shared immutable constants and reusable THREE materials (player
@@ -1249,6 +1249,20 @@ function worldToAxial(x, z) { return { q: Math.round(x / SP), r: Math.round(z / 
 function gridWrapOffset(dx, dz) { return { x: dx * G.bW * SP, z: dz * G.bD * SP }; }
 // Camera-centring point: the centre of the full square board.
 function getCenter() { return { x: (G.bW - 1) / 2 * SP, z: (G.bD - 1) / 2 * SP }; }
+
+// --- Piece / mesh geometry ---
+// Square builds a FRESH geometry per mesh (so each piece owns its geometry and can be disposed
+// individually). Each function reproduces exactly what the square game inlined; hex's counterparts
+// return hex shapes (and share a cached solid/hollow geometry). The shared main.js calls these by name.
+function solidGeo()        { return new RoundedBoxGeometry(PS, PS, PS, 4, 0.1); }       // piece / blocker base / wire blocker
+function wildGeo()         { return new RoundedBoxGeometry(PS, PS, PS, 4, 0.1); }       // wild piece (gets a baked rainbow; own geometry)
+function sliceGeo()        { return new RoundedBoxGeometry(PS, PS * 0.22, PS, 4, 0.05); } // blocker slices
+function ringGeo()         { return new RoundedBoxGeometry(PS + 0.06, 0.18, PS + 0.06, 4, 0.08); } // win/highlight ring slab on top of a cell
+function ringGeoTall()     { return new THREE.BoxGeometry(PS + 0.06, 0.22, PS + 0.06); } // slightly taller highlight slab
+function coreInnerGeo()    { return new RoundedBoxGeometry(PS * 0.8, PS * 0.8, PS * 0.8, 4, 0.1); } // inner core cube
+function unitGeo()         { return new THREE.BoxGeometry(PS, PS, PS); }                 // plain FX / glitch cube
+function columnGeo(height) { return new THREE.BoxGeometry(PS, height, PS); }             // column highlight column
+function columnSelGeo(cHeight) { return new THREE.BoxGeometry(PS + 0.1, cHeight + 0.1, PS + 0.1); } // full-column selector ghost
 
 // serialize.js — canonical game-state serialization for Firebase sync + the round-trip
 // self-test. No DOM and no game-engine coupling: serializeState / deserializeCore operate
@@ -1670,7 +1684,7 @@ window._insertCoreVisually = function(cx, cz, lvl, coreHex, animate = false) {
     mesh.material.side = THREE.DoubleSide;
     mesh.material.needsUpdate = true;
 
-    const innerGeo = new RoundedBoxGeometry(PS*0.8, PS*0.8, PS*0.8, 4, 0.1);
+    const innerGeo = coreInnerGeo();
     const innerMat = new THREE.MeshStandardMaterial({color: coreHex, roughness: 0.5, metalness: 0.3, emissive: coreHex, emissiveIntensity: 0.2});
     const innerMesh = new THREE.Mesh(innerGeo, innerMat);
     innerMesh.userData.isCore = true;
@@ -4515,7 +4529,7 @@ function setupListener() {
                         }
 
                         if (G.rules.gravityOff) {
-                            const boxGeo = new THREE.BoxGeometry(PS, PS, PS);
+                            const boxGeo = unitGeo();
                             const boxMat = new THREE.LineBasicMaterial({color: 0x888888, transparent: true, opacity: 0.5});
                             for(let i=0; i<G.heightCap; i++) {
                                 const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), boxMat);
@@ -4560,7 +4574,7 @@ function setupListener() {
                         // an undone original column came back green like an added column).
                         const isAdded = G.addedColumns.has(key);
                         const colHex = isAdded ? 0x33dd66 : (G.paidColumns && G.paidColumns.has(key) ? PAID_ORANGE : 0x4a6080);
-                        const geo=new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+                        const geo=ringGeo();
                         const tileMat=new THREE.MeshStandardMaterial({color:colHex, roughness:0.5});
                         tileMat.emissive.setHex(0x000000);
                         tileMat.emissiveIntensity = 0;
@@ -6245,7 +6259,7 @@ function showZeroGravityGrid(cx, cz) {
     hideZeroGravityGrid();
     zgGridGroup = new THREE.Group();
     zgGridGroup.position.set(wX(cx,cz), 0, wZ(cz));
-    const boxGeo = new THREE.BoxGeometry(PS, PS, PS);
+    const boxGeo = unitGeo();
     const boxMat = new THREE.LineBasicMaterial({color: 0x888888, transparent: true, opacity: 0.5});
     for (let i = 0; i < G.heightCap; i++) {
         if (!G.board.has(`${cx},${cz},${i}`)) {
@@ -6329,7 +6343,7 @@ function buildBoard(){
 
     G.footprint.forEach(key=>{
         const [cx,cz]=key.split(',').map(Number);
-        const geo=new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+        const geo=ringGeo();
         const isAdded = G.addedColumns.has(key);
         const isPaid = G.paidColumns.has(key);
         const col = isAdded ? 0x33dd66 : (isPaid ? PAID_ORANGE : 0x4a6080);
@@ -6850,7 +6864,7 @@ function applyHoverVisuals(activeArray, potentials, solidLinks, faintLinks) {
         group.add(coinGroup);
 
         const height = (pY + PS/2) - FLOOR_Y;
-        const boxGeo = new THREE.BoxGeometry(PS, height, PS);
+        const boxGeo = columnGeo(height);
         const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), new THREE.LineBasicMaterial({color: primaryColor, transparent: true, opacity: 0.4}));
         edges.position.y = FLOOR_Y + (height / 2);
         group.add(edges);
@@ -7149,7 +7163,7 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
    if (G.mode === 'core') {
                     G.ghost = new THREE.Group();
                     
-                    const innerGeo = new RoundedBoxGeometry(PS*0.8, PS*0.8, PS*0.8, 4, 0.1);
+                    const innerGeo = coreInnerGeo();
                     const innerMat = new THREE.MeshStandardMaterial({color: p.hex, transparent: true, opacity: hover ? 0.4 : 0.8, emissive: p.hex, emissiveIntensity: hover ? 0.2 : 0.4, roughness: 0.5, metalness: 0.3});
                     const innerMesh = new THREE.Mesh(innerGeo, innerMat);
                     innerMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(innerGeo), new THREE.LineBasicMaterial({color: 0xffffff, transparent: true, opacity: hover ? 0.3 : 0.9})));
@@ -7162,7 +7176,7 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
                 }
 
     if (G.mode === 'addCol') {
-        const geo = new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+        const geo = ringGeo();
         const mat = new THREE.MeshBasicMaterial({color: 0x33dd66, transparent: true, opacity: hover ? 0.5 : 0.8});
         G.ghost = new THREE.Mesh(geo, mat);
         G.ghost.position.set(wX(cx,cz), -0.09, wZ(cz));
@@ -7227,11 +7241,11 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
     if(G.mode==='removeCol'){
         if(lvl===-1) lvl = G.heightCap;
         const cHeight = G.rules.gravityOff ? lvl * SP : lvl * PS;
-        geo = new THREE.BoxGeometry(PS+0.1, cHeight + 0.1, PS+0.1);
+        geo = columnSelGeo(cHeight);
     } else if (isBlocker) {
         // Handled below
     } else {
-        geo = new RoundedBoxGeometry(PS, PS, PS, 4, 0.1);
+        geo = solidGeo();
     }
     
     let mat;
@@ -7250,16 +7264,16 @@ function spawnGhost(cx,cz,hover, forcedLvl = -1){
             emissive: 0x222233, emissiveIntensity: hover ? 0.2 : 0.4,
             transparent: true, opacity: hover ? 0.4 : 0.8 
         });
-        const baseBlocker = new THREE.Mesh(new RoundedBoxGeometry(PS, PS, PS, 4, 0.1), matBlack);
+        const baseBlocker = new THREE.Mesh(solidGeo(), matBlack);
         const slicedGroup = new THREE.Group();
         for(let i=0; i<4; i++) {
-            const slice = new THREE.Mesh(new RoundedBoxGeometry(PS, PS*0.22, PS, 4, 0.05), matBlack);
+            const slice = new THREE.Mesh(sliceGeo(), matBlack);
 slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.random()-0.5)*0.3);
                 slice.castShadow = true; slice.receiveShadow = true;
                 slice.userData.origPos = slice.position.clone();
                 slicedGroup.add(slice);
             }
-            const wireBlocker = new THREE.Mesh(new RoundedBoxGeometry(PS, PS, PS, 4, 0.1), new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true, transparent: true, opacity: hover ? 0.2 : 0.4}));
+            const wireBlocker = new THREE.Mesh(solidGeo(), new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true, transparent: true, opacity: hover ? 0.2 : 0.4}));
             
             const blockerShapes = [baseBlocker, slicedGroup, wireBlocker];
             blockerShapes.forEach(s => { s.visible = false; G.ghost.add(s); });
@@ -7486,7 +7500,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             window.GameAudio && GameAudio.sfx('addcol');
             log(`${p.name} added column at (${cx},${cz})`);
             
-            const geo=new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+            const geo=ringGeo();
             const tileMat=new THREE.MeshStandardMaterial({color:0x33dd66, roughness:0.5});
             tileMat.emissive.setHex(0x000000);
             tileMat.emissiveIntensity = 0;
@@ -7692,7 +7706,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         }
 
         if (G.rules.gravityOff) {
-            const boxGeo = new THREE.BoxGeometry(PS, PS, PS);
+            const boxGeo = unitGeo();
             const boxMat = new THREE.LineBasicMaterial({color: 0x888888, transparent: true, opacity: 0.5});
             for(let i=0; i<G.heightCap; i++) {
                 const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), boxMat);
@@ -7864,17 +7878,17 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         if (pid === 'blocker') {
             const group = new THREE.Group();
             const matBlack = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.5, metalness: 0.3, emissive: 0x222233, emissiveIntensity: 0.2 });
-            const baseBlocker = new THREE.Mesh(new RoundedBoxGeometry(PS, PS, PS, 4, 0.1), matBlack);
+            const baseBlocker = new THREE.Mesh(solidGeo(), matBlack);
             baseBlocker.castShadow = true; baseBlocker.receiveShadow = true;
             const slicedGroup = new THREE.Group();
             for(let i=0; i<4; i++) {
-                const slice = new THREE.Mesh(new RoundedBoxGeometry(PS, PS*0.22, PS, 4, 0.05), matBlack);
+                const slice = new THREE.Mesh(sliceGeo(), matBlack);
                 slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.random()-0.5)*0.3);
                 slice.castShadow = true; slice.receiveShadow = true;
                 slice.userData.origPos = slice.position.clone();
                 slicedGroup.add(slice);
             }
-            const wireBlocker = new THREE.Mesh(new RoundedBoxGeometry(PS, PS, PS, 4, 0.1), new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true}));
+            const wireBlocker = new THREE.Mesh(solidGeo(), new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true}));
             
             const blockerShapes = [baseBlocker, slicedGroup, wireBlocker];
             blockerShapes.forEach(s => { s.visible = false; group.add(s); });
@@ -7886,7 +7900,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             G.board.set(`${cx},${cz},${lvl}`,{pid,hex:col});
             return;
         }
-        const geo=new RoundedBoxGeometry(PS,PS,PS, 4, 0.1);
+        const geo=solidGeo();
         const mat=new THREE.MeshStandardMaterial({color:col, roughness:0.5, metalness:0.3});
         mat.emissive.setHex(col); mat.emissiveIntensity = 0.2;
         const m=new THREE.Mesh(geo,mat);
@@ -8218,7 +8232,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
     }
 
     function _dropWildPiece(cx,cz,lvl){
-        const geo = new RoundedBoxGeometry(PS,PS,PS, 4, 0.1);
+        const geo = wildGeo();
         _bakeWildRainbow(geo);
         const mat = new THREE.MeshStandardMaterial({color:0xffffff, emissive:0xffffff, emissiveIntensity:0.6, roughness:0.4, metalness:0.2, transparent: true, opacity: 0});
         const m = new THREE.Mesh(geo,mat);
@@ -8604,7 +8618,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         G.addColIndicators = [];
 
         if (G.mode === 'addCol') {
-            const boxGeo = new THREE.BoxGeometry(PS+0.06, 0.22, PS+0.06);
+            const boxGeo = ringGeoTall();
             
             // Brighter glowing materials
             const lineMat = new THREE.LineBasicMaterial({color: 0x33dd66, transparent: true, opacity: 0.9});
@@ -8907,7 +8921,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
         } else if(h.type === 'addCol') {
             G.footprint.add(`${h.cx},${h.cz}`);
             G.addedColumns.add(`${h.cx},${h.cz}`);
-            const geo=new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+            const geo=ringGeo();
             const tileMat=new THREE.MeshStandardMaterial({color:0x33dd66, roughness:0.5});
             const m=new THREE.Mesh(geo,tileMat);
             m.position.set(wX(h.cx,h.cz),-0.09,wZ(h.cz));
@@ -9074,7 +9088,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
             if (entry.wasPaid !== null) G.paidColumns.set(key, entry.wasPaid);
             if (entry.lockCount > 0) G.locks.set(key, entry.lockCount);
             
-            const geo = new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+            const geo = ringGeo();
             const colHex = entry.wasAdded ? 0x33dd66 : (entry.wasPaid ? PAID_ORANGE : 0x4a6080);
             const tileMat = new THREE.MeshStandardMaterial({color: colHex, roughness: 0.5, metalness: 0.2});
             tileMat.emissive.setHex(0x000000); tileMat.emissiveIntensity = 0;
@@ -9136,7 +9150,7 @@ slice.position.set((Math.random()-0.5)*0.3, -(PS*0.375)+(i*PS*0.25), (Math.rando
                     if (ex.colMeta.wasPaid != null) G.paidColumns.set(ck, ex.colMeta.wasPaid);
                     if (ex.colMeta.lockCount > 0) G.locks.set(ck, ex.colMeta.lockCount);
                     if (!G.tileObjects.find(t => t.userData.cx === ex.cx && t.userData.cz === ex.cz)) {
-                        const geo = new RoundedBoxGeometry(PS+0.06, 0.18, PS+0.06, 4, 0.08);
+                        const geo = ringGeo();
                         const colHex = ex.colMeta.wasAdded ? 0x33dd66 : (ex.colMeta.wasPaid ? PAID_ORANGE : 0x4a6080);
                         const tileMat = new THREE.MeshStandardMaterial({color: colHex, roughness: 0.5, metalness: 0.2});
                         tileMat.emissive.setHex(0x000000); tileMat.emissiveIntensity = 0;

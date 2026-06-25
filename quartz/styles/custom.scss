@@ -186,3 +186,23 @@ body:has(.home-splash) {
   width: 100%; height: 100%;
   border: 0;
 }
+
+// ============================================================
+//  Folder-listing tweaks — the automatic "X items under this
+//  folder" list Quartz shows on every folder page (.page-listing).
+//  Lives here (core styles) so it survives the plugin reinstall
+//  that runs on every publish.
+// ============================================================
+.page-listing {
+  // Hide the date that sits to the left of each row...
+  .section > .meta { display: none !important; }
+  // ...and reclaim its space so the title isn't cramped.
+  // (Columns were: date | title | tags — now just title | tags.)
+  .section { grid-template-columns: 3fr 1fr !important; }
+}
+
+// Hide the "date · reading time" line under the title on FOLDER/INDEX pages
+// only. A folder page is any page that shows the auto folder listing
+// (.page-listing), so this leaves individual video/note pages untouched —
+// they keep their own dates.
+body:has(.page-listing) .content-meta { display: none !important; }

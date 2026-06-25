@@ -3,10 +3,6 @@ title: Individual videos I recommend
 publish: true
 ---
 
-One-off videos worth watching. Each entry plays the video on its own page with my note underneath. Browse by subtopic:
+One-off videos worth watching, sorted into the subtopics below. Each entry plays the video on its own page with my note underneath.
 
-- [[youtube/recommended/science/index|Science]]
-- [[youtube/recommended/theology/index|Theology]]
-- [[youtube/recommended/finance/index|Finance]]
-
-*(See the example entry in this folder for how a curated video looks and how to add your own. A video can sit either directly in this folder or inside one of the subtopics above.)*
+*(To add one, drop a file directly in this folder or inside a subtopic — the [[youtube/recommended/the-first-youtube-video|example entry]] shows how.)*

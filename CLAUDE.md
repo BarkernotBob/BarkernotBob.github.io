@@ -11,9 +11,6 @@ branches, merging, and related concepts. For ALL interactions:
 - Don't assume the user knows Git/GitHub workflows — spell them out.
 
 ## Response format
-Keep replies concise — trim preamble and recaps; lead with what matters. (Still
-explain terms plainly per the guidance above — concise, not cryptic.)
-
 Group anything actionable under these labeled headers (emoji + bold label) so
 the user can scan by color. Skip any header that doesn't apply to a given reply:
 

@@ -1362,6 +1362,18 @@ function coreHostState(mesh, hasCore) {
 // _removeCoreVisually clears the mask), so nothing extra to do here.
 function coreHostRevert(mesh) { /* no geometry swap for square */ }
 
+// --- GPU disposal ---
+// Square gives every piece its OWN geometry, so the generic disposeMesh (which frees geometry +
+// materials + textures) is safe everywhere. (Hex must skip its shared geometry caches.)
+function disposeRemovable(obj) { disposeMesh(obj); }
+
+// --- Firebase backend (square = the Blockchain project) ---
+const firebaseConfig = {
+    apiKey: "AIzaSyCcg82Do9USg0puk9tO40JT-61bSc5jje4",
+    databaseURL: "https://blockchain-c9fb5-default-rtdb.firebaseio.com/",
+    projectId: "blockchain-c9fb5"
+};
+
 // serialize.js — canonical game-state serialization for Firebase sync + the round-trip
 // self-test. No DOM and no game-engine coupling: serializeState / deserializeCore operate
 // purely on the passed-in state object and plain data. disposeMesh is the one THREE touch
@@ -1540,11 +1552,7 @@ if (_rejoinId) {
     window.history.replaceState(null, '', newUrl);
 }
 
-firebase.initializeApp({
-    apiKey: "AIzaSyCcg82Do9USg0puk9tO40JT-61bSc5jje4",
-    databaseURL: "https://blockchain-c9fb5-default-rtdb.firebaseio.com/",
-    projectId: "blockchain-c9fb5"
-});
+firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let gameRef = null;
 let chatListenerAdded = false;
@@ -1741,7 +1749,7 @@ window._removeCoreVisually = function(cx, cz, lvl) {
     const m = G.pieces.find(p => p.userData && p.userData.type === 'piece' && p.userData.cx === cx && p.userData.cz === cz && p.userData.lvl === lvl);
     if (!m) return;
     const coreMesh = m.children.find(c => c.userData && c.userData.isCore);
-    if (coreMesh) { m.remove(coreMesh); disposeMesh(coreMesh); }
+    if (coreMesh) { m.remove(coreMesh); disposeRemovable(coreMesh); }
     coreHostRevert(m);
     if (m.material) {
         m.material.alphaMap = null;
@@ -4695,7 +4703,7 @@ function setupListener() {
                       if (rm && !rm.userData.isFlyOut && !rm.userData.isWinning) {
                           scene.remove(rm);
                           G.pieces = G.pieces.filter(px => px !== rm);
-                          disposeMesh(rm);
+                          disposeRemovable(rm);
                       }
                   }
                   G.board.delete(bk);

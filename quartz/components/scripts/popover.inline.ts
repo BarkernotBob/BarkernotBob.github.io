@@ -126,7 +126,9 @@ function clearActivePopover() {
 }
 
 function setupPopovers() {
-  const links = [...document.querySelectorAll("a.internal")] as HTMLAnchorElement[]
+  // Skip links opting out with `.no-popover` (e.g. the home nav cards, whose
+  // target pages have no body text and would show an empty preview strip).
+  const links = [...document.querySelectorAll("a.internal:not(.no-popover)")] as HTMLAnchorElement[]
   for (const link of links) {
     link.addEventListener("mouseenter", mouseEnterHandler)
     link.addEventListener("mouseleave", clearActivePopover)

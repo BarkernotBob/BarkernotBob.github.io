@@ -38,9 +38,6 @@ You don't need to know any code to use it. This guide explains everything in pla
   preview at `http://localhost:8080`. Only you can see this.
 - When you're done looking, close that black window (or press **Control + C** in it).
 
-> First time only: macOS may say the file is "from an unidentified developer." Right-click
-> the file → **Open** → **Open**. After that, double-clicking works normally.
-
 ### 3. Publish it to the internet (public)
 - **Double-click `Publish Changes.command`** in this folder.
 - It saves your changes and sends them to GitHub. Your live site updates by itself in

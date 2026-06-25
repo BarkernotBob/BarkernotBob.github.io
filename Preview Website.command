@@ -86,9 +86,10 @@ echo ""
 npx quartz build --serve &
 SERVER_PID=$!
 
-# Give it a few seconds to start, then open your browser automatically.
+# Give it a few seconds to start, then open the side-by-side (desktop + phone)
+# preview in your browser. It has an "Open full size" link if you want just one.
 sleep 5
-open "http://localhost:8080"
+open "design/side-by-side-preview.html"
 
 echo ""
 echo "Preview is running. Leave this window open while you look at the site."

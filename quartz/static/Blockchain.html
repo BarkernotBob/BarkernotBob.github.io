@@ -1849,6 +1849,7 @@ function getRulesHTML(rules) {
     html += `<div style="width:100%; font-size:0.8rem; color:#94a3b8; text-transform:uppercase; margin-top:8px;">Advanced Rules</div>`;
     html += `<div class="rule-item">Chain of 3 earns: <span>${rules.chainTokens !== undefined ? rules.chainTokens : 1} 🪙</span></div>`;
     if(rules.theGridEnabled) html += `<div class="rule-item">The Grid: <span>Active</span></div>`;
+    if(rules.diagonalEnabled) html += `<div class="rule-item">Diagonals: <span>Active</span></div>`;
     
     return html;
 }
@@ -2181,6 +2182,7 @@ function applySetupRules(r){
     setRuleToggle('wildEarnToggle',r.wildEarnTokens);
     setRuleToggle('coreEarnToggle',r.coreEarnTokens);
     const tg=document.getElementById('theGridToggle'); if(tg) tg.classList.toggle('on', !!r.theGridEnabled);
+    const dg=document.getElementById('diagonalToggle'); if(dg) dg.classList.toggle('on', !!r.diagonalEnabled);
     const we=document.getElementById('wildEarnGroup'); if(we) we.style.display = r.wildEnabled ? 'flex' : 'none';
     const ce=document.getElementById('coreEarnGroup'); if(ce) ce.style.display = r.coreEnabled ? 'flex' : 'none';
     if(window.syncPresetSeg) syncPresetSeg();
@@ -2306,6 +2308,7 @@ function getSetupRules() {
         timedAddColRounds: +document.getElementById('timedAddColRounds').value,
         chainTokens: +document.getElementById('chainTokens').value,
         theGridEnabled: document.getElementById('theGridToggle') && document.getElementById('theGridToggle').classList.contains('on'),
+        diagonalEnabled: document.getElementById('diagonalToggle') && document.getElementById('diagonalToggle').classList.contains('on'),
     timebombEnabled: document.getElementById('timebombToggle').classList.contains('on'),
     timebombCost: +document.getElementById('timebombCost').value
     };
@@ -2464,6 +2467,7 @@ window.startLocalGame = function() {
     G.isVsAI = false;
     G.host = localUserId; 
     G.rules = getSetupRules();
+    refreshActiveDirs();
     G.heightCap = +document.getElementById('heightCap').value;
     G.bW = W; G.bD = D;
     G.teamConfig = { enabled: false, teamCount: 2, teamNames: ['Team 1', 'Team 2', 'Team 3'] };
@@ -4518,6 +4522,7 @@ function setupListener() {
 
             if (!G.gameStarted) {
                 G.rules = d.rules;
+                refreshActiveDirs();
                 if (d.teamConfig) G.teamConfig = d.teamConfig;
                 G.bW = d.config.W;
                 G.bD = d.config.D;

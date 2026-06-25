@@ -37,13 +37,24 @@ body:has(.home-splash) {
     max-width: none !important;
     height: auto !important;
     margin: 0 0 0.5rem !important;
-    padding: 1rem 0 0.5rem !important;
+    // Left padding reserves the gutter the menu (☰) button lives in, so the
+    // wordmark always starts at the same place.
+    padding: 1rem 0 0.5rem 3.25rem !important;
     background: transparent !important;
   }
-  // Top-bar order: Explorer menu button FAR LEFT, then wordmark, then
-  // search/theme pushed to the right edge.
+  // Menu (☰) button: pulled OUT of the flow and parked in the left gutter, so
+  // the "Isaiah Barker" wordmark sits at a fixed position and never shifts when
+  // the button loads in (it's hidden until JS runs) or changes.
   & .left.sidebar > * { order: 5; }
-  & .left.sidebar .explorer { order: 0; margin: 0 0.6rem 0 0 !important; }
+  & .left.sidebar .explorer {
+    position: absolute !important;
+    left: 0.2rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin: 0 !important;
+  }
+  // Wordmark is the first in-flow item; margin-right auto pushes search/theme
+  // to the far right.
   & .left.sidebar .page-title { order: 1; margin: 0 auto 0 0 !important; }
   & .left.sidebar .spacer,
   & .left.sidebar .mobile-only { display: none !important; }
@@ -86,7 +97,10 @@ body:has(.home-splash) {
   --muted: #6b6280;
   font-family: "Outfit", system-ui, sans-serif;
   color: var(--ink);
-  padding: 10px 0 48px;
+  // Left padding matches the top-bar gutter (3.25rem) so the wordmark,
+  // WELCOME, and the cards all share the same left edge, with the menu
+  // button sitting in the gutter to their left.
+  padding: 10px 0 48px 3.25rem;
 
   & .splash-top { margin-bottom: 56px; }
   & .splash-mark {

@@ -78,11 +78,15 @@ EOF
   fi
 done
 
-# Make search match within words (substring), not just from word-starts.
-# (The search plugin ships with word-start matching; this flips it to substring.)
+# Small plugin tweaks applied before each build:
+#  - search matches within words (substring), not just word-starts
+#  - the file-tree explorer slides over as a drawer at all screen sizes
 sed -i '' 's/tokenize:"forward"/tokenize:"full"/g' \
   .quartz/plugins/search/dist/index.js \
   .quartz/plugins/search/dist/components/index.js 2>/dev/null
+sed -i '' 's/max-width: *800px/max-width: 99999px/g' \
+  .quartz/plugins/explorer/dist/index.js \
+  .quartz/plugins/explorer/dist/components/index.js 2>/dev/null
 
 echo "Building your website and starting the preview..."
 echo "When you see a web address (http://localhost:8080), it's ready."

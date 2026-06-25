@@ -312,6 +312,11 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
         if (t) t.setAttribute("aria-expanded", "false")
       })
     }
+    document.addEventListener("click", (e) => {
+      document.querySelectorAll(".explorer:not(.collapsed)").forEach((exp) => {
+        if (!exp.contains(e.target)) exp.classList.add("collapsed")
+      })
+    })
     document.addEventListener("nav", () => { quartzExplorerExtras(); quartzCollapseExplorer() })
     quartzExplorerExtras(); quartzCollapseExplorer()
   `)

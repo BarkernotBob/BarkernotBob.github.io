@@ -59,10 +59,32 @@
       .methbody p { margin:6px 0; }
       .wrap { max-width:1180px; margin:0 auto; padding:18px 22px 60px; }
       .grid { display:grid; grid-template-columns:1fr; gap:18px; }
-      @media (min-width:960px){ .grid{ grid-template-columns:1.05fr .95fr; } .results{ position:sticky; top:14px; align-self:start; max-height:calc(100vh - 28px); overflow:auto; } }
-      .presets { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; align-items:center; }
-      .presets button { border:1px solid var(--line-strong); background:var(--panel); color:var(--ink); padding:7px 13px; border-radius:999px; cursor:pointer; font-size:13px; transition:border-color .12s, color .12s; }
-      .presets button:hover { border-color:var(--accent); color:var(--accent); }
+      /* mobile-first toolbar */
+      .toolbar { display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:16px; }
+      .toolbar-left { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; }
+      .toolbar-left button[data-preset] { border:1px solid var(--line-strong); background:var(--panel); color:var(--ink); padding:7px 13px; border-radius:999px; cursor:pointer; font-size:13px; transition:border-color .12s, color .12s; }
+      .toolbar-left button[data-preset]:hover { border-color:var(--accent); color:var(--accent); }
+      .export-row { display:flex; gap:8px; width:100%; }
+      .export-row button { flex:1; }
+      .toolbar-right { display:none; align-items:center; }
+      .toolbar-right .tabs { margin-bottom:0; width:100%; }
+      #mobTabsContainer { position:sticky; top:0; z-index:30; background:var(--bg); padding:6px 0 4px; }
+      #mobTabsContainer .tabs { margin-bottom:0; }
+      @media (min-width:960px){
+        body { height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+        header.top { flex-shrink:0; }
+        .wrap { width:100%; flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-bottom:0; }
+        .toolbar { flex-shrink:0; display:grid; grid-template-columns:1.05fr .95fr; gap:18px; }
+        .toolbar-left { flex-direction:row; width:auto; justify-content:flex-start; }
+        .export-row { width:auto; }
+        .export-row button { flex:none; }
+        .toolbar-right { display:flex; }
+        #mobTabsContainer { display:none !important; }
+        .mobalance { flex-shrink:0; }
+        .grid { flex:1; min-height:0; grid-template-columns:1.05fr .95fr; align-items:stretch; }
+        .form-panel { overflow-y:auto; min-height:0; }
+        .results { overflow-y:auto; min-height:0; position:static; max-height:none; align-self:auto; top:auto; }
+      }
       details.sec { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:11px; overflow:visible; box-shadow:var(--shadow-sm); }
       details.sec > summary { list-style:none; cursor:pointer; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; font-weight:700; }
       details.sec > summary::-webkit-details-marker { display:none; }
@@ -103,7 +125,6 @@
       table.water tr.sub td { color:var(--muted); }
       .ddl { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--ddl-bg); color:var(--ddl-ink); white-space:nowrap; font-weight:600; }
       .ddl.ddlUrgent { background:var(--warn-bg); color:var(--warn); font-weight:600; }
-      .modeToggle { display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
       #form input[type=text] { padding:9px 11px; border:1px solid var(--fieldBd); border-radius:10px; background:var(--field); color:var(--ink); font-size:14px; }
       .sbgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
       @media (max-width:520px){ .sbgrid { grid-template-columns:1fr; } }
@@ -111,7 +132,7 @@
       .sbf input { padding:8px 10px; border:1px solid var(--fieldBd); border-radius:9px; background:var(--field); color:var(--ink); font-size:14px; width:100%; box-sizing:border-box; }
       .sbhint { font-size:11.5px; color:var(--muted2); }
       .cliff { padding:9px 11px; border-radius:10px; margin-bottom:8px; font-size:13px; border:1px solid var(--line); }
-      .cliff.faraway { opacity:.5; }
+      .cliff.faraway { opacity:1; }
       .cliffhead { display:flex; justify-content:space-between; gap:8px; margin-bottom:6px; }
       .cliff .st { font-weight:600; white-space:nowrap; }
       .cliff.good { background:var(--good-bg); border-color:var(--good-bd); } .cliff.good .st { color:var(--good); }
@@ -124,8 +145,8 @@
       .rec b { color:var(--accent); }
       .h3 { font-size:14px; font-weight:700; margin:2px 0 10px; }
       .resbtns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-      .resbtns button { border:1px solid var(--band); background:var(--band); color:var(--bandTx); padding:9px 14px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; }
-      .resbtns button.ghost { background:var(--panel); color:var(--accent); border-color:var(--line-strong); }
+      .resbtns button, #btnExport, #btnExportJSON { border:1px solid var(--band); background:var(--band); color:var(--bandTx); padding:9px 14px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; }
+      .resbtns button.ghost, #btnExportJSON { background:var(--panel); color:var(--accent); border-color:var(--line-strong); }
       footer { color:var(--muted2); font-size:12px; margin-top:18px; border-top:1px solid var(--line); padding-top:12px; }
       /* modal */
       .overlay { position:fixed; inset:0; background:rgba(8,14,26,.6); display:flex; align-items:center; justify-content:center; z-index:50; padding:18px; }
@@ -199,8 +220,6 @@
       .toggle span, .vtoggle span { padding:7px 14px; user-select:none; }
       .toggle .on, .vtoggle .on { background:var(--band); color:var(--bandTx); }
       .toggle .off, .vtoggle .off { color:var(--muted); }
-      /* presets quick-start label */
-      .presets .qs { font-size:12.5px; color:var(--muted2); margin-right:2px; }
       /* labelled input group with prefix (e.g. $) */
       .inp { display:flex; align-items:center; border:1px solid var(--fieldBd); border-radius:10px; background:var(--field); overflow:hidden; transition:border-color .12s, box-shadow .12s; }
       .inp .pre { padding:9px 7px 9px 11px; color:var(--muted2); font-size:14px; }
@@ -285,78 +304,45 @@
       .mbar { display:flex; height:28px; gap:3px; border-radius:7px; overflow:hidden; }
       .mbar > span { display:block; min-width:2px; transition:width .2s; }
       .mleg { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:11px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
-      /* mobile sticky balance bar (Track C) — hidden on desktop */
+      /* mobile sticky balance bar — hidden (replaced by Summary/Optimize tabs) */
       .mobalance { display:none; }
-      @media (max-width:959px){
-        .mobalance { display:flex; position:sticky; top:0; z-index:30; align-items:center; justify-content:space-between; gap:10px;
-          background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-md); padding:10px 14px; margin:0 0 14px; }
-        .mobalance .mb-l { display:flex; flex-direction:column; min-width:0; }
-        .mobalance .mb-lbl { font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--overline); }
-        .mobalance .mb-num { font-size:23px; font-weight:800; line-height:1.05; font-variant-numeric:tabular-nums; display:flex; align-items:baseline; gap:7px; }
-        .mobalance .mb-num.good { color:var(--good); } .mobalance .mb-num.bad { color:var(--bad); }
-        .mobalance .mb-r { text-align:right; font-size:11px; color:var(--muted2); font-variant-numeric:tabular-nums; white-space:nowrap; }
-        .mobalance .mb-delta { font-size:11px; font-weight:700; border-radius:999px; padding:1px 8px; }
-        .mobalance .mb-delta.up { color:var(--good); background:var(--gbg); }
-        .mobalance .mb-delta.down { color:var(--bad); background:var(--bad-bg); }
-      }
       /* inline validation messages (Track C) */
       .fieldmsg { display:none; font-size:11.5px; color:var(--warn); margin-top:4px; line-height:1.4; }
       .fieldmsg.show { display:block; }
-      /* guided onboarding (Track C) */
-      .preset-cta { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--accent); background:var(--accent); color:var(--bandTx); padding:7px 13px; border-radius:999px; cursor:pointer; font-size:13px; font-weight:600; }
-      .preset-cta:hover { filter:brightness(1.06); }
-      .ob-modal { max-width:540px; }
-      .ob-body { padding:18px 22px 6px; flex:1; min-height:0; overflow:auto; }
-      .ob-sub { font-size:13px; color:var(--muted); margin:0 0 16px; }
-      .ob-grp { margin-bottom:16px; }
-      .ob-lbl { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:8px; }
-      .ob-choices { display:grid; gap:8px; }
-      .ob-modal .ob-choice { text-align:left; border:1px solid var(--line-strong); background:var(--panel); color:var(--ink); padding:12px 14px; border-radius:11px; cursor:pointer; font-size:14px; font-weight:500; transition:border-color .12s, background .12s; }
-      .ob-modal .ob-choice:hover { border-color:var(--accent); }
-      .ob-modal .ob-choice.sel { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); box-shadow:var(--focus-ring); }
-      .ob-row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-      .ob-num { width:100%; font-size:16px; padding:11px 13px; border:1px solid var(--fieldBd); border-radius:11px; background:var(--field); color:var(--ink); font-variant-numeric:tabular-nums; }
-      .ob-num:focus { outline:none; border-color:var(--accent); box-shadow:var(--focus-ring); }
-      .ob-foot { display:flex; align-items:center; gap:10px; padding:14px 22px 20px; border-top:1px solid var(--line); }
-      .ob-modal .ob-skip { color:var(--muted); font-size:13px; background:none; border:none; cursor:pointer; }
-      .ob-modal .ob-skip:hover { color:var(--ink); }
-      .ob-spacer { flex:1; }
-      .ob-modal .ob-btn { border:1px solid var(--accent); background:var(--accent); color:var(--bandTx); padding:10px 18px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
     </style>
   </head>
   <body>
     <header class="top">
       <button class="themeToggle" id="themeToggle" type="button" aria-label="Switch to dark mode" title="Toggle theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></button>
       <h1>US Tax Modeler — Tax Year 2026</h1>
-      <p>Federal + state estimate (Indiana modeled in full). Educational only — not tax advice.</p>
-      <p class="privacy"><svg width="14" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> 100% private — runs entirely in your browser. Nothing is uploaded or sent anywhere; your entries are saved only on this device and you can clear them anytime with “Reset all.”</p>
     </header>
     <div class="wrap">
-      <div class="presets" id="presets">
-        <span style="font-size:13px;color:var(--muted);align-self:center;margin-right:2px;">Quick start:</span>
-        <button id="btnGuided" class="preset-cta" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"></path></svg> Guided setup</button>
-        <button data-preset="w2">W-2 employee</button>
-        <button data-preset="se">Self-employed</button>
-        <button data-preset="retiree">Retiree on Social Security</button>
-        <button data-preset="aca">ACA Marketplace shopper</button>
-        <button data-preset="reset" style="margin-left:auto">Reset all</button>
+      <div class="toolbar">
+        <div class="toolbar-left" id="presets">
+          <button data-preset="reset">Reset all</button>
+        </div>
+        <div class="toolbar-right" id="tabsContainer"></div>
       </div>
       <div class="mobalance" id="mobalance" aria-live="polite"></div>
       <div class="grid">
-        <div id="form"></div>
+        <div class="form-panel">
+          <div id="form"></div>
+          <footer>
+            <details class="methodology"><summary><strong>Methodology, assumptions &amp; what's NOT modeled</strong> — please read before relying on any number</summary>
+              <div class="methbody">
+                <p><strong>Tax year 2026.</strong> Figures last reviewed <strong id="methDate"></strong>, based on <span id="methSrc"></span>. Some 2026 amounts are inflation-projected and may change before filing season.</p>
+                <p><strong>What's modeled:</strong> federal income tax (ordinary + capital-gains brackets), the standard vs. itemized choice, AMT, Net Investment Income Tax, Additional Medicare tax, Social Security/Medicare (FICA), self-employment tax, QBI, the major credits (Child Tax Credit, EITC, education, child/dependent care, Saver's, MCC), Social Security benefit taxation, ACA Premium Tax Credit, and OBBBA 2026 changes. State: <strong>Indiana in full</strong> (state + all 92 counties, exemptions, renter/property deductions, 529 credit, state EIC); other states via an optional flat-rate estimate; no-income-tax states as $0.</p>
+                <p><strong>What's NOT modeled (treat results as an estimate):</strong> states other than Indiana in detail; local/city taxes outside Indiana; part-year or multi-state residency; prior-year carryforwards (capital-loss, NOL, unused credits); the underpayment/estimated-tax penalty (Form 2210); rental depreciation, passive-activity limits, and K-1 pass-through detail; the QBI W-2-wage/property limit is simplified; AMT is approximate; foreign income/FEIE; estate/gift; and any situation needing professional judgment. The ACA benchmark premium is a rough age-based estimate — enter your exact figure from HealthCare.gov.</p>
+                <p><strong>Privacy:</strong> everything runs in your browser. No data is transmitted; entries are stored only in this browser's local storage on your device.</p>
+              </div>
+            </details>
+            <p style="margin-top:10px"><strong>Disclaimer:</strong> This is an educational modeling tool, <strong>not tax, legal, or financial advice</strong>, and not a substitute for a CPA or tax professional. Estimates may differ from your actual return; verify against official sources before filing or making decisions. Provided "as is," with no warranty of accuracy. Updated <span id="footDate"></span>.</p>
+            <p class="privacy" style="margin-top:10px"><svg width="14" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> 100% private — runs entirely in your browser. Nothing is uploaded or sent anywhere; your entries are saved only on this device and you can clear them anytime with "Reset all."</p>
+          </footer>
+        </div>
+        <div id="mobTabsContainer"></div>
         <div class="results" id="results"></div>
       </div>
-      <footer>
-        <details class="methodology"><summary><strong>Methodology, assumptions &amp; what's NOT modeled</strong> — please read before relying on any number</summary>
-          <div class="methbody">
-            <p><strong>Tax year 2026.</strong> Figures last reviewed <strong id="methDate"></strong>, based on <span id="methSrc"></span>. Some 2026 amounts are inflation-projected and may change before filing season.</p>
-            <p><strong>What's modeled:</strong> federal income tax (ordinary + capital-gains brackets), the standard vs. itemized choice, AMT, Net Investment Income Tax, Additional Medicare tax, Social Security/Medicare (FICA), self-employment tax, QBI, the major credits (Child Tax Credit, EITC, education, child/dependent care, Saver's, MCC), Social Security benefit taxation, ACA Premium Tax Credit, and OBBBA 2026 changes. State: <strong>Indiana in full</strong> (state + all 92 counties, exemptions, renter/property deductions, 529 credit, state EIC); other states via an optional flat-rate estimate; no-income-tax states as $0.</p>
-            <p><strong>What's NOT modeled (treat results as an estimate):</strong> states other than Indiana in detail; local/city taxes outside Indiana; part-year or multi-state residency; prior-year carryforwards (capital-loss, NOL, unused credits); the underpayment/estimated-tax penalty (Form 2210); rental depreciation, passive-activity limits, and K-1 pass-through detail; the QBI W-2-wage/property limit is simplified; AMT is approximate; foreign income/FEIE; estate/gift; and any situation needing professional judgment. The ACA benchmark premium is a rough age-based estimate — enter your exact figure from HealthCare.gov.</p>
-            <p><strong>Privacy:</strong> everything runs in your browser. No data is transmitted; entries are stored only in this browser's local storage on your device.</p>
-          </div>
-        </details>
-        <p style="margin-top:10px"><strong>Disclaimer:</strong> This is an educational modeling tool, <strong>not tax, legal, or financial advice</strong>, and not a substitute for a CPA or tax professional. Estimates may differ from your actual return; verify against official sources before filing or making decisions. Provided “as is,” with no warranty of accuracy. Updated <span id="footDate"></span>.</p>
-      </footer>
     </div>
     <div id="modalRoot"></div>
     <div id="ttip"></div>
@@ -440,7 +426,6 @@ function defaults(){
   return {
     filingStatus:"single", yourAge:29, spouseAge:29, youBlind:false, spouseBlind:false,
     dependents:[], state:"IN", county:"Marion", stateName:"Texas", stateRateOverride:0,
-    uiMode:"simple",
     wages:0, wagesSpouse:0, interest:0, ordDiv:0, qualDiv:0, stcg:0, ltcg:0, rental:0, otherOrdinary:0,
     tips:0, overtime:0, ssBenefits:0, railroad:0, military:0, seNetProfit:0, seNetProfitSpouse:0,
     trad401k:0, trad401kSpouse:0, tradIRA:0, tradIRASpouse:0, rothIRA:0, rothIRASpouse:0,
@@ -920,7 +905,7 @@ function renderForm(){
   const countyOpts=COUNTIES.map(c=>`<option ${c.name===S.county?'selected':''}>${c.name}</option>`).join("");
   const depRows=S.dependents.map((d,i)=>`<div class="depRow"><span>Dependent ${i+1}</span><input type="number" data-dep="${i}" value="${d.age}" min="0" step="1" style="width:90px" title="age at year end"/> <button data-deldep="${i}">Remove</button>${(S.state==="IN"&&n(d.age)<19)?`<label class="check" style="grid-column:1/-1;margin-top:2px"><input type="checkbox" data-depfy="${i}" ${d.firstYear?'checked':''}/> First year claiming this child in Indiana ${tipIcon("Indiana doubles the additional dependent-child exemption to $3,000 (from $1,500) the first year you claim the child — e.g., a birth, adoption, foster placement, new guardianship, or the child's first year living in Indiana.")}</label>`:''}</div>`).join("");
 
-  const full=S.uiMode!=="simple";
+  const full=true;
   const stateSel=`<div class="row"><label class="lbl">State ${tipIcon("Federal tax is computed for everyone. Indiana is modeled in full (including county tax). For other states you can enter an approximate rate, or pick a no-income-tax state. Your federal numbers are always complete.")}</label>
       <select data-key="state">
         <option value="federal" ${S.state==="federal"?'selected':''}>Federal only (skip state tax)</option>
@@ -935,7 +920,6 @@ function renderForm(){
       <div class="miniNote"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> Rough estimate only — most states have brackets and their own deductions this can't capture.</div>`:''}
     ${S.state==="federal"?`<div class="miniNote">State &amp; local income tax is not included — your federal results are still complete.</div>`:''}`;
   document.getElementById("form").innerHTML=`
-  <div class="modeToggle"><span style="font-size:12.5px;color:var(--muted)">View:</span><span class="seg"><button data-mode="simple" class="${S.uiMode==='simple'?'on':''}">Simple</button><button data-mode="full" class="${full?'on':''}">Detailed</button></span><span style="font-size:12px;color:var(--muted)">${full?'all deductions &amp; credits':'just the essentials'}</span></div>
   <details class="sec" open><summary>Household &amp; Filing <span class="sub" id="sub-household"></span></summary><div class="secbody">
     <div class="row"><label class="lbl">Filing status</label><select data-key="filingStatus">${Object.entries(C.filingNames).map(([k,v])=>`<option value="${k}" ${S.filingStatus===k?'selected':''}>${v}</option>`).join("")}</select></div>
     ${pairField("Age (at year end)","yourAge","spouseAge",{step:1,tip:"Age affects extra standard deduction (65+), the senior bonus deduction, HSA/401(k)/IRA catch-up limits, and more."})}
@@ -1051,8 +1035,7 @@ function renderForm(){
     ${field(S.state==="IN"?"Indiana withholding + estimates":"State withholding + estimates","inWithholding")}
     ${field("Last year's total federal tax (optional)","priorYearTax",{tip:"From line 22 of your prior-year Form 1040 (total tax). Lets the safe-harbor check use the 100%/110%-of-last-year rule, which often means you can prepay less.",hint:"For the underpayment-penalty safe-harbor check."})}
     <div class="inline">${check("Last year's AGI was over $150,000 ($75k if married-separate)","priorAgiHigh","Higher earners must prepay 110% of last year's tax (instead of 100%) to use that safe harbor.")}</div>
-  </div></details>
-  ${full?'':'<div class="miniNote" style="margin-top:10px">Simple view shows the essentials. Switch to <b>Detailed</b> at the top for itemized deductions, education &amp; child-care credits, QBI, ACA subsidies, and state-specific items.</div>'}`;
+  </div></details>`;
   // visibility: Indiana section only for IN; advanced sections hidden in Simple mode
   const setShow=(el,sh)=>{ if(el) el.style.display=sh?'':'none'; };
   document.querySelectorAll('#form details.secIN').forEach(d=>setShow(d,S.state==='IN'&&full));
@@ -1578,14 +1561,18 @@ function renderResults(){
     <button data-tab="summary" class="${S.resultsTab==='summary'?'active':''}">Summary</button>
     <button data-tab="optimize" class="${S.resultsTab==='optimize'?'active':''}">Optimize <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"></path></svg></button></div>`;
   const body=S.resultsTab==='optimize'?renderOptimizeTab(r):renderSummaryTab(r);
-  document.getElementById("results").innerHTML=`
-    <div class="resbtns">
+  document.getElementById("presets").innerHTML=`<button data-preset="reset">Reset all</button>
+    <div class="export-row">
       <button id="btnExport"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export for AI review</button>
-      <button class="ghost" id="btnExportJSON">Copy raw data</button>
-    </div>${tabs}${body}`;
+      <button id="btnExportJSON"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export raw data</button>
+    </div>`;
+  document.getElementById("tabsContainer").innerHTML=tabs;
+  const _mobTabs=document.getElementById("mobTabsContainer");
+  if(_mobTabs) _mobTabs.innerHTML=tabs;
+  document.getElementById("results").innerHTML=body;
   document.getElementById("btnExport").addEventListener("click",()=>openExport(r,"md"));
   document.getElementById("btnExportJSON").addEventListener("click",()=>openExport(r,"json"));
-  document.querySelectorAll('#results [data-tab]').forEach(b=>b.addEventListener('click',()=>{ S.resultsTab=b.dataset.tab; renderResults(); }));
+  document.querySelectorAll('#tabsContainer [data-tab], #mobTabsContainer [data-tab]').forEach(b=>b.addEventListener('click',()=>{ S.resultsTab=b.dataset.tab; renderResults(); }));
   document.querySelectorAll('#results [data-exp]').forEach(el=>el.addEventListener('click',()=>{ S.expandedRows[el.dataset.exp]=!S.expandedRows[el.dataset.exp]; renderResults(); }));
   if(S.resultsTab==='optimize') wireOptimize();
 }
@@ -1610,7 +1597,7 @@ function acaCard(r){
 /* =========================================================================
    EXPORT FOR AI REVIEW
    ========================================================================= */
-const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax','sbOn','sbRevenue','sbExpenses','sbHomeSqft','sbMiles','sbEquipment','sbHealth','sbRetire','uiMode'];
+const UI_KEYS=['resultsTab','explorerLever','explorerY','leaderboardSort','expandedRows','acaBenchmarkTouched','aotcEligible','hsaFamily','hsaThroughPayroll','premiumPreTax','sbOn','sbRevenue','sbExpenses','sbHomeSqft','sbMiles','sbEquipment','sbHealth','sbRetire'];
 function exportInputs(){ const inputs={};
   for(const k of Object.keys(S)){ if(k.startsWith('show')||UI_KEYS.includes(k))continue; const v=S[k]; if(v===0||v===false||(Array.isArray(v)&&v.length===0))continue; inputs[k]=v; }
   return inputs;
@@ -1707,60 +1694,6 @@ function buildExport(r,fmt){
   recommendations(S,r).forEach(t=>push("- "+t.replace(/<\/?b>/g,"**").replace(/<[^>]+>/g,"")));
   return L.filter(x=>x!=="").join("\n");
 }
-/* =========================================================================
-   GUIDED ONBOARDING — a few plain-language questions that pre-fill the form
-   ========================================================================= */
-let OB=null;
-function openOnboarding(){ OB={ filing:"single", age:"35", spouseAge:"35", place:"IN", work:"w2", income:"60000", kids:"0" }; renderOnboarding(); }
-function closeOnboarding(){ const r=document.getElementById("modalRoot"); if(r) r.innerHTML=""; }
-function obChoiceHtml(field,opts){ return `<div class="ob-choices">`+opts.map(o=>`<button type="button" class="ob-choice ${OB[field]===o[0]?"sel":""}" data-ob="${field}" data-val="${o[0]}">${o[1]}</button>`).join("")+`</div>`; }
-function obNumHtml(field,money){ const disp=money?cfmt(OB[field]):OB[field]; return `<input class="ob-num" type="text" inputmode="${money?"decimal":"numeric"}" data-obnum="${field}" ${money?"data-money":""} value="${disp}"/>`; }
-function obIncomeLabel(){ return OB.work==="se"?"Roughly what will your business net this year?":OB.work==="retired"?"Roughly how much Social Security will you receive this year?":"Roughly how much will you earn this year?"; }
-function renderOnboarding(){
-  const root=document.getElementById("modalRoot");
-  const x='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-  const ageLbl=OB.filing==="mfj"?"Your age and spouse age (at year-end)":"Your age (at year-end)";
-  const ageInputs=OB.filing==="mfj"?`<div class="ob-row2">${obNumHtml("age")}${obNumHtml("spouseAge")}</div>`:obNumHtml("age");
-  root.innerHTML=`<div class="overlay" id="obOvl"><div class="modal ob-modal">
-    <header><strong>Let us build your estimate</strong><button class="ghost" id="obClose" style="padding:4px 10px" aria-label="Close">${x}</button></header>
-    <div class="ob-body">
-      <div class="ob-sub">Answer a few quick questions — you can fine-tune everything afterward.</div>
-      <div class="ob-grp"><div class="ob-lbl">Who is filing this return?</div>${obChoiceHtml("filing",[["single","Just me"],["mfj","Me and my spouse"],["hoh","Single parent (head of household)"]])}</div>
-      <div class="ob-grp"><div class="ob-lbl">${ageLbl}</div>${ageInputs}</div>
-      <div class="ob-grp"><div class="ob-lbl">Where do you live?</div>${obChoiceHtml("place",[["IN","Indiana"],["notax","A no-income-tax state"],["other","Another state"],["federal","Just federal — skip state tax"]])}</div>
-      <div class="ob-grp"><div class="ob-lbl">How do you earn most of your income?</div>${obChoiceHtml("work",[["w2","A regular job (W-2 paycheck)"],["se","Self-employed / 1099"],["retired","Retired"],["other","Something else"]])}</div>
-      <div class="ob-grp"><div class="ob-lbl">${obIncomeLabel()}</div>${obNumHtml("income",true)}</div>
-      <div class="ob-grp"><div class="ob-lbl">How many children or dependents will you claim?</div>${obNumHtml("kids")}</div>
-    </div>
-    <footer class="ob-foot"><button class="ob-skip" id="obSkip">Skip — I will fill it in myself</button><div class="ob-spacer"></div><button class="ob-btn" id="obBuild">Build my estimate</button></footer>
-  </div></div>`;
-  root.querySelectorAll("[data-ob]").forEach(b=>b.addEventListener("click",()=>{ OB[b.dataset.ob]=b.dataset.val; renderOnboarding(); }));
-  root.querySelectorAll("[data-obnum]").forEach(el=>el.addEventListener("input",()=>{ if(el.hasAttribute("data-money")) applyCommaFormat(el); OB[el.dataset.obnum]=el.value; }));
-  document.getElementById("obClose").onclick=closeOnboarding;
-  document.getElementById("obSkip").onclick=closeOnboarding;
-  document.getElementById("obOvl").onclick=e=>{ if(e.target.id==="obOvl") closeOnboarding(); };
-  document.getElementById("obBuild").onclick=applyOnboarding;
-}
-function applyOnboarding(){
-  const a=OB; Object.assign(S, defaults());
-  S.filingStatus=["single","mfj","hoh"].includes(a.filing)?a.filing:"single";
-  S.yourAge=Math.max(0,Math.min(120,Math.round(n(a.age))))||35;
-  if(S.filingStatus==="mfj") S.spouseAge=Math.max(0,Math.min(120,Math.round(n(a.spouseAge))))||S.yourAge;
-  if(a.place==="IN"){ S.state="IN"; S.county="Marion"; }
-  else if(a.place==="notax"){ S.state="notax"; S.stateName="Texas"; }
-  else if(a.place==="other"){ S.state="other"; S.stateName=""; S.stateRateOverride=5; }
-  else { S.state="federal"; }
-  const inc=Math.max(0,n(a.income));
-  if(a.work==="se"){ S.seNetProfit=inc; S.healthInsuranceSource="marketplace"; }
-  else if(a.work==="retired"){ S.ssBenefits=inc; if(S.yourAge<62) S.yourAge=67; }
-  else { S.wages=inc; }
-  const k=Math.max(0,Math.min(12,Math.round(n(a.kids))));
-  S.dependents=[]; for(let i=0;i<k;i++) S.dependents.push({age:8});
-  S.uiMode="simple"; S.resultsTab="summary";
-  closeOnboarding();
-  renderForm(); refresh();
-  document.querySelectorAll("#form details.sec").forEach((d,i)=>{ d.open=i<2; });
-}
 function openExport(r,fmt){
   const text=buildExport(r,fmt);
   const root=document.getElementById("modalRoot");
@@ -1847,7 +1780,6 @@ function wireForm(){
   const a=document.getElementById("addDep"); if(a)a.addEventListener("click",()=>{ S.dependents.push({age:5}); renderForm(); refresh(); });
   const i=document.getElementById("toggleLessIncome"); if(i)i.addEventListener("click",()=>{ S.showLessIncome=!S.showLessIncome; renderForm(); refresh(); });
   const c=document.getElementById("toggleLessCredits"); if(c)c.addEventListener("click",()=>{ S.showLessCredits=!S.showLessCredits; renderForm(); refresh(); });
-  document.querySelectorAll("#form [data-mode]").forEach(el=>el.addEventListener("click",()=>{ S.uiMode=el.dataset.mode; renderForm(); refresh(); }));
 }
 function updateAutoFields(){
   const el=document.getElementById("f_acaBenchmarkOverride");
@@ -1859,14 +1791,9 @@ function refresh(){ applyCaps(); applyVisibility(); updateAutoFields(); updateSu
 
 document.getElementById("presets").addEventListener("click",e=>{
   const p=e.target.dataset.preset; if(!p)return; Object.assign(S,defaults());
-  if(p==="w2"){ S.wages=75000; S.fedWithholding=8000; S.inWithholding=2200; S.trad401k=8000; S.hsaContribution=2000; }
-  if(p==="se"){ S.seNetProfit=90000; S.healthInsuranceSource="marketplace"; S.seHealth=9000; S.fedEstimated=12000; }
-  if(p==="retiree"){ S.yourAge=68; S.ssBenefits=36000; S.interest=4000; S.ordDiv=6000; S.qualDiv=5000; S.ltcg=12000; }
-  if(p==="aca"){ S.wages=42000; S.healthInsuranceSource="marketplace"; S.advancePtc=4000; }
   renderForm(); refresh();
   document.querySelectorAll("details.sec").forEach((d,idx)=>{ d.open=idx<2; });
 });
-{ const gb=document.getElementById("btnGuided"); if(gb) gb.addEventListener("click",openOnboarding); }
 
 // viewport-clamped tooltips (replaces CSS ::after so they never clip off-screen)
 (function(){

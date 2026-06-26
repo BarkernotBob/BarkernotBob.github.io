@@ -112,7 +112,22 @@ const el = (tag, attrs={}, html='') => {
 };
 const money = n => (n == null || isNaN(n)) ? '—' : '$' + Number(n).toFixed(2);
 const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const todayISO = () => new Date().toISOString().split('T')[0];
+// "Today" in the user's configured timezone (not the browser/UTC day), so
+// date-based alerts don't roll over a day early/late.
+function todayISO(){
+  const tz = (typeof config !== 'undefined' && config && config.timezone) || 'America/New_York';
+  try {
+    return new Intl.DateTimeFormat('en-CA', {timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+  } catch(e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
+// Shift an ISO date by N days (anchored at noon UTC to dodge DST edges).
+function shiftISO(iso, days){
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split('T')[0];
+}
 
 function toast(msg, ms=2600){
   const t = $('#toast');
@@ -306,12 +321,8 @@ function render_today(){
     }
   });
 
-  const ddCleared = accounts.filter(a => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayISO = yesterday.toISOString().split('T')[0];
-    return a.dates.firstDD === yesterdayISO && a.status === 'open';
-  });
+  const yesterdayISO = shiftISO(today, -1);
+  const ddCleared = accounts.filter(a => a.dates.firstDD === yesterdayISO && a.status === 'open');
 
   if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
     html = '<div class="empty">Nothing to do today!</div>';
@@ -584,6 +595,27 @@ async function deleteOffer(offerId){
   toast('Offer deleted');
 }
 
+// Generate `count` paycheck dates on/after fromISO, from the config schedule.
+function paycheckDates(fromISO, count){
+  const pc = config.paycheck || {};
+  const interval = pc.intervalDays || 14;
+  let d = pc.firstDate || '2024-12-27';
+  const out = [];
+  let guard = 0;
+  while(d < fromISO && guard < 2000){ d = shiftISO(d, interval); guard++; }
+  while(out.length < count && guard < 4000){ out.push(d); d = shiftISO(d, interval); guard++; }
+  return out;
+}
+
+// Total DD already allocated on a payroll date by all accounts except one.
+function allocatedOn(date, exceptId){
+  return accounts.reduce((s, a) => {
+    if(a.id === exceptId) return s;
+    const dd = (a.ddPlan || []).find(x => x.payrollDate === date);
+    return s + (dd ? dd.amount : 0);
+  }, 0);
+}
+
 function render_calendar(){
   const section = $('#section-calendar');
 
@@ -598,7 +630,7 @@ function render_calendar(){
   const sortedDates = Array.from(paydates).sort();
 
   if(sortedDates.length === 0) {
-    section.innerHTML = '<div class="empty">No DD planned yet.</div>';
+    section.innerHTML = '<div class="empty">No DD planned yet.<br><span style="font-size:13px">Open an account → "Auto-suggest" in its Direct Deposit Plan to fill the schedule.</span></div>';
     return;
   }
 
@@ -634,37 +666,48 @@ function render_reports(){
   const closed = accounts.filter(a => a.status === 'closed');
   const planned = accounts.filter(a => a.status === 'planned');
 
-  const earnedBonus = closed.reduce((sum, a) => sum + (a.bonus || 0), 0);
-  const pendingBonus = open.reduce((sum, a) => sum + (a.bonus || 0), 0);
-  const plannedBonus = planned.reduce((sum, a) => sum + (a.bonus || 0), 0);
-  const totalBonus = earnedBonus + pendingBonus + plannedBonus;
+  // Gross income per account = bonus + referral
+  const gross = a => (a.bonus || 0) + (a.referralValue || 0);
+  const sum = arr => arr.reduce((s, a) => s + gross(a), 0);
 
-  const totalHours = open.reduce((sum, a) => {
-    const hours = (config.laborHours || {});
-    return sum + (hours.open || 0.35);
-  }, 0) + closed.reduce((sum, a) => {
-    const hours = (config.laborHours || {});
-    return sum + (hours.open || 0.35) + (hours.close || 0.5);
-  }, 0);
+  const taxRate = config.taxRate || 0;
+  const afterTax = v => v * (1 - taxRate);
+
+  const earned = sum(closed);
+  const pending = sum(open);
+  const plannedTot = sum(planned);
+  const total = earned + pending + plannedTot;
+
+  const hrs = config.laborHours || {};
+  const perOpen = (hrs.open || 0.35) + (hrs.requirements || 0.5);
+  const perClosed = (hrs.open || 0.35) + (hrs.requirements || 0.5) + (hrs.close || 0.5);
+  // Realized + in-progress effort (planned accounts not yet worked)
+  const totalHours = open.length * perOpen + closed.length * perClosed;
+  const afterTaxRealized = afterTax(earned + pending);
+
+  const pct = (taxRate * 100).toFixed(2);
 
   let html = '<div class="card">';
-  html += '<div class="card-header">Summary</div>';
-  html += '<div class="row">';
-  html += '<div class="row-item"><div class="label">Earned</div><div class="value">' + money(earnedBonus) + '</div></div>';
-  html += '<div class="row-item"><div class="label">Pending</div><div class="value">' + money(pendingBonus) + '</div></div>';
-  html += '<div class="row-item"><div class="label">Planned</div><div class="value">' + money(plannedBonus) + '</div></div>';
-  html += '</div>';
-  html += '<div class="row">';
-  html += '<div class="row-item"><div class="label">Total Projected</div><div class="value">' + money(totalBonus) + '</div></div>';
-  html += '<div class="row-item"><div class="label">Est. Hours</div><div class="value">' + totalHours.toFixed(1) + 'h</div></div>';
-  html += '<div class="row-item"><div class="label">Hourly Value</div><div class="value">' + money(totalBonus / Math.max(totalHours, 1)) + '/hr</div></div>';
-  html += '</div>';
+  html += '<div class="card-header">Bonuses (gross → after-tax)</div>';
+  html += '<table><thead><tr><th></th><th>Gross</th><th>After-tax</th><th>#</th></tr></thead><tbody>';
+  html += `<tr><td>Earned (closed)</td><td>${money(earned)}</td><td>${money(afterTax(earned))}</td><td>${closed.length}</td></tr>`;
+  html += `<tr><td>Pending (open)</td><td>${money(pending)}</td><td>${money(afterTax(pending))}</td><td>${open.length}</td></tr>`;
+  html += `<tr><td>Planned</td><td>${money(plannedTot)}</td><td>${money(afterTax(plannedTot))}</td><td>${planned.length}</td></tr>`;
+  html += `<tr style="font-weight:600"><td>Total projected</td><td>${money(total)}</td><td>${money(afterTax(total))}</td><td>${accounts.length}</td></tr>`;
+  html += '</tbody></table>';
+  html += `<div style="font-size:12px;color:#666;margin-top:8px">After-tax applies your ${pct}% marginal rate to bonus + referral income.</div>`;
   html += '</div>';
 
-  html += '<div class="card"><div class="card-header">Accounts</div>';
-  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th></tr></thead><tbody>';
+  html += '<div class="card"><div class="card-header">Effort & return</div><div class="row">';
+  html += `<div class="row-item"><div class="label">Est. hours (opened)</div><div class="value">${totalHours.toFixed(1)}h</div></div>`;
+  html += `<div class="row-item"><div class="label">After-tax realized+pending</div><div class="value">${money(afterTaxRealized)}</div></div>`;
+  html += `<div class="row-item"><div class="label">After-tax $/hr</div><div class="value">${money(afterTaxRealized / Math.max(totalHours, 1))}/hr</div></div>`;
+  html += '</div></div>';
+
+  html += '<div class="card"><div class="card-header">All accounts</div>';
+  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th><th>Referral</th></tr></thead><tbody>';
   accounts.forEach(a => {
-    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td></tr>`;
+    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td><td>${a.referralValue ? money(a.referralValue) : '—'}</td></tr>`;
   });
   html += '</tbody></table></div>';
 
@@ -904,7 +947,11 @@ function render_detail(){
       </div>`;
     });
   }
-  html += `<div class="row" style="margin-top:8px">
+  html += `<div class="action-bar" style="margin-top:4px">
+      <button class="sec" onclick="suggestDD()">⚡ Auto-suggest</button>
+    </div>
+    <div style="font-size:12px;color:#666;margin:4px 0 8px">Auto-suggest fills paychecks from the planned/open date until the DD total is met, without over-filling any paycheck. Adjust by hand for split-deposit rules.</div>
+    <div class="row" style="margin-top:8px">
       <input type="date" id="d_new_dd_date">
       <input type="number" id="d_new_dd_amount" placeholder="Amount ($)" step="0.01" style="flex:1">
       <button onclick="addDD()">Add</button>
@@ -992,6 +1039,32 @@ async function addDD(){
   a.ddPlan.push({ payrollDate, amount });
   a.ddPlan.sort((x, y) => x.payrollDate.localeCompare(y.payrollDate));
   await persistDetail('Add DD entry');
+}
+
+async function suggestDD(){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const need = a.directDepositTotal || 0;
+  if(need <= 0){ toast('No DD requirement to schedule'); return; }
+  const cap = (config.paycheck || {}).amount || 1930;
+  const start = a.dates.plannedOpen || a.dates.opened || todayISO();
+  const dates = paycheckDates(start, 26);
+  const plan = [];
+  let remaining = need;
+  for(const d of dates){
+    if(remaining <= 0) break;
+    const free = cap - allocatedOn(d, a.id);
+    if(free <= 0) continue;
+    const amt = Math.min(remaining, free);
+    plan.push({ payrollDate: d, amount: Math.round(amt * 100) / 100 });
+    remaining -= amt;
+  }
+  if(plan.length === 0){ toast('No paycheck capacity available'); return; }
+  a.ddPlan = plan;
+  if(remaining > 0) toast('Scheduled ' + money(need - remaining) + ' of ' + money(need) + ' — ran out of paychecks');
+  else toast('Suggested DD across ' + plan.length + ' paycheck(s)');
+  await persistDetail('Auto-suggest DD plan');
 }
 
 async function saveAccountDetail(){

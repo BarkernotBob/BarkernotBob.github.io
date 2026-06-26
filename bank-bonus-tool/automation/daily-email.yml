@@ -36,14 +36,16 @@ jobs:
             process.exit(1);
           }
 
-          // Compute today's date in UTC
-          const now = new Date();
-          const todayISO = now.toISOString().split('T')[0];
+          // Compute today's date in the user's configured timezone (so the
+          // day boundary matches the app, not the UTC runner).
+          const tz = (config && config.timezone) || 'America/New_York';
+          const fmt = d => new Intl.DateTimeFormat('en-CA', {timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit'}).format(d);
+          const todayISO = fmt(new Date());
 
-          // Yesterday (for DD clearance)
-          const yesterday = new Date(now);
-          yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-          const yesterdayISO = yesterday.toISOString().split('T')[0];
+          // Yesterday (for DD clearance), anchored at noon UTC to dodge DST edges
+          const y = new Date(todayISO + 'T12:00:00Z');
+          y.setUTCDate(y.getUTCDate() - 1);
+          const yesterdayISO = y.toISOString().split('T')[0];
 
           console.log(`Computing actions for ${todayISO}...`);
 

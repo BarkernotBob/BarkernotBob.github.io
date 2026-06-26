@@ -133,6 +133,15 @@ const LS = {
 const API = 'https://api.github.com';
 const DB = {}; // in-memory cache: { 'db/items.json': {value, sha} , ... }
 
+/* One-tap "Sign in with GitHub" (OAuth device flow).
+   Leave BOTH of these blank to keep the classic "paste a token" setup —
+   the button simply won't appear. Fill them in once you've created the
+   sign-in app + helper: see grocery-tool/signin/SIGN-IN-SETUP.md. */
+const GH_CLIENT_ID = '';   // from your GitHub OAuth App, e.g. 'Ov23li...'
+const AUTH_PROXY   = '';   // your helper's web address, e.g. 'https://grocery-signin.you.workers.dev' (no trailing slash)
+function authEnabled(){ return !!(GH_CLIENT_ID && AUTH_PROXY); }
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
 /* ---------- tiny helpers ---------- */
 const $ = sel => document.querySelector(sel);
 const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
@@ -214,6 +223,70 @@ async function getImageDataUrl(path){
   return null;
 }
 
+/* ---------- GitHub one-tap sign-in (OAuth device flow) ----------
+   No passwords or keys pass through us. The tiny helper (AUTH_PROXY) only
+   relays GitHub's own sign-in messages, because a plain web page isn't
+   allowed to talk to GitHub's sign-in system directly. */
+async function ghDevicePost(path, params){
+  const r = await fetch(AUTH_PROXY+path, {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},
+    body:new URLSearchParams(params)
+  });
+  return r.json();
+}
+async function pollForToken(device_code, interval, isCancelled){
+  const deadline = Date.now() + 15*60*1000; // give up after 15 min
+  let wait = interval || 5;
+  while(Date.now() < deadline){
+    await sleep(wait*1000);
+    if(isCancelled && isCancelled()) return null;
+    const d = await ghDevicePost('/access_token', {
+      client_id:GH_CLIENT_ID, device_code,
+      grant_type:'urn:ietf:params:oauth:grant-type:device_code'
+    });
+    if(d.access_token) return d.access_token;
+    if(d.error==='authorization_pending') continue;       // user hasn't approved yet
+    if(d.error==='slow_down'){ wait += 5; continue; }      // GitHub asked us to poll slower
+    if(d.error) throw new Error(d.error_description || d.error);
+  }
+  throw new Error('Sign-in timed out — please try again');
+}
+async function signInWithGitHub(targetInputId){
+  if(!authEnabled()){ toast('GitHub sign-in isn’t set up yet — see SIGN-IN-SETUP.md'); return; }
+  let start;
+  try{ start = await ghDevicePost('/device/code', {client_id:GH_CLIENT_ID, scope:'repo'}); }
+  catch(e){ toast('Sign-in helper unreachable — check its web address.'); return; }
+  if(!start.device_code){ toast(start.error_description || 'Could not start GitHub sign-in'); return; }
+
+  const ov = el('div',{class:'modal-ov'});
+  ov.innerHTML = `<div class="modal-card">
+    <h2>Sign in with GitHub</h2>
+    <p class="small muted">Two taps and you're in — nothing to find or paste.</p>
+    <p style="margin:10px 0 4px">Enter this code on GitHub:</p>
+    <div style="font-size:1.7em;font-weight:800;letter-spacing:3px;text-align:center;margin:6px 0">${esc(start.user_code)}</div>
+    <a href="${esc(start.verification_uri)}" target="_blank" rel="noopener"><button style="width:100%">Open GitHub &amp; approve</button></a>
+    <p id="dev_status" class="small muted" style="margin-top:12px"><span class="spin" style="border-color:#2f7d4f;border-top-color:transparent"></span> Waiting for you to approve on GitHub…</p>
+    <div class="row" style="margin-top:6px"><button class="sec" id="dev_cancel">Cancel</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  let cancelled = false;
+  ov.querySelector('#dev_cancel').addEventListener('click', ()=>{ cancelled=true; ov.remove(); });
+
+  try{
+    const token = await pollForToken(start.device_code, start.interval, ()=>cancelled);
+    if(cancelled || !token) return;
+    ov.remove();
+    LS.token = token;
+    const tgt = targetInputId && $('#'+targetInputId);
+    if(tgt) tgt.value = token;
+    const badge = $('#gh_signed'); if(badge) badge.style.display='block';
+    toast('Signed in with GitHub ✓');
+  }catch(e){
+    if(!cancelled){ ov.remove(); toast(String(e.message||e)); }
+  }
+}
+
 /* ---------- data load ---------- */
 const FILES = {
   items:'db/items.json', receipts:'db/receipts.json', groups:'db/item_groups.json',
@@ -282,10 +355,17 @@ function renderSetup(){
     <label>This device's name (so your phone and computer can both stay signed in)</label>
     <input id="su_device" placeholder="e.g. Isaiah's iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
     <label>Private data repository (looks like <code>owner/name</code>)</label>
-    <input id="su_repo" placeholder="isaiahmail97-oss/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <input id="su_repo" placeholder="isaiahmail97-oss/grocery-data" value="${esc(LS.repo||'isaiahmail97-oss/grocery-data')}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    ${authEnabled() ? `
+    <label>Sign in</label>
+    <button type="button" onclick="signInWithGitHub('su_token')" style="width:100%">Sign in with GitHub</button>
+    <p id="gh_signed" class="small" style="display:${LS.token?'block':'none'};color:#2f7d4f;margin:6px 0 0">✓ Signed in with GitHub on this device</p>
+    <details style="margin-top:10px"><summary class="small muted">Advanced: paste a key by hand instead</summary>
+      <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-top:8px"/>
+    </details>` : `
     <label>Access key (your private token — like a house key)</label>
     <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
+    <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>`}
     <button onclick="saveSetup()">Connect</button>
   </div>`;
 }
@@ -781,12 +861,14 @@ function renderSettings(){
     <input id="set_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <label>Access key (token)</label>
     <input id="set_token" type="password" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    ${authEnabled()?`<button type="button" class="sec" style="margin-top:8px;width:100%" onclick="signInWithGitHub('set_token')">Sign in with GitHub (refresh key)</button>`:''}
     <div class="row" style="margin-top:10px"><button class="sec" onclick="testConn()">Test connection</button><button onclick="saveSettings()">Save</button></div>
     <button class="link danger" style="color:var(--danger)" onclick="signOut()">Sign out / forget key on this device</button>
   </div>
   <div class="card">
     <h2>📱💻 Using more than one device</h2>
     <p class="small muted">Yes — you can stay signed in on your phone <b>and</b> your computer at the same time. There's no central login server: each device keeps its <b>own</b> access key (token) in its own browser, and GitHub happily lets many keys work at once for the same account.</p>
+    ${authEnabled()?`<p class="small muted"><b>Easiest way to add a device:</b> open this app on it and tap <i>Sign in with GitHub</i> — approve the short code, and you're in. No token to create or paste.</p>`:''}
     <p class="small muted"><b>To add another device:</b> on that device, create a <b>brand-new</b> token (GitHub → Settings → Developer settings → Fine-grained tokens → <i>Generate new token</i>, give it the <code>grocery-data</code> repo with Contents = Read &amp; write) and paste that one into its setup screen.</p>
     <p class="small muted"><b>The thing that kicks a device out:</b> pressing <i>Regenerate</i> on an existing token — that changes the key's value, so whatever device was using the old value stops working. Making a <i>new</i> token never affects your other devices. Give each device its own token and its own name above, and they'll all stay signed in.</p>
   </div>

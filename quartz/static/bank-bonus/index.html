@@ -705,9 +705,14 @@ function render_reports(){
   html += '</div></div>';
 
   html += '<div class="card"><div class="card-header">All accounts</div>';
-  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th><th>Referral</th></tr></thead><tbody>';
+  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th><th>Referral</th><th>APY</th></tr></thead><tbody>';
   accounts.forEach(a => {
-    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td><td>${a.referralValue ? money(a.referralValue) : '—'}</td></tr>`;
+    let apy = '—';
+    if (a.minBalance && a.minBalance > 0 && a.minBalDays && a.minBalDays > 0) {
+      const afterTaxBonus = (a.bonus || 0) * (1 - taxRate);
+      apy = `${(afterTaxBonus / a.minBalance * 365 / a.minBalDays * 100).toFixed(1)}%`;
+    }
+    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td><td>${a.referralValue ? money(a.referralValue) : '—'}</td><td>${apy}</td></tr>`;
   });
   html += '</tbody></table></div>';
 

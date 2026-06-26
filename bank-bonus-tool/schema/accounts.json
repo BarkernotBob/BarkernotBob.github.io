@@ -20,6 +20,7 @@
     "monthsTillReopen": null,
     "notes": "States '1 bonus per household'. May mean spouses aren't eligible at same address",
     "dates": {
+      "plannedOpen": null,
       "opened": "2025-06-28",
       "firstDD": "2025-07-25",
       "bonusPaidOut": null,
@@ -76,6 +77,7 @@
     "monthsTillReopen": null,
     "notes": "Research: Offer not available if primary account owner in last 12 months",
     "dates": {
+      "plannedOpen": "2026-02-06",
       "opened": null,
       "firstDD": null,
       "bonusPaidOut": null,

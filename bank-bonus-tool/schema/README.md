@@ -57,7 +57,8 @@ You normally never edit these by hand. The app keeps them up to date. This folde
 - `churnable` — `true`/`false` — can you re-open for bonus again, or is it one-time-only?
 - `monthsTillReopen` — if churnable, how many months after closing before you can reopen
 - `notes` — any other info (research notes, observations, gotchas)
-- `dates.opened` — date you opened the account (ISO format `YYYY-MM-DD`), or `null`
+- `dates.plannedOpen` — for `planned` accounts, the date you *intend* to open it (ISO format `YYYY-MM-DD`), or `null`. This is what drives the "Accounts to Open today" alert and the daily email.
+- `dates.opened` — date you *actually* opened the account (ISO format `YYYY-MM-DD`), or `null`
 - `dates.firstDD` — date of the first direct deposit (ISO), or `null`
 - `dates.bonusPaidOut` — when the bonus posted (ISO), or `null`
 - `dates.closed` — date you closed it (ISO), or `null`

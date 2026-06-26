@@ -200,13 +200,17 @@ async function saveJson(path, value, message){
 }
 
 // --------- Tab navigation ---------
+let lastTab = 'today';
+
 function show(tab){
   $$('.section').forEach(s => s.classList.remove('active'));
   $$('.nav-btn').forEach(b => b.classList.remove('active'));
   const section = $(`#section-${tab}`);
   if(section) {
     section.classList.add('active');
-    $(`[data-tab="${tab}"]`).classList.add('active');
+    const navBtn = $(`[data-tab="${tab}"]`);
+    if(navBtn) navBtn.classList.add('active');   // detail view has no nav button
+    if(tab !== 'detail') lastTab = tab;
     const fn = window[`render_${tab}`];
     if(fn) fn();
   }
@@ -243,25 +247,41 @@ async function saveConfig(msg='Update config'){
 }
 
 // --------- Main init ---------
+let loadError = '';
+
 async function init(){
   const main = $('#main');
 
-  // Create all sections
-  main.innerHTML = `
-    <div id="section-today" class="section"></div>
-    <div id="section-active" class="section"></div>
-    <div id="section-planned" class="section"></div>
-    <div id="section-offers" class="section"></div>
-    <div id="section-calendar" class="section"></div>
-    <div id="section-reports" class="section"></div>
-    <div id="section-settings" class="section"></div>
-  `;
+  // Create all sections (only once — never destroy them, or Settings becomes
+  // unreachable on a load error)
+  if(!$('#section-today')) {
+    main.innerHTML = `
+      <div id="section-today" class="section"></div>
+      <div id="section-active" class="section"></div>
+      <div id="section-planned" class="section"></div>
+      <div id="section-offers" class="section"></div>
+      <div id="section-calendar" class="section"></div>
+      <div id="section-reports" class="section"></div>
+      <div id="section-settings" class="section"></div>
+      <div id="section-detail" class="section"></div>
+    `;
+  }
 
-  // Load data and render
+  // If no repo/token configured yet, send the user straight to Settings.
+  if(!LS.repo || !LS.token) {
+    loadError = 'Welcome! Enter your data repo and GitHub token below to get started.';
+    show('settings');
+    return;
+  }
+
+  // Load data and render. On failure, fall back to Settings (which stays
+  // reachable) rather than wiping the page.
   if(await loadAll()) {
+    loadError = '';
     show('today');
   } else {
-    main.innerHTML = '<div class="card"><p style="color:#cc3333"><strong>Setup required</strong> — go to Settings to configure your GitHub repo and token.</p></div>';
+    loadError = 'Could not load data. Check your repo name and token below.';
+    show('settings');
   }
 }
 
@@ -272,7 +292,7 @@ function render_today(){
   const today = todayISO();
   let html = '';
 
-  const toOpen = accounts.filter(a => (a.status === 'planned' && a.dates.opened === today) || (a.dates.reopenAfter === today));
+  const toOpen = accounts.filter(a => (a.status === 'planned' && a.dates.plannedOpen === today) || (a.dates.reopenAfter === today));
   const toClose = accounts.filter(a => a.dates.closed === today);
 
   let reminders = [];
@@ -397,6 +417,7 @@ function render_planned(){
       <div class="row">
         <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
         <div class="row-item"><div class="label">DD Req</div><div class="value">${money(a.directDepositTotal)}</div></div>
+        <div class="row-item"><div class="label">Planned Open</div><div class="value">${a.dates.plannedOpen || '—'}</div></div>
       </div>
       <button onclick="openPlanned('${a.id}')">Mark Opened</button>
       <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
@@ -526,6 +547,7 @@ async function promoteOffer(offerId, toStatus){
     monthsTillReopen: offer.monthsTillReopen,
     notes: offer.notes,
     dates: {
+      plannedOpen: null,
       opened: toStatus === 'open' ? todayISO() : null,
       firstDD: null,
       bonusPaidOut: null,
@@ -654,7 +676,12 @@ function render_settings(){
 
   const notifyEmail = (config.notify && config.notify[0]) ? config.notify[0].email : '';
 
-  let html = `<div class="card">
+  let html = '';
+  if(loadError) {
+    html += `<div class="card" style="border-left:4px solid #cc8800;background:#fff8e6"><p style="margin:0">${esc(loadError)}</p></div>`;
+  }
+
+  html += `<div class="card">
     <div class="card-header">GitHub Configuration</div>
     <div class="row"><div class="row-item">
       <div class="label">Data Repo (owner/name)</div>
@@ -750,9 +777,265 @@ async function savePaycheckSettings(){
   }
 }
 
-async function editAccount(accountId){
-  // Placeholder for full edit UI
-  toast('Edit account (coming soon)');
+// --------- Account detail / edit screen ---------
+let editingId = null;
+
+function editAccount(accountId){
+  editingId = accountId;
+  show('detail');
+}
+
+// Read every field input back into the in-memory account object, so edits are
+// never lost when the detail view re-renders (e.g. after adding a reminder).
+function captureFields(){
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const gv = id => { const e = $('#' + id); return e ? e.value : undefined; };
+  const gs = id => { const v = gv(id); return v === undefined ? undefined : v.trim(); };
+  const gn = id => { const v = gv(id); if(v === undefined || v.trim() === '') return null; const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const gd = id => { const v = gv(id); return v === undefined ? undefined : (v.trim() === '' ? null : v.trim()); };
+
+  if(gs('d_institution') !== undefined) a.institution = gs('d_institution');
+  if(gv('d_person') !== undefined) a.person = gv('d_person');
+  if(gv('d_status') !== undefined) a.status = gv('d_status');
+  if(gn('d_bonus') !== undefined) a.bonus = gn('d_bonus');
+  if(gn('d_referralValue') !== undefined) a.referralValue = gn('d_referralValue');
+  if(gn('d_directDepositTotal') !== undefined) a.directDepositTotal = gn('d_directDepositTotal');
+  if(gn('d_nbDeposits') !== undefined) a.nbDeposits = gn('d_nbDeposits');
+  if(gn('d_minBalance') !== undefined) a.minBalance = gn('d_minBalance');
+  if(gn('d_minBalDays') !== undefined) a.minBalDays = gn('d_minBalDays');
+  if(gn('d_daysToCompleteReq') !== undefined) a.daysToCompleteReq = gn('d_daysToCompleteReq');
+  if(gn('d_monthsTillReopen') !== undefined) a.monthsTillReopen = gn('d_monthsTillReopen');
+  if(gs('d_bonusTiming') !== undefined) a.bonusTiming = gs('d_bonusTiming');
+  if(gs('d_avoidFees') !== undefined) a.avoidFees = gs('d_avoidFees');
+  if(gs('d_additionalRequirements') !== undefined) a.additionalRequirements = gs('d_additionalRequirements');
+  if(gs('d_notes') !== undefined) a.notes = gs('d_notes');
+
+  if(gd('d_date_plannedOpen') !== undefined) a.dates.plannedOpen = gd('d_date_plannedOpen');
+  if(gd('d_date_opened') !== undefined) a.dates.opened = gd('d_date_opened');
+  if(gd('d_date_firstDD') !== undefined) a.dates.firstDD = gd('d_date_firstDD');
+  if(gd('d_date_bonusPaidOut') !== undefined) a.dates.bonusPaidOut = gd('d_date_bonusPaidOut');
+  if(gd('d_date_closed') !== undefined) a.dates.closed = gd('d_date_closed');
+  if(gd('d_date_reopenAfter') !== undefined) a.dates.reopenAfter = gd('d_date_reopenAfter');
+}
+
+function render_detail(){
+  const section = $('#section-detail');
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) { section.innerHTML = '<div class="empty">Account not found.</div>'; return; }
+
+  // Backfill new fields on older records
+  if(a.dates.plannedOpen === undefined) a.dates.plannedOpen = null;
+  if(!a.tasks) a.tasks = {};
+  if(!a.reminders) a.reminders = [];
+  if(!a.ddPlan) a.ddPlan = [];
+
+  const peopleOpts = (config.people || []).map(p =>
+    `<option value="${esc(p)}" ${p === a.person ? 'selected' : ''}>${esc(p)}</option>`).join('');
+  const statusOpts = ['planned','open','closed'].map(s =>
+    `<option value="${s}" ${s === a.status ? 'selected' : ''}>${s}</option>`).join('');
+
+  const num = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><input type="number" id="${id}" value="${val == null ? '' : val}" step="0.01"></div>`;
+  const txt = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><input type="text" id="${id}" value="${esc(val == null ? '' : val)}"></div>`;
+  const dat = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><input type="date" id="${id}" value="${esc(val || '')}"></div>`;
+
+  let html = `
+    <div class="card">
+      <button class="sec" onclick="backFromDetail()" style="margin-bottom:12px">← Back</button>
+      <div class="row">${txt('d_institution','Institution', a.institution)}
+        <div class="row-item"><div class="label">Person</div><select id="d_person">${peopleOpts}</select></div>
+        <div class="row-item"><div class="label">Status</div><select id="d_status">${statusOpts}</select></div>
+      </div>
+      <div class="row">${num('d_bonus','Bonus ($)', a.bonus)}${num('d_referralValue','Referral ($)', a.referralValue)}${num('d_directDepositTotal','DD Total ($)', a.directDepositTotal)}</div>
+      <div class="row">${num('d_nbDeposits','# Deposits', a.nbDeposits)}${num('d_minBalance','Min Balance ($)', a.minBalance)}${num('d_minBalDays','Min Bal Days', a.minBalDays)}</div>
+      <div class="row">${num('d_daysToCompleteReq','Days to Complete Req', a.daysToCompleteReq)}${num('d_monthsTillReopen','Months till Reopen', a.monthsTillReopen)}${txt('d_bonusTiming','Bonus Timing', a.bonusTiming)}</div>
+      <div class="row">${txt('d_avoidFees','Avoid Fees', a.avoidFees)}</div>
+      <div class="row"><div class="row-item"><div class="label">Additional Requirements</div><textarea id="d_additionalRequirements" rows="2" style="width:100%">${esc(a.additionalRequirements || '')}</textarea></div></div>
+      <div class="row"><div class="row-item"><div class="label">Notes</div><textarea id="d_notes" rows="2" style="width:100%">${esc(a.notes || '')}</textarea></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Dates</div>
+      <div class="row">${dat('d_date_plannedOpen','Planned Open', a.dates.plannedOpen)}${dat('d_date_opened','Opened', a.dates.opened)}${dat('d_date_firstDD','First DD', a.dates.firstDD)}</div>
+      <div class="row">${dat('d_date_bonusPaidOut','Bonus Paid Out', a.dates.bonusPaidOut)}${dat('d_date_closed','Closed', a.dates.closed)}${dat('d_date_reopenAfter','Reopen After', a.dates.reopenAfter)}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Tasks</div>`;
+
+  const taskDefs = [['estatements','E-Statements'],['alerts','Account alerts'],['ddSetup','DD setup'],['documented','Notes/fees documented'],['reminders','Reminders added'],['referrals','Referrals sent']];
+  taskDefs.forEach(([key,label]) => {
+    html += `<label style="display:block;margin-bottom:6px"><input type="checkbox" class="checkbox" ${a.tasks[key] ? 'checked' : ''} onchange="toggleTask('${key}')"> ${label}</label>`;
+  });
+  html += `</div>`;
+
+  // Reminders
+  html += `<div class="card"><div class="card-header">Reminders</div><div class="reminder-list">`;
+  if(a.reminders.length === 0) {
+    html += '<div style="color:#999;font-size:13px;margin-bottom:8px">No reminders yet.</div>';
+  } else {
+    a.reminders.forEach(r => {
+      html += `<div class="reminder-item">
+        <div><input type="checkbox" class="checkbox" ${r.done ? 'checked' : ''} onchange="toggleReminderDetail('${r.id}')">
+        <span style="${r.done ? 'text-decoration:line-through;color:#999' : ''}">${esc(r.note)}</span>
+        <span class="reminder-date"> — ${esc(r.date)}</span></div>
+        <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteReminder('${r.id}')">×</button>
+      </div>`;
+    });
+  }
+  html += `<div class="row" style="margin-top:8px">
+      <input type="date" id="d_new_rem_date">
+      <input type="text" id="d_new_rem_note" placeholder="Reminder note" style="flex:1">
+      <button onclick="addReminder()">Add</button>
+    </div></div>`;
+
+  // DD Plan
+  html += `<div class="card"><div class="card-header">Direct Deposit Plan</div>`;
+  if(a.ddPlan.length === 0) {
+    html += '<div style="color:#999;font-size:13px;margin-bottom:8px">No DD scheduled yet.</div>';
+  } else {
+    a.ddPlan.forEach((dd, i) => {
+      html += `<div class="reminder-item">
+        <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(dd.payrollDate)}</span></div>
+        <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteDD(${i})">×</button>
+      </div>`;
+    });
+  }
+  html += `<div class="row" style="margin-top:8px">
+      <input type="date" id="d_new_dd_date">
+      <input type="number" id="d_new_dd_amount" placeholder="Amount ($)" step="0.01" style="flex:1">
+      <button onclick="addDD()">Add</button>
+    </div></div>`;
+
+  // Actions
+  html += `<div class="card">
+    <div class="action-bar">
+      <button onclick="saveAccountDetail()">Save Changes</button>
+      <button class="sec" onclick="closeAccountDetail()">Close Account</button>
+      <button class="danger" onclick="deleteAccountDetail()">Delete</button>
+    </div>
+  </div>`;
+
+  section.innerHTML = html;
+}
+
+function backFromDetail(){
+  captureFields();
+  saveAccounts('Update account').catch(e => toast('Save error: ' + e.message));
+  editingId = null;
+  show(lastTab);
+}
+
+async function persistDetail(msg){
+  try {
+    await saveAccounts(msg);
+    render_detail();
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+async function toggleTask(key){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.tasks[key] = !a.tasks[key];
+  await persistDetail('Update task');
+}
+
+async function toggleReminderDetail(remId){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  const r = a && a.reminders.find(x => x.id === remId);
+  if(!r) return;
+  r.done = !r.done;
+  await persistDetail('Toggle reminder');
+}
+
+async function deleteReminder(remId){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.reminders = a.reminders.filter(x => x.id !== remId);
+  await persistDetail('Delete reminder');
+}
+
+async function addReminder(){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const date = $('#d_new_rem_date').value;
+  const note = $('#d_new_rem_note').value.trim();
+  if(!date || !note) { toast('Reminder needs a date and a note'); return; }
+  a.reminders.push({ id: uid('r'), date, note, done: false });
+  await persistDetail('Add reminder');
+}
+
+async function deleteDD(index){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.ddPlan.splice(index, 1);
+  await persistDetail('Delete DD entry');
+}
+
+async function addDD(){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const payrollDate = $('#d_new_dd_date').value;
+  const amount = parseFloat($('#d_new_dd_amount').value);
+  if(!payrollDate || isNaN(amount)) { toast('DD entry needs a date and amount'); return; }
+  a.ddPlan.push({ payrollDate, amount });
+  a.ddPlan.sort((x, y) => x.payrollDate.localeCompare(y.payrollDate));
+  await persistDetail('Add DD entry');
+}
+
+async function saveAccountDetail(){
+  captureFields();
+  try {
+    await saveAccounts('Update account');
+    toast('Saved');
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+async function closeAccountDetail(){
+  const ok = await modal(`<p>Close this account? Status will be set to <strong>closed</strong>.</p>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button class="danger" data-mval="yes">Close Account</button></div>`);
+  if(ok !== 'yes') return;
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.status = 'closed';
+  if(!a.dates.closed) a.dates.closed = todayISO();
+  try {
+    await saveAccounts('Close account: ' + a.institution);
+    toast('Account closed');
+    editingId = null;
+    show(lastTab);
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+async function deleteAccountDetail(){
+  const ok = await modal(`<p>Permanently delete this account? This cannot be undone.</p>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button class="danger" data-mval="yes">Delete</button></div>`);
+  if(ok !== 'yes') return;
+  accounts = accounts.filter(x => x.id !== editingId);
+  try {
+    await saveAccounts('Delete account');
+    toast('Account deleted');
+    editingId = null;
+    show(lastTab);
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
 }
 
 // Initialize

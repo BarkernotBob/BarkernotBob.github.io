@@ -51,9 +51,9 @@ jobs:
 
           // Scan accounts
           accounts.forEach(account => {
-            // Accounts to open (status planned and opened today, or reopen today)
+            // Accounts to open (planned with a planned-open date of today, or reopen today)
             if (
-              (account.status === 'planned' && account.dates.opened === todayISO) ||
+              (account.status === 'planned' && account.dates.plannedOpen === todayISO) ||
               (account.dates.reopenAfter === todayISO)
             ) {
               actions.push({
@@ -102,10 +102,18 @@ jobs:
 
           console.log(`Found ${actions.length} actions for ${todayISO}`);
 
+          // Helper: set a step output via the modern $GITHUB_OUTPUT file
+          // (the old ::set-output command was disabled by GitHub in 2023).
+          function setOutput(name, value) {
+            if (process.env.GITHUB_OUTPUT) {
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+            }
+          }
+
           // If no actions, exit
           if (actions.length === 0) {
             console.log('No actions for today. Skipping email.');
-            console.log('::set-output name=send_email::false');
+            setOutput('send_email', 'false');
             process.exit(0);
           }
 
@@ -150,7 +158,7 @@ jobs:
 
           // Write to temp file
           fs.writeFileSync('/tmp/email_body.html', html);
-          console.log('::set-output name=send_email::true');
+          setOutput('send_email', 'true');
           console.log('Email body prepared.');
           SCRIPT
 

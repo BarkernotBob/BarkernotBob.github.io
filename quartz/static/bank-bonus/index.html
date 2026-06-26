@@ -128,6 +128,15 @@ function shiftISO(iso, days){
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().split('T')[0];
 }
+// Format a stored ISO date (YYYY-MM-DD) for DISPLAY as MM/DD/YY. Storage and
+// all date math stay ISO; this only affects what the user sees. Returns ''
+// for empty/invalid input so callers can fall back to a placeholder.
+function fmtDate(iso){
+  if(!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if(!m) return iso;
+  return m[2] + '/' + m[3] + '/' + m[1].slice(2);
+}
 
 function toast(msg, ms=2600){
   const t = $('#toast');
@@ -404,8 +413,8 @@ function render_active(){
         <div class="row-item"><div class="label">DD Total</div><div class="value">${money(a.directDepositTotal)}</div></div>
       </div>
       <div class="row">
-        <div class="row-item"><div class="label">Opened</div><div class="value">${a.dates.opened || '—'}</div></div>
-        <div class="row-item"><div class="label">First DD</div><div class="value">${a.dates.firstDD || '—'}</div></div>
+        <div class="row-item"><div class="label">Opened</div><div class="value">${fmtDate(a.dates.opened) || '—'}</div></div>
+        <div class="row-item"><div class="label">First DD</div><div class="value">${fmtDate(a.dates.firstDD) || '—'}</div></div>
       </div>
     </div>`;
   });
@@ -428,7 +437,7 @@ function render_planned(){
       <div class="row">
         <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
         <div class="row-item"><div class="label">DD Req</div><div class="value">${money(a.directDepositTotal)}</div></div>
-        <div class="row-item"><div class="label">Planned Open</div><div class="value">${a.dates.plannedOpen || '—'}</div></div>
+        <div class="row-item"><div class="label">Planned Open</div><div class="value">${fmtDate(a.dates.plannedOpen) || '—'}</div></div>
       </div>
       <button onclick="openPlanned('${a.id}')">Mark Opened</button>
       <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
@@ -648,7 +657,7 @@ function render_calendar(){
     const status = allocated > checkAmount ? '❌ Over' : allocated === checkAmount ? '✅ Full' : '⚪ Partial';
 
     html += `<tr>
-      <td>${date}</td>
+      <td>${fmtDate(date)}</td>
       <td>${money(allocated)}</td>
       <td>${money(Math.max(0, checkAmount - allocated))}</td>
       <td>${status}</td>
@@ -929,7 +938,7 @@ function render_detail(){
       html += `<div class="reminder-item">
         <div><input type="checkbox" class="checkbox" ${r.done ? 'checked' : ''} onchange="toggleReminderDetail('${r.id}')">
         <span style="${r.done ? 'text-decoration:line-through;color:#999' : ''}">${esc(r.note)}</span>
-        <span class="reminder-date"> — ${esc(r.date)}</span></div>
+        <span class="reminder-date"> — ${esc(fmtDate(r.date))}</span></div>
         <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteReminder('${r.id}')">×</button>
       </div>`;
     });
@@ -947,7 +956,7 @@ function render_detail(){
   } else {
     a.ddPlan.forEach((dd, i) => {
       html += `<div class="reminder-item">
-        <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(dd.payrollDate)}</span></div>
+        <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(fmtDate(dd.payrollDate))}</span></div>
         <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteDD(${i})">×</button>
       </div>`;
     });

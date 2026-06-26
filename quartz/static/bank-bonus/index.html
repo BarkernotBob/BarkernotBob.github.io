@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Bonus Tracker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    #main { max-width: 900px; margin: 0 auto; padding: 20px; }
+    nav { background: white; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 100; }
+    nav button { background: none; border: none; padding: 12px 16px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; color: #666; }
+    nav button.active { color: #000; border-bottom-color: #0066cc; }
+    nav button:hover { color: #000; }
+    .ic { margin-right: 4px; }
+    .badge { background: #ff4444; color: white; border-radius: 50%; display: inline-block; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 12px; margin-left: 4px; }
+    .badge.hidden { display: none; }
+
+    .section { display: none; animation: fadeIn 0.2s; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card-header { font-weight: 600; margin-bottom: 12px; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .row-item { flex: 1; }
+    .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+    .value { font-size: 14px; font-weight: 500; }
+
+    button { background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #0052a3; }
+    button.sec { background: #ddd; color: #000; }
+    button.sec:hover { background: #ccc; }
+    button.danger { background: #cc3333; }
+    button.danger:hover { background: #aa2222; }
+
+    input, select, textarea { border: 1px solid #ddd; border-radius: 4px; padding: 8px; font-size: 14px; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 0 2px rgba(0,102,204,0.1); }
+
+    .toast { position: fixed; bottom: 20px; left: 20px; background: #333; color: white; padding: 12px 16px; border-radius: 4px; opacity: 0; transition: opacity 0.2s; z-index: 1000; }
+    .toast.show { opacity: 1; }
+
+    .modal-ov { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .modal-card { background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .modal-card p { margin: 0 0 16px; }
+    .modal-card input, .modal-card select { width: 100%; margin-bottom: 12px; }
+
+    .list { list-style: none; padding: 0; margin: 0; }
+    .list-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item.clickable { cursor: pointer; }
+    .list-item.clickable:hover { background: #f9f9f9; }
+
+    .empty { text-align: center; color: #999; padding: 40px 20px; }
+    .action-bar { margin-top: 16px; display: flex; gap: 8px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: #f5f5f5; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { font-weight: 600; }
+    tbody tr:hover { background: #f9f9f9; }
+
+    .checkbox { margin: 0; }
+    .reminder-list { margin-top: 12px; }
+    .reminder-item { background: #f9f9f9; padding: 8px; border-radius: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .reminder-date { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<nav id="nav" style="display: flex; flex-wrap: wrap;">
+  <button data-tab="today" class="nav-btn active" onclick="show('today')"><span class="ic">🗓</span>Today</button>
+  <button data-tab="active" class="nav-btn" onclick="show('active')"><span class="ic">📂</span>Active</button>
+  <button data-tab="planned" class="nav-btn" onclick="show('planned')"><span class="ic">🗒</span>Planned</button>
+  <button data-tab="offers" class="nav-btn" onclick="show('offers')"><span class="ic">🧰</span>Offers</button>
+  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')"><span class="ic">📅</span>Calendar</button>
+  <button data-tab="reports" class="nav-btn" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
+  <button data-tab="settings" class="nav-btn" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+</nav>
+
+<main id="main"></main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   Bank Bonus Tracker — single-file app.
+   Stores everything in a PRIVATE GitHub repo (the "data repo") via the GitHub API.
+   No data lives in this file; settings live in localStorage.
+   ========================================================================= */
+
+const LS = {
+  get repo(){ return localStorage.getItem('bb_repo') || '' },
+  set repo(v){ localStorage.setItem('bb_repo', v) },
+  get token(){ return localStorage.getItem('bb_token') || '' },
+  set token(v){ localStorage.setItem('bb_token', v) },
+  get me(){ return localStorage.getItem('bb_me') || '' },
+  set me(v){ localStorage.setItem('bb_me', v) },
+};
+
+const API = 'https://api.github.com';
+const DB = {};
+
+// --------- UI helpers ---------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+const el = (tag, attrs={}, html='') => {
+  const e = document.createElement(tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(html !== '') e.innerHTML = html;
+  return e;
+};
+const money = n => (n == null || isNaN(n)) ? '—' : '$' + Number(n).toFixed(2);
+const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// "Today" in the user's configured timezone (not the browser/UTC day), so
+// date-based alerts don't roll over a day early/late.
+function todayISO(){
+  const tz = (typeof config !== 'undefined' && config && config.timezone) || 'America/New_York';
+  try {
+    return new Intl.DateTimeFormat('en-CA', {timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+  } catch(e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
+// Shift an ISO date by N days (anchored at noon UTC to dodge DST edges).
+function shiftISO(iso, days){
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function toast(msg, ms=2600){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function modal(innerHtml){
+  return new Promise(resolve => {
+    const o = el('div', {class:'modal-ov'});
+    o.innerHTML = `<div class="modal-card">${innerHtml}</div>`;
+    const close = (val) => { if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    o.addEventListener('click', e => { if(e.target===o) close(null); });
+    document.body.appendChild(o);
+    o.querySelectorAll('[data-mval]').forEach(b => b.addEventListener('click', () => close(b.getAttribute('data-mval'))));
+    o.querySelectorAll('[data-mcancel]').forEach(b => b.addEventListener('click', () => close(null)));
+  });
+}
+
+function uid(p){ return p + '_' + Math.floor(Date.now()/1000) + '_' + Math.random().toString(36).slice(2,6); }
+function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
+
+// --------- GitHub API ---------
+function ghHeaders(){
+  return {
+    'Authorization': 'Bearer ' + LS.token,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+}
+
+async function ghContents(path){
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers: ghHeaders()});
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+
+async function ghPut(path, contentB64, sha, message){
+  const body = { message, content: contentB64 };
+  if(sha) body.sha = sha;
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: ghHeaders(),
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(`Save failed ${r.status}`);
+  return r.json();
+}
+
+async function loadJson(path, fallback){
+  try {
+    const c = await ghContents(path);
+    if(c === null){
+      DB[path] = {value: JSON.parse(JSON.stringify(fallback)), sha: null};
+      return DB[path].value;
+    }
+    const value = JSON.parse(b64decode(c.content));
+    DB[path] = {value, sha: c.sha};
+    return value;
+  } catch(e) {
+    console.error('Error loading', path, e);
+    throw e;
+  }
+}
+
+async function saveJson(path, value, message){
+  let sha = DB[path] ? DB[path].sha : null;
+  let retries = 1;
+  while(retries-- >= 0) {
+    try {
+      const res = await ghPut(path, b64encode(JSON.stringify(value, null, 2)), sha, message);
+      DB[path] = {value, sha: res.content.sha};
+      return;
+    } catch(e) {
+      if(retries > 0 && e.message.includes('conflict')) {
+        const c = await ghContents(path);
+        sha = c.sha;
+      } else throw e;
+    }
+  }
+}
+
+// --------- Tab navigation ---------
+let lastTab = 'today';
+
+function show(tab){
+  $$('.section').forEach(s => s.classList.remove('active'));
+  $$('.nav-btn').forEach(b => b.classList.remove('active'));
+  const section = $(`#section-${tab}`);
+  if(section) {
+    section.classList.add('active');
+    const navBtn = $(`[data-tab="${tab}"]`);
+    if(navBtn) navBtn.classList.add('active');   // detail view has no nav button
+    if(tab !== 'detail') lastTab = tab;
+    const fn = window[`render_${tab}`];
+    if(fn) fn();
+  }
+}
+
+// --------- Data load ---------
+let config = {};
+let accounts = [];
+let offers = [];
+
+async function loadAll(){
+  try {
+    config = await loadJson('db/config.json', {owner:'User', people:[], paycheck:{amount:1930,firstDate:'2024-12-27',intervalDays:14,ddClearDays:21}, taxRate:0.1675, laborHours:{open:0.35,adjustDD:0.15,requirements:0.5,close:0.5}, notify:[], timezone:'America/New_York'});
+    accounts = await loadJson('db/accounts.json', []);
+    offers = await loadJson('db/offers.json', []);
+    return true;
+  } catch(e) {
+    toast('Error loading data: ' + e.message);
+    console.error(e);
+    return false;
+  }
+}
+
+async function saveAccounts(msg='Update accounts'){
+  await saveJson('db/accounts.json', accounts, msg);
+}
+
+async function saveOffers(msg='Update offers'){
+  await saveJson('db/offers.json', offers, msg);
+}
+
+async function saveConfig(msg='Update config'){
+  await saveJson('db/config.json', config, msg);
+}
+
+// --------- Main init ---------
+let loadError = '';
+
+async function init(){
+  const main = $('#main');
+
+  // Create all sections (only once — never destroy them, or Settings becomes
+  // unreachable on a load error)
+  if(!$('#section-today')) {
+    main.innerHTML = `
+      <div id="section-today" class="section"></div>
+      <div id="section-active" class="section"></div>
+      <div id="section-planned" class="section"></div>
+      <div id="section-offers" class="section"></div>
+      <div id="section-calendar" class="section"></div>
+      <div id="section-reports" class="section"></div>
+      <div id="section-settings" class="section"></div>
+      <div id="section-detail" class="section"></div>
+    `;
+  }
+
+  // If no repo/token configured yet, send the user straight to Settings.
+  if(!LS.repo || !LS.token) {
+    loadError = 'Welcome! Enter your data repo and GitHub token below to get started.';
+    show('settings');
+    return;
+  }
+
+  // Load data and render. On failure, fall back to Settings (which stays
+  // reachable) rather than wiping the page.
+  if(await loadAll()) {
+    loadError = '';
+    show('today');
+  } else {
+    loadError = 'Could not load data. Check your repo name and token below.';
+    show('settings');
+  }
+}
+
+// --------- Render functions ---------
+
+function render_today(){
+  const section = $('#section-today');
+  const today = todayISO();
+  let html = '';
+
+  const toOpen = accounts.filter(a => (a.status === 'planned' && a.dates.plannedOpen === today) || (a.dates.reopenAfter === today));
+  const toClose = accounts.filter(a => a.dates.closed === today);
+
+  let reminders = [];
+  accounts.forEach(a => {
+    if(a.reminders) {
+      a.reminders.forEach(r => {
+        if(r.date === today && !r.done) {
+          reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id});
+        }
+      });
+    }
+  });
+
+  const yesterdayISO = shiftISO(today, -1);
+  const ddCleared = accounts.filter(a => a.dates.firstDD === yesterdayISO && a.status === 'open');
+
+  if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
+    html = '<div class="empty">Nothing to do today!</div>';
+  } else {
+    if(toOpen.length) {
+      html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';
+      toOpen.forEach(a => {
+        html += `<div class="list-item"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:#666">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div></div>`;
+      });
+      html += '</div>';
+    }
+
+    if(toClose.length) {
+      html += '<div class="card"><div class="card-header">🔒 Accounts to Close</div>';
+      toClose.forEach(a => {
+        html += `<div class="list-item"><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div>`;
+      });
+      html += '</div>';
+    }
+
+    if(reminders.length) {
+      html += '<div class="card"><div class="card-header">⏰ Reminders</div>';
+      reminders.forEach(r => {
+        html += `<div class="list-item"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><button class="sec" onclick="markReminderDone('${esc(r.accountId)}','${esc(r.id)}')">Done</button></div>`;
+      });
+      html += '</div>';
+    }
+
+    if(ddCleared.length) {
+      html += '<div class="card"><div class="card-header">✅ First DD Cleared (Yesterday)</div>';
+      ddCleared.forEach(a => {
+        html += `<div class="list-item"><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  // Update nav badge
+  const badge = $('[data-tab="today"] .badge') || document.createElement('span');
+  const count = toOpen.length + toClose.length + reminders.length + ddCleared.length;
+  if(count > 0) {
+    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today<span class="badge">' + count + '</span>';
+  } else {
+    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today';
+  }
+
+  section.innerHTML = html;
+}
+
+async function markReminderDone(accountId, reminderId){
+  const acc = accounts.find(a => a.id === accountId);
+  if(acc && acc.reminders) {
+    const rem = acc.reminders.find(r => r.id === reminderId);
+    if(rem) {
+      rem.done = true;
+      await saveAccounts('Mark reminder done');
+      render_today();
+      toast('Reminder marked done');
+    }
+  }
+}
+
+function render_active(){
+  const section = $('#section-active');
+  const active = accounts.filter(a => a.status === 'open');
+
+  if(active.length === 0) {
+    section.innerHTML = '<div class="empty">No active accounts yet.</div>';
+    return;
+  }
+
+  let html = '';
+  active.forEach(a => {
+    html += `<div class="card" onclick="editAccount('${a.id}')">
+      <div class="card-header">${esc(a.institution)}</div>
+      <div class="row">
+        <div class="row-item"><div class="label">Person</div><div class="value">${esc(a.person)}</div></div>
+        <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
+        <div class="row-item"><div class="label">DD Total</div><div class="value">${money(a.directDepositTotal)}</div></div>
+      </div>
+      <div class="row">
+        <div class="row-item"><div class="label">Opened</div><div class="value">${a.dates.opened || '—'}</div></div>
+        <div class="row-item"><div class="label">First DD</div><div class="value">${a.dates.firstDD || '—'}</div></div>
+      </div>
+    </div>`;
+  });
+  section.innerHTML = html;
+}
+
+function render_planned(){
+  const section = $('#section-planned');
+  const planned = accounts.filter(a => a.status === 'planned');
+
+  if(planned.length === 0) {
+    section.innerHTML = '<div class="empty">No planned accounts yet.</div>';
+    return;
+  }
+
+  let html = '';
+  planned.forEach(a => {
+    html += `<div class="card">
+      <div class="card-header">${esc(a.institution)} <span style="color:#999;font-weight:normal">(${esc(a.person)})</span></div>
+      <div class="row">
+        <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
+        <div class="row-item"><div class="label">DD Req</div><div class="value">${money(a.directDepositTotal)}</div></div>
+        <div class="row-item"><div class="label">Planned Open</div><div class="value">${a.dates.plannedOpen || '—'}</div></div>
+      </div>
+      <button onclick="openPlanned('${a.id}')">Mark Opened</button>
+      <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
+    </div>`;
+  });
+  section.innerHTML = html;
+}
+
+async function openPlanned(accountId){
+  const acc = accounts.find(a => a.id === accountId);
+  if(acc && acc.status === 'planned') {
+    acc.status = 'open';
+    acc.dates.opened = todayISO();
+    await saveAccounts('Open planned account: ' + acc.institution);
+    render_planned();
+    render_today();
+    toast(acc.institution + ' marked as open');
+  }
+}
+
+function render_offers(){
+  const section = $('#section-offers');
+  const backlog = offers.filter(o => o.status === 'backlog');
+
+  let html = '<button onclick="addOffer()" style="margin-bottom:16px">+ Add Offer</button>';
+
+  if(backlog.length === 0) {
+    html += '<div class="empty">No offers in backlog yet.</div>';
+  } else {
+    html += '<table><thead><tr><th>Institution</th><th>Bonus</th><th>DD Req</th><th>Actions</th></tr></thead><tbody>';
+    backlog.forEach(o => {
+      html += `<tr>
+        <td>${esc(o.institution)}</td>
+        <td>${money(o.bonus)}</td>
+        <td>${money(o.directDepositTotal)}</td>
+        <td>
+          <button class="sec" onclick="promoteOffer('${o.id}','planned')" style="font-size:12px;padding:4px 8px">Planned</button>
+          <button class="sec" onclick="promoteOffer('${o.id}','open')" style="font-size:12px;padding:4px 8px">Open</button>
+          <button class="sec" onclick="deleteOffer('${o.id}')" style="font-size:12px;padding:4px 8px">Del</button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+
+  section.innerHTML = html;
+}
+
+async function addOffer(){
+  const result = await modal(`
+    <p><strong>Add a new offer to backlog</strong></p>
+    <input type="text" id="off_inst" placeholder="Institution name" autofocus>
+    <input type="number" id="off_bonus" placeholder="Bonus ($)">
+    <input type="number" id="off_dd" placeholder="DD Required ($)">
+    <div class="row">
+      <button data-mcancel>Cancel</button>
+      <button data-mval="save">Add</button>
+    </div>
+  `);
+
+  if(result === 'save') {
+    const inst = $('#off_inst').value.trim();
+    const bonus = parseFloat($('#off_bonus').value) || 0;
+    const dd = parseFloat($('#off_dd').value) || 0;
+
+    if(!inst) { toast('Institution name required'); return; }
+
+    offers.push({
+      id: uid('o'),
+      institution: inst,
+      person: null,
+      bonus,
+      referralValue: null,
+      directDepositTotal: dd,
+      requiresMultipleDeposits: false,
+      nbDeposits: null,
+      minBalance: null,
+      minBalDays: null,
+      additionalRequirements: '',
+      daysToCompleteReq: 90,
+      bonusTiming: '',
+      avoidFees: '',
+      churnable: false,
+      monthsTillReopen: null,
+      notes: '',
+      status: 'backlog'
+    });
+
+    await saveOffers('Add offer: ' + inst);
+    render_offers();
+    toast(inst + ' added to backlog');
+  }
+}
+
+async function promoteOffer(offerId, toStatus){
+  const offer = offers.find(o => o.id === offerId);
+  if(!offer) return;
+
+  // Ask which person
+  const personList = config.people.map(p => `<button data-mval="${p}">${p}</button>`).join('');
+  const result = await modal(`
+    <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
+    <div class="row">${personList}</div>
+  `);
+
+  if(!result) return;
+
+  const person = result;
+  const acc = {
+    id: uid('a'),
+    offerId: offerId,
+    institution: offer.institution,
+    person: person,
+    status: toStatus,
+    bonus: offer.bonus,
+    referralValue: offer.referralValue,
+    directDepositTotal: offer.directDepositTotal,
+    requiresMultipleDeposits: offer.requiresMultipleDeposits,
+    nbDeposits: offer.nbDeposits,
+    minBalance: offer.minBalance,
+    minBalDays: offer.minBalDays,
+    additionalRequirements: offer.additionalRequirements,
+    daysToCompleteReq: offer.daysToCompleteReq,
+    bonusTiming: offer.bonusTiming,
+    avoidFees: offer.avoidFees,
+    churnable: offer.churnable,
+    monthsTillReopen: offer.monthsTillReopen,
+    notes: offer.notes,
+    dates: {
+      plannedOpen: null,
+      opened: toStatus === 'open' ? todayISO() : null,
+      firstDD: null,
+      bonusPaidOut: null,
+      closed: null,
+      reopenAfter: null
+    },
+    tasks: {
+      estatements: false,
+      alerts: false,
+      ddSetup: false,
+      documented: false,
+      reminders: false,
+      referrals: false
+    },
+    reminders: [],
+    ddPlan: []
+  };
+
+  accounts.push(acc);
+  offer.status = 'archived';
+
+  await saveAccounts('Promote offer: ' + offer.institution);
+  await saveOffers('Archive offer: ' + offer.institution);
+  render_offers();
+  render_planned();
+  render_today();
+  toast(offer.institution + ' promoted to ' + toStatus);
+}
+
+async function deleteOffer(offerId){
+  offers = offers.filter(o => o.id !== offerId);
+  await saveOffers('Delete offer');
+  render_offers();
+  toast('Offer deleted');
+}
+
+// Generate `count` paycheck dates on/after fromISO, from the config schedule.
+function paycheckDates(fromISO, count){
+  const pc = config.paycheck || {};
+  const interval = pc.intervalDays || 14;
+  let d = pc.firstDate || '2024-12-27';
+  const out = [];
+  let guard = 0;
+  while(d < fromISO && guard < 2000){ d = shiftISO(d, interval); guard++; }
+  while(out.length < count && guard < 4000){ out.push(d); d = shiftISO(d, interval); guard++; }
+  return out;
+}
+
+// Total DD already allocated on a payroll date by all accounts except one.
+function allocatedOn(date, exceptId){
+  return accounts.reduce((s, a) => {
+    if(a.id === exceptId) return s;
+    const dd = (a.ddPlan || []).find(x => x.payrollDate === date);
+    return s + (dd ? dd.amount : 0);
+  }, 0);
+}
+
+function render_calendar(){
+  const section = $('#section-calendar');
+
+  // Get all payroll dates from ddPlan across all accounts
+  const paydates = new Set();
+  accounts.forEach(a => {
+    if(a.ddPlan) {
+      a.ddPlan.forEach(dd => paydates.add(dd.payrollDate));
+    }
+  });
+
+  const sortedDates = Array.from(paydates).sort();
+
+  if(sortedDates.length === 0) {
+    section.innerHTML = '<div class="empty">No DD planned yet.<br><span style="font-size:13px">Open an account → "Auto-suggest" in its Direct Deposit Plan to fill the schedule.</span></div>';
+    return;
+  }
+
+  const paycheck = config.paycheck || {};
+  const checkAmount = paycheck.amount || 1930;
+
+  let html = '<table><thead><tr><th>Payroll Date</th><th>Allocated</th><th>Available</th><th>Status</th></tr></thead><tbody>';
+
+  sortedDates.forEach(date => {
+    const allocated = accounts.reduce((sum, a) => {
+      const dd = a.ddPlan.find(d => d.payrollDate === date);
+      return sum + (dd ? dd.amount : 0);
+    }, 0);
+
+    const status = allocated > checkAmount ? '❌ Over' : allocated === checkAmount ? '✅ Full' : '⚪ Partial';
+
+    html += `<tr>
+      <td>${date}</td>
+      <td>${money(allocated)}</td>
+      <td>${money(Math.max(0, checkAmount - allocated))}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  section.innerHTML = html;
+}
+
+function render_reports(){
+  const section = $('#section-reports');
+
+  const open = accounts.filter(a => a.status === 'open');
+  const closed = accounts.filter(a => a.status === 'closed');
+  const planned = accounts.filter(a => a.status === 'planned');
+
+  // Gross income per account = bonus + referral
+  const gross = a => (a.bonus || 0) + (a.referralValue || 0);
+  const sum = arr => arr.reduce((s, a) => s + gross(a), 0);
+
+  const taxRate = config.taxRate || 0;
+  const afterTax = v => v * (1 - taxRate);
+
+  const earned = sum(closed);
+  const pending = sum(open);
+  const plannedTot = sum(planned);
+  const total = earned + pending + plannedTot;
+
+  const hrs = config.laborHours || {};
+  const perOpen = (hrs.open || 0.35) + (hrs.requirements || 0.5);
+  const perClosed = (hrs.open || 0.35) + (hrs.requirements || 0.5) + (hrs.close || 0.5);
+  // Realized + in-progress effort (planned accounts not yet worked)
+  const totalHours = open.length * perOpen + closed.length * perClosed;
+  const afterTaxRealized = afterTax(earned + pending);
+
+  const pct = (taxRate * 100).toFixed(2);
+
+  let html = '<div class="card">';
+  html += '<div class="card-header">Bonuses (gross → after-tax)</div>';
+  html += '<table><thead><tr><th></th><th>Gross</th><th>After-tax</th><th>#</th></tr></thead><tbody>';
+  html += `<tr><td>Earned (closed)</td><td>${money(earned)}</td><td>${money(afterTax(earned))}</td><td>${closed.length}</td></tr>`;
+  html += `<tr><td>Pending (open)</td><td>${money(pending)}</td><td>${money(afterTax(pending))}</td><td>${open.length}</td></tr>`;
+  html += `<tr><td>Planned</td><td>${money(plannedTot)}</td><td>${money(afterTax(plannedTot))}</td><td>${planned.length}</td></tr>`;
+  html += `<tr style="font-weight:600"><td>Total projected</td><td>${money(total)}</td><td>${money(afterTax(total))}</td><td>${accounts.length}</td></tr>`;
+  html += '</tbody></table>';
+  html += `<div style="font-size:12px;color:#666;margin-top:8px">After-tax applies your ${pct}% marginal rate to bonus + referral income.</div>`;
+  html += '</div>';
+
+  html += '<div class="card"><div class="card-header">Effort & return</div><div class="row">';
+  html += `<div class="row-item"><div class="label">Est. hours (opened)</div><div class="value">${totalHours.toFixed(1)}h</div></div>`;
+  html += `<div class="row-item"><div class="label">After-tax realized+pending</div><div class="value">${money(afterTaxRealized)}</div></div>`;
+  html += `<div class="row-item"><div class="label">After-tax $/hr</div><div class="value">${money(afterTaxRealized / Math.max(totalHours, 1))}/hr</div></div>`;
+  html += '</div></div>';
+
+  html += '<div class="card"><div class="card-header">All accounts</div>';
+  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th><th>Referral</th><th>APY</th></tr></thead><tbody>';
+  accounts.forEach(a => {
+    let apy = '—';
+    if (a.minBalance && a.minBalance > 0 && a.minBalDays && a.minBalDays > 0) {
+      const afterTaxBonus = (a.bonus || 0) * (1 - taxRate);
+      apy = `${(afterTaxBonus / a.minBalance * 365 / a.minBalDays * 100).toFixed(1)}%`;
+    }
+    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td><td>${a.referralValue ? money(a.referralValue) : '—'}</td><td>${apy}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  section.innerHTML = html;
+}
+
+function render_settings(){
+  const section = $('#section-settings');
+
+  const notifyEmail = (config.notify && config.notify[0]) ? config.notify[0].email : '';
+
+  let html = '';
+  if(loadError) {
+    html += `<div class="card" style="border-left:4px solid #cc8800;background:#fff8e6"><p style="margin:0">${esc(loadError)}</p></div>`;
+  }
+
+  html += `<div class="card">
+    <div class="card-header">GitHub Configuration</div>
+    <div class="row"><div class="row-item">
+      <div class="label">Data Repo (owner/name)</div>
+      <input type="text" id="set_repo" value="${esc(LS.repo)}" placeholder="e.g., username/bank-bonus-data">
+    </div></div>
+    <div class="row"><div class="row-item">
+      <div class="label">GitHub Token</div>
+      <input type="password" id="set_token" value="${esc(LS.token)}" placeholder="ghp_...">
+    </div></div>
+    <div class="row"><div class="row-item">
+      <div class="label">Your Name</div>
+      <select id="set_me">`;
+
+  (config.people || []).forEach(p => {
+    html += `<option value="${esc(p)}" ${p === LS.me ? 'selected' : ''}>${esc(p)}</option>`;
+  });
+
+  html += `</select>
+    </div></div>
+    <button onclick="saveSettings()">Save Settings</button>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="card-header">Paycheck Settings</div>
+    <div class="row">
+      <div class="row-item">
+        <div class="label">Amount ($)</div>
+        <input type="number" id="set_amount" value="${config.paycheck?.amount || 1930}" step="0.01">
+      </div>
+      <div class="row-item">
+        <div class="label">Interval (days)</div>
+        <input type="number" id="set_interval" value="${config.paycheck?.intervalDays || 14}">
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-item">
+        <div class="label">First Date (YYYY-MM-DD)</div>
+        <input type="text" id="set_firstdate" value="${config.paycheck?.firstDate || '2024-12-27'}">
+      </div>
+      <div class="row-item">
+        <div class="label">DD Clear Days</div>
+        <input type="number" id="set_ddclear" value="${config.paycheck?.ddClearDays || 21}">
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-item">
+        <div class="label">Notify Email</div>
+        <input type="email" id="set_email" value="${esc(notifyEmail)}">
+      </div>
+    </div>
+    <button onclick="savePaycheckSettings()">Save Paycheck Settings</button>
+  </div>`;
+
+  section.innerHTML = html;
+}
+
+async function saveSettings(){
+  LS.repo = $('#set_repo').value.trim();
+  LS.token = $('#set_token').value.trim();
+  LS.me = $('#set_me').value;
+
+  if(!LS.repo || !LS.token) {
+    toast('Repo and token required');
+    return;
+  }
+
+  // Test connectivity
+  try {
+    await loadAll();
+    toast('Settings saved and data loaded');
+    init();
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function savePaycheckSettings(){
+  const amount = parseFloat($('#set_amount').value) || 1930;
+  const interval = parseInt($('#set_interval').value) || 14;
+  const firstDate = $('#set_firstdate').value.trim();
+  const ddClear = parseInt($('#set_ddclear').value) || 21;
+  const email = $('#set_email').value.trim();
+
+  config.paycheck = { amount, intervalDays: interval, firstDate, ddClearDays: ddClear };
+  if(email && !config.notify) config.notify = [];
+  if(email) config.notify[0] = { email, enabled: true };
+
+  try {
+    await saveConfig('Update paycheck settings');
+    toast('Paycheck settings saved');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// --------- Account detail / edit screen ---------
+let editingId = null;
+
+function editAccount(accountId){
+  editingId = accountId;
+  show('detail');
+}
+
+// Read every field input back into the in-memory account object, so edits are
+// never lost when the detail view re-renders (e.g. after adding a reminder).
+function captureFields(){
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const gv = id => { const e = $('#' + id); return e ? e.value : undefined; };
+  const gs = id => { const v = gv(id); return v === undefined ? undefined : v.trim(); };
+  const gn = id => { const v = gv(id); if(v === undefined || v.trim() === '') return null; const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const gd = id => { const v = gv(id); return v === undefined ? undefined : (v.trim() === '' ? null : v.trim()); };
+
+  if(gs('d_institution') !== undefined) a.institution = gs('d_institution');
+  if(gv('d_person') !== undefined) a.person = gv('d_person');
+  if(gv('d_status') !== undefined) a.status = gv('d_status');
+  if(gn('d_bonus') !== undefined) a.bonus = gn('d_bonus');
+  if(gn('d_referralValue') !== undefined) a.referralValue = gn('d_referralValue');
+  if(gn('d_directDepositTotal') !== undefined) a.directDepositTotal = gn('d_directDepositTotal');
+  if(gn('d_nbDeposits') !== undefined) a.nbDeposits = gn('d_nbDeposits');
+  if(gn('d_minBalance') !== undefined) a.minBalance = gn('d_minBalance');
+  if(gn('d_minBalDays') !== undefined) a.minBalDays = gn('d_minBalDays');
+  if(gn('d_daysToCompleteReq') !== undefined) a.daysToCompleteReq = gn('d_daysToCompleteReq');
+  if(gn('d_monthsTillReopen') !== undefined) a.monthsTillReopen = gn('d_monthsTillReopen');
+  if(gs('d_bonusTiming') !== undefined) a.bonusTiming = gs('d_bonusTiming');
+  if(gs('d_avoidFees') !== undefined) a.avoidFees = gs('d_avoidFees');
+  if(gs('d_additionalRequirements') !== undefined) a.additionalRequirements = gs('d_additionalRequirements');
+  if(gs('d_notes') !== undefined) a.notes = gs('d_notes');
+
+  if(gd('d_date_plannedOpen') !== undefined) a.dates.plannedOpen = gd('d_date_plannedOpen');
+  if(gd('d_date_opened') !== undefined) a.dates.opened = gd('d_date_opened');
+  if(gd('d_date_firstDD') !== undefined) a.dates.firstDD = gd('d_date_firstDD');
+  if(gd('d_date_bonusPaidOut') !== undefined) a.dates.bonusPaidOut = gd('d_date_bonusPaidOut');
+  if(gd('d_date_closed') !== undefined) a.dates.closed = gd('d_date_closed');
+  if(gd('d_date_reopenAfter') !== undefined) a.dates.reopenAfter = gd('d_date_reopenAfter');
+}
+
+function render_detail(){
+  const section = $('#section-detail');
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) { section.innerHTML = '<div class="empty">Account not found.</div>'; return; }
+
+  // Backfill new fields on older records
+  if(a.dates.plannedOpen === undefined) a.dates.plannedOpen = null;
+  if(!a.tasks) a.tasks = {};
+  if(!a.reminders) a.reminders = [];
+  if(!a.ddPlan) a.ddPlan = [];
+
+  const peopleOpts = (config.people || []).map(p =>
+    `<option value="${esc(p)}" ${p === a.person ? 'selected' : ''}>${esc(p)}</option>`).join('');
+  const statusOpts = ['planned','open','closed'].map(s =>
+    `<option value="${s}" ${s === a.status ? 'selected' : ''}>${s}</option>`).join('');
+
+  const num = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><input type="number" id="${id}" value="${val == null ? '' : val}" step="0.01"></div>`;
+  const txt = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><input type="text" id="${id}" value="${esc(val == null ? '' : val)}"></div>`;
+  const dat = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><input type="date" id="${id}" value="${esc(val || '')}"></div>`;
+
+  let html = `
+    <div class="card">
+      <button class="sec" onclick="backFromDetail()" style="margin-bottom:12px">← Back</button>
+      <div class="row">${txt('d_institution','Institution', a.institution)}
+        <div class="row-item"><div class="label">Person</div><select id="d_person">${peopleOpts}</select></div>
+        <div class="row-item"><div class="label">Status</div><select id="d_status">${statusOpts}</select></div>
+      </div>
+      <div class="row">${num('d_bonus','Bonus ($)', a.bonus)}${num('d_referralValue','Referral ($)', a.referralValue)}${num('d_directDepositTotal','DD Total ($)', a.directDepositTotal)}</div>
+      <div class="row">${num('d_nbDeposits','# Deposits', a.nbDeposits)}${num('d_minBalance','Min Balance ($)', a.minBalance)}${num('d_minBalDays','Min Bal Days', a.minBalDays)}</div>
+      <div class="row">${num('d_daysToCompleteReq','Days to Complete Req', a.daysToCompleteReq)}${num('d_monthsTillReopen','Months till Reopen', a.monthsTillReopen)}${txt('d_bonusTiming','Bonus Timing', a.bonusTiming)}</div>
+      <div class="row">${txt('d_avoidFees','Avoid Fees', a.avoidFees)}</div>
+      <div class="row"><div class="row-item"><div class="label">Additional Requirements</div><textarea id="d_additionalRequirements" rows="2" style="width:100%">${esc(a.additionalRequirements || '')}</textarea></div></div>
+      <div class="row"><div class="row-item"><div class="label">Notes</div><textarea id="d_notes" rows="2" style="width:100%">${esc(a.notes || '')}</textarea></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Dates</div>
+      <div class="row">${dat('d_date_plannedOpen','Planned Open', a.dates.plannedOpen)}${dat('d_date_opened','Opened', a.dates.opened)}${dat('d_date_firstDD','First DD', a.dates.firstDD)}</div>
+      <div class="row">${dat('d_date_bonusPaidOut','Bonus Paid Out', a.dates.bonusPaidOut)}${dat('d_date_closed','Closed', a.dates.closed)}${dat('d_date_reopenAfter','Reopen After', a.dates.reopenAfter)}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Tasks</div>`;
+
+  const taskDefs = [['estatements','E-Statements'],['alerts','Account alerts'],['ddSetup','DD setup'],['documented','Notes/fees documented'],['reminders','Reminders added'],['referrals','Referrals sent']];
+  taskDefs.forEach(([key,label]) => {
+    html += `<label style="display:block;margin-bottom:6px"><input type="checkbox" class="checkbox" ${a.tasks[key] ? 'checked' : ''} onchange="toggleTask('${key}')"> ${label}</label>`;
+  });
+  html += `</div>`;
+
+  // Reminders
+  html += `<div class="card"><div class="card-header">Reminders</div><div class="reminder-list">`;
+  if(a.reminders.length === 0) {
+    html += '<div style="color:#999;font-size:13px;margin-bottom:8px">No reminders yet.</div>';
+  } else {
+    a.reminders.forEach(r => {
+      html += `<div class="reminder-item">
+        <div><input type="checkbox" class="checkbox" ${r.done ? 'checked' : ''} onchange="toggleReminderDetail('${r.id}')">
+        <span style="${r.done ? 'text-decoration:line-through;color:#999' : ''}">${esc(r.note)}</span>
+        <span class="reminder-date"> — ${esc(r.date)}</span></div>
+        <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteReminder('${r.id}')">×</button>
+      </div>`;
+    });
+  }
+  html += `<div class="row" style="margin-top:8px">
+      <input type="date" id="d_new_rem_date">
+      <input type="text" id="d_new_rem_note" placeholder="Reminder note" style="flex:1">
+      <button onclick="addReminder()">Add</button>
+    </div></div>`;
+
+  // DD Plan
+  html += `<div class="card"><div class="card-header">Direct Deposit Plan</div>`;
+  if(a.ddPlan.length === 0) {
+    html += '<div style="color:#999;font-size:13px;margin-bottom:8px">No DD scheduled yet.</div>';
+  } else {
+    a.ddPlan.forEach((dd, i) => {
+      html += `<div class="reminder-item">
+        <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(dd.payrollDate)}</span></div>
+        <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteDD(${i})">×</button>
+      </div>`;
+    });
+  }
+  html += `<div class="action-bar" style="margin-top:4px">
+      <button class="sec" onclick="suggestDD()">⚡ Auto-suggest</button>
+    </div>
+    <div style="font-size:12px;color:#666;margin:4px 0 8px">Auto-suggest fills paychecks from the planned/open date until the DD total is met, without over-filling any paycheck. Adjust by hand for split-deposit rules.</div>
+    <div class="row" style="margin-top:8px">
+      <input type="date" id="d_new_dd_date">
+      <input type="number" id="d_new_dd_amount" placeholder="Amount ($)" step="0.01" style="flex:1">
+      <button onclick="addDD()">Add</button>
+    </div></div>`;
+
+  // Actions
+  html += `<div class="card">
+    <div class="action-bar">
+      <button onclick="saveAccountDetail()">Save Changes</button>
+      <button class="sec" onclick="closeAccountDetail()">Close Account</button>
+      <button class="danger" onclick="deleteAccountDetail()">Delete</button>
+    </div>
+  </div>`;
+
+  section.innerHTML = html;
+}
+
+function backFromDetail(){
+  captureFields();
+  saveAccounts('Update account').catch(e => toast('Save error: ' + e.message));
+  editingId = null;
+  show(lastTab);
+}
+
+async function persistDetail(msg){
+  try {
+    await saveAccounts(msg);
+    render_detail();
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+async function toggleTask(key){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.tasks[key] = !a.tasks[key];
+  await persistDetail('Update task');
+}
+
+async function toggleReminderDetail(remId){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  const r = a && a.reminders.find(x => x.id === remId);
+  if(!r) return;
+  r.done = !r.done;
+  await persistDetail('Toggle reminder');
+}
+
+async function deleteReminder(remId){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.reminders = a.reminders.filter(x => x.id !== remId);
+  await persistDetail('Delete reminder');
+}
+
+async function addReminder(){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const date = $('#d_new_rem_date').value;
+  const note = $('#d_new_rem_note').value.trim();
+  if(!date || !note) { toast('Reminder needs a date and a note'); return; }
+  a.reminders.push({ id: uid('r'), date, note, done: false });
+  await persistDetail('Add reminder');
+}
+
+async function deleteDD(index){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.ddPlan.splice(index, 1);
+  await persistDetail('Delete DD entry');
+}
+
+async function addDD(){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const payrollDate = $('#d_new_dd_date').value;
+  const amount = parseFloat($('#d_new_dd_amount').value);
+  if(!payrollDate || isNaN(amount)) { toast('DD entry needs a date and amount'); return; }
+  a.ddPlan.push({ payrollDate, amount });
+  a.ddPlan.sort((x, y) => x.payrollDate.localeCompare(y.payrollDate));
+  await persistDetail('Add DD entry');
+}
+
+async function suggestDD(){
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  const need = a.directDepositTotal || 0;
+  if(need <= 0){ toast('No DD requirement to schedule'); return; }
+  const cap = (config.paycheck || {}).amount || 1930;
+  const start = a.dates.plannedOpen || a.dates.opened || todayISO();
+  const dates = paycheckDates(start, 26);
+  const plan = [];
+  let remaining = need;
+  for(const d of dates){
+    if(remaining <= 0) break;
+    const free = cap - allocatedOn(d, a.id);
+    if(free <= 0) continue;
+    const amt = Math.min(remaining, free);
+    plan.push({ payrollDate: d, amount: Math.round(amt * 100) / 100 });
+    remaining -= amt;
+  }
+  if(plan.length === 0){ toast('No paycheck capacity available'); return; }
+  a.ddPlan = plan;
+  if(remaining > 0) toast('Scheduled ' + money(need - remaining) + ' of ' + money(need) + ' — ran out of paychecks');
+  else toast('Suggested DD across ' + plan.length + ' paycheck(s)');
+  await persistDetail('Auto-suggest DD plan');
+}
+
+async function saveAccountDetail(){
+  captureFields();
+  try {
+    await saveAccounts('Update account');
+    toast('Saved');
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+async function closeAccountDetail(){
+  const ok = await modal(`<p>Close this account? Status will be set to <strong>closed</strong>.</p>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button class="danger" data-mval="yes">Close Account</button></div>`);
+  if(ok !== 'yes') return;
+  captureFields();
+  const a = accounts.find(x => x.id === editingId);
+  if(!a) return;
+  a.status = 'closed';
+  if(!a.dates.closed) a.dates.closed = todayISO();
+  try {
+    await saveAccounts('Close account: ' + a.institution);
+    toast('Account closed');
+    editingId = null;
+    show(lastTab);
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+async function deleteAccountDetail(){
+  const ok = await modal(`<p>Permanently delete this account? This cannot be undone.</p>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button class="danger" data-mval="yes">Delete</button></div>`);
+  if(ok !== 'yes') return;
+  accounts = accounts.filter(x => x.id !== editingId);
+  try {
+    await saveAccounts('Delete account');
+    toast('Account deleted');
+    editingId = null;
+    show(lastTab);
+  } catch(e) {
+    toast('Save error: ' + e.message);
+  }
+}
+
+// Initialize
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "o_1719240000_ab12",
+    "institution": "Key Bank",
+    "person": null,
+    "bonus": 300,
+    "referralValue": null,
+    "directDepositTotal": 2000,
+    "requiresMultipleDeposits": false,
+    "nbDeposits": null,
+    "minBalance": null,
+    "minBalDays": null,
+    "additionalRequirements": "Limit one account-opening gift per individual",
+    "daysToCompleteReq": 90,
+    "bonusTiming": "60 days after meeting requirements",
+    "avoidFees": "$10 opening Deposit",
+    "churnable": false,
+    "monthsTillReopen": null,
+    "notes": "Offer not available to individuals who were a primary account owner in the last 12 months",
+    "status": "backlog"
+  },
+  {
+    "id": "o_1719240000_cd34",
+    "institution": "Alliant",
+    "person": null,
+    "bonus": 200,
+    "referralValue": null,
+    "directDepositTotal": 500,
+    "requiresMultipleDeposits": false,
+    "nbDeposits": null,
+    "minBalance": null,
+    "minBalDays": null,
+    "additionalRequirements": "Make $500 deposit for Rakuten bonus, Make $100 deposits every month for 12 months for an additional $100",
+    "daysToCompleteReq": 30,
+    "bonusTiming": "45 days",
+    "avoidFees": "N/A",
+    "churnable": false,
+    "monthsTillReopen": 180,
+    "notes": "",
+    "status": "backlog"
+  }
+]

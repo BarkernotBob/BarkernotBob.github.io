@@ -1,0 +1,25 @@
+{
+  "owner": "Isaiah",
+  "people": ["Isaiah", "Grace", "Business"],
+  "paycheck": {
+    "amount": 1930.00,
+    "firstDate": "2024-12-27",
+    "intervalDays": 14,
+    "ddClearDays": 21
+  },
+  "taxRate": 0.1675,
+  "hysaDailyRate": 0.000091,
+  "laborHours": {
+    "open": 0.35,
+    "adjustDD": 0.15,
+    "requirements": 0.5,
+    "close": 0.5
+  },
+  "notify": [
+    {
+      "email": "isaiahmail97@gmail.com",
+      "enabled": true
+    }
+  ],
+  "timezone": "America/New_York"
+}

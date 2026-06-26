@@ -1,0 +1,168 @@
+name: Daily Bank Bonus Report
+
+# Runs automatically every day at 11:00 UTC, or manually via "Run workflow"
+on:
+  schedule:
+    # Cron: run at 11:00 UTC daily
+    # Format: minute hour day month weekday
+    # This runs at 11:00 UTC, which is 6:00 AM EST or 7:00 AM EDT
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read account data and send email (if needed)
+        id: check_actions
+        run: |
+          node << 'SCRIPT'
+          const fs = require('fs');
+          const os = require('os');
+
+          // Read config and accounts
+          let config = {};
+          let accounts = [];
+          try {
+            config = JSON.parse(fs.readFileSync('db/config.json', 'utf8'));
+            accounts = JSON.parse(fs.readFileSync('db/accounts.json', 'utf8'));
+          } catch (e) {
+            console.log('Error reading data files:', e.message);
+            process.exit(1);
+          }
+
+          // Compute today's date in UTC
+          const now = new Date();
+          const todayISO = now.toISOString().split('T')[0];
+
+          // Yesterday (for DD clearance)
+          const yesterday = new Date(now);
+          yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+          const yesterdayISO = yesterday.toISOString().split('T')[0];
+
+          console.log(`Computing actions for ${todayISO}...`);
+
+          let actions = [];
+
+          // Scan accounts
+          accounts.forEach(account => {
+            // Accounts to open (status planned and opened today, or reopen today)
+            if (
+              (account.status === 'planned' && account.dates.opened === todayISO) ||
+              (account.dates.reopenAfter === todayISO)
+            ) {
+              actions.push({
+                type: 'open',
+                institution: account.institution,
+                person: account.person,
+                bonus: account.bonus,
+                directDepositTotal: account.directDepositTotal
+              });
+            }
+
+            // Accounts to close
+            if (account.dates.closed === todayISO) {
+              actions.push({
+                type: 'close',
+                institution: account.institution,
+                person: account.person,
+                bonus: account.bonus
+              });
+            }
+
+            // Reminders due today (not already done)
+            if (account.reminders && Array.isArray(account.reminders)) {
+              account.reminders.forEach(reminder => {
+                if (reminder.date === todayISO && !reminder.done) {
+                  actions.push({
+                    type: 'reminder',
+                    institution: account.institution,
+                    person: account.person,
+                    note: reminder.note
+                  });
+                }
+              });
+            }
+
+            // First DD cleared yesterday
+            if (account.dates.firstDD === yesterdayISO && account.status === 'open') {
+              actions.push({
+                type: 'dd-cleared',
+                institution: account.institution,
+                person: account.person,
+                directDepositTotal: account.directDepositTotal
+              });
+            }
+          });
+
+          console.log(`Found ${actions.length} actions for ${todayISO}`);
+
+          // If no actions, exit
+          if (actions.length === 0) {
+            console.log('No actions for today. Skipping email.');
+            console.log('::set-output name=send_email::false');
+            process.exit(0);
+          }
+
+          // Build email HTML
+          let html = `<p><strong>Bank Bonus Report</strong> — ${todayISO}</p>`;
+
+          const opens = actions.filter(a => a.type === 'open');
+          if (opens.length > 0) {
+            html += '<h3>Accounts to Open</h3><ul>';
+            opens.forEach(a => {
+              html += `<li><strong>${a.institution}</strong> (${a.person}) — $${a.bonus} bonus, $${a.directDepositTotal} DD</li>`;
+            });
+            html += '</ul>';
+          }
+
+          const closes = actions.filter(a => a.type === 'close');
+          if (closes.length > 0) {
+            html += '<h3>Accounts to Close</h3><ul>';
+            closes.forEach(a => {
+              html += `<li><strong>${a.institution}</strong> (${a.person})</li>`;
+            });
+            html += '</ul>';
+          }
+
+          const reminders = actions.filter(a => a.type === 'reminder');
+          if (reminders.length > 0) {
+            html += '<h3>Reminders</h3><ul>';
+            reminders.forEach(r => {
+              html += `<li><strong>${r.institution}</strong> (${r.person}): ${r.note}</li>`;
+            });
+            html += '</ul>';
+          }
+
+          const ddCleared = actions.filter(a => a.type === 'dd-cleared');
+          if (ddCleared.length > 0) {
+            html += '<h3>First DD Cleared</h3><ul>';
+            ddCleared.forEach(d => {
+              html += `<li><strong>${d.institution}</strong> (${d.person})</li>`;
+            });
+            html += '</ul>';
+          }
+
+          // Write to temp file
+          fs.writeFileSync('/tmp/email_body.html', html);
+          console.log('::set-output name=send_email::true');
+          console.log('Email body prepared.');
+          SCRIPT
+
+      - name: Send email via Gmail
+        if: steps.check_actions.outputs.send_email == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "Daily Bank Bonus Report"
+          to: ${{ secrets.MAIL_TO }}
+          html_body: file:///tmp/email_body.html
+          from: ${{ secrets.MAIL_USERNAME }}

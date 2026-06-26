@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Bonus Tracker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    #main { max-width: 900px; margin: 0 auto; padding: 20px; }
+    nav { background: white; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 100; }
+    nav button { background: none; border: none; padding: 12px 16px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; color: #666; }
+    nav button.active { color: #000; border-bottom-color: #0066cc; }
+    nav button:hover { color: #000; }
+    .ic { margin-right: 4px; }
+    .badge { background: #ff4444; color: white; border-radius: 50%; display: inline-block; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 12px; margin-left: 4px; }
+    .badge.hidden { display: none; }
+
+    .section { display: none; animation: fadeIn 0.2s; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card-header { font-weight: 600; margin-bottom: 12px; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .row-item { flex: 1; }
+    .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+    .value { font-size: 14px; font-weight: 500; }
+
+    button { background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #0052a3; }
+    button.sec { background: #ddd; color: #000; }
+    button.sec:hover { background: #ccc; }
+    button.danger { background: #cc3333; }
+    button.danger:hover { background: #aa2222; }
+
+    input, select, textarea { border: 1px solid #ddd; border-radius: 4px; padding: 8px; font-size: 14px; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 0 2px rgba(0,102,204,0.1); }
+
+    .toast { position: fixed; bottom: 20px; left: 20px; background: #333; color: white; padding: 12px 16px; border-radius: 4px; opacity: 0; transition: opacity 0.2s; z-index: 1000; }
+    .toast.show { opacity: 1; }
+
+    .modal-ov { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .modal-card { background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .modal-card p { margin: 0 0 16px; }
+    .modal-card input, .modal-card select { width: 100%; margin-bottom: 12px; }
+
+    .list { list-style: none; padding: 0; margin: 0; }
+    .list-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item.clickable { cursor: pointer; }
+    .list-item.clickable:hover { background: #f9f9f9; }
+
+    .empty { text-align: center; color: #999; padding: 40px 20px; }
+    .action-bar { margin-top: 16px; display: flex; gap: 8px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: #f5f5f5; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { font-weight: 600; }
+    tbody tr:hover { background: #f9f9f9; }
+
+    .checkbox { margin: 0; }
+    .reminder-list { margin-top: 12px; }
+    .reminder-item { background: #f9f9f9; padding: 8px; border-radius: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .reminder-date { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<nav id="nav" style="display: flex; flex-wrap: wrap;">
+  <button data-tab="today" class="nav-btn active" onclick="show('today')"><span class="ic">🗓</span>Today</button>
+  <button data-tab="active" class="nav-btn" onclick="show('active')"><span class="ic">📂</span>Active</button>
+  <button data-tab="planned" class="nav-btn" onclick="show('planned')"><span class="ic">🗒</span>Planned</button>
+  <button data-tab="offers" class="nav-btn" onclick="show('offers')"><span class="ic">🧰</span>Offers</button>
+  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')"><span class="ic">📅</span>Calendar</button>
+  <button data-tab="reports" class="nav-btn" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
+  <button data-tab="settings" class="nav-btn" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+</nav>
+
+<main id="main"></main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   Bank Bonus Tracker — single-file app.
+   Stores everything in a PRIVATE GitHub repo (the "data repo") via the GitHub API.
+   No data lives in this file; settings live in localStorage.
+   ========================================================================= */
+
+const LS = {
+  get repo(){ return localStorage.getItem('bb_repo') || '' },
+  set repo(v){ localStorage.setItem('bb_repo', v) },
+  get token(){ return localStorage.getItem('bb_token') || '' },
+  set token(v){ localStorage.setItem('bb_token', v) },
+  get me(){ return localStorage.getItem('bb_me') || '' },
+  set me(v){ localStorage.setItem('bb_me', v) },
+};
+
+const API = 'https://api.github.com';
+const DB = {};
+
+// --------- UI helpers ---------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+const el = (tag, attrs={}, html='') => {
+  const e = document.createElement(tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(html !== '') e.innerHTML = html;
+  return e;
+};
+const money = n => (n == null || isNaN(n)) ? '—' : '$' + Number(n).toFixed(2);
+const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const todayISO = () => new Date().toISOString().split('T')[0];
+
+function toast(msg, ms=2600){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function modal(innerHtml){
+  return new Promise(resolve => {
+    const o = el('div', {class:'modal-ov'});
+    o.innerHTML = `<div class="modal-card">${innerHtml}</div>`;
+    const close = (val) => { if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    o.addEventListener('click', e => { if(e.target===o) close(null); });
+    document.body.appendChild(o);
+    o.querySelectorAll('[data-mval]').forEach(b => b.addEventListener('click', () => close(b.getAttribute('data-mval'))));
+    o.querySelectorAll('[data-mcancel]').forEach(b => b.addEventListener('click', () => close(null)));
+  });
+}
+
+function uid(p){ return p + '_' + Math.floor(Date.now()/1000) + '_' + Math.random().toString(36).slice(2,6); }
+function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
+
+// --------- GitHub API ---------
+function ghHeaders(){
+  return {
+    'Authorization': 'Bearer ' + LS.token,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+}
+
+async function ghContents(path){
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers: ghHeaders()});
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+
+async function ghPut(path, contentB64, sha, message){
+  const body = { message, content: contentB64 };
+  if(sha) body.sha = sha;
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: ghHeaders(),
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(`Save failed ${r.status}`);
+  return r.json();
+}
+
+async function loadJson(path, fallback){
+  try {
+    const c = await ghContents(path);
+    if(c === null){
+      DB[path] = {value: JSON.parse(JSON.stringify(fallback)), sha: null};
+      return DB[path].value;
+    }
+    const value = JSON.parse(b64decode(c.content));
+    DB[path] = {value, sha: c.sha};
+    return value;
+  } catch(e) {
+    console.error('Error loading', path, e);
+    throw e;
+  }
+}
+
+async function saveJson(path, value, message){
+  let sha = DB[path] ? DB[path].sha : null;
+  let retries = 1;
+  while(retries-- >= 0) {
+    try {
+      const res = await ghPut(path, b64encode(JSON.stringify(value, null, 2)), sha, message);
+      DB[path] = {value, sha: res.content.sha};
+      return;
+    } catch(e) {
+      if(retries > 0 && e.message.includes('conflict')) {
+        const c = await ghContents(path);
+        sha = c.sha;
+      } else throw e;
+    }
+  }
+}
+
+// --------- Tab navigation ---------
+function show(tab){
+  $$('.section').forEach(s => s.classList.remove('active'));
+  $$('.nav-btn').forEach(b => b.classList.remove('active'));
+  const section = $(`#section-${tab}`);
+  if(section) {
+    section.classList.add('active');
+    $(`[data-tab="${tab}"]`).classList.add('active');
+    const fn = window[`render_${tab}`];
+    if(fn) fn();
+  }
+}
+
+// --------- Data load ---------
+let config = {};
+let accounts = [];
+let offers = [];
+
+async function loadAll(){
+  try {
+    config = await loadJson('db/config.json', {owner:'User', people:[], paycheck:{amount:1930,firstDate:'2024-12-27',intervalDays:14,ddClearDays:21}, taxRate:0.1675, laborHours:{open:0.35,adjustDD:0.15,requirements:0.5,close:0.5}, notify:[], timezone:'America/New_York'});
+    accounts = await loadJson('db/accounts.json', []);
+    offers = await loadJson('db/offers.json', []);
+    return true;
+  } catch(e) {
+    toast('Error loading data: ' + e.message);
+    console.error(e);
+    return false;
+  }
+}
+
+async function saveAccounts(msg='Update accounts'){
+  await saveJson('db/accounts.json', accounts, msg);
+}
+
+async function saveOffers(msg='Update offers'){
+  await saveJson('db/offers.json', offers, msg);
+}
+
+async function saveConfig(msg='Update config'){
+  await saveJson('db/config.json', config, msg);
+}
+
+// --------- Main init ---------
+async function init(){
+  const main = $('#main');
+
+  // Create all sections
+  main.innerHTML = `
+    <div id="section-today" class="section"></div>
+    <div id="section-active" class="section"></div>
+    <div id="section-planned" class="section"></div>
+    <div id="section-offers" class="section"></div>
+    <div id="section-calendar" class="section"></div>
+    <div id="section-reports" class="section"></div>
+    <div id="section-settings" class="section"></div>
+  `;
+
+  // Load data and render
+  if(await loadAll()) {
+    show('today');
+  } else {
+    main.innerHTML = '<div class="card"><p style="color:#cc3333"><strong>Setup required</strong> — go to Settings to configure your GitHub repo and token.</p></div>';
+  }
+}
+
+// --------- Render functions ---------
+
+function render_today(){
+  const section = $('#section-today');
+  const today = todayISO();
+  let html = '';
+
+  const toOpen = accounts.filter(a => (a.status === 'planned' && a.dates.opened === today) || (a.dates.reopenAfter === today));
+  const toClose = accounts.filter(a => a.dates.closed === today);
+
+  let reminders = [];
+  accounts.forEach(a => {
+    if(a.reminders) {
+      a.reminders.forEach(r => {
+        if(r.date === today && !r.done) {
+          reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id});
+        }
+      });
+    }
+  });
+
+  const ddCleared = accounts.filter(a => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayISO = yesterday.toISOString().split('T')[0];
+    return a.dates.firstDD === yesterdayISO && a.status === 'open';
+  });
+
+  if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
+    html = '<div class="empty">Nothing to do today!</div>';
+  } else {
+    if(toOpen.length) {
+      html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';
+      toOpen.forEach(a => {
+        html += `<div class="list-item"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:#666">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div></div>`;
+      });
+      html += '</div>';
+    }
+
+    if(toClose.length) {
+      html += '<div class="card"><div class="card-header">🔒 Accounts to Close</div>';
+      toClose.forEach(a => {
+        html += `<div class="list-item"><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div>`;
+      });
+      html += '</div>';
+    }
+
+    if(reminders.length) {
+      html += '<div class="card"><div class="card-header">⏰ Reminders</div>';
+      reminders.forEach(r => {
+        html += `<div class="list-item"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><button class="sec" onclick="markReminderDone('${esc(r.accountId)}','${esc(r.id)}')">Done</button></div>`;
+      });
+      html += '</div>';
+    }
+
+    if(ddCleared.length) {
+      html += '<div class="card"><div class="card-header">✅ First DD Cleared (Yesterday)</div>';
+      ddCleared.forEach(a => {
+        html += `<div class="list-item"><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  // Update nav badge
+  const badge = $('[data-tab="today"] .badge') || document.createElement('span');
+  const count = toOpen.length + toClose.length + reminders.length + ddCleared.length;
+  if(count > 0) {
+    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today<span class="badge">' + count + '</span>';
+  } else {
+    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today';
+  }
+
+  section.innerHTML = html;
+}
+
+async function markReminderDone(accountId, reminderId){
+  const acc = accounts.find(a => a.id === accountId);
+  if(acc && acc.reminders) {
+    const rem = acc.reminders.find(r => r.id === reminderId);
+    if(rem) {
+      rem.done = true;
+      await saveAccounts('Mark reminder done');
+      render_today();
+      toast('Reminder marked done');
+    }
+  }
+}
+
+function render_active(){
+  const section = $('#section-active');
+  const active = accounts.filter(a => a.status === 'open');
+
+  if(active.length === 0) {
+    section.innerHTML = '<div class="empty">No active accounts yet.</div>';
+    return;
+  }
+
+  let html = '';
+  active.forEach(a => {
+    html += `<div class="card" onclick="editAccount('${a.id}')">
+      <div class="card-header">${esc(a.institution)}</div>
+      <div class="row">
+        <div class="row-item"><div class="label">Person</div><div class="value">${esc(a.person)}</div></div>
+        <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
+        <div class="row-item"><div class="label">DD Total</div><div class="value">${money(a.directDepositTotal)}</div></div>
+      </div>
+      <div class="row">
+        <div class="row-item"><div class="label">Opened</div><div class="value">${a.dates.opened || '—'}</div></div>
+        <div class="row-item"><div class="label">First DD</div><div class="value">${a.dates.firstDD || '—'}</div></div>
+      </div>
+    </div>`;
+  });
+  section.innerHTML = html;
+}
+
+function render_planned(){
+  const section = $('#section-planned');
+  const planned = accounts.filter(a => a.status === 'planned');
+
+  if(planned.length === 0) {
+    section.innerHTML = '<div class="empty">No planned accounts yet.</div>';
+    return;
+  }
+
+  let html = '';
+  planned.forEach(a => {
+    html += `<div class="card">
+      <div class="card-header">${esc(a.institution)} <span style="color:#999;font-weight:normal">(${esc(a.person)})</span></div>
+      <div class="row">
+        <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
+        <div class="row-item"><div class="label">DD Req</div><div class="value">${money(a.directDepositTotal)}</div></div>
+      </div>
+      <button onclick="openPlanned('${a.id}')">Mark Opened</button>
+      <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
+    </div>`;
+  });
+  section.innerHTML = html;
+}
+
+async function openPlanned(accountId){
+  const acc = accounts.find(a => a.id === accountId);
+  if(acc && acc.status === 'planned') {
+    acc.status = 'open';
+    acc.dates.opened = todayISO();
+    await saveAccounts('Open planned account: ' + acc.institution);
+    render_planned();
+    render_today();
+    toast(acc.institution + ' marked as open');
+  }
+}
+
+function render_offers(){
+  const section = $('#section-offers');
+  const backlog = offers.filter(o => o.status === 'backlog');
+
+  let html = '<button onclick="addOffer()" style="margin-bottom:16px">+ Add Offer</button>';
+
+  if(backlog.length === 0) {
+    html += '<div class="empty">No offers in backlog yet.</div>';
+  } else {
+    html += '<table><thead><tr><th>Institution</th><th>Bonus</th><th>DD Req</th><th>Actions</th></tr></thead><tbody>';
+    backlog.forEach(o => {
+      html += `<tr>
+        <td>${esc(o.institution)}</td>
+        <td>${money(o.bonus)}</td>
+        <td>${money(o.directDepositTotal)}</td>
+        <td>
+          <button class="sec" onclick="promoteOffer('${o.id}','planned')" style="font-size:12px;padding:4px 8px">Planned</button>
+          <button class="sec" onclick="promoteOffer('${o.id}','open')" style="font-size:12px;padding:4px 8px">Open</button>
+          <button class="sec" onclick="deleteOffer('${o.id}')" style="font-size:12px;padding:4px 8px">Del</button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+
+  section.innerHTML = html;
+}
+
+async function addOffer(){
+  const result = await modal(`
+    <p><strong>Add a new offer to backlog</strong></p>
+    <input type="text" id="off_inst" placeholder="Institution name" autofocus>
+    <input type="number" id="off_bonus" placeholder="Bonus ($)">
+    <input type="number" id="off_dd" placeholder="DD Required ($)">
+    <div class="row">
+      <button data-mcancel>Cancel</button>
+      <button data-mval="save">Add</button>
+    </div>
+  `);
+
+  if(result === 'save') {
+    const inst = $('#off_inst').value.trim();
+    const bonus = parseFloat($('#off_bonus').value) || 0;
+    const dd = parseFloat($('#off_dd').value) || 0;
+
+    if(!inst) { toast('Institution name required'); return; }
+
+    offers.push({
+      id: uid('o'),
+      institution: inst,
+      person: null,
+      bonus,
+      referralValue: null,
+      directDepositTotal: dd,
+      requiresMultipleDeposits: false,
+      nbDeposits: null,
+      minBalance: null,
+      minBalDays: null,
+      additionalRequirements: '',
+      daysToCompleteReq: 90,
+      bonusTiming: '',
+      avoidFees: '',
+      churnable: false,
+      monthsTillReopen: null,
+      notes: '',
+      status: 'backlog'
+    });
+
+    await saveOffers('Add offer: ' + inst);
+    render_offers();
+    toast(inst + ' added to backlog');
+  }
+}
+
+async function promoteOffer(offerId, toStatus){
+  const offer = offers.find(o => o.id === offerId);
+  if(!offer) return;
+
+  // Ask which person
+  const personList = config.people.map(p => `<button data-mval="${p}">${p}</button>`).join('');
+  const result = await modal(`
+    <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
+    <div class="row">${personList}</div>
+  `);
+
+  if(!result) return;
+
+  const person = result;
+  const acc = {
+    id: uid('a'),
+    offerId: offerId,
+    institution: offer.institution,
+    person: person,
+    status: toStatus,
+    bonus: offer.bonus,
+    referralValue: offer.referralValue,
+    directDepositTotal: offer.directDepositTotal,
+    requiresMultipleDeposits: offer.requiresMultipleDeposits,
+    nbDeposits: offer.nbDeposits,
+    minBalance: offer.minBalance,
+    minBalDays: offer.minBalDays,
+    additionalRequirements: offer.additionalRequirements,
+    daysToCompleteReq: offer.daysToCompleteReq,
+    bonusTiming: offer.bonusTiming,
+    avoidFees: offer.avoidFees,
+    churnable: offer.churnable,
+    monthsTillReopen: offer.monthsTillReopen,
+    notes: offer.notes,
+    dates: {
+      opened: toStatus === 'open' ? todayISO() : null,
+      firstDD: null,
+      bonusPaidOut: null,
+      closed: null,
+      reopenAfter: null
+    },
+    tasks: {
+      estatements: false,
+      alerts: false,
+      ddSetup: false,
+      documented: false,
+      reminders: false,
+      referrals: false
+    },
+    reminders: [],
+    ddPlan: []
+  };
+
+  accounts.push(acc);
+  offer.status = 'archived';
+
+  await saveAccounts('Promote offer: ' + offer.institution);
+  await saveOffers('Archive offer: ' + offer.institution);
+  render_offers();
+  render_planned();
+  render_today();
+  toast(offer.institution + ' promoted to ' + toStatus);
+}
+
+async function deleteOffer(offerId){
+  offers = offers.filter(o => o.id !== offerId);
+  await saveOffers('Delete offer');
+  render_offers();
+  toast('Offer deleted');
+}
+
+function render_calendar(){
+  const section = $('#section-calendar');
+
+  // Get all payroll dates from ddPlan across all accounts
+  const paydates = new Set();
+  accounts.forEach(a => {
+    if(a.ddPlan) {
+      a.ddPlan.forEach(dd => paydates.add(dd.payrollDate));
+    }
+  });
+
+  const sortedDates = Array.from(paydates).sort();
+
+  if(sortedDates.length === 0) {
+    section.innerHTML = '<div class="empty">No DD planned yet.</div>';
+    return;
+  }
+
+  const paycheck = config.paycheck || {};
+  const checkAmount = paycheck.amount || 1930;
+
+  let html = '<table><thead><tr><th>Payroll Date</th><th>Allocated</th><th>Available</th><th>Status</th></tr></thead><tbody>';
+
+  sortedDates.forEach(date => {
+    const allocated = accounts.reduce((sum, a) => {
+      const dd = a.ddPlan.find(d => d.payrollDate === date);
+      return sum + (dd ? dd.amount : 0);
+    }, 0);
+
+    const status = allocated > checkAmount ? '❌ Over' : allocated === checkAmount ? '✅ Full' : '⚪ Partial';
+
+    html += `<tr>
+      <td>${date}</td>
+      <td>${money(allocated)}</td>
+      <td>${money(Math.max(0, checkAmount - allocated))}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  section.innerHTML = html;
+}
+
+function render_reports(){
+  const section = $('#section-reports');
+
+  const open = accounts.filter(a => a.status === 'open');
+  const closed = accounts.filter(a => a.status === 'closed');
+  const planned = accounts.filter(a => a.status === 'planned');
+
+  const earnedBonus = closed.reduce((sum, a) => sum + (a.bonus || 0), 0);
+  const pendingBonus = open.reduce((sum, a) => sum + (a.bonus || 0), 0);
+  const plannedBonus = planned.reduce((sum, a) => sum + (a.bonus || 0), 0);
+  const totalBonus = earnedBonus + pendingBonus + plannedBonus;
+
+  const totalHours = open.reduce((sum, a) => {
+    const hours = (config.laborHours || {});
+    return sum + (hours.open || 0.35);
+  }, 0) + closed.reduce((sum, a) => {
+    const hours = (config.laborHours || {});
+    return sum + (hours.open || 0.35) + (hours.close || 0.5);
+  }, 0);
+
+  let html = '<div class="card">';
+  html += '<div class="card-header">Summary</div>';
+  html += '<div class="row">';
+  html += '<div class="row-item"><div class="label">Earned</div><div class="value">' + money(earnedBonus) + '</div></div>';
+  html += '<div class="row-item"><div class="label">Pending</div><div class="value">' + money(pendingBonus) + '</div></div>';
+  html += '<div class="row-item"><div class="label">Planned</div><div class="value">' + money(plannedBonus) + '</div></div>';
+  html += '</div>';
+  html += '<div class="row">';
+  html += '<div class="row-item"><div class="label">Total Projected</div><div class="value">' + money(totalBonus) + '</div></div>';
+  html += '<div class="row-item"><div class="label">Est. Hours</div><div class="value">' + totalHours.toFixed(1) + 'h</div></div>';
+  html += '<div class="row-item"><div class="label">Hourly Value</div><div class="value">' + money(totalBonus / Math.max(totalHours, 1)) + '/hr</div></div>';
+  html += '</div>';
+  html += '</div>';
+
+  html += '<div class="card"><div class="card-header">Accounts</div>';
+  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th></tr></thead><tbody>';
+  accounts.forEach(a => {
+    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  section.innerHTML = html;
+}
+
+function render_settings(){
+  const section = $('#section-settings');
+
+  const notifyEmail = (config.notify && config.notify[0]) ? config.notify[0].email : '';
+
+  let html = `<div class="card">
+    <div class="card-header">GitHub Configuration</div>
+    <div class="row"><div class="row-item">
+      <div class="label">Data Repo (owner/name)</div>
+      <input type="text" id="set_repo" value="${esc(LS.repo)}" placeholder="e.g., username/bank-bonus-data">
+    </div></div>
+    <div class="row"><div class="row-item">
+      <div class="label">GitHub Token</div>
+      <input type="password" id="set_token" value="${esc(LS.token)}" placeholder="ghp_...">
+    </div></div>
+    <div class="row"><div class="row-item">
+      <div class="label">Your Name</div>
+      <select id="set_me">`;
+
+  (config.people || []).forEach(p => {
+    html += `<option value="${esc(p)}" ${p === LS.me ? 'selected' : ''}>${esc(p)}</option>`;
+  });
+
+  html += `</select>
+    </div></div>
+    <button onclick="saveSettings()">Save Settings</button>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="card-header">Paycheck Settings</div>
+    <div class="row">
+      <div class="row-item">
+        <div class="label">Amount ($)</div>
+        <input type="number" id="set_amount" value="${config.paycheck?.amount || 1930}" step="0.01">
+      </div>
+      <div class="row-item">
+        <div class="label">Interval (days)</div>
+        <input type="number" id="set_interval" value="${config.paycheck?.intervalDays || 14}">
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-item">
+        <div class="label">First Date (YYYY-MM-DD)</div>
+        <input type="text" id="set_firstdate" value="${config.paycheck?.firstDate || '2024-12-27'}">
+      </div>
+      <div class="row-item">
+        <div class="label">DD Clear Days</div>
+        <input type="number" id="set_ddclear" value="${config.paycheck?.ddClearDays || 21}">
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-item">
+        <div class="label">Notify Email</div>
+        <input type="email" id="set_email" value="${esc(notifyEmail)}">
+      </div>
+    </div>
+    <button onclick="savePaycheckSettings()">Save Paycheck Settings</button>
+  </div>`;
+
+  section.innerHTML = html;
+}
+
+async function saveSettings(){
+  LS.repo = $('#set_repo').value.trim();
+  LS.token = $('#set_token').value.trim();
+  LS.me = $('#set_me').value;
+
+  if(!LS.repo || !LS.token) {
+    toast('Repo and token required');
+    return;
+  }
+
+  // Test connectivity
+  try {
+    await loadAll();
+    toast('Settings saved and data loaded');
+    init();
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function savePaycheckSettings(){
+  const amount = parseFloat($('#set_amount').value) || 1930;
+  const interval = parseInt($('#set_interval').value) || 14;
+  const firstDate = $('#set_firstdate').value.trim();
+  const ddClear = parseInt($('#set_ddclear').value) || 21;
+  const email = $('#set_email').value.trim();
+
+  config.paycheck = { amount, intervalDays: interval, firstDate, ddClearDays: ddClear };
+  if(email && !config.notify) config.notify = [];
+  if(email) config.notify[0] = { email, enabled: true };
+
+  try {
+    await saveConfig('Update paycheck settings');
+    toast('Paycheck settings saved');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function editAccount(accountId){
+  // Placeholder for full edit UI
+  toast('Edit account (coming soon)');
+}
+
+// Initialize
+init();
+</script>
+
+</body>
+</html>

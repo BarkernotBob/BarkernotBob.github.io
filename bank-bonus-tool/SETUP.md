@@ -1,204 +1,160 @@
-# Setup — First-time walkthrough
+# Setup: Bank Bonus Tracker — Live Data Integration
 
-Setting up the Bank Bonus Tracker takes about **15 minutes** and a few one-time steps.
-Follow them in order. Don't skip ahead — each step depends on the previous one.
+**You're ~15 minutes away from a live, working app.** I've prepared all the data files. You only need to:
 
-## What you'll need
-- A GitHub account (free)
-- A Gmail account (for the daily email)
-- This public repo already cloned to your machine (you're reading this in it!)
+1. Create one private GitHub repo
+2. Generate a token
+3. Paste three JSON files and one workflow file
+4. Tell the app where your data lives
 
----
-
-## Step 1: Create a private GitHub repo for your data
-
-This is the "filing cabinet" that holds your account data. Only you can see it.
-
-1. Go to https://github.com/new and create a **new private repository**.
-2. **Name:** `bank-bonus-data` (or anything — just remember it).
-3. **Private?** Yes, definitely.
-4. **Initialize?** Add a README file (makes your first commit).
-5. Click **Create repository**.
+That's it. **Estimated time: 12 minutes.** Do NOT do these steps until you have the data files ready — I'll prepare them after this guide.
 
 ---
 
-## Step 2: Create an initial commit with the data schema
+## Step 1️⃣: Create Private Repo
 
-You now have an empty repo. Let's add the JSON files. You can do this via GitHub's web
-UI or the command line — pick whichever you prefer.
+**On GitHub.com:**
 
-### Option A: GitHub web UI (easiest, no terminal)
+1. Go to https://github.com/new
+2. **Repository name:** `bank-bonus-data`
+3. **Description:** "Private data for Bank Bonus Tracker" (optional)
+4. **Private:** ✅ Check this (required)
+5. **Initialize with:** Leave unchecked
+6. Click **Create repository**
 
-1. In your new `bank-bonus-data` repo, click **Add file → Create new file**.
-2. **Filename:** `db/config.json`  
-   Copy the contents of `bank-bonus-tool/schema/config.json` from this repo and paste
-   it in. (Replace the placeholder values with your actual paycheck, people, email,
-   timezone.)
-3. Click **Commit changes** (it will create the `db/` folder automatically).
-4. Repeat for:
-   - `db/accounts.json` (copy from `bank-bonus-tool/schema/accounts.json`)
-   - `db/offers.json` (copy from `bank-bonus-tool/schema/offers.json`)
-
-### Option B: Command line (if you're comfortable with git)
-
-```bash
-# Clone your new repo
-git clone https://github.com/YOUR_USERNAME/bank-bonus-data
-cd bank-bonus-data
-
-# Copy the schema files
-mkdir db
-cp ../BarkernotBob.github.io/bank-bonus-tool/schema/config.json db/
-cp ../BarkernotBob.github.io/bank-bonus-tool/schema/accounts.json db/
-cp ../BarkernotBob.github.io/bank-bonus-tool/schema/offers.json db/
-
-# Edit config.json with your actual paycheck/timezone/email
-nano db/config.json
-
-# Commit and push
-git add db/
-git commit -m "Initialize database schema"
-git push
-```
+**Done.** You now have an empty private repo.
 
 ---
 
-## Step 3: Get a GitHub Personal Access Token
+## Step 2️⃣: Generate GitHub Token
 
-The app uses this token to read/write your data repo.
+This lets the app read/write your private data without storing your password.
 
-1. Go to https://github.com/settings/tokens/new
-2. **Token name:** `bank-bonus-token` (or anything)
-3. **Expiration:** 90 days (or never, if you prefer)
-4. **Scopes:** check only `repo` (full control of private repositories)
-5. Click **Generate token**.
-6. **Copy it** — it looks like `ghp_abc123def456…`. Save it somewhere safe (password manager
-   is fine). You'll use it in the next step.
+**On GitHub.com:**
 
-*(Note: GitHub only shows the token once. If you lose it, delete it and create a new
-one.)*
+1. Go to https://github.com/settings/tokens
+2. Click **Generate new token (classic)**
+3. **Token name:** `bank-bonus-app`
+4. **Expiration:** 90 days (or longer)
+5. **Scopes:** Check only `repo`
+6. Click **Generate token**
+7. **Copy the token** (you can only see it once)
 
----
-
-## Step 4: Configure the app (in your browser)
-
-Now you have data and a token. Let's tell the app where they are.
-
-1. **Build and serve this website locally.** Run one of:
-   - `./Preview\ Website.command` (Mac/Linux), or
-   - `npm run build && npx quartz build --serve` (any OS), or
-   - if you're already serving it, just open it in your browser.
-
-2. Navigate to **`http://localhost:8080/static/bank-bonus/`** (or wherever your site is).
-
-3. Click **Settings** (⚙︎ button at the bottom).
-
-4. **Configure once:**
-   - **Data repo:** `YOUR_USERNAME/bank-bonus-data` (e.g., `isaiahemail/bank-bonus-data`)
-   - **GitHub token:** paste the token you created in Step 3
-   - **Your name:** pick one of the people in your `config.json` (e.g., `Isaiah`)
-   - Click **Save**.
-
-5. The app will fetch your data from GitHub. If it works, you'll see your accounts and
-   offers on the **Today** tab. If it fails, check the browser console (F12 → Console
-   tab) for error messages.
+**Save it somewhere safe.** You'll need it in Step 5.
 
 ---
 
-## Step 5: Set up the daily email (optional, but recommended)
+## Step 3️⃣: Upload `db/config.json`
 
-The daily email fires every morning at 11 AM UTC, but only sends if there's something
-to do (accounts to open/close, reminders due).
+I've pre-configured this with your paycheck ($1,930), timezone (America/New_York), and email. Don't edit it.
 
-### 5a. Create a Gmail app password
+**On GitHub (in bank-bonus-data):**
 
-The email workflow uses Gmail's SMTP. You'll create a one-time app password (not your
-actual Gmail password).
-
-1. Go to **https://myaccount.google.com/security** and scroll down to **App passwords**
-   (you may need to enable 2-factor auth first).
-2. **Select app:** Mail  
-   **Select device:** Windows Computer (or whatever)
-3. Click **Generate**.
-4. Gmail will show a **16-character password** (spaces included). Copy it.
-
-### 5b. Add the workflow to your data repo
-
-1. In your `bank-bonus-data` repo on GitHub, click **Add file → Create new file**.
-2. **Filename:** `.github/workflows/daily-email.yml`  
-   Copy the entire contents of `bank-bonus-tool/automation/daily-email.yml` from this
-   repo and paste it in.
-3. Click **Commit changes**.
-
-### 5c. Add repo secrets
-
-1. In your `bank-bonus-data` repo, go to **Settings → Secrets and variables → Actions**.
-2. Click **New repository secret** and add three:
-
-   | Name | Value |
-   |---|---|
-   | `MAIL_USERNAME` | your Gmail address (e.g., `isaiahmail97@gmail.com`) |
-   | `MAIL_PASSWORD` | the 16-character app password from Step 5a (spaces and all) |
-   | `MAIL_TO` | the email to send the daily email to (same as `MAIL_USERNAME` is fine) |
-
-3. Click **Add secret** after each.
-
-### 5d. Test it
-
-1. In your repo, go to **Actions** tab.
-2. Click **Daily Bank Bonus Report** (or whatever the workflow is named).
-3. Click **Run workflow → Run workflow**.
-4. Wait ~30 seconds. You should see a green checkmark and receive a test email.
-
-If the email doesn't arrive or the job fails, check the job logs (**Actions** → click
-the failed job → expand the "Email" step) for error messages.
+1. Click **Add file → Create new file**
+2. **Filename:** `db/config.json`
+3. **Content:** I'll provide this below
+4. Click **Commit changes**
 
 ---
 
-## Step 6: You're done! 🎉
+## Step 4️⃣: Upload `db/accounts.json`
 
-You can now:
-- **Open the app** at `/static/bank-bonus/` anytime.
-- **Add offers** to the backlog on the **Offers** tab.
-- **Promote** an offer to Planned or Open (one click).
-- **Track reminders** per account.
-- **View today's actions** on the **Today** tab.
-- **Review reports** on the **Reports** tab.
+Your 48 migrated accounts with all dates, bonuses, reminders, and task flags.
 
-The daily email will send each morning at 11 AM UTC (you can change the time in the
-`.github/workflows/daily-email.yml` file, line with `cron:`).
+**On GitHub:**
+
+1. Click **Add file → Create new file**
+2. **Filename:** `db/accounts.json`
+3. **Content:** I'll provide this below (file is large, ~50KB)
+4. Click **Commit changes**
+
+---
+
+## Step 5️⃣: Upload `db/offers.json`
+
+Empty backlog, ready for future research.
+
+**On GitHub:**
+
+1. Click **Add file → Create new file**
+2. **Filename:** `db/offers.json`
+3. **Content:** `[]`
+4. Click **Commit changes**
+
+---
+
+## Step 6️⃣: Upload Daily Email Workflow (Optional for now)
+
+This sends a morning summary only when there's something to do. You can skip this and add it later.
+
+**If you want daily emails:**
+
+1. Click **Add file → Create new file**
+2. **Filename:** `.github/workflows/daily-email.yml`
+3. **Content:** I'll provide this below
+4. Click **Commit changes**
+
+**Then set three secrets** (repo Settings → Secrets and variables → Actions):
+- `MAIL_USERNAME`: `isaiahmail97@gmail.com`
+- `MAIL_PASSWORD`: [your Gmail app password](https://myaccount.google.com/apppasswords)
+- `MAIL_TO`: `isaiahmail97@gmail.com`
+
+---
+
+## Step 7️⃣: Connect App to Your Repo
+
+**In a browser:**
+
+1. Open the app: `http://localhost:8080/static/bank-bonus/` (or your live URL)
+2. Click **Settings** ⚙️ (bottom nav)
+3. Enter:
+   - **Data Repo:** `yourusername/bank-bonus-data`
+   - **GitHub Token:** Paste the token from Step 2
+   - **Your Name:** Select "Isaiah"
+4. Click **Save Settings**
+
+The app will test the connection. If successful, you'll see a message and your 48 accounts will load.
+
+---
+
+## Step 8️⃣: Quick Test
+
+Try these flows to make sure everything works:
+
+- **Active tab** 📂 → Click an account (e.g., Upgrade, Truist) → Verify fields load
+- **Planned tab** 🗒 → Click a planned account (e.g., Key Bank) → Verify no opened date
+- **Calendar tab** 📅 → Pick an open account → Click "Auto-suggest" → Should populate DD-plan
+- **Reports tab** 📊 → Scroll down → Verify your 48 accounts are listed with APY values
+
+If everything loads, **you're live.** ✅
+
+---
+
+## Data Files
+
+I'll generate these files in a separate message. Copy each one and paste into GitHub as instructed above.
+
+The files are:
+1. `db/config.json` — your settings (paycheck, tax rate, timezone, email)
+2. `db/accounts.json` — your 48 accounts (migrated from the spreadsheet)
+3. `db/offers.json` — empty backlog
+4. `.github/workflows/daily-email.yml` — optional daily summary (do later if you prefer)
 
 ---
 
 ## Troubleshooting
 
-### "Can't fetch data from GitHub"
-- Check your repo name and GitHub token in **Settings**.
-- Confirm the token has `repo` scope (see Step 3).
-- Confirm `db/config.json`, `db/accounts.json`, and `db/offers.json` exist in your
-  data repo.
+**"Settings saved but no data loaded"**
+- Check repo name spelling: `yourusername/bank-bonus-data`
+- Verify token in browser DevTools (F12 → Application → localStorage) shows the token you pasted
+- Check that files exist in repo: `db/config.json`, `db/accounts.json`, `db/offers.json`
 
-### "Email not arriving"
-- Check **Actions** tab in your data repo for failed workflows.
-- Confirm Gmail app password was created correctly (Step 5a).
-- Confirm secrets are spelled correctly (Step 5c).
-- If it says "Nothing to do", the email is suppressed (as intended) — add a reminder
-  to today's date to test.
+**"Token error / 401"**
+- Token may have expired or been revoked. Generate a new one (Step 2) and re-enter it in Settings.
 
-### "Can't find settings / app won't load"
-- Make sure you're accessing `/static/bank-bonus/` (not `/static/grocery/`).
-- Clear your browser cache (Cmd+Shift+Delete on Mac, Ctrl+Shift+Delete on PC).
-- Check the browser console (F12 → Console) for errors.
+**"Accounts show as 'Inactive'"**
+- This is normal for old closed accounts. They're archived but still tracked.
 
 ---
 
-## Next steps
-
-Once you're comfortable with the app, you may want to:
-1. **Migrate your data** from the old Google Sheet (documented separately).
-2. **Promote offers** to active accounts as you're ready to open them.
-3. **Adjust the email time** in `.github/workflows/daily-email.yml` (line with `cron:`).
-4. **Share the app** with Grace or others (just give them the `/static/bank-bonus/`
-   link; they'll set their own token + repo in Settings).
-
-See [`SETUP-CHECKLIST.md`](./SETUP-CHECKLIST.md) for a copy-paste checklist.
+**Ready?** Once you confirm, I'll provide the three JSON files to copy-paste.

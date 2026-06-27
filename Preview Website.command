@@ -32,26 +32,33 @@ if [ ! -L node_modules ] || [ ! -e "node_modules/preact/package.json" ]; then
   rm -rf node_modules.old.*(N) 2>/dev/null &
 fi
 
-# --- Pull in the latest game builds from your folders, so the preview always
-# --- shows your newest versions. (If a game file isn't found — e.g. iCloud is
-# --- still syncing — we just keep whatever's already here.)
-# --- To add a future game, copy one line below: "<where the game file lives>|<Name>.html".
+# --- Pull in the latest game/app builds so the preview always shows your newest
+# --- versions. AUTO-DISCOVERY: any file named "*.standalone.html" anywhere inside
+# --- your Claude folder is picked up automatically — no need to list it here. To add
+# --- a new game, just save it as "<Name>.standalone.html" in that folder.
+GAME_SRC_ROOT="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude"
+if [ -d "$GAME_SRC_ROOT" ]; then
+  for src in "$GAME_SRC_ROOT"/**/*.standalone.html(N); do
+    base="${src:t:r}"; base="${base%.standalone}"; base="${base// /-}"  # "My Game.standalone.html" -> "My-Game"
+    dst="quartz/static/${base}.html"
+    if ! cmp -s "$src" "$dst" 2>/dev/null; then
+      cp "$src" "$dst" && echo "Updated ${base} to your latest version."
+    fi
+  done
+else
+  echo "Note: couldn't find your Claude games folder (it may still be syncing) —"
+  echo "      showing whatever is already in the site folder."
+fi
+
+# Special cases: games whose source file ISN'T named "*.standalone.html".
+# Format per line: "<full path to the source file>|<Name>.html".
 GAMES=(
-  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html|Blockchain.html"
-  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Hexchain.standalone.html|Hexchain.html"
-  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/BallChain.standalone.html|BallChain.html"
-  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Dodecachain.standalone.html|Dodecachain.html"
   "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
 )
 for entry in "${GAMES[@]}"; do
   src="${entry%%|*}"; dst="quartz/static/${entry##*|}"; name="${dst:t:r}"
-  if [ -f "$src" ]; then
-    if ! cmp -s "$src" "$dst" 2>/dev/null; then
-      cp "$src" "$dst" && echo "Updated the ${name} game to your latest version."
-    fi
-  else
-    echo "Note: couldn't find your ${name} game file (it may still be syncing) —"
-    echo "      showing the version already in the site folder."
+  if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
+    cp "$src" "$dst" && echo "Updated the ${name} to your latest version."
   fi
 done
 

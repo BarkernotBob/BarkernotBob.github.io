@@ -133,8 +133,10 @@ plugins:
     options:
       useSavedState: false
       folderDefaultState: collapsed
-      # Custom sidebar order for the top-level sections. Anything not listed
-      # (e.g. nested notes/videos) falls back to folders-first, then A–Z.
+      # Sidebar ordering, in priority order:
+      #   1. Top-level sections follow the explicit list below.
+      #   2. Anything with a numeric `order:` frontmatter field sorts by it (ascending).
+      #   3. Everything else falls back to folders-first, then A–Z.
       sortFn: |
         (a, b) => {
           const order = ["Notes", "Tools", "Games", "Curated YouTube"]
@@ -146,6 +148,11 @@ plugins:
             return ia - ib
           }
           if ((!a.isFolder && !b.isFolder) || (a.isFolder && b.isFolder)) {
+            const ao = a.data?.order
+            const bo = b.data?.order
+            if (typeof ao === "number" && typeof bo === "number") return ao - bo
+            if (typeof ao === "number") return -1
+            if (typeof bo === "number") return 1
             return (a.displayName || "").localeCompare(b.displayName || "", undefined, { numeric: true, sensitivity: "base" })
           }
           return !a.isFolder && b.isFolder ? 1 : -1

@@ -137,6 +137,44 @@ settings block (between the `---` lines at the very top).
 
 ---
 
+## Changing the order pages appear in (a list page or the sidebar)
+
+By default, a folder's pages are listed **newest first** (by their `created` date), and the
+left sidebar is **A–Z**. To force your own order instead, add one line — `order:` — to the
+settings block of each page you want to place.
+
+**How to do it (in Obsidian):**
+1. Open the note (e.g. `content/games/Blockchain`).
+2. Switch to **source/edit mode** so you can see the settings block — the lines between the
+   two `---` markers at the very top.
+3. Add an `order:` line with a number. Lower numbers come first. For example, to make the
+   Games list read Blockchain → Hexchain → Ball&Chain:
+
+   In `Blockchain`:
+   ```
+   ---
+   title: BlockChain 3D
+   order: 1
+   publish: true
+   ---
+   ```
+   Then `order: 2` in `Hexchain`, and `order: 3` in `BallChain`.
+4. Save, then double-click **Publish Changes.command**.
+
+**Good to know:**
+- The same `order:` number controls **both** the list page (e.g. `/games`) **and** the
+  left sidebar — set it once per page.
+- You only need to number the pages you care about. Anything **without** an `order:` line
+  falls back to the old behavior (date, then A–Z) and sorts *after* the numbered ones.
+- Leave gaps if you like (`10`, `20`, `30`) so you can slip a new page in between later
+  without renumbering everything.
+- This works in **any** folder — Tools, Notes, etc. — not just Games.
+- The top-level sidebar sections (Notes / Tools / Games / Curated YouTube) have their own
+  fixed order set in `quartz.config.default.yaml`; `order:` controls the pages *inside*
+  each section. Ask Claude if you want the top-level sections rearranged.
+
+---
+
 ## Adding a video to Curated YouTube (in Obsidian)
 
 1. In Obsidian, open the **`youtube`** folder (inside `content`). The example note

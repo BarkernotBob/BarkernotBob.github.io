@@ -191,6 +191,58 @@ body:has(.home-splash) {
 }
 
 // ============================================================
+//  Channel cards — recommend a WHOLE YouTube channel as a
+//  clickable card. (A channel can't be embedded as a player,
+//  so it links out instead.) Matches the .video-embed framing.
+// ============================================================
+.channel-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 1rem;
+  row-gap: 0.3rem;
+  align-items: center;
+  margin: 1.2rem 0;
+  padding: 1rem 1.1rem;
+  border: 2px solid var(--dark);
+  border-radius: 10px;
+  background: var(--light);
+  text-decoration: none !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.channel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.13);
+}
+// round channel avatar spanning all three text rows on the left
+.channel-card .cc-avatar {
+  grid-row: 1 / 4;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--lightgray);
+  margin: 0;
+}
+.channel-card .cc-name {
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  color: var(--dark);
+}
+.channel-card .cc-note {
+  color: var(--gray);
+  font-size: 0.95rem;
+}
+.channel-card .cc-cta {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--secondary);
+}
+// suppress Quartz's external-link arrow icon inside the card
+.channel-card .external-icon { display: none; }
+
+// ============================================================
 //  Folder-listing tweaks — the automatic "X items under this
 //  folder" list Quartz shows on every folder page (.page-listing).
 //  Lives here (core styles) so it survives the plugin reinstall

@@ -14,6 +14,7 @@ echo ""
 GAMES=(
   "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Blockchain.standalone.html|Blockchain.html"
   "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/Hexchain.standalone.html|Hexchain.html"
+  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Blockchain/BallChain.standalone.html|BallChain.html"
   "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
 )
 for entry in "${GAMES[@]}"; do
@@ -34,7 +35,7 @@ done
 SITE_ORIGIN="https://barkernotbob.github.io"
 # Which menu folder each app belongs in (default: games). Add a line per new app.
 typeset -A LAUNCH_FOLDER
-LAUNCH_FOLDER=(Blockchain games Hexchain games Tax-Modeler tools)
+LAUNCH_FOLDER=(Blockchain games Hexchain games BallChain games Tax-Modeler tools)
 for f in quartz/static/*.html(N); do
   fname="${f:t}"; base="${f:t:r}"
   folder="${LAUNCH_FOLDER[$base]:-games}"

@@ -9,10 +9,10 @@ project back up cold. No prior context needed.
 
 ## 1. The one-sentence summary
 
-The Calendar tab was empty because of missing **data**, not a code bug. That data
-is now filled in and merged. The app should show the Calendar events. The next
-thing you wanted to explore is a **simpler sign-in** that doesn't make you paste a
-GitHub token — and that piece is **not built yet** (details in section 4).
+The Calendar data is populated and the **"Sign in with GitHub" button is built and
+live** (Option A — OAuth App + Cloudflare Worker — no token to paste). What's left
+is **interface polish**: the **single-key keyboard shortcuts you asked for are still
+not built**, and several UX/visual rough edges remain (sections 4 and 5).
 
 ---
 
@@ -40,6 +40,21 @@ GitHub token — and that piece is **not built yet** (details in section 4).
    `quartz/static/bank-bonus/index.html`, on the `v5` branch. **Merged**
    (was PR #12).
 
+4. **Keyless "Sign in with GitHub" — DONE (Option A).** The token-paste step is no
+   longer required. The app now has a **🔐 Sign in with GitHub** button: you approve
+   on GitHub and come straight back signed in, no secret to copy.
+   - Built as **Option A** from the old plan: a public GitHub **OAuth App** plus one
+     tiny **Cloudflare Worker** that does the secret token-exchange. Both are
+     **shared** with the Pool/Grocery apps — one OAuth App + one Worker cover all of
+     `barkernotbob.github.io/static/*`.
+   - In code (`index.html`): the `OAUTH` config object (`clientId`, `workerUrl`),
+     `signInWithGitHub()`, `handleOAuthRedirect()` (the `/exchange` call), and
+     `afterSignIn()`. Sign-in method is recorded in `bb_method` (`'oauth'` vs
+     `'token'`).
+   - The old token paste still exists as a **fallback**, tucked under
+     "Advanced: paste a token instead" in Settings.
+   - Setup docs (`SETUP.md`, `SETUP-CHECKLIST.md`) already describe this flow.
+
 > Plain-language note on terms: a **repo** ("repository") is a project folder
 > stored on GitHub. A **branch** is a parallel copy of the files you can change
 > safely; **merging** copies those changes into the main copy. A **PR** ("pull
@@ -59,46 +74,86 @@ GitHub token — and that piece is **not built yet** (details in section 4).
 
 ---
 
-## 4. The next feature you wanted: simpler / keyless sign-in 🔵
+## 4. Keyboard shortcuts — REQUESTED, NOT BUILT ⛔
 
-**Reality check first:** you mentioned wanting a simpler sign-in "like the grocery
-tracker, where a private key is not needed." Both apps actually work the **same
-way** today — they each ask you to paste a **GitHub personal access token** (a long
-secret string, like `github_pat_…`) into Settings, and store it in your browser.
-The grocery tracker only *looks* friendlier: it calls the token an "access key…
-like a house key" and lets you name each device. Mechanically it's the same token.
-So **a truly keyless sign-in does not exist in either app yet** — it's new work.
+You asked for **single-key keyboard shortcuts**. As of now the app has **none** —
+the only `addEventListener` calls in `index.html` are for closing modals by click.
+There is no `keydown`/`keyup` handler anywhere, so no key does anything. This is the
+clearest outstanding gap.
 
-### Why it's not trivial
-The apps are **static pages** (just HTML/JavaScript, no server of their own). They
-talk straight to GitHub's API using your token. A "real" sign-in button — where you
-click "Sign in with GitHub," approve, and never see a token — needs one of these,
-because the secure GitHub sign-in flows can't be completed safely by a page with no
-backend:
+### Suggested shortcut set (to build)
+- **Tab switching:** `1`–`7` jump to Today / Active / Planned / Offers / Calendar /
+  Reports / Settings (the nav order). Or `g` then a letter (`g a` = Active) if you
+  prefer "go to" chords.
+- **Create:** `n` = new offer on the Offers tab (and, in future, new account).
+- **In the detail view:** `s` = Save Changes, `Esc` = Back, `e` = focus the first
+  field.
+- **Global:** `?` opens a small "keyboard shortcuts" help overlay; `Esc` always
+  closes the open modal.
 
-- **Option A — GitHub OAuth App + a tiny serverless function.** You'd add a small
-  cloud function (e.g. Cloudflare Workers / Netlify / Vercel free tier) that holds
-  the app's secret and does the token exchange. Result: a clean "Sign in with
-  GitHub" button, no token pasting. Most work, best experience.
-- **Option B — GitHub Device Flow.** Shows a short code and a github.com link to
-  approve on your phone. Friendlier than pasting a token, but GitHub's device-flow
-  endpoint still needs a small proxy (CORS), so it also implies a minimal backend.
-- **Option C — Keep the token, polish the wording only.** No backend. Lowest
-  effort; this is essentially what the grocery tracker already did. Doesn't remove
-  the token, just makes it less scary.
+### How to build it (for whoever picks this up)
+One `document.addEventListener('keydown', …)` near the init block at the bottom of
+`index.html`. Guard it so it does nothing while the user is typing — i.e. bail if
+`document.activeElement` is an `INPUT`, `TEXTAREA`, or `SELECT`, or a modal is open
+(except `Esc`). Map keys to the existing `show('<tab>')` and the per-view action
+functions (`addOffer()`, `saveAccountDetail()`, `backFromDetail()`), so it's wiring,
+not new logic. Add a `?` help overlay using the existing `modal()` helper.
 
-### Recommendation
-If the goal is genuinely "no key to paste," **Option A** is the right target, and
-it's a shared piece both the bank-bonus and grocery apps could reuse. Decision to
-make when you return: are you willing to run a tiny free serverless function? If
-yes → Option A. If you want zero infrastructure → Option C is all that's possible.
+---
 
-### Where the sign-in code lives (for whoever builds it)
-- Bank app: `quartz/static/bank-bonus/index.html` — see the `LS` settings object
-  (`bb_repo`, `bb_token`, `bb_me`) and `ghHeaders()` (`Authorization: Bearer …`).
-- Grocery app: `quartz/static/grocery/index.html` — same shape (`gt_repo`,
-  `gt_token`, `gt_me`, plus `gt_device` for per-device naming).
-- Both send the token on every request to `https://api.github.com`.
+## 5. Where the interface is still rough 🔶 (UI / visual polish backlog)
+
+The app works and is functional, but several edges are still un-friendly. Ranked
+roughly by impact:
+
+1. **No keyboard shortcuts at all** — see section 4. Biggest gap.
+2. **No way to add an account directly.** You can only create accounts by adding an
+   *Offer* then "Promote"-ing it. There's no "+ Add Account" button on Active or
+   Planned. For a one-off account that detour is clunky.
+3. **No empty-state guidance is actionable.** Empty tabs say "No active accounts
+   yet." but offer no button to do something about it.
+4. **No search / filter / sort.** Active, Reports, and the "All accounts" table have
+   no way to filter by person or search by institution. With ~48 accounts the
+   Reports table is a long unbroken scroll.
+5. **No per-person split.** Config has `people: [Isaiah, Grace, Business]` but the
+   lists don't group or color by person — you scan institution names to tell whose
+   account is whose.
+6. **Cards aren't clickably obvious.** Active cards open the detail view on click,
+   but there's no cursor/hover cue saying so (Planned uses explicit buttons — the
+   two tabs behave inconsistently).
+7. **No undo / confirmation consistency.** Delete account asks twice; deleting a
+   reminder or DD entry (the `×`) deletes instantly with no confirm.
+8. **Calendar is a flat table, not a calendar.** It lists payroll dates in a table;
+   it doesn't visually look like a month grid, and past vs upcoming aren't
+   distinguished.
+9. **Mobile/width:** `#main` is capped at 900px and the detail view packs three
+   inputs per `.row` with no responsive collapse, so on a phone those rows get
+   cramped.
+
+### How the visuals could be optimized
+- **Density & hierarchy:** the whole app is one flat `#f5f5f5` with white cards.
+  Add a slim app header (title + who's signed in), and use color to encode *status*
+  (green = open, grey = closed, blue = planned) on the cards and the Reports table —
+  right now status is plain text.
+- **Status pills instead of words.** Replace the bare `open`/`closed`/`planned` text
+  with small colored pills; same for the Calendar `✅ Full / ⚪ Partial / ❌ Over`.
+- **Sticky table headers + zebra rows** on the Reports "All accounts" table so it
+  stays readable while scrolling 48 rows.
+- **Person as a visual token** (initial chip or color dot) on every card/row.
+- **Money emphasis:** right-align and bold dollar amounts in tables; show totals in
+  a summary strip at the top of Reports rather than only in the table footer.
+- **Dark-mode + system font scale** would match the rest of the Quartz site, which
+  has a dark theme; the app is currently light-only.
+- **Touch targets:** the tiny `Del` / `×` / 12px buttons are below the ~44px
+  comfortable tap size on mobile.
+
+These are independent and can be done in any order; **keyboard shortcuts (section 4)
+is the one thing you explicitly asked for and the natural first pickup.**
+
+### Where the relevant code lives
+- All UI is in one file: `quartz/static/bank-bonus/index.html`. Styles are the
+  `<style>` block at the top; each tab is a `render_<tab>()` function; navigation is
+  `show('<tab>')`; modals use the `modal()` helper.
 
 ---
 

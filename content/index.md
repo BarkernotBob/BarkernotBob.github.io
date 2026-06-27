@@ -16,25 +16,25 @@ publish: true
   <a class="splash-card notes no-popover" href="/notes"><span class="splash-bar"></span>
     <div class="splash-ic">📓</div>
     <div class="splash-h">Notes</div>
-    <p>A growing garden of essays and ideas, linked together.</p>
+    <p></p>
     <span class="splash-go">Start reading →</span>
   </a>
   <a class="splash-card tools no-popover" href="/tools"><span class="splash-bar"></span>
     <div class="splash-ic">🛠️</div>
     <div class="splash-h">Tools</div>
-    <p>The Tax Modeler and other little apps that do real work.</p>
+    <p></p>
     <span class="splash-go">Open the toolbox →</span>
   </a>
   <a class="splash-card games no-popover" href="/games"><span class="splash-bar"></span>
     <div class="splash-ic">🎮</div>
     <div class="splash-h">Games</div>
-    <p>BlockChain &amp; HexChain — 3D multiplayer strategy in your browser.</p>
+    <p></p>
     <span class="splash-go">Enter the arcade →</span>
   </a>
   <a class="splash-card yt no-popover" href="/youtube"><span class="splash-bar"></span>
     <div class="splash-ic">▶️</div>
     <div class="splash-h">Curated YouTube</div>
-    <p>Videos I found worth saving — with a note on why.</p>
+    <p></p>
     <span class="splash-go">Watch the picks →</span>
   </a>
 </div>

@@ -123,6 +123,9 @@ plugins:
     enabled: true
   - source: github:quartz-community/folder-page
     enabled: true
+    options:
+      # Hide the "N items under this folder." line on index pages.
+      showFolderCount: false
   - source: github:quartz-community/tag-page
     enabled: true
   - source: github:quartz-community/explorer

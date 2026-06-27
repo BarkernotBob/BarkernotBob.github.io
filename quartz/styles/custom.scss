@@ -254,6 +254,13 @@ body:has(.home-splash) {
   // ...and reclaim its space so the title isn't cramped.
   // (Columns were: date | title | tags — now just title | tags.)
   .section { grid-template-columns: 3fr 1fr !important; }
+  // Divider above the VeggieTales Chess entry on the Games index — visually
+  // separates the original 3 "chain" games from the chess game.
+  li.section-li:has(a[href$="games/veggietales-chess"]) {
+    border-top: 1px solid var(--lightgray);
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
 }
 
 // Hide the "date · reading time" line under the title on FOLDER/INDEX pages

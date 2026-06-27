@@ -8,9 +8,38 @@ A quick map of the words you'll see:
   your stuff). You already have one for your website. We'll make a *second, private*
   one just for grocery data.
 - **Private** = only people you invite can see it. (Your website repo is public.)
-- **Token** = a long secret password the app uses to open your private folder.
-  Think of it as a house key you save on your phone.
+- **Sign in with GitHub** = a one-tap button (the same kind you've used on other
+  sites). This is the easy, recommended way to connect the app — no keys to copy.
+- **Token** = a long secret password the app *can* use instead, if you prefer the
+  manual route. Think of it as a house key you save on your phone. It's now the
+  **fallback**, not the main path.
 - **The app** = the web page you open on your phone to snap receipts and see reports.
+
+---
+
+## ⭐ The easy way: "Sign in with GitHub" (shared with your Pool app)
+
+The grocery app now has a **🔐 Sign in with GitHub** button — the same sign-in your
+**Pool** app already uses. Because it's shared, there's **nothing new to set up in
+Cloudflare** and **no token to copy**. You only do **one** small one-time thing so
+GitHub will allow the same sign-in to work on the grocery (and bank) pages too:
+
+**One-time: widen the Pool sign-in to cover all your apps**
+1. Go to **https://github.com/settings/developers** → **OAuth Apps** → open the one
+   you made for Pool (it's named **Pool Care**).
+2. Find **Authorization callback URL**. It currently says
+   `https://barkernotbob.github.io/static/pool/`.
+3. Change it to the parent folder so it covers every app:
+   **`https://barkernotbob.github.io/static/`**
+   *(just delete the `pool/` at the end — keep the trailing slash)*
+4. Click **Update application.**
+
+That's it. Pool keeps working exactly as before, and now Grocery and Bank can use the
+**same** one-tap sign-in. (The Client ID and Worker URL are already baked into the
+app — they're public, not secrets.)
+
+Then go to **Step 4** below and use the **🔐 Sign in with GitHub** button. You only
+need the token Steps (2–3) if you ever want the manual fallback.
 
 ---
 
@@ -72,16 +101,17 @@ This is the fiddliest step. Go slowly.
 2. Tap the browser menu → **Add to Home Screen** so it feels like a real app.
 3. In the setup screen:
    - **Your name:** choose Isaiah.
-   - **Private data repository:** type `your-username/grocery-data`
-     (for example `BarkernotBob/grocery-data`).
-   - **Access key:** paste the token from Step 3.
-   - Tap **Connect.**
-4. The first time, it automatically creates the data files inside your folder. Done!
-5. The setup screen also asks for a **device name** (like "Isaiah's iPhone"). This is
-   just a label so you can tell your devices apart — type anything.
+   - **Device name:** type a label like "Isaiah's iPhone" (just so you can tell your
+     devices apart).
+   - Tap **🔐 Sign in with GitHub** → approve on GitHub → you land back in the app,
+     signed in. The first time, it automatically creates the data files inside your
+     `grocery-data` folder. Done!
+4. *(Fallback only)* If you'd rather use a token, open **"Advanced: paste a token
+   instead,"** type `your-username/grocery-data` and paste the token from Step 3,
+   then tap **Connect with token.**
 
-Repeat Step 4 on **your wife's phone**, choosing **Wife** as the name and using her
-own token (she makes one the same way in Step 3).
+Repeat Step 4 on **your wife's phone**, choosing **Wife** as the name and tapping the
+same **Sign in with GitHub** button (she approves with her own GitHub account).
 
 ### Staying signed in on several devices at once (phone *and* computer)
 

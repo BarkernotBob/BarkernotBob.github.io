@@ -2,6 +2,14 @@
 
 **All data files are prepared.** You just need to upload them and connect the app.
 
+> ⭐ **New easy sign-in:** the app now has a **🔐 Sign in with GitHub** button (the
+> same one your Pool app uses). With it you can **skip Step 2 (the token)**.
+> **One-time tweak first:** GitHub → **Settings → Developer settings → OAuth Apps** →
+> open **Pool Care** → change **Authorization callback URL** from
+> `https://barkernotbob.github.io/static/pool/` to
+> `https://barkernotbob.github.io/static/` (delete `pool/`, keep the trailing slash)
+> → **Update application.** Then in Step 4 just tap **Sign in with GitHub**.
+
 ---
 
 ## ✅ Step 1: Create Private Repo

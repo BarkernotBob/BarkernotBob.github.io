@@ -119,6 +119,15 @@
    this browser only (localStorage).
    ========================================================================= */
 
+/* ---- App-wide sign-in config. Shared with the Pool app: one GitHub OAuth App
+        + one Cloudflare Worker cover all of barkernotbob.github.io/static/*.
+        These two values are PUBLIC (not secrets). The token-paste fallback works
+        even before OAuth is set. ---- */
+const OAUTH = {
+  clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
+  workerUrl: 'https://pool-auth.isaiahmail97.workers.dev'  // Cloudflare Worker base URL
+};
+
 const LS = {
   get repo(){ return localStorage.getItem('gt_repo') || '' },        // "owner/name"
   set repo(v){ localStorage.setItem('gt_repo', v) },
@@ -128,6 +137,10 @@ const LS = {
   set me(v){ localStorage.setItem('gt_me', v) },
   get device(){ return localStorage.getItem('gt_device') || '' },    // "Isaiah's iPhone" — names THIS device's sign-in
   set device(v){ localStorage.setItem('gt_device', v) },
+  get login(){ return localStorage.getItem('gt_login') || '' },      // GitHub username (from OAuth)
+  set login(v){ localStorage.setItem('gt_login', v) },
+  get method(){ return localStorage.getItem('gt_method') || '' },    // 'oauth' | 'token'
+  set method(v){ localStorage.setItem('gt_method', v) },
 };
 
 const API = 'https://api.github.com';
@@ -269,31 +282,86 @@ async function show(tab){
 function isConfigured(){ return LS.repo && LS.token && LS.me; }
 
 /* =========================================================================
+   SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
+   ========================================================================= */
+function oauthReady(){ return OAUTH.clientId && OAUTH.workerUrl; }
+function appRedirect(){ return location.origin + location.pathname; }
+
+function signInWithGitHub(){
+  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use “paste a token” below for now.'); return; }
+  // The redirect navigates away, so capture the name/device first.
+  const me = $('#su_me') ? $('#su_me').value.trim() : LS.me;
+  const device = $('#su_device') ? $('#su_device').value.trim() : LS.device;
+  if(!me){ toast('Choose your name first'); return; }
+  LS.me = me; if(device) LS.device = device;
+  const state = uid('s'); localStorage.setItem('gt_oauth_state', state);
+  const u = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(OAUTH.clientId)}`
+          + `&scope=repo&redirect_uri=${encodeURIComponent(appRedirect())}&state=${encodeURIComponent(state)}`;
+  location.href = u;
+}
+async function handleOAuthRedirect(){
+  const p = new URLSearchParams(location.search);
+  const code = p.get('code'), state = p.get('state');
+  if(!code) return false;
+  history.replaceState({}, '', appRedirect()); // clean the URL no matter what
+  if(state !== localStorage.getItem('gt_oauth_state')){ toast('Sign-in expired, please try again.'); return false; }
+  try{
+    const r = await fetch(OAUTH.workerUrl.replace(/\/$/,'')+'/exchange', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code, redirect_uri: appRedirect() })
+    });
+    const j = await r.json();
+    if(!j.access_token) throw new Error(j.error_description||j.error||'No token returned');
+    LS.token = j.access_token; LS.method='oauth';
+    await afterSignIn();
+    return true;
+  }catch(e){ toast('Sign-in failed: '+(e.message||e)); return false; }
+}
+/* After we have a token: learn the username, default the data repo, seed files. */
+async function afterSignIn(){
+  try{
+    const r = await fetch(`${API}/user`, {headers:ghHeaders()});
+    if(r.ok){ const u=await r.json(); LS.login=u.login; if(!LS.repo) LS.repo = u.login+'/grocery-data'; }
+  }catch(e){}
+  if(!LS.device) LS.device = (LS.me||'this')+"'s device";
+  toast('Signed in 🎉');
+  if(isConfigured()){
+    try{ await ensureInitialized(); D={}; for(const k in DB) delete DB[k]; await loadAll(); }catch(e){}
+  }
+  show('capture');
+}
+
+/* =========================================================================
    SETUP (first run)
    ========================================================================= */
 function renderSetup(){
   $('#main').innerHTML = `
   <div class="card">
     <h2>Welcome — let's connect your tool</h2>
-    <p class="small muted">This is a one-time setup on this phone/computer. Your wife does the same on hers.
-    See the <b>SETUP guide</b> in your repo if you haven't created the private data folder + key yet.</p>
+    <p class="small muted">A one-time sign-in on this phone/computer. Your wife does the same on hers.
+    Your receipts live in your own <b>private</b> GitHub repo — see the <b>SETUP guide</b>
+    (grocery-tool/SETUP.md) if you haven't made it yet.</p>
     <label>Your name (so we know who snapped each receipt)</label>
-    <select id="su_me"><option value="">Choose…</option><option>Isaiah</option><option>Wife</option></select>
+    <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Isaiah'?'selected':''}>Isaiah</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
     <label>This device's name (so your phone and computer can both stay signed in)</label>
     <input id="su_device" placeholder="e.g. Isaiah's iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
-    <label>Private data repository (looks like <code>owner/name</code>)</label>
-    <input id="su_repo" placeholder="isaiahmail97-oss/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <label>Access key (your private token — like a house key)</label>
-    <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
-    <button onclick="saveSetup()">Connect</button>
+    <button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
+    <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until OAuth is configured.'}</p>
+    <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
+      <label>Private data repository (<code>owner/name</code>)</label>
+      <input id="su_repo" placeholder="BarkernotBob/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <label>Access key (your private token — like a house key)</label>
+      <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
+      <button class="sec" onclick="saveSetup()">Connect with token</button>
+    </details>
   </div>`;
 }
 async function saveSetup(){
   const me=$('#su_me').value.trim(), repo=$('#su_repo').value.trim(), token=$('#su_token').value.trim();
   const device=$('#su_device').value.trim();
   if(!me||!repo||!token){ toast('Please fill in your name, repository and key'); return; }
-  LS.me=me; LS.repo=repo; LS.token=token; LS.device=device||(me+"'s device");
+  LS.me=me; LS.repo=repo; LS.token=token; LS.method='token'; LS.device=device||(me+"'s device");
   toast('Checking your connection…');
   try{
     const r = await fetch(`${API}/repos/${repo}`, {headers:ghHeaders()});
@@ -786,7 +854,8 @@ function renderSettings(){
   </div>
   <div class="card">
     <h2>📱💻 Using more than one device</h2>
-    <p class="small muted">Yes — you can stay signed in on your phone <b>and</b> your computer at the same time. There's no central login server: each device keeps its <b>own</b> access key (token) in its own browser, and GitHub happily lets many keys work at once for the same account.</p>
+    <p class="small muted"><b>Easiest:</b> on each device just open the app and tap <b>🔐 Sign in with GitHub</b> — no tokens to copy. You can stay signed in on your phone, computer, and tablet all at once.</p>
+    <p class="small muted">Prefer the token route? You can — there's no central login server: each device keeps its <b>own</b> access key (token) in its own browser, and GitHub happily lets many keys work at once for the same account.</p>
     <p class="small muted"><b>To add another device:</b> on that device, create a <b>brand-new</b> token (GitHub → Settings → Developer settings → Fine-grained tokens → <i>Generate new token</i>, give it the <code>grocery-data</code> repo with Contents = Read &amp; write) and paste that one into its setup screen.</p>
     <p class="small muted"><b>The thing that kicks a device out:</b> pressing <i>Regenerate</i> on an existing token — that changes the key's value, so whatever device was using the old value stops working. Making a <i>new</i> token never affects your other devices. Give each device its own token and its own name above, and they'll all stay signed in.</p>
   </div>
@@ -815,10 +884,15 @@ async function saveConfig(){
   (D.config.members||[]).forEach((m,idx)=>{ const v=$('#mem_'+idx); if(v) m.email=v.value.trim(); });
   await saveJson(FILES.config, D.config, 'Update notification emails'); toast('Emails saved');
 }
-async function signOut(){ if(await confirmModal('Forget the access key on this device? You can re-enter it anytime. Your other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); toast('Signed out'); show('settings'); } }
+async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); localStorage.removeItem('gt_login'); localStorage.removeItem('gt_method'); toast('Signed out'); show('settings'); } }
 
 /* ---------- boot ---------- */
-window.addEventListener('load', ()=>{ show(isConfigured()?'capture':'settings'); });
+window.addEventListener('load', async ()=>{
+  // Handle the "back from GitHub sign-in" return first; otherwise show the app.
+  const came = await handleOAuthRedirect();
+  if(came) return;
+  show(isConfigured()?'capture':'settings');
+});
 </script>
 </body>
 </html>

@@ -9,10 +9,11 @@ project back up cold. No prior context needed.
 
 ## 1. The one-sentence summary
 
-The Calendar data is populated and the **"Sign in with GitHub" button is built and
-live** (Option A — OAuth App + Cloudflare Worker — no token to paste). What's left
-is **interface polish**: the **single-key keyboard shortcuts you asked for are still
-not built**, and several UX/visual rough edges remain (sections 4 and 5).
+The Calendar data is populated, the **"Sign in with GitHub" button is live**
+(Option A — OAuth App + Cloudflare Worker, no token to paste), and the **interface
+overhaul is now done**: single-key keyboard shortcuts, dark mode, status pills,
+person tags, a real month-grid Calendar, search/filter, and a direct "+ Add Account"
+all shipped (sections 4 and 5). What's left is your eyes on it — verify it live.
 
 ---
 
@@ -74,90 +75,59 @@ not built**, and several UX/visual rough edges remain (sections 4 and 5).
 
 ---
 
-## 4. Keyboard shortcuts — REQUESTED, NOT BUILT ⛔
+## 4. Keyboard shortcuts — BUILT ✅
 
-You asked for **single-key keyboard shortcuts**. As of now the app has **none** —
-the only `addEventListener` calls in `index.html` are for closing modals by click.
-There is no `keydown`/`keyup` handler anywhere, so no key does anything. This is the
-clearest outstanding gap.
+The app now has a global keyboard handler (`keydown` near the bottom of
+`index.html`). It ignores keys while you're typing in a field or a dialog is open
+(except `Esc`), so it never fights normal input. There's also a **⌨ button** in the
+header and a `?` shortcut that pop up a cheat-sheet.
 
-### Suggested shortcut set (to build)
-- **Tab switching:** `1`–`7` jump to Today / Active / Planned / Offers / Calendar /
-  Reports / Settings (the nav order). Or `g` then a letter (`g a` = Active) if you
-  prefer "go to" chords.
-- **Create:** `n` = new offer on the Offers tab (and, in future, new account).
-- **In the detail view:** `s` = Save Changes, `Esc` = Back, `e` = focus the first
-  field.
-- **Global:** `?` opens a small "keyboard shortcuts" help overlay; `Esc` always
-  closes the open modal.
-
-### How to build it (for whoever picks this up)
-One `document.addEventListener('keydown', …)` near the init block at the bottom of
-`index.html`. Guard it so it does nothing while the user is typing — i.e. bail if
-`document.activeElement` is an `INPUT`, `TEXTAREA`, or `SELECT`, or a modal is open
-(except `Esc`). Map keys to the existing `show('<tab>')` and the per-view action
-functions (`addOffer()`, `saveAccountDetail()`, `backFromDetail()`), so it's wiring,
-not new logic. Add a `?` help overlay using the existing `modal()` helper.
+| Key | Does |
+| --- | --- |
+| `1`–`7` | Jump to Today / Active / Planned / Offers / Calendar / Reports / Settings |
+| `n` | New — account (on Active/Planned) or offer (on Offers) |
+| `s` | Save changes (inside an account) |
+| `e` | Edit — focus the first field (inside an account) |
+| `/` | Focus the search box (Active / Planned) |
+| `Esc` | Close a dialog, or step back out of an account |
+| `?` | Show the shortcuts cheat-sheet |
 
 ---
 
-## 5. Where the interface is still rough 🔶 (UI / visual polish backlog)
+## 5. Interface overhaul — BUILT ✅
 
-The app works and is functional, but several edges are still un-friendly. Ranked
-roughly by impact:
+Every item from the old "rough edges" backlog shipped. All in the one file
+`quartz/static/bank-bonus/index.html`:
 
-1. **No keyboard shortcuts at all** — see section 4. Biggest gap.
-2. **No way to add an account directly.** You can only create accounts by adding an
-   *Offer* then "Promote"-ing it. There's no "+ Add Account" button on Active or
-   Planned. For a one-off account that detour is clunky.
-3. **No empty-state guidance is actionable.** Empty tabs say "No active accounts
-   yet." but offer no button to do something about it.
-4. **No search / filter / sort.** Active, Reports, and the "All accounts" table have
-   no way to filter by person or search by institution. With ~48 accounts the
-   Reports table is a long unbroken scroll.
-5. **No per-person split.** Config has `people: [Isaiah, Grace, Business]` but the
-   lists don't group or color by person — you scan institution names to tell whose
-   account is whose.
-6. **Cards aren't clickably obvious.** Active cards open the detail view on click,
-   but there's no cursor/hover cue saying so (Planned uses explicit buttons — the
-   two tabs behave inconsistently).
-7. **No undo / confirmation consistency.** Delete account asks twice; deleting a
-   reminder or DD entry (the `×`) deletes instantly with no confirm.
-8. **Calendar is a flat table, not a calendar.** It lists payroll dates in a table;
-   it doesn't visually look like a month grid, and past vs upcoming aren't
-   distinguished.
-9. **Mobile/width:** `#main` is capped at 900px and the detail view packs three
-   inputs per `.row` with no responsive collapse, so on a phone those rows get
-   cramped.
+- **Dark mode.** Auto-detects your system setting and a **🌙 / ☀️ toggle** in the
+  header remembers your choice. The whole app runs on CSS theme variables.
+- **App header bar** — title, who's signed in, theme + shortcuts buttons.
+- **Status pills + colored card stripes.** `open` / `closed` / `planned` show as
+  colored pills, and each account card carries a matching left stripe (green / grey /
+  blue). The Calendar uses the same Full / Partial / Over coloring.
+- **Person tags everywhere** — a colored initial dot + name on every card and table
+  row, stable per person, so you can tell whose account is whose at a glance.
+- **"+ Add Account" button** on Active and Planned (and in their empty states), so
+  you no longer have to create an Offer and "Promote" it for a one-off account.
+- **Search + person filter** on Active and Planned (and a person filter on the
+  Reports "All accounts" table). Search box is reachable with `/`.
+- **Real month-grid Calendar.** Replaces the flat table with a Sun–Sat month grid,
+  payroll days colored by allocation status, today outlined, past days dimmed, plus a
+  summary strip (total planned / upcoming / over-allocated) and a legend.
+- **Reports polish** — a 4-stat summary strip up top, right-aligned tabular money,
+  zebra rows, and sticky table headers.
+- **Consistent delete confirms** — removing a reminder or a DD entry now asks first,
+  matching the account-delete behavior.
+- **Responsive + bigger touch targets** — rows reflow on narrow screens and buttons
+  meet the ~44px tap size, so the phone layout isn't cramped.
 
-### How the visuals could be optimized
-- **Density & hierarchy:** the whole app is one flat `#f5f5f5` with white cards.
-  Add a slim app header (title + who's signed in), and use color to encode *status*
-  (green = open, grey = closed, blue = planned) on the cards and the Reports table —
-  right now status is plain text.
-- **Status pills instead of words.** Replace the bare `open`/`closed`/`planned` text
-  with small colored pills; same for the Calendar `✅ Full / ⚪ Partial / ❌ Over`.
-- **Sticky table headers + zebra rows** on the Reports "All accounts" table so it
-  stays readable while scrolling 48 rows.
-- **Person as a visual token** (initial chip or color dot) on every card/row.
-- **Money emphasis:** right-align and bold dollar amounts in tables; show totals in
-  a summary strip at the top of Reports rather than only in the table footer.
-- **Dark-mode + system font scale** would match the rest of the Quartz site, which
-  has a dark theme; the app is currently light-only.
-- **Touch targets:** the tiny `Del` / `×` / 12px buttons are below the ~44px
-  comfortable tap size on mobile.
-
-These are independent and can be done in any order; **keyboard shortcuts (section 4)
-is the one thing you explicitly asked for and the natural first pickup.**
-
-### Where the relevant code lives
-- All UI is in one file: `quartz/static/bank-bonus/index.html`. Styles are the
-  `<style>` block at the top; each tab is a `render_<tab>()` function; navigation is
-  `show('<tab>')`; modals use the `modal()` helper.
+> Verified headless (Chromium): all tabs render with no console errors, the month
+> grid and pills draw, search/person filters work, theme toggles, and the `1`–`7` /
+> `?` / `Esc` shortcuts fire. Still worth a quick look on the live site after deploy.
 
 ---
 
-## 5. Key facts to not re-derive
+## 6. Key facts to not re-derive
 
 - **Data repo:** `BarkernotBob/bank-bonus-data` (private) — holds `db/accounts.json`.
   Default branch `main`.

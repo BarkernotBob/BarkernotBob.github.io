@@ -1,3 +1,6 @@
+# Open questions (to address later)
+- **Game publish naming convention:** the Publish/Preview commands now auto-publish any `*.standalone.html` in the iCloud Claude folder. Decide how to handle games whose source file ISN'T named `*.standalone.html` (e.g. VeggieTales-Chess): either rename the source to end in `.standalone.html`, or add a one-line special case (path|Name.html) to the `GAMES=( … )` block in both `Publish Changes.command` and `Preview Website.command`. Confirm VeggieTales-Chess's actual source path/filename.
+
 # Response style
 - Be terse. No narration, reasoning summaries, or "I'll now…" preambles. Execute first, then report only the result (a short "what I did" summary).
 - Lead with the outcome; no preamble, no recap of the process.

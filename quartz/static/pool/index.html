@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0d6ea8" />
+<title>Pool Care</title>
+<style>
+  :root{
+    --blue:#0d6ea8; --blue-d:#0a567f; --bg:#eef4f8; --card:#fff;
+    --ink:#10242f; --muted:#5d6f79; --line:#dde6ec; --warn:#b4690e; --danger:#b3261e; --ok:#1d7a4d;
+    --shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%;
+    padding-bottom:74px; line-height:1.45;
+  }
+  header{
+    position:sticky; top:0; z-index:20; background:var(--blue); color:#fff;
+    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px; box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .who{font-size:12px;opacity:.9}
+  main{padding:16px;max-width:760px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
+  .card h2{font-size:16px;margin:0 0 10px}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+  input,select,textarea{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    font-size:16px;background:#fff;color:var(--ink)
+  }
+  button{
+    font-size:15px;font-weight:600;border:0;border-radius:10px;padding:12px 14px;
+    background:var(--blue);color:#fff;cursor:pointer;width:100%
+  }
+  button.sec{background:#e9eff3;color:var(--ink);border:1px solid var(--line)}
+  button.warn{background:var(--warn)} button.danger{background:var(--danger)} button.ok{background:var(--ok)}
+  button.link{background:none;color:var(--blue);width:auto;padding:6px 0;font-weight:600}
+  button:disabled{opacity:.5}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+  .pill.warn{background:#fbecd6;color:#7a4708}
+  .pill.ok{background:#dcefe2;color:#1d5e39}
+  .pill.gray{background:#eceee9;color:#5a615b}
+  .pill.due{background:#fbe3e1;color:#8a221b}
+  .item{border-top:1px solid var(--line);padding:11px 0}
+  .item:first-child{border-top:0}
+  .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom)
+  }
+  nav button{background:none;color:var(--muted);border-radius:0;font-size:11px;font-weight:600;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  nav button .ic{font-size:20px;line-height:1}
+  nav button.active{color:var(--blue)}
+  .badge{position:absolute;top:4px;margin-left:16px;background:var(--danger);color:#fff;font-size:10px;border-radius:999px;padding:0 5px;font-weight:700}
+  .hidden{display:none!important}
+  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:center;justify-content:center;padding:18px}
+  .modal-card{background:var(--card);border-radius:14px;padding:18px;max-width:440px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:88vh;overflow:auto}
+  .modal-card h2{margin:0 0 4px;font-size:17px}
+  .modal-card button{width:100%;margin-bottom:8px}
+  .modal-card .row{margin-bottom:0}
+  .modal-card .row button{margin-bottom:0}
+  .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#10242f;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
+  .toast.show{opacity:.97}
+  .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
+  .kv b{font-weight:650}
+  .big{font-size:28px;font-weight:750}
+  a{color:var(--blue)}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r .7s linear infinite;vertical-align:-3px}
+  @keyframes r{to{transform:rotate(360deg)}}
+  /* 5-step qualitative level picker */
+  .levels{display:flex;gap:6px;margin-top:4px}
+  .levels button{padding:9px 4px;font-size:12px;font-weight:600;background:#f1f5f8;color:var(--muted);border:1px solid var(--line)}
+  .levels button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .sev0{color:var(--ok)} .sev1{color:var(--warn)} .sev2{color:var(--danger)}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px}
+  .dot.s0{background:#1d7a4d}.dot.s1{background:#e0a32e}.dot.s2{background:#c64236}.dot.sx{background:#cfd8de}
+  .rec{border-left:3px solid var(--blue);padding:8px 0 8px 12px;margin:8px 0;background:#f6fafc}
+  .rec.warn{border-color:var(--warn);background:#fdf6ea}
+  .rec.danger{border-color:var(--danger);background:#fcf0ef}
+  .rec.ok{border-color:var(--ok);background:#f0f8f3}
+  .timeline{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px}
+  details summary{cursor:pointer;font-weight:600;font-size:14px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  svg.spark{width:100%;height:60px;display:block}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🏊 Pool Care</h1><div class="who" id="whoami"></div></div>
+  <button class="link" style="color:#fff" onclick="show('settings')">⚙︎</button>
+</header>
+
+<main id="main"></main>
+
+<nav id="nav">
+  <button data-tab="today"    onclick="show('today')"><span class="ic">📅</span>Today<span id="todayBadge" class="badge hidden">0</span></button>
+  <button data-tab="test"     onclick="show('test')"><span class="ic">🧪</span>Test</button>
+  <button data-tab="schedule" onclick="show('schedule')"><span class="ic">✅</span>Schedule</button>
+  <button data-tab="history"  onclick="show('history')"><span class="ic">📈</span>History</button>
+  <button data-tab="settings" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   Pool Care — single-file app.
+   Stores everything in a PRIVATE GitHub repo (the "data repo") via the GitHub
+   API. No pool data lives in this file. Sign-in is "Sign in with GitHub"
+   (via a Cloudflare Worker) with a paste-a-token fallback. The token (however
+   obtained) lives only in this browser (localStorage).
+   ========================================================================= */
+
+/* ---- App-wide sign-in config. Filled in once the OAuth App + Worker exist.
+        Until both are set, the app uses the token-paste fallback. ---- */
+const OAUTH = {
+  clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
+  workerUrl: 'https://pool-auth.isaiahmail97.workers.dev'  // Cloudflare Worker base URL
+};
+
+const LS = {
+  get repo(){ return localStorage.getItem('pl_repo') || '' },        // "owner/name"
+  set repo(v){ localStorage.setItem('pl_repo', v) },
+  get token(){ return localStorage.getItem('pl_token') || '' },
+  set token(v){ localStorage.setItem('pl_token', v) },
+  get login(){ return localStorage.getItem('pl_login') || '' },      // GitHub username
+  set login(v){ localStorage.setItem('pl_login', v) },
+  get device(){ return localStorage.getItem('pl_device') || '' },
+  set device(v){ localStorage.setItem('pl_device', v) },
+  get method(){ return localStorage.getItem('pl_method') || '' },    // 'oauth' | 'token'
+  set method(v){ localStorage.setItem('pl_method', v) },
+};
+
+const API = 'https://api.github.com';
+const DB = {}; // in-memory cache: { path:{value,sha} }
+
+/* ---------- tiny helpers ---------- */
+const $ = sel => document.querySelector(sel);
+const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const todayISO = () => new Date().toISOString().slice(0,10);
+const nowISO = () => new Date().toISOString();
+function addDaysISO(iso, n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/86400000); }
+function mmdd(iso){ return (iso||todayISO()).slice(5,10); }
+function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${m}/${d}/${y.slice(2)}`; }
+function toast(msg, ms=2800){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
+function modal(innerHtml){
+  return new Promise(resolve=>{
+    const o=el('div',{class:'modal-ov'});
+    o.innerHTML=`<div class="modal-card">${innerHtml}</div>`;
+    const close=(val)=>{ if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    o.addEventListener('click', e=>{ if(e.target===o) close(null); });
+    document.body.appendChild(o);
+    o.querySelectorAll('[data-mval]').forEach(b=> b.addEventListener('click', ()=>close(b.getAttribute('data-mval'))));
+    o.querySelectorAll('[data-mcancel]').forEach(b=> b.addEventListener('click', ()=>close(null)));
+  });
+}
+function confirmModal(message, okLabel='OK', danger=false){
+  return modal(`<p style="margin:0 0 14px">${esc(message)}</p>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button class="${danger?'danger':''}" data-mval="yes">${esc(okLabel)}</button></div>`)
+    .then(v=>v==='yes');
+}
+function uid(p){ return p+'_'+Math.floor(Date.now()/1000)+'_'+Math.random().toString(36).slice(2,6); }
+function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
+
+/* ---------- GitHub API ---------- */
+function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
+async function ghContents(path){
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return r.json();
+}
+async function ghPut(path, contentB64, sha, message){
+  const body = { message, content:contentB64 };
+  if(sha) body.sha = sha;
+  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {method:'PUT', headers:ghHeaders(), body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(`Save failed ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return r.json();
+}
+async function loadJson(path, fallback){
+  const c = await ghContents(path);
+  if(c===null){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
+  const value = JSON.parse(b64decode(c.content));
+  DB[path] = {value, sha:c.sha};
+  return value;
+}
+async function saveJson(path, value, message){
+  let sha = DB[path] ? DB[path].sha : null;
+  try{
+    const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
+    DB[path] = {value, sha:res.content.sha};
+  }catch(e){
+    if(String(e).includes('409')||String(e).includes('422')){ // stale sha: re-read & retry once
+      const c = await ghContents(path); sha = c? c.sha : null;
+      const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
+      DB[path] = {value, sha:res.content.sha};
+    } else throw e;
+  }
+}
+
+/* =========================================================================
+   DEFAULTS — the whole pool "brain" lives in config so you can edit it later.
+   ========================================================================= */
+const READINGS = [
+  {key:'fc',  name:'Free chlorine',   numUnit:'ppm', numRange:[1,3]},
+  {key:'ph',  name:'pH',              numUnit:'',    numRange:[7.4,7.6]},
+  {key:'ta',  name:'Total alkalinity',numUnit:'ppm', numRange:[80,120]},
+  {key:'cya', name:'Cyanuric acid',   numUnit:'ppm', numRange:[30,50]},
+  {key:'ch',  name:'Calcium hardness',numUnit:'ppm', numRange:[200,400]},
+  {key:'po4', name:'Phosphates',      numUnit:'ppb', numRange:[0,100]},
+];
+const LEVELS = ['very low','low','normal','high','very high']; // index 0..4, normal=2
+function levelIdx(l){ return LEVELS.indexOf(l); }
+function severity(l){ const i=levelIdx(l); return i<0?null:Math.abs(i-2); } // 0 good,1,2
+
+/* Qualitative level -> recommended action, per reading. {tone, text} */
+function recForLevel(key, level){
+  const sev = severity(level);
+  if(sev===0) return {tone:'ok', text:'In range — nothing to do.'};
+  const i = levelIdx(level), low = i<2, vv = (i===0||i===4);
+  switch(key){
+    case 'fc':
+      return low
+        ? (vv ? {tone:'danger', text:'Chlorine very low. SHOCK: add 1 cup granular chlorine (double dose), run the pump, and keep swimmers out until it reads normal. Re-test in a few hours.'}
+              : {tone:'warn',   text:'Chlorine low. Add your usual ½ cup granular chlorine (in a bucket of water, poured by the pump return). Re-test tomorrow.'})
+        : (vv ? {tone:'danger', text:'Chlorine very high. Do NOT add more. Keep swimmers out until it drops to normal; partial fresh-water dilution speeds it up.'}
+              : {tone:'warn',   text:'Chlorine high. Hold off adding chlorine; let it drift down before the next dose.'});
+    case 'ph':
+      return low
+        ? {tone:'warn', text:'pH low (acidic). Add pH Up (soda ash) per the label for ~10,000 gal, then re-test. Low pH can irritate eyes and corrode metal.'}
+        : (vv ? {tone:'danger', text:'pH very high. Add pH Down (dry acid / muriatic acid) per label, run the pump, re-test in a few hours. High pH makes chlorine sluggish.'}
+              : {tone:'warn',   text:'pH high. Add a measured dose of pH Down per label and re-test. High pH weakens chlorine.'});
+    case 'ta':
+      return low
+        ? {tone:'warn', text:'Alkalinity low. Add baking soda (sodium bicarbonate) — about 1.5 lb raises ~10 ppm in 10,000 gal. Low alkalinity makes pH bounce around.'}
+        : {tone:'warn', text:'Alkalinity high. Lower it slowly with muriatic acid and aerate; re-test over a few days.'};
+    case 'cya':
+      return low
+        ? {tone:'warn', text:'Stabilizer (CYA) low — chlorine burns off fast in sunlight. Add cyanuric acid / conditioner per label and re-test in a couple days.'}
+        : {tone:'danger', text:'Stabilizer (CYA) high — there is no chemical that lowers it. Partially drain (~⅓) and refill with fresh water, then re-test. (Often caused by chlorine tabs; you use granular, so this should creep slowly.)'};
+    case 'ch':
+      return low
+        ? {tone:'warn', text:'Calcium hardness low. Add calcium chloride per label; soft water can etch plaster/grout.'}
+        : {tone:'warn', text:'Calcium hardness high. Dilute with fresh water and avoid calcium-based chlorine; watch for scaling.'};
+    case 'po4':
+      return low
+        ? {tone:'ok', text:'Phosphates fine. Keep your every-2-weeks 1 oz maintenance dose.'}
+        : (vv ? {tone:'danger', text:'Phosphates very high (algae food). Add phosphate remover per label for a heavy dose, run/filter, then re-test. Resume the 1 oz biweekly routine after.'}
+              : {tone:'warn',   text:'Phosphates high. Add a corrective dose of phosphate remover per label, then return to 1 oz every 2 weeks.'});
+  }
+  return {tone:'warn', text:'Off target — adjust and re-test.'};
+}
+
+/* Numeric value -> simple dose estimate for 10,000 gal (editable volume). */
+function recForNumber(key, val, gallons){
+  const r = READINGS.find(x=>x.key===key); const [lo,hi]=r.numRange; const g=gallons||10000;
+  const f = g/10000; // scale factor vs 10k gal
+  if(val>=lo && val<=hi) return {tone:'ok', text:`In range (${lo}–${hi} ${r.numUnit}). Nothing to do.`};
+  switch(key){
+    case 'fc':{
+      if(val<lo){ const cups = val<0.5 ? 1 : 0.5; return {tone:val<0.5?'danger':'warn', text:`Add about ${cups===1?'1 cup':'½ cup'} granular chlorine (×${f.toFixed(1)} for your volume). Re-test in a few hours.`}; }
+      return {tone:'warn', text:'Above 3 ppm — skip chlorine until it falls back into 1–3 ppm.'};
+    }
+    case 'ph':
+      return val<lo ? {tone:'warn', text:'Below 7.4 — add pH Up (soda ash) per label and re-test.'}
+                    : {tone:'warn', text:'Above 7.6 — add pH Down per label and re-test in a few hours.'};
+    case 'ta':{
+      if(val<lo){ const lbs=(((lo+hi)/2 - val)/10*1.5*f); return {tone:'warn', text:`Add ~${lbs.toFixed(1)} lb baking soda to bring alkalinity toward ${(lo+hi)/2} ppm, then re-test.`}; }
+      return {tone:'warn', text:'Above 120 ppm — lower slowly with muriatic acid and aerate.'};
+    }
+    case 'cya':{
+      if(val<lo){ const oz=(((lo+hi)/2 - val)*0.13*8*f); return {tone:'warn', text:`Add stabilizer to raise CYA toward ${(lo+hi)/2} ppm (~${oz.toFixed(0)} oz dry conditioner). Re-test in 2 days.`}; }
+      return {tone:'danger', text:'Above 50 ppm — no chemical lowers CYA. Partially drain & refill, then re-test.'};
+    }
+    case 'ch':
+      return val<lo ? {tone:'warn', text:'Below 200 ppm — add calcium chloride per label.'}
+                    : {tone:'warn', text:'Above 400 ppm — dilute with fresh water; avoid calcium-based products.'};
+    case 'po4':
+      return {tone:val>250?'danger':'warn', text:'Phosphates above ~100 ppb — dose phosphate remover per label, filter, then resume 1 oz every 2 weeks.'};
+  }
+  return {tone:'warn', text:'Out of range — adjust and re-test.'};
+}
+
+/* ---- Default recurring schedule (Fort Wayne, IN seasons). Editable in app. ---- */
+function defaultConfig(){
+  return {
+    pool:{ name:'Our Pool', gallons:10000, location:'Fort Wayne, IN', chlorineProduct:'granular' },
+    email:'',
+    season:{ open:'04-20', close:'10-05', peakStart:'06-01', peakEnd:'08-31' },
+    targets: READINGS.reduce((o,r)=>{ o[r.key]={range:r.numRange}; return o; }, {}),
+    tasks: defaultTasks(),
+    opening: defaultOpening(),
+    closing: defaultClosing(),
+    waterLevel:{ note:'Keep between the lowest and highest side screws. Filling adds ~1 inch per hour with the hose.' }
+  };
+}
+function defaultTasks(){
+  return [
+    {id:'test',     title:'Test the water (strips)', detail:'Dip a test strip and log the results here.', cadence:'weekly',   season:'in',   last:null},
+    {id:'chlorine', title:'Add chlorine (½ cup)',    detail:'½ cup granular into a half-full 5-gal bucket of water; mix carefully (don\'t inhale); pour by the pump return.', cadence:'weekly', season:'in', last:null},
+    {id:'phosphate',title:'Add phosphate remover (1 oz)', detail:'1 oz phosphate remover. Check phosphates at Leslie\'s now and then.', cadence:'biweekly', season:'in', last:null},
+    {id:'pump',     title:'Run the pump',            detail:'Off-season: ~twice a week, 2–4 hrs. Peak summer: run daily.', cadence:'pump', season:'in', last:null},
+    {id:'robot',    title:'Robot vacuum',            detail:'Filter first, then run the robot ~1.5 hrs. Daily when you\'re filtering daily.', cadence:'pump', season:'in', last:null},
+    {id:'basket',   title:'Check & clean the basket',detail:'Clean the bottom/strainer basket whenever you see debris (~4–6×/yr).', cadence:'monthly', season:'in', last:null},
+    {id:'backwash', title:'Check pump flow / backwash',detail:'If the pump seems weak or pressure is up: backwash (pump OFF to move handle → ON, run to clear in the sight glass → OFF → Rinse → ON ~30s until clear).', cadence:'biweekly', season:'in', last:null},
+  ];
+}
+function defaultOpening(){
+  return { title:'Spring opening', steps:[
+    'Remove and clean the cover; let it dry before storing.',
+    'Top up water to mid-skimmer / between the side screws (≈1 inch per hour of hose).',
+    'Reconnect/return the pump & filter; check the sight glass and baskets.',
+    'Run the pump several hours to circulate.',
+    'Test the water (or take a sample to Leslie\'s for a full panel).',
+    'Balance alkalinity, then pH, then chlorine.',
+    'Shock with chlorine (about 1 cup granular for 10,000 gal); keep swimmers out until it drops to normal.',
+    'Add 1 oz phosphate remover to start the season.',
+    'Run the pump daily until the water is clear, then settle into the summer routine.'
+  ]};
+}
+function defaultClosing(){
+  return { title:'Fall closing (before the leaves fall)', steps:[
+    'Add 6 oz phosphate remover.',
+    'Add 2 doses of chlorine (1 full cup granular).',
+    'Run the pump a few hours to circulate the chemicals.',
+    'Lower water to the winterizing level if your setup needs it.',
+    'Backwash/clean the filter.',
+    'Put the cover on before the leaves start dropping.'
+  ]};
+}
+
+/* =========================================================================
+   DATA LOAD
+   ========================================================================= */
+const FILES = { config:'db/config.json', tests:'db/tests.json', log:'db/log.json' };
+let D = {};
+async function loadAll(){
+  D.config = await loadJson(FILES.config, defaultConfig());
+  D.tests  = await loadJson(FILES.tests, []);
+  D.log    = await loadJson(FILES.log, []);
+  // merge any newly-added default keys into an older config (non-destructive)
+  const dc = defaultConfig();
+  for(const k in dc){ if(D.config[k]===undefined) D.config[k]=dc[k]; }
+  updateBadges();
+}
+function lastTest(){ return (D.tests||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0]||null; }
+
+/* ---- season helpers ---- */
+function inSeason(d){ const md=mmdd(d||todayISO()); const s=D.config.season; return md>=s.open && md<=s.close; }
+function inPeak(d){ const md=mmdd(d||todayISO()); const s=D.config.season; return md>=s.peakStart && md<=s.peakEnd; }
+function cadenceDays(task){
+  if(task.cadence==='weekly') return 7;
+  if(task.cadence==='biweekly') return 14;
+  if(task.cadence==='monthly') return 30;
+  if(task.cadence==='pump') return inPeak()?1:4; // daily in peak, ~twice weekly otherwise
+  return 7;
+}
+function taskDue(task){
+  if(task.season==='in' && !inSeason()) return {state:'offseason'};
+  const days = cadenceDays(task);
+  if(!task.last) return {state:'due', overdueBy:0, next:todayISO()};
+  const next = addDaysISO(task.last, days);
+  const od = daysBetween(next, todayISO());
+  return od>=0 ? {state:'due', overdueBy:od, next} : {state:'ok', next};
+}
+function dueTasks(){ return (D.config.tasks||[]).map(t=>({t, d:taskDue(t)})).filter(x=>x.d.state==='due'); }
+
+/* ---- seasonal open/close prompt ---- */
+function seasonalPrompt(){
+  const md=mmdd(); const s=D.config.season;
+  // within ~3 weeks before open, not yet in season
+  if(md < s.open && md >= addMonthDay(s.open,-21)) return {kind:'open', when:s.open};
+  // within ~3 weeks before close, still in season
+  if(md <= s.close && md >= addMonthDay(s.close,-21)) return {kind:'close', when:s.close};
+  return null;
+}
+function addMonthDay(md, days){ const d=new Date('2024-'+md+'T12:00:00'); d.setDate(d.getDate()+days); return d.toISOString().slice(5,10); }
+
+function updateBadges(){
+  const n = dueTasks().length + (seasonalPrompt()?1:0);
+  const b=$('#todayBadge');
+  if(n>0){ b.textContent=n; b.classList.remove('hidden'); } else b.classList.add('hidden');
+}
+
+/* =========================================================================
+   ROUTER
+   ========================================================================= */
+let CUR='today';
+async function show(tab){
+  CUR=tab;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  if(!isConfigured()){ renderSetup(); return; }
+  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:#0d6ea8;border-top-color:transparent"></span> Loading…</div>';
+  try{
+    if(!D.config) await loadAll();
+    if(tab==='today') renderToday();
+    else if(tab==='test') renderTest();
+    else if(tab==='schedule') renderSchedule();
+    else if(tab==='history') renderHistory();
+    else if(tab==='settings') renderSettings();
+  }catch(e){
+    m.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted small">${esc(String(e))}</p>
+      <p class="small">If this mentions 401/403, your sign-in may have expired. Open Settings to sign in again.</p>
+      <button class="sec" onclick="show('settings')">Open Settings</button></div>`;
+  }
+  $('#whoami').textContent = LS.login ? ('Signed in as '+LS.login + (LS.device?(' · '+LS.device):'')) : '';
+}
+function isConfigured(){ return LS.repo && LS.token; }
+
+/* =========================================================================
+   SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
+   ========================================================================= */
+function oauthReady(){ return OAUTH.clientId && OAUTH.workerUrl; }
+function appRedirect(){ return location.origin + location.pathname; }
+
+function signInWithGitHub(){
+  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use “paste a token” below for now.'); return; }
+  const state = uid('s'); localStorage.setItem('pl_oauth_state', state);
+  const u = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(OAUTH.clientId)}`
+          + `&scope=repo&redirect_uri=${encodeURIComponent(appRedirect())}&state=${encodeURIComponent(state)}`;
+  location.href = u;
+}
+async function handleOAuthRedirect(){
+  const p = new URLSearchParams(location.search);
+  const code = p.get('code'), state = p.get('state');
+  if(!code) return false;
+  history.replaceState({}, '', appRedirect()); // clean the URL no matter what
+  if(state !== localStorage.getItem('pl_oauth_state')){ toast('Sign-in expired, please try again.'); return false; }
+  try{
+    const r = await fetch(OAUTH.workerUrl.replace(/\/$/,'')+'/exchange', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code, redirect_uri: appRedirect() })
+    });
+    const j = await r.json();
+    if(!j.access_token) throw new Error(j.error_description||j.error||'No token returned');
+    LS.token = j.access_token; LS.method='oauth';
+    await afterSignIn();
+    return true;
+  }catch(e){ toast('Sign-in failed: '+(e.message||e)); return false; }
+}
+/* After we have a token: learn the username and default the data repo. */
+async function afterSignIn(){
+  try{
+    const r = await fetch(`${API}/user`, {headers:ghHeaders()});
+    if(r.ok){ const u=await r.json(); LS.login=u.login; if(!LS.repo) LS.repo = u.login+'/pool-data'; }
+  }catch(e){}
+  toast('Signed in 🎉');
+  if(LS.repo && LS.token){ try{ await ensureRepoReady(); }catch(e){} }
+  show('today');
+}
+async function ensureRepoReady(){
+  // verify repo, then create any missing db files
+  const r = await fetch(`${API}/repos/${LS.repo}`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error('Could not open '+LS.repo+' ('+r.status+'). Check the name in Settings.');
+  const seed = { 'db/config.json':defaultConfig(), 'db/tests.json':[], 'db/log.json':[] };
+  for(const path in seed){
+    const c = await ghContents(path);
+    if(c===null) await ghPut(path, b64encode(JSON.stringify(seed[path],null,2)), null, 'Initialize '+path);
+  }
+  D={}; for(const k in DB) delete DB[k];
+  await loadAll();
+}
+
+function renderSetup(){
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>Welcome to Pool Care 🏊</h2>
+    <p class="small muted">A one-time sign-in on this phone/computer. Your pool data is saved in your own
+    <b>private</b> GitHub repository — see the <b>SETUP guide</b> in your website repo (pool-tool/SETUP.md).</p>
+    <button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
+    <p class="small muted" style="margin-top:6px">${oauthReady()?'Approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until the Cloudflare step is done.'}</p>
+    <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
+      <label>Private data repository (<code>owner/name</code>)</label>
+      <input id="su_repo" placeholder="BarkernotBob/pool-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <label>Access token (<code>github_pat_…</code>)</label>
+      <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <label>This device's name (optional)</label>
+      <input id="su_device" placeholder="e.g. Isaiah's iPhone" value="${esc(LS.device)}" autocapitalize="words"/>
+      <p class="small muted">The token is saved only in this browser, sent only to GitHub.</p>
+      <button class="sec" onclick="saveTokenSetup()">Connect with token</button>
+    </details>
+  </div>`;
+}
+async function saveTokenSetup(){
+  const repo=$('#su_repo').value.trim(), token=$('#su_token').value.trim(), device=$('#su_device').value.trim();
+  if(!repo||!token){ toast('Enter the repository and token'); return; }
+  LS.repo=repo; LS.token=token; LS.method='token'; LS.device=device;
+  toast('Checking your connection…');
+  try{ await afterSignIn(); }
+  catch(e){ toast(String(e.message||e)); }
+}
+
+/* =========================================================================
+   TODAY
+   ========================================================================= */
+function renderToday(){
+  const due = dueTasks();
+  const sp  = seasonalPrompt();
+  const lt  = lastTest();
+  const season = inSeason() ? (inPeak()?'Peak summer':'In season') : 'Off-season';
+  let html = `<div class="card">
+    <div class="flex"><h2 style="margin:0">📅 Today</h2><span class="pill ${inSeason()?'ok':'gray'}">${season}</span></div>
+    <p class="small muted" style="margin:6px 0 0">${esc(D.config.pool.name)} · ${esc(D.config.pool.location)} · ${D.config.pool.gallons.toLocaleString()} gal</p>
+  </div>`;
+
+  if(sp){
+    html += `<div class="card"><h2>${sp.kind==='open'?'🌷 Time to open the pool':'🍂 Time to close the pool'}</h2>
+      <p class="small muted">Target ${sp.kind==='open'?'opening':'closing'} around ${esc(sp.when.replace('-','/'))}. ${sp.kind==='close'?'Do it before the leaves fall.':''}</p>
+      <button class="sec" onclick="show('schedule')">Open the ${sp.kind==='open'?'opening':'closing'} checklist</button></div>`;
+  }
+
+  html += `<div class="card"><div class="flex"><h2 style="margin:0">🔔 Due now</h2>${due.length?`<span class="pill due">${due.length}</span>`:''}</div>`;
+  if(!inSeason()){
+    html += `<p class="muted small">Off-season — routine tasks are paused. Re-open in spring (around ${esc(D.config.season.open.replace('-','/'))}).</p>`;
+  } else if(!due.length){
+    html += `<p class="muted small">All caught up. Nice. 🎉</p>`;
+  } else {
+    html += due.map(({t,d})=>`<div class="item flex">
+      <div><b>${esc(t.title)}</b><div class="small muted">${esc(t.detail)}</div>
+        <div class="small ${d.overdueBy>0?'sev2':'muted'}">${d.overdueBy>0?('overdue '+d.overdueBy+'d'):'due today'}</div></div>
+      <button style="width:auto;flex:0 0 auto" onclick="markTask('${t.id}')">Done</button>
+    </div>`).join('');
+  }
+  html += `</div>`;
+
+  // recommendations from the latest test
+  html += `<div class="card"><div class="flex"><h2 style="margin:0">🧪 Latest test</h2>${lt?`<span class="small muted">${fmtDate(lt.date)}</span>`:''}</div>`;
+  if(!lt){ html += `<p class="muted small">No test logged yet. <button class="link" onclick="show('test')">Log one</button></p>`; }
+  else {
+    const recs = testRecs(lt);
+    const actionable = recs.filter(r=>r.rec.tone!=='ok');
+    html += actionable.length
+      ? actionable.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div></div>`).join('')
+      : `<p class="ok small">Everything was in range on the last test. 👍</p>`;
+    html += `<button class="link" onclick="show('test')">Log a new test</button>`;
+  }
+  html += `</div>`;
+  $('#main').innerHTML = html;
+}
+
+/* Build per-reading recommendation list from a test record. */
+function testRecs(t){
+  return READINGS.map(r=>{
+    const q = t.levels && t.levels[r.key];
+    const n = t.nums && (t.nums[r.key]!=null && t.nums[r.key]!=='') ? Number(t.nums[r.key]) : null;
+    if(n!=null) return {key:r.key, name:r.name, display:n+(r.numUnit?(' '+r.numUnit):''), rec:recForNumber(r.key, n, D.config.pool.gallons)};
+    if(q) return {key:r.key, name:r.name, display:q, rec:recForLevel(r.key, q)};
+    return null;
+  }).filter(Boolean);
+}
+
+async function markTask(id){
+  const t=(D.config.tasks||[]).find(x=>x.id===id); if(!t) return;
+  t.last = todayISO();
+  D.log.push({id:uid('l'), at:nowISO(), kind:'task', task:t.id, title:t.title, by:LS.login||LS.device||''});
+  try{
+    await saveJson(FILES.config, D.config, 'Mark task done: '+t.title);
+    await saveJson(FILES.log, D.log, 'Log task: '+t.title);
+    toast('Logged ✓'); updateBadges(); render(CUR);
+  }catch(e){ toast(String(e.message||e)); }
+}
+function render(tab){ show(tab); }
+
+/* =========================================================================
+   TEST  (qualitative by default, numeric optional)
+   ========================================================================= */
+let testMode='qual';
+function renderTest(){
+  const lt=lastTest();
+  $('#main').innerHTML = `
+  <div class="card">
+    <div class="flex"><h2 style="margin:0">🧪 Log a test</h2>
+      <div class="row" style="flex:0 0 auto;gap:6px;width:auto">
+        <button class="${testMode==='qual'?'':'sec'}" style="width:auto;padding:8px 12px" onclick="setTestMode('qual')">Strips</button>
+        <button class="${testMode==='num'?'':'sec'}" style="width:auto;padding:8px 12px" onclick="setTestMode('num')">Numbers</button>
+      </div></div>
+    <p class="small muted" style="margin:4px 0 0">${testMode==='qual'
+      ? 'Pick what each strip pad reads. Leave any you didn\'t test blank.'
+      : 'Enter measured values from an in-depth test. Leave blanks for ones you didn\'t measure.'}</p>
+    <div id="testForm" style="margin-top:6px">${testMode==='qual'?qualForm():numForm()}</div>
+    <label>Notes (optional)</label>
+    <input id="t_notes" placeholder="e.g. water cloudy, heavy use this week"/>
+    <div class="row" style="margin-top:12px"><button class="sec" onclick="show('today')">Cancel</button><button id="t_save" onclick="saveTest()">Save & get advice</button></div>
+  </div>
+  ${lt?`<div class="card"><h2>Last test — ${fmtDate(lt.date)}</h2>${recHtml(lt)}</div>`:''}`;
+}
+function setTestMode(m){ testMode=m; renderTest(); }
+function qualForm(){
+  return READINGS.map(r=>`
+    <div style="margin-top:10px">
+      <label style="margin:0">${esc(r.name)}</label>
+      <div class="levels" data-key="${r.key}">
+        ${LEVELS.map(l=>`<button type="button" class="lv" data-l="${l}" onclick="pickLevel('${r.key}','${l}',this)">${l.replace('very ','v.')}</button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function numForm(){
+  return READINGS.map(r=>`
+    <label>${esc(r.name)} ${r.numUnit?`<span class="muted">(${r.numUnit}, ideal ${r.numRange[0]}–${r.numRange[1]})</span>`:`<span class="muted">(ideal ${r.numRange[0]}–${r.numRange[1]})</span>`}</label>
+    <input class="num" data-key="${r.key}" inputmode="decimal" placeholder="—"/>`).join('');
+}
+const picked={};
+function pickLevel(key,l,btn){
+  picked[key]=l;
+  btn.parentElement.querySelectorAll('.lv').forEach(b=>b.classList.toggle('on', b===btn));
+}
+async function saveTest(){
+  const rec={ id:uid('t'), date:todayISO(), at:nowISO(), by:LS.login||LS.device||'', mode:testMode,
+    levels:{}, nums:{}, notes:($('#t_notes').value.trim()||'') };
+  if(testMode==='qual'){
+    document.querySelectorAll('#testForm .levels').forEach(g=>{ const k=g.dataset.key; if(picked[k]) rec.levels[k]=picked[k]; });
+  } else {
+    document.querySelectorAll('#testForm .num').forEach(i=>{ const v=i.value.trim(); if(v!=='') rec.nums[i.dataset.key]=parseFloat(v); });
+  }
+  if(!Object.keys(rec.levels).length && !Object.keys(rec.nums).length){ toast('Pick at least one reading'); return; }
+  const btn=$('#t_save'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saving…';
+  try{
+    D.tests.push(rec);
+    // mark the "test the water" task done
+    const tt=(D.config.tasks||[]).find(x=>x.id==='test'); if(tt) tt.last=todayISO();
+    await saveJson(FILES.tests, D.tests, 'Log water test '+rec.date);
+    await saveJson(FILES.config, D.config, 'Mark test task done');
+    for(const k in picked) delete picked[k];
+    toast('Saved ✓'); updateBadges();
+    showRecModal(rec);
+  }catch(e){ toast(String(e.message||e)); btn.disabled=false; btn.innerHTML='Save & get advice'; }
+}
+function recHtml(t){
+  const recs=testRecs(t);
+  if(!recs.length) return '<p class="muted small">No readings recorded.</p>';
+  return recs.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div></div>`).join('');
+}
+function showRecModal(t){
+  modal(`<h2>What to do 🧪</h2><p class="small muted" style="margin:0 0 8px">${fmtDate(t.date)} test</p>
+    <div style="max-height:60vh;overflow:auto">${recHtml(t)}</div>
+    <button data-mval="ok" style="margin-top:10px">Got it</button>`).then(()=>show('today'));
+}
+
+/* =========================================================================
+   SCHEDULE  (recurring tasks + opening/closing checklists)
+   ========================================================================= */
+function renderSchedule(){
+  const tasks=D.config.tasks||[];
+  let html=`<div class="card"><h2>✅ Routine</h2>
+    <p class="small muted">Your recurring tasks. Tap <b>Done</b> when you finish one — it reschedules the next reminder automatically.</p>`;
+  html += tasks.map(t=>{
+    const d=taskDue(t);
+    const status = d.state==='offseason' ? '<span class="pill gray">off-season</span>'
+      : d.state==='due' ? `<span class="pill due">${d.overdueBy>0?('overdue '+d.overdueBy+'d'):'due'}</span>`
+      : `<span class="pill ok">next ${fmtDate(d.next)}</span>`;
+    return `<div class="item">
+      <div class="flex"><div><b>${esc(t.title)}</b> <span class="small muted">· ${cadenceLabel(t)}</span></div>${status}</div>
+      <div class="small muted" style="margin:2px 0 6px">${esc(t.detail)}</div>
+      <div class="row"><button class="sec" style="flex:0 0 auto;width:auto" onclick="markTask('${t.id}')">Mark done</button>
+        <button class="link" onclick="editTask('${t.id}')">Edit cadence</button></div>
+    </div>`;
+  }).join('');
+  html += `</div>`;
+
+  html += checklistCard('opening', D.config.opening, '🌷');
+  html += checklistCard('closing', D.config.closing, '🍂');
+
+  html += `<div class="card"><h2>💧 Water level</h2><p class="small muted">${esc(D.config.waterLevel.note)}</p></div>`;
+  $('#main').innerHTML = html;
+}
+function cadenceLabel(t){
+  return ({weekly:'weekly', biweekly:'every 2 weeks', monthly:'monthly', pump:'twice weekly / daily in summer'})[t.cadence]||t.cadence;
+}
+function checklistCard(kind, obj, icon){
+  return `<div class="card"><div class="flex"><h2 style="margin:0">${icon} ${esc(obj.title)}</h2>
+      <button class="link" onclick="editChecklist('${kind}')">Edit</button></div>
+    <ol style="margin:8px 0 0;padding-left:20px" class="small">${obj.steps.map(s=>`<li style="margin:4px 0">${esc(s)}</li>`).join('')}</ol>
+    ${kind==='closing'?'':''}
+    <button class="sec" style="margin-top:10px" onclick="logChecklistDone('${kind}')">Mark ${kind} done for this year</button>
+  </div>`;
+}
+async function editTask(id){
+  const t=(D.config.tasks||[]).find(x=>x.id===id); if(!t) return;
+  const opts=['weekly','biweekly','monthly','pump'];
+  const v=await modal(`<h2>Edit cadence</h2><p class="small muted">${esc(t.title)}</p>
+    ${opts.map(o=>`<button class="${t.cadence===o?'':'sec'}" data-mval="${o}">${({weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',pump:'Twice weekly / daily in summer'})[o]}</button>`).join('')}
+    <button class="link" data-mcancel style="width:100%">Cancel</button>`);
+  if(!v) return;
+  t.cadence=v;
+  try{ await saveJson(FILES.config, D.config, 'Edit cadence: '+t.title); toast('Updated'); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
+}
+async function editChecklist(kind){
+  const obj=D.config[kind];
+  const v=await modal(`<h2>Edit ${esc(obj.title)}</h2>
+    <p class="small muted">One step per line.</p>
+    <textarea id="cl_steps" rows="9">${esc(obj.steps.join('\n'))}</textarea>
+    <div class="row" style="margin-top:10px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
+  if(v!=='save') return;
+  const steps=$('#cl_steps').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  obj.steps=steps;
+  try{ await saveJson(FILES.config, D.config, 'Edit '+kind+' checklist'); toast('Saved'); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
+}
+async function logChecklistDone(kind){
+  D.log.push({id:uid('l'), at:nowISO(), kind:'season', task:kind, title:D.config[kind].title, by:LS.login||LS.device||''});
+  try{ await saveJson(FILES.log, D.log, 'Log '+kind+' completed'); toast(D.config[kind].title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
+}
+
+/* =========================================================================
+   HISTORY  (test trends + activity log)
+   ========================================================================= */
+function renderHistory(){
+  const tests=(D.tests||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  let html=`<div class="card"><h2>📈 Test history</h2>`;
+  if(!tests.length){ html+=`<p class="muted small">No tests yet.</p>`; }
+  else {
+    html += READINGS.map(r=>{
+      const pts = tests.map(t=>{
+        const n = t.nums && t.nums[r.key]!=null && t.nums[r.key]!=='' ? Number(t.nums[r.key]) : null;
+        const q = t.levels && t.levels[r.key];
+        return {date:t.date, n, q};
+      }).filter(p=>p.n!=null || p.q);
+      if(!pts.length) return '';
+      const hasNums = pts.some(p=>p.n!=null);
+      return `<div style="margin:12px 0"><div class="flex"><b class="small">${esc(r.name)}</b><span class="small muted">${pts.length} reading(s)</span></div>
+        ${hasNums ? spark(pts, r) : qualTimeline(pts, r)}</div>`;
+    }).join('');
+  }
+  html += `</div>`;
+
+  // recent activity
+  const log=(D.log||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,40);
+  html += `<div class="card"><h2>🗓 Recent activity</h2>`;
+  html += log.length ? log.map(l=>`<div class="item flex"><div><b>${esc(l.title)}</b><div class="small muted">${esc((l.at||'').slice(0,10))}${l.by?(' · '+esc(l.by)):''}</div></div>
+      <span class="pill gray">${esc(l.kind)}</span></div>`).join('')
+    : `<p class="muted small">Nothing logged yet.</p>`;
+  html += `</div>`;
+  $('#main').innerHTML = html;
+}
+function qualTimeline(pts, r){
+  return `<div class="timeline">${pts.map(p=>{ const s=severity(p.q); const cls=s==null?'sx':('s'+s);
+    return `<span class="dot ${cls}" title="${esc(p.date+': '+p.q)}"></span>`; }).join('')}</div>
+    <div class="small muted" style="margin-top:3px">${esc(pts[0].date)} → ${esc(pts[pts.length-1].date)} · <span class="dot s0"></span> in range <span class="dot s1"></span> off <span class="dot s2"></span> far off</div>`;
+}
+function spark(pts, r){
+  const ns=pts.filter(p=>p.n!=null); if(ns.length<1) return '';
+  const xs=ns.map((p,i)=>i), ys=ns.map(p=>p.n);
+  const [lo,hi]=r.numRange; const minY=Math.min(lo,...ys), maxY=Math.max(hi,...ys);
+  const W=320,H=60,pad=4;
+  const X=i=> ns.length<2?W/2 : pad + i*(W-2*pad)/(ns.length-1);
+  const Y=v=> H-pad - (v-minY)*(H-2*pad)/((maxY-minY)||1);
+  const band=`<rect x="0" y="${Y(hi).toFixed(1)}" width="${W}" height="${(Y(lo)-Y(hi)).toFixed(1)}" fill="#1d7a4d" opacity="0.10"/>`;
+  const line=ns.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.n).toFixed(1)}`).join(' ');
+  const dots=ns.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.n).toFixed(1)}" r="2.5" fill="#0d6ea8"/>`).join('');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${band}<path d="${line}" fill="none" stroke="#0d6ea8" stroke-width="1.5"/>${dots}</svg>
+    <div class="small muted">ideal ${lo}–${hi} ${esc(r.numUnit)} (green band) · last ${esc(String(ys[ys.length-1]))}</div>`;
+}
+
+/* =========================================================================
+   SETTINGS
+   ========================================================================= */
+function renderSettings(){
+  const c=D.config;
+  $('#main').innerHTML = `
+  <div class="card">
+    <h2>🏊 Pool</h2>
+    <label>Name</label><input id="s_name" value="${esc(c.pool.name)}"/>
+    <label>Volume (gallons)</label><input id="s_gal" inputmode="numeric" value="${esc(c.pool.gallons)}"/>
+    <label>Location</label><input id="s_loc" value="${esc(c.pool.location)}"/>
+    <button style="margin-top:10px" onclick="savePool()">Save pool</button>
+  </div>
+  <div class="card">
+    <h2>📧 Reminder email</h2>
+    <p class="small muted">Where the scheduled job emails you what's due. (The email job is set up separately — see pool-tool/SETUP.md.)</p>
+    <input id="s_email" type="email" placeholder="you@example.com" value="${esc(c.email||'')}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <button style="margin-top:10px" onclick="saveEmail()">Save email</button>
+  </div>
+  <div class="card">
+    <h2>🗓 Season (Fort Wayne defaults)</h2>
+    <p class="small muted">Used to know when to prompt opening/closing and when to pause off-season tasks. Format MM-DD.</p>
+    <div class="row"><div><label>Open</label><input id="s_open" value="${esc(c.season.open)}"/></div>
+      <div><label>Close</label><input id="s_close" value="${esc(c.season.close)}"/></div></div>
+    <div class="row"><div><label>Peak start</label><input id="s_pstart" value="${esc(c.season.peakStart)}"/></div>
+      <div><label>Peak end</label><input id="s_pend" value="${esc(c.season.peakEnd)}"/></div></div>
+    <button style="margin-top:10px" onclick="saveSeason()">Save season</button>
+  </div>
+  <div class="card">
+    <h2>🎯 Target ranges</h2>
+    <p class="small muted">Used by the numeric calculator and to judge what's in range. Edit if your test kit or pool pro suggests different numbers.</p>
+    ${READINGS.map(r=>`<div class="row" style="align-items:flex-end"><div style="flex:2"><label style="margin:6px 0 2px">${esc(r.name)} ${r.numUnit?`(${r.numUnit})`:''}</label></div>
+      <div><label style="margin:6px 0 2px">low</label><input class="tgt" data-key="${r.key}" data-i="0" inputmode="decimal" value="${esc(c.targets[r.key].range[0])}"/></div>
+      <div><label style="margin:6px 0 2px">high</label><input class="tgt" data-key="${r.key}" data-i="1" inputmode="decimal" value="${esc(c.targets[r.key].range[1])}"/></div></div>`).join('')}
+    <button style="margin-top:10px" onclick="saveTargets()">Save targets</button>
+  </div>
+  <div class="card">
+    <h2>This device</h2>
+    <div class="kv"><span>Signed in as</span><b>${esc(LS.login||'—')}</b></div>
+    <div class="kv"><span>Method</span><b>${esc(LS.method||'—')}</b></div>
+    <label>Device name</label><input id="s_device" value="${esc(LS.device)}" placeholder="e.g. Isaiah's iPhone"/>
+    <label>Data repository</label><input id="s_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <div class="row" style="margin-top:10px"><button class="sec" onclick="saveDevice()">Save</button>
+      <button class="danger" onclick="signOut()">Sign out</button></div>
+  </div>`;
+}
+async function savePool(){
+  D.config.pool.name=$('#s_name').value.trim()||'Our Pool';
+  D.config.pool.gallons=parseInt($('#s_gal').value,10)||10000;
+  D.config.pool.location=$('#s_loc').value.trim();
+  await saveJson(FILES.config, D.config, 'Update pool settings'); toast('Saved');
+}
+async function saveEmail(){ D.config.email=$('#s_email').value.trim(); await saveJson(FILES.config, D.config, 'Update reminder email'); toast('Email saved'); }
+async function saveSeason(){
+  D.config.season.open=$('#s_open').value.trim(); D.config.season.close=$('#s_close').value.trim();
+  D.config.season.peakStart=$('#s_pstart').value.trim(); D.config.season.peakEnd=$('#s_pend').value.trim();
+  await saveJson(FILES.config, D.config, 'Update season dates'); toast('Saved'); updateBadges();
+}
+async function saveTargets(){
+  document.querySelectorAll('.tgt').forEach(i=>{ const k=i.dataset.key, idx=+i.dataset.i; D.config.targets[k].range[idx]=parseFloat(i.value); });
+  // keep the live READINGS ranges in sync for this session
+  READINGS.forEach(r=>{ r.numRange=D.config.targets[r.key].range; });
+  await saveJson(FILES.config, D.config, 'Update target ranges'); toast('Targets saved');
+}
+async function saveDevice(){ LS.device=$('#s_device').value.trim(); LS.repo=$('#s_repo').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
+async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('pl_token'); localStorage.removeItem('pl_login'); localStorage.removeItem('pl_method'); toast('Signed out'); renderSetup(); } }
+
+/* ---------- boot ---------- */
+window.addEventListener('load', async ()=>{
+  // sync target ranges from any saved config happens after load; first handle OAuth return.
+  const came = await handleOAuthRedirect();
+  if(came) return;
+  show(isConfigured()?'today':'settings');
+  if(isConfigured()){
+    try{ await loadAll(); READINGS.forEach(r=>{ if(D.config.targets[r.key]) r.numRange=D.config.targets[r.key].range; }); updateBadges(); }catch(e){}
+  } else renderSetup();
+});
+</script>
+</body>
+</html>

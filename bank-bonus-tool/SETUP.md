@@ -11,6 +11,28 @@ That's it. **Estimated time: 12 minutes.** Do NOT do these steps until you have 
 
 ---
 
+## ⭐ Easiest sign-in: "Sign in with GitHub" (shared with your Pool app)
+
+The bank app now has a **🔐 Sign in with GitHub** button — the **same** sign-in your
+**Pool** app already uses. With it you can **skip the token step (Step 2)** entirely:
+no key to copy, nothing new to set up in Cloudflare.
+
+There's just **one** small one-time thing so GitHub allows that sign-in to work on the
+bank (and grocery) pages too:
+
+1. Go to **https://github.com/settings/developers** → **OAuth Apps** → open the app
+   you made for Pool (named **Pool Care**).
+2. Find **Authorization callback URL** (currently `https://barkernotbob.github.io/static/pool/`).
+3. Change it to the parent folder: **`https://barkernotbob.github.io/static/`**
+   *(delete `pool/`, keep the trailing slash)* → **Update application.**
+
+Pool keeps working as before; now Grocery and Bank share the same one-tap sign-in.
+(The Client ID and Worker URL are already baked into the app — they're public, not
+secrets.) Then do **Step 1**, skip Step 2, and in **Step 7** tap **Sign in with
+GitHub** instead of pasting a token.
+
+---
+
 ## Step 1️⃣: Create Private Repo
 
 **On GitHub.com:**
@@ -26,7 +48,11 @@ That's it. **Estimated time: 12 minutes.** Do NOT do these steps until you have 
 
 ---
 
-## Step 2️⃣: Generate GitHub Token
+## Step 2️⃣: Generate GitHub Token *(skip if using Sign in with GitHub)*
+
+> ⭐ If you did the one-time tweak above and plan to use the **🔐 Sign in with GitHub**
+> button in Step 7, you can **skip this whole step** — there's no token to make. This
+> step is only for the manual fallback.
 
 This lets the app read/write your private data without storing your password.
 
@@ -107,11 +133,14 @@ This sends a morning summary only when there's something to do. You can skip thi
 
 1. Open the app: `http://localhost:8080/static/bank-bonus/` (or your live URL)
 2. Click **Settings** ⚙️ (bottom nav)
-3. Enter:
+3. **Easiest:** under **GitHub Configuration**, tap **🔐 Sign in with GitHub** →
+   approve on GitHub → you come right back, signed in. Pick **Your Name** (Isaiah)
+   and you're done — your accounts load automatically.
+4. *(Fallback only)* Prefer a token? Open **"Advanced: paste a token instead"**, enter:
    - **Data Repo:** `yourusername/bank-bonus-data`
    - **GitHub Token:** Paste the token from Step 2
-   - **Your Name:** Select "Isaiah"
-4. Click **Save Settings**
+
+   then click **Save Settings**.
 
 The app will test the connection. If successful, you'll see a message and your 48 accounts will load.
 

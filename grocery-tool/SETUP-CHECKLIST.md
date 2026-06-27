@@ -12,6 +12,16 @@ are already filled in. Plain-language version of `SETUP.md`.
 > the app is **published** — tell Claude **"publish it"** and it'll handle that.
 > You can do Steps 1–3 first and publish anytime.
 
+> ⭐ **New easy sign-in:** the app now has a **🔐 Sign in with GitHub** button (the
+> same one your Pool app uses). With it you can **skip Steps 2 and 3 (the token)** —
+> just do Step 1, then the one-time tweak below, then tap the button in Step 4.
+>
+> **One-time tweak (do once):** GitHub → **Settings → Developer settings → OAuth Apps**
+> → open **Pool Care** → change **Authorization callback URL** from
+> `https://barkernotbob.github.io/static/pool/` to
+> `https://barkernotbob.github.io/static/` (delete `pool/`, keep the trailing slash)
+> → **Update application.** Now the same sign-in works for grocery and bank too.
+
 ---
 
 ## ☐ STEP 1 — Make your private grocery folder

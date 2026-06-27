@@ -37,8 +37,11 @@ A quick map of the words you'll see:
 2. Fill it in:
    - **Application name:** `Pool Care`
    - **Homepage URL:** `https://barkernotbob.github.io/static/pool/`
-   - **Authorization callback URL:** `https://barkernotbob.github.io/static/pool/`
-     *(must match exactly — trailing slash included)*
+   - **Authorization callback URL:** `https://barkernotbob.github.io/static/`
+     *(the trailing slash matters. Tip: use the parent `/static/` folder — not
+     `/static/pool/` — so this one sign-in also covers the Grocery and Bank apps,
+     which share it. If you already registered it as `/static/pool/`, just edit it
+     to `/static/` and click **Update application**.)*
 3. Click **Register application.**
 4. On the next page:
    - Copy the **Client ID** (looks like `Iv1.abc123…`). Keep it handy.

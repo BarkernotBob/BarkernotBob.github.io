@@ -89,6 +89,10 @@ sed -i '' 's/max-width: *800px/max-width: 99999px/g' \
   .quartz/plugins/explorer/dist/index.js \
   .quartz/plugins/explorer/dist/components/index.js 2>/dev/null
 
+#  - teach plugins to honor the `order:` frontmatter field (list pages + sidebar).
+#    Idempotent; mirrors the same step in .github/workflows/deploy.yml. See QUARTZ_GUIDE.md.
+node patch-plugins.mjs 2>/dev/null
+
 echo "Building your website and starting the preview..."
 echo "When you see a web address (http://localhost:8080), it's ready."
 echo ""

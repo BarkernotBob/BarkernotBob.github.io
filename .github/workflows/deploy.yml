@@ -47,6 +47,10 @@ jobs:
           sed -i 's/max-width: *800px/max-width: 99999px/g' \
             .quartz/plugins/explorer/dist/index.js \
             .quartz/plugins/explorer/dist/components/index.js
+      - name: Teach plugins to honor the `order:` frontmatter field (list pages + sidebar)
+        # Re-applied after `plugin install` wipes plugin dist edits. See patch-plugins.mjs
+        # and QUARTZ_GUIDE.md → "Changing the order pages appear in".
+        run: node patch-plugins.mjs
       - name: Build
         run: npx quartz build
       - uses: actions/upload-pages-artifact@v3

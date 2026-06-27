@@ -47,27 +47,14 @@ jobs:
           MAIL_FALLBACK: ${{ secrets.MAIL_USERNAME }}
         run: node reminders.mjs
 
-      - name: Send the reminder email
-        if: ${{ steps.gen.outputs.has_due == 'true' && env.MAIL_USERNAME != '' && steps.gen.outputs.to != '' }}
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          from: Pool Care <${{ secrets.MAIL_USERNAME }}>
-          to: ${{ steps.gen.outputs.to }}
-          subject: ${{ steps.gen.outputs.subject }}
-          html_body: ${{ steps.gen.outputs.body }}
-
-      - name: Remember what's already been sent
-        if: ${{ steps.gen.outputs.state_changed == 'true' }}
+      # NOTE: feed + data are saved BEFORE the email step, so a bad email
+      # login can never block the RSS feed from updating.
+      - name: Save feed history & rain log
         run: |
           git config user.name  "pool-reminders"
           git config user.email "actions@users.noreply.github.com"
-          git add db/feed-state.json
-          git commit -m "Update reminder feed history" || echo "nothing to commit"
+          git add db/feed-state.json db/rain.json 2>/dev/null || true
+          git commit -m "Update reminder feed history & rain log" || echo "nothing to commit"
           git push || echo "push skipped"
 
       - name: Publish the RSS feed
@@ -81,3 +68,20 @@ jobs:
           git add pool.xml
           git commit -m "Update pool feed" || echo "nothing to commit"
           git push || echo "push skipped"
+
+      # Email runs LAST and is allowed to fail without failing the whole job
+      # (e.g. while you're still sorting out the Gmail App Password).
+      - name: Send the reminder email
+        if: ${{ steps.gen.outputs.has_due == 'true' && env.MAIL_USERNAME != '' && steps.gen.outputs.to != '' }}
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: Pool Care <${{ secrets.MAIL_USERNAME }}>
+          to: ${{ steps.gen.outputs.to }}
+          subject: ${{ steps.gen.outputs.subject }}
+          html_body: ${{ steps.gen.outputs.body }}

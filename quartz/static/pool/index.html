@@ -298,6 +298,7 @@ function recForNumber(key, val, gallons){
 function defaultConfig(){
   return {
     pool:{ name:'Our Pool', gallons:10000, location:'Fort Wayne, IN', chlorineProduct:'granular' },
+    geo:{ lat:41.0793, lon:-85.1394 }, // Fort Wayne, IN — used for daily rainfall
     email:'',
     season:{ open:'04-20', close:'10-05', peakStart:'06-01', peakEnd:'08-31' },
     targets: READINGS.reduce((o,r)=>{ o[r.key]={range:r.numRange}; return o; }, {}),
@@ -393,6 +394,51 @@ function updateBadges(){
   const n = dueTasks().length + (seasonalPrompt()?1:0);
   const b=$('#todayBadge');
   if(n>0){ b.textContent=n; b.classList.remove('hidden'); } else b.classList.add('hidden');
+}
+
+/* =========================================================================
+   RAINFALL  (Open-Meteo — free, no key, no AI). Fetched live in the browser
+   and shown alongside your readings so you can see how rain moves your levels.
+   ========================================================================= */
+let _rain=null, _rainAt=0;
+async function getRain(days=30){
+  if(_rain && (Date.now()-_rainAt < 30*60*1000)) return _rain;
+  const g = D.config.geo || {lat:41.0793, lon:-85.1394};
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}`
+            + `&daily=precipitation_sum&precipitation_unit=inch&timezone=auto&past_days=${days}&forecast_days=1`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('weather '+r.status);
+  const j = await r.json(); const t=j.daily.time, p=j.daily.precipitation_sum;
+  _rain = t.map((d,i)=>({date:d, in: p[i]==null?0:Number(p[i])})); _rainAt=Date.now();
+  return _rain;
+}
+function rainStats(days){
+  const t=todayISO();
+  const yest=(days.find(x=>x.date===addDaysISO(t,-1))||{}).in||0;
+  const last7=days.filter(x=>x.date>addDaysISO(t,-8)&&x.date<=t).reduce((s,x)=>s+(x.in||0),0);
+  const heavy=days.some(x=>x.date>=addDaysISO(t,-2)&&x.date<=t&&(x.in||0)>=0.5);
+  return {yest,last7,heavy};
+}
+function rainBars(days){
+  const W=320,H=70,pad=4, max=Math.max(0.25,...days.map(d=>d.in||0)), n=days.length, bw=(W-2*pad)/n;
+  const bars=days.map((d,i)=>{ const h=(d.in||0)/max*(H-2*pad), x=pad+i*bw;
+    return `<rect x="${x.toFixed(1)}" y="${(H-pad-h).toFixed(1)}" width="${Math.max(1,bw*0.8).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" fill="#0d6ea8" opacity="${(d.in||0)>0?0.85:0.12}"><title>${esc(d.date)}: ${(d.in||0).toFixed(2)} in</title></rect>`;}).join('');
+  const total=days.reduce((s,d)=>s+(d.in||0),0);
+  return `<svg class="spark" style="height:70px" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>
+    <div class="small muted">${esc(days[0].date)} → ${esc(days[days.length-1].date)} · ${total.toFixed(2)} in total · wettest day ${max.toFixed(2)} in</div>`;
+}
+async function fillRainToday(){
+  const box=$('#rainToday'); if(!box) return;
+  try{ const days=await getRain(8); const s=rainStats(days);
+    box.innerHTML=`<div class="kv"><span>Yesterday</span><b>${s.yest.toFixed(2)} in</b></div>
+      <div class="kv"><span>Last 7 days</span><b>${s.last7.toFixed(2)} in</b></div>
+      ${s.heavy?`<div class="rec warn small" style="margin-top:8px">Notable recent rain can dilute chlorine and lower stabilizer (CYA), and wash in phosphates. Worth testing soon.</div>`:''}`;
+  }catch(e){ box.innerHTML=`<p class="muted small">Couldn't load rain data right now.</p>`; }
+}
+async function fillRainHistory(){
+  const box=$('#rainHist'); if(!box) return;
+  try{ const days=(await getRain(30)).slice(-30); box.innerHTML=rainBars(days); }
+  catch(e){ box.innerHTML=`<p class="muted small">Couldn't load rain data right now.</p>`; }
 }
 
 /* =========================================================================
@@ -548,7 +594,13 @@ function renderToday(){
     html += `<button class="link" onclick="show('test')">Log a new test</button>`;
   }
   html += `</div>`;
+
+  html += `<div class="card"><h2>🌧️ Recent rain</h2>
+    <p class="small muted" style="margin:0 0 6px">Rainfall at your pool's location. Heavy rain often moves your chemistry.</p>
+    <div id="rainToday"><p class="muted small">Loading…</p></div></div>`;
+
   $('#main').innerHTML = html;
+  fillRainToday();
 }
 
 /* Build per-reading recommendation list from a test record. */
@@ -750,6 +802,11 @@ function renderHistory(){
   }
   html += `</div>`;
 
+  // rainfall — compare with the readings above
+  html += `<div class="card"><h2>🌧️ Rainfall (30 days)</h2>
+    <p class="small muted" style="margin:0 0 6px">Compare with your readings above to see how rain moves your levels.</p>
+    <div id="rainHist"><p class="muted small">Loading…</p></div></div>`;
+
   // recent activity
   const log=(D.log||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,40);
   html += `<div class="card"><h2>🗓 Recent activity</h2>`;
@@ -758,6 +815,7 @@ function renderHistory(){
     : `<p class="muted small">Nothing logged yet.</p>`;
   html += `</div>`;
   $('#main').innerHTML = html;
+  fillRainHistory();
 }
 function qualTimeline(pts, r){
   return `<div class="timeline">${pts.map(p=>{ const s=severity(p.q); const cls=s==null?'sx':('s'+s);
@@ -789,6 +847,9 @@ function renderSettings(){
     <label>Name</label><input id="s_name" value="${esc(c.pool.name)}"/>
     <label>Volume (gallons)</label><input id="s_gal" inputmode="numeric" value="${esc(c.pool.gallons)}"/>
     <label>Location</label><input id="s_loc" value="${esc(c.pool.location)}"/>
+    <div class="row"><div><label>Latitude</label><input id="s_lat" inputmode="decimal" value="${esc((c.geo||{}).lat ?? 41.0793)}"/></div>
+      <div><label>Longitude</label><input id="s_lon" inputmode="decimal" value="${esc((c.geo||{}).lon ?? -85.1394)}"/></div></div>
+    <p class="small muted">Used to fetch your daily rainfall. Fort Wayne is pre-filled; change it if your pool is elsewhere.</p>
     <button style="margin-top:10px" onclick="savePool()">Save pool</button>
   </div>
   <div class="card">
@@ -828,6 +889,9 @@ async function savePool(){
   D.config.pool.name=$('#s_name').value.trim()||'Our Pool';
   D.config.pool.gallons=parseInt($('#s_gal').value,10)||10000;
   D.config.pool.location=$('#s_loc').value.trim();
+  const lat=parseFloat($('#s_lat').value), lon=parseFloat($('#s_lon').value);
+  D.config.geo={ lat: isNaN(lat)?41.0793:lat, lon: isNaN(lon)?-85.1394:lon };
+  _rain=null; // location may have changed — refetch rain next time
   await saveJson(FILES.config, D.config, 'Update pool settings'); toast('Saved');
 }
 async function saveEmail(){ D.config.email=$('#s_email').value.trim(); await saveJson(FILES.config, D.config, 'Update reminder email'); toast('Email saved'); }

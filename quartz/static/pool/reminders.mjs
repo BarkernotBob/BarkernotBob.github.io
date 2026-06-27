@@ -161,6 +161,37 @@ const adv  = testAdvice(lt);
 const today = todayISO();
 const year  = today.slice(0,4);
 
+/* ---------- daily rainfall (Open-Meteo, no key, no AI) ---------- */
+async function getRainData(){
+  const g = (config.geo && config.geo.lat!=null && config.geo.lon!=null) ? config.geo : {lat:41.0793, lon:-85.1394};
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}`
+            + `&daily=precipitation_sum&precipitation_unit=inch&timezone=auto&past_days=10&forecast_days=1`;
+  try{
+    const r = await fetch(url);
+    if(!r.ok){ console.error('[rain] HTTP '+r.status); return null; }
+    const j = await r.json();
+    const t=j.daily.time, p=j.daily.precipitation_sum;
+    return t.map((d,i)=>({date:d, in: p[i]==null?0:Number(p[i])}));
+  }catch(e){ console.error('[rain] fetch failed:', e.message); return null; }
+}
+const rainDays = await getRainData();
+let rainLog = readJson('db/rain.json', []); if(!Array.isArray(rainLog)) rainLog=[];
+let rainChanged=false, rainSummary=null, rainAlert=null;
+if(rainDays){
+  const byDate = new Map(rainLog.map(x=>[x.date,x]));
+  for(const d of rainDays){ const prev=byDate.get(d.date); if(!prev || prev.in!==d.in){ byDate.set(d.date,{date:d.date,in:d.in}); rainChanged=true; } }
+  rainLog = [...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-120);
+  const yIso = addDaysISO(today,-1);
+  const yest = (rainDays.find(x=>x.date===yIso)||{}).in || 0;
+  const last7 = rainDays.filter(x=>x.date>addDaysISO(today,-8) && x.date<=today).reduce((s,x)=>s+(x.in||0),0);
+  rainSummary = { yest, last7 };
+  // a notable wet day in the last 2 days is worth flagging (dilutes chlorine/CYA, washes in phosphates)
+  const recent = rainDays.filter(x=>x.date>=addDaysISO(today,-2) && x.date<=today);
+  const peak = recent.reduce((m,x)=>Math.max(m, x.in||0), 0);
+  const peakDay = recent.find(x=>(x.in||0)===peak);
+  if(peak>=0.5 && peakDay) rainAlert = { date:peakDay.date, in:peak };
+}
+
 const events = [];
 for(const {t,d} of due){
   events.push({
@@ -185,6 +216,14 @@ if(adv.length && lt){
     guid: `pool-test-${lt.id}`,
     title: `Pool: ${adv.length} reading${adv.length>1?'s':''} need attention (test ${lt.date})`,
     body: adv.map(a=>`${a.name} (${a.display}): ${a.text}`).join('  •  '),
+    overdueBy: 0,
+  });
+}
+if(rainAlert){
+  events.push({
+    guid: `pool-rain-${rainAlert.date}`,
+    title: `Pool: heavy rain ${rainAlert.date} (${rainAlert.in.toFixed(2)} in)`,
+    body: `Notable rainfall can dilute chlorine and stabilizer (CYA) and wash in phosphates. Test the water and rebalance if needed.`,
     overdueBy: 0,
   });
 }
@@ -250,6 +289,10 @@ function emailHtml(){
         <b>${esc(a.name)} — ${esc(a.display)}</b><br><span style="color:#444;font-size:14px">${esc(a.text)}</span></div>`);
     }
   }
+  if(rainSummary){
+    rows.push(`<h3 style="margin:18px 0 6px">🌧️ Rain</h3>`);
+    rows.push(`<p style="margin:0;color:#333">Yesterday: <b>${rainSummary.yest.toFixed(2)} in</b> · Last 7 days: <b>${rainSummary.last7.toFixed(2)} in</b>${rainAlert?` <span style="color:#b26a00">— recent heavy rain may have thrown off your balance; test soon.</span>`:''}</p>`);
+  }
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:560px;margin:0 auto;color:#222">
     <h2 style="margin:0 0 2px">🏊 Pool Care — ${esc(fmtDate(today))}</h2>
     <p style="margin:0 0 4px;color:#777;font-size:14px">Here's what's on the list.</p>
@@ -263,6 +306,7 @@ const subjParts = [];
 if(due.length) subjParts.push(`${due.length} task${due.length>1?'s':''} due`);
 if(sp)         subjParts.push('season heads-up');
 if(adv.length) subjParts.push('test advice');
+if(rainAlert)  subjParts.push('rain alert');
 const subject = subjParts.length ? `🏊 Pool: ${subjParts.join(', ')}` : '🏊 Pool Care reminder';
 
 /* ---------- write outputs ---------- */
@@ -271,6 +315,7 @@ writeFileSync('out/pool.xml', rss);
 writeFileSync('out/email_subject.txt', subject);
 writeFileSync('out/email_body.html', emailHtml());
 if(stateChanged) writeFileSync('db/feed-state.json', JSON.stringify(state,null,2)+'\n');
+if(rainChanged)  writeFileSync('db/rain.json', JSON.stringify(rainLog,null,2)+'\n');
 
 const to = (config.email && config.email.trim()) || process.env.MAIL_FALLBACK || '';
 
@@ -285,4 +330,4 @@ setOutput('subject', subject);
 setOutput('body', emailHtml());
 setOutput('state_changed', stateChanged ? 'true' : 'false');
 
-console.error(`[reminders] today=${today} due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} hasDue=${hasDue} to=${to||'(none)'}`);
+console.error(`[reminders] today=${today} due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} rain=${rainSummary?('y'+rainSummary.yest.toFixed(2)+'/7d'+rainSummary.last7.toFixed(2)+(rainAlert?'/ALERT':'')):'n/a'} hasDue=${hasDue} to=${to||'(none)'}`);

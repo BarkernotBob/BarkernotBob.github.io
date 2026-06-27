@@ -9,10 +9,11 @@ project back up cold. No prior context needed.
 
 ## 1. The one-sentence summary
 
-The Calendar tab was empty because of missing **data**, not a code bug. That data
-is now filled in and merged. The app should show the Calendar events. The next
-thing you wanted to explore is a **simpler sign-in** that doesn't make you paste a
-GitHub token — and that piece is **not built yet** (details in section 4).
+The Calendar data is populated, the **"Sign in with GitHub" button is live**
+(Option A — OAuth App + Cloudflare Worker, no token to paste), and the **interface
+overhaul is now done**: single-key keyboard shortcuts, dark mode, status pills,
+person tags, a real month-grid Calendar, search/filter, and a direct "+ Add Account"
+all shipped (sections 4 and 5). What's left is your eyes on it — verify it live.
 
 ---
 
@@ -40,6 +41,21 @@ GitHub token — and that piece is **not built yet** (details in section 4).
    `quartz/static/bank-bonus/index.html`, on the `v5` branch. **Merged**
    (was PR #12).
 
+4. **Keyless "Sign in with GitHub" — DONE (Option A).** The token-paste step is no
+   longer required. The app now has a **🔐 Sign in with GitHub** button: you approve
+   on GitHub and come straight back signed in, no secret to copy.
+   - Built as **Option A** from the old plan: a public GitHub **OAuth App** plus one
+     tiny **Cloudflare Worker** that does the secret token-exchange. Both are
+     **shared** with the Pool/Grocery apps — one OAuth App + one Worker cover all of
+     `barkernotbob.github.io/static/*`.
+   - In code (`index.html`): the `OAUTH` config object (`clientId`, `workerUrl`),
+     `signInWithGitHub()`, `handleOAuthRedirect()` (the `/exchange` call), and
+     `afterSignIn()`. Sign-in method is recorded in `bb_method` (`'oauth'` vs
+     `'token'`).
+   - The old token paste still exists as a **fallback**, tucked under
+     "Advanced: paste a token instead" in Settings.
+   - Setup docs (`SETUP.md`, `SETUP-CHECKLIST.md`) already describe this flow.
+
 > Plain-language note on terms: a **repo** ("repository") is a project folder
 > stored on GitHub. A **branch** is a parallel copy of the files you can change
 > safely; **merging** copies those changes into the main copy. A **PR** ("pull
@@ -59,50 +75,59 @@ GitHub token — and that piece is **not built yet** (details in section 4).
 
 ---
 
-## 4. The next feature you wanted: simpler / keyless sign-in 🔵
+## 4. Keyboard shortcuts — BUILT ✅
 
-**Reality check first:** you mentioned wanting a simpler sign-in "like the grocery
-tracker, where a private key is not needed." Both apps actually work the **same
-way** today — they each ask you to paste a **GitHub personal access token** (a long
-secret string, like `github_pat_…`) into Settings, and store it in your browser.
-The grocery tracker only *looks* friendlier: it calls the token an "access key…
-like a house key" and lets you name each device. Mechanically it's the same token.
-So **a truly keyless sign-in does not exist in either app yet** — it's new work.
+The app now has a global keyboard handler (`keydown` near the bottom of
+`index.html`). It ignores keys while you're typing in a field or a dialog is open
+(except `Esc`), so it never fights normal input. There's also a **⌨ button** in the
+header and a `?` shortcut that pop up a cheat-sheet.
 
-### Why it's not trivial
-The apps are **static pages** (just HTML/JavaScript, no server of their own). They
-talk straight to GitHub's API using your token. A "real" sign-in button — where you
-click "Sign in with GitHub," approve, and never see a token — needs one of these,
-because the secure GitHub sign-in flows can't be completed safely by a page with no
-backend:
-
-- **Option A — GitHub OAuth App + a tiny serverless function.** You'd add a small
-  cloud function (e.g. Cloudflare Workers / Netlify / Vercel free tier) that holds
-  the app's secret and does the token exchange. Result: a clean "Sign in with
-  GitHub" button, no token pasting. Most work, best experience.
-- **Option B — GitHub Device Flow.** Shows a short code and a github.com link to
-  approve on your phone. Friendlier than pasting a token, but GitHub's device-flow
-  endpoint still needs a small proxy (CORS), so it also implies a minimal backend.
-- **Option C — Keep the token, polish the wording only.** No backend. Lowest
-  effort; this is essentially what the grocery tracker already did. Doesn't remove
-  the token, just makes it less scary.
-
-### Recommendation
-If the goal is genuinely "no key to paste," **Option A** is the right target, and
-it's a shared piece both the bank-bonus and grocery apps could reuse. Decision to
-make when you return: are you willing to run a tiny free serverless function? If
-yes → Option A. If you want zero infrastructure → Option C is all that's possible.
-
-### Where the sign-in code lives (for whoever builds it)
-- Bank app: `quartz/static/bank-bonus/index.html` — see the `LS` settings object
-  (`bb_repo`, `bb_token`, `bb_me`) and `ghHeaders()` (`Authorization: Bearer …`).
-- Grocery app: `quartz/static/grocery/index.html` — same shape (`gt_repo`,
-  `gt_token`, `gt_me`, plus `gt_device` for per-device naming).
-- Both send the token on every request to `https://api.github.com`.
+| Key | Does |
+| --- | --- |
+| `1`–`7` | Jump to Today / Active / Planned / Offers / Calendar / Reports / Settings |
+| `n` | New — account (on Active/Planned) or offer (on Offers) |
+| `s` | Save changes (inside an account) |
+| `e` | Edit — focus the first field (inside an account) |
+| `/` | Focus the search box (Active / Planned) |
+| `Esc` | Close a dialog, or step back out of an account |
+| `?` | Show the shortcuts cheat-sheet |
 
 ---
 
-## 5. Key facts to not re-derive
+## 5. Interface overhaul — BUILT ✅
+
+Every item from the old "rough edges" backlog shipped. All in the one file
+`quartz/static/bank-bonus/index.html`:
+
+- **Dark mode.** Auto-detects your system setting and a **🌙 / ☀️ toggle** in the
+  header remembers your choice. The whole app runs on CSS theme variables.
+- **App header bar** — title, who's signed in, theme + shortcuts buttons.
+- **Status pills + colored card stripes.** `open` / `closed` / `planned` show as
+  colored pills, and each account card carries a matching left stripe (green / grey /
+  blue). The Calendar uses the same Full / Partial / Over coloring.
+- **Person tags everywhere** — a colored initial dot + name on every card and table
+  row, stable per person, so you can tell whose account is whose at a glance.
+- **"+ Add Account" button** on Active and Planned (and in their empty states), so
+  you no longer have to create an Offer and "Promote" it for a one-off account.
+- **Search + person filter** on Active and Planned (and a person filter on the
+  Reports "All accounts" table). Search box is reachable with `/`.
+- **Real month-grid Calendar.** Replaces the flat table with a Sun–Sat month grid,
+  payroll days colored by allocation status, today outlined, past days dimmed, plus a
+  summary strip (total planned / upcoming / over-allocated) and a legend.
+- **Reports polish** — a 4-stat summary strip up top, right-aligned tabular money,
+  zebra rows, and sticky table headers.
+- **Consistent delete confirms** — removing a reminder or a DD entry now asks first,
+  matching the account-delete behavior.
+- **Responsive + bigger touch targets** — rows reflow on narrow screens and buttons
+  meet the ~44px tap size, so the phone layout isn't cramped.
+
+> Verified headless (Chromium): all tabs render with no console errors, the month
+> grid and pills draw, search/person filters work, theme toggles, and the `1`–`7` /
+> `?` / `Esc` shortcuts fire. Still worth a quick look on the live site after deploy.
+
+---
+
+## 6. Key facts to not re-derive
 
 - **Data repo:** `BarkernotBob/bank-bonus-data` (private) — holds `db/accounts.json`.
   Default branch `main`.

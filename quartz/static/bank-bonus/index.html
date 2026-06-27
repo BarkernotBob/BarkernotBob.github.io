@@ -5,77 +5,175 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bank Bonus Tracker</title>
   <style>
+    /* ---- Theme tokens. Light by default; [data-theme="dark"] on <html> flips them.
+            Everything below references these vars so dark mode is one switch. ---- */
+    :root {
+      --bg: #f2f3f5; --surface: #ffffff; --surface-2: #f7f8fa; --text: #1a1a1a;
+      --muted: #5c6670; --border: #e0e3e8; --accent: #0066cc; --accent-hover: #0052a3;
+      --accent-soft: rgba(0,102,204,0.10);
+      --open: #1a7f37; --open-bg: #e7f4ea; --closed: #57606a; --closed-bg: #eef0f2;
+      --planned: #0969da; --planned-bg: #ddf4ff; --danger: #cf3030; --danger-hover: #ad2424;
+      --warn: #9a6700; --row-alt: #fafbfc; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    html[data-theme="dark"] {
+      --bg: #0d1117; --surface: #161b22; --surface-2: #1c2128; --text: #e6edf3;
+      --muted: #9198a1; --border: #2a2f37; --accent: #388bfd; --accent-hover: #58a6ff;
+      --accent-soft: rgba(56,139,253,0.15);
+      --open: #3fb950; --open-bg: #122017; --closed: #8b949e; --closed-bg: #21262d;
+      --planned: #58a6ff; --planned-bg: #0c2742; --danger: #f85149; --danger-hover: #ff6a60;
+      --warn: #d29922; --row-alt: #1a1f27; --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-    #main { max-width: 900px; margin: 0 auto; padding: 20px; }
-    nav { background: white; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 100; }
-    nav button { background: none; border: none; padding: 12px 16px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; color: #666; }
-    nav button.active { color: #000; border-bottom-color: #0066cc; }
-    nav button:hover { color: #000; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+    #main { max-width: 960px; margin: 0 auto; padding: 20px; }
+
+    /* ---- App header bar ---- */
+    #appbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px;
+      position: sticky; top: 0; z-index: 101; }
+    .appbar-title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+    .appbar-right { display: flex; align-items: center; gap: 8px; }
+    #appbar-user { font-size: 13px; color: var(--muted); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .icon-btn { background: none; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+      min-width: 40px; min-height: 36px; padding: 6px 10px; font-size: 16px; cursor: pointer; }
+    .icon-btn:hover { background: var(--surface-2); }
+
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 56px; z-index: 100; }
+    nav button { background: none; border: none; padding: 12px 14px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; color: var(--muted); min-height: 44px; }
+    nav button.active { color: var(--text); border-bottom-color: var(--accent); }
+    nav button:hover { color: var(--text); }
     .ic { margin-right: 4px; }
-    .badge { background: #ff4444; color: white; border-radius: 50%; display: inline-block; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 12px; margin-left: 4px; }
+    .badge { background: #e5484d; color: white; border-radius: 999px; display: inline-block; min-width: 20px; height: 20px; padding: 0 5px; text-align: center; line-height: 20px; font-size: 12px; margin-left: 4px; }
     .badge.hidden { display: none; }
 
     .section { display: none; animation: fadeIn 0.2s; }
     .section.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .card-header { font-weight: 600; margin-bottom: 12px; }
-    .row { display: flex; gap: 12px; margin-bottom: 12px; }
-    .row-item { flex: 1; }
-    .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+    .card { background: var(--surface); border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card.clickable { cursor: pointer; transition: box-shadow .15s, transform .15s, border-color .15s; }
+    .card.clickable:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.12); border-color: var(--accent); transform: translateY(-1px); }
+    /* Left accent stripe encodes account status at a glance */
+    .card.st-open { border-left: 4px solid var(--open); }
+    .card.st-closed { border-left: 4px solid var(--closed); }
+    .card.st-planned { border-left: 4px solid var(--planned); }
+    .card-header { font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .card-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .row-item { flex: 1; min-width: 130px; }
+    .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
     .value { font-size: 14px; font-weight: 500; }
+    .value.money { font-variant-numeric: tabular-nums; }
 
-    button { background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-    button:hover { background: #0052a3; }
-    button.sec { background: #ddd; color: #000; }
-    button.sec:hover { background: #ccc; }
-    button.danger { background: #cc3333; }
-    button.danger:hover { background: #aa2222; }
+    button { background: var(--accent); color: white; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; min-height: 38px; }
+    button:hover { background: var(--accent-hover); }
+    button.sec { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    button.sec:hover { background: var(--border); }
+    button.danger { background: var(--danger); color: #fff; }
+    button.danger:hover { background: var(--danger-hover); }
+    button.small { min-height: 0; padding: 5px 10px; font-size: 12px; }
 
-    input, select, textarea { border: 1px solid #ddd; border-radius: 4px; padding: 8px; font-size: 14px; font-family: inherit; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 0 2px rgba(0,102,204,0.1); }
+    input, select, textarea { border: 1px solid var(--border); border-radius: 6px; padding: 9px; font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text); }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    ::placeholder { color: var(--muted); opacity: .7; }
 
-    .toast { position: fixed; bottom: 20px; left: 20px; background: #333; color: white; padding: 12px 16px; border-radius: 4px; opacity: 0; transition: opacity 0.2s; z-index: 1000; }
+    .toast { position: fixed; bottom: 20px; left: 20px; background: #22272e; color: white; padding: 12px 16px; border-radius: 8px; opacity: 0; transition: opacity 0.2s; z-index: 1000; box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
     .toast.show { opacity: 1; }
 
-    .modal-ov { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; }
-    .modal-card { background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 16px; }
+    .modal-card { background: var(--surface); color: var(--text); border-radius: 12px; padding: 24px; max-width: 520px; width: 100%; box-shadow: 0 8px 30px rgba(0,0,0,0.35); max-height: 90vh; overflow: auto; }
     .modal-card p { margin: 0 0 16px; }
     .modal-card input, .modal-card select { width: 100%; margin-bottom: 12px; }
 
-    .list { list-style: none; padding: 0; margin: 0; }
-    .list-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .list-item:last-child { border-bottom: none; }
-    .list-item.clickable { cursor: pointer; }
-    .list-item.clickable:hover { background: #f9f9f9; }
+    /* ---- Status pills & person tokens ---- */
+    .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; letter-spacing: .02em; text-transform: capitalize; }
+    .pill-open { color: var(--open); background: var(--open-bg); }
+    .pill-closed { color: var(--closed); background: var(--closed-bg); }
+    .pill-planned { color: var(--planned); background: var(--planned-bg); }
+    .pill-full { color: var(--open); background: var(--open-bg); }
+    .pill-partial { color: var(--warn); background: rgba(154,103,0,.12); }
+    .pill-over { color: var(--danger); background: rgba(207,48,48,.12); }
+    .person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text); }
+    .person-dot { width: 16px; height: 16px; border-radius: 50%; color: #fff; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 
-    .empty { text-align: center; color: #999; padding: 40px 20px; }
-    .action-bar { margin-top: 16px; display: flex; gap: 8px; }
+    /* ---- Filter bar ---- */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+    .filter-bar .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; min-height: 34px; }
+    .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .search-input { flex: 1; min-width: 160px; }
 
+    .empty { text-align: center; color: var(--muted); padding: 40px 20px; }
+    .empty .empty-cta { margin-top: 16px; }
+    .action-bar { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ---- Tables ---- */
+    .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead { background: #f5f5f5; }
-    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { font-weight: 600; }
-    tbody tr:hover { background: #f9f9f9; }
+    thead th { position: sticky; top: 90px; background: var(--surface-2); z-index: 1; }
+    th, td { padding: 9px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--muted); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.num { font-weight: 600; }
+    tbody tr:nth-child(even) { background: var(--row-alt); }
+    tbody tr:hover { background: var(--accent-soft); }
 
-    .checkbox { margin: 0; }
+    /* ---- Summary stat strip ---- */
+    .summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; box-shadow: var(--shadow); }
+    .stat .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .stat .stat-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat .stat-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ---- Calendar month grid ---- */
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .cal-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-dow { font-size: 11px; color: var(--muted); text-align: center; padding: 4px 0; font-weight: 600; }
+    .cal-cell { min-height: 56px; border: 1px solid var(--border); border-radius: 6px; padding: 4px; font-size: 12px; background: var(--surface); }
+    .cal-empty { border: none; background: transparent; }
+    .cal-day { color: var(--muted); font-weight: 600; }
+    .cal-cell.cal-today { outline: 2px solid var(--accent); }
+    .cal-cell.cal-past { opacity: .5; }
+    .cal-amt { margin-top: 2px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 11px; }
+    .cal-full { background: var(--open-bg); } .cal-full .cal-amt { color: var(--open); }
+    .cal-partial { background: rgba(154,103,0,.12); } .cal-partial .cal-amt { color: var(--warn); }
+    .cal-over { background: rgba(207,48,48,.12); } .cal-over .cal-amt { color: var(--danger); }
+
+    .checkbox { margin: 0; width: 18px; height: 18px; }
     .reminder-list { margin-top: 12px; }
-    .reminder-item { background: #f9f9f9; padding: 8px; border-radius: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-    .reminder-date { color: #666; font-size: 12px; }
+    .reminder-item { background: var(--surface-2); padding: 10px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+    .reminder-date { color: var(--muted); font-size: 12px; }
+    kbd { background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    .sc-table td { padding: 6px 8px; border: none; }
+
+    @media (max-width: 600px) {
+      thead th { top: 96px; }
+      #appbar-user { max-width: 30vw; }
+      nav button { padding: 10px 10px; }
+    }
   </style>
 </head>
 <body>
 
+<header id="appbar">
+  <div class="appbar-title">🏦 Bank Bonus Tracker</div>
+  <div class="appbar-right">
+    <span id="appbar-user"></span>
+    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light / dark">🌙</button>
+    <button class="icon-btn" onclick="showShortcuts()" title="Keyboard shortcuts (press ?)">⌨</button>
+  </div>
+</header>
+
 <nav id="nav" style="display: flex; flex-wrap: wrap;">
-  <button data-tab="today" class="nav-btn active" onclick="show('today')"><span class="ic">🗓</span>Today</button>
-  <button data-tab="active" class="nav-btn" onclick="show('active')"><span class="ic">📂</span>Active</button>
-  <button data-tab="planned" class="nav-btn" onclick="show('planned')"><span class="ic">🗒</span>Planned</button>
-  <button data-tab="offers" class="nav-btn" onclick="show('offers')"><span class="ic">🧰</span>Offers</button>
-  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')"><span class="ic">📅</span>Calendar</button>
-  <button data-tab="reports" class="nav-btn" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
-  <button data-tab="settings" class="nav-btn" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+  <button data-tab="today" class="nav-btn active" onclick="show('today')" title="Today (1)"><span class="ic">🗓</span>Today</button>
+  <button data-tab="active" class="nav-btn" onclick="show('active')" title="Active (2)"><span class="ic">📂</span>Active</button>
+  <button data-tab="planned" class="nav-btn" onclick="show('planned')" title="Planned (3)"><span class="ic">🗒</span>Planned</button>
+  <button data-tab="offers" class="nav-btn" onclick="show('offers')" title="Offers (4)"><span class="ic">🧰</span>Offers</button>
+  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')" title="Calendar (5)"><span class="ic">📅</span>Calendar</button>
+  <button data-tab="reports" class="nav-btn" onclick="show('reports')" title="Reports (6)"><span class="ic">📊</span>Reports</button>
+  <button data-tab="settings" class="nav-btn" onclick="show('settings')" title="Settings (7)"><span class="ic">⚙︎</span>Settings</button>
 </nav>
 
 <main id="main"></main>
@@ -159,13 +257,101 @@ function toast(msg, ms=2600){
   t._t = setTimeout(() => t.classList.remove('show'), ms);
 }
 
+// --------- Theme (light / dark) ---------
+function applyTheme(){
+  const stored = localStorage.getItem('bb_theme');
+  const dark = stored ? stored === 'dark'
+    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  const btn = $('#themeBtn'); if(btn) btn.textContent = dark ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  localStorage.setItem('bb_theme', dark ? 'light' : 'dark');
+  applyTheme();
+}
+
+// --------- Status pills & person tokens ---------
+function statusPill(status){
+  const s = (status||'').toLowerCase();
+  const cls = s==='open'?'pill-open':s==='closed'?'pill-closed':'pill-planned';
+  return `<span class="pill ${cls}">${esc(s||'—')}</span>`;
+}
+// Stable color per person name, so each person reads as the same chip everywhere.
+const PERSON_PALETTE = ['#0969da','#1a7f37','#9a3fb0','#bc4c00','#0a7ea3','#a8431e','#6e40c9','#2d7d46'];
+function personColor(name){
+  let h = 0; const s = String(name||'');
+  for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+  return PERSON_PALETTE[h % PERSON_PALETTE.length];
+}
+function personChip(name){
+  if(!name) return '';
+  const initial = String(name).trim().charAt(0).toUpperCase() || '?';
+  return `<span class="person-chip"><span class="person-dot" style="background:${personColor(name)}">${esc(initial)}</span>${esc(name)}</span>`;
+}
+
+// --------- Current visible tab helpers (for keyboard shortcuts) ---------
+function currentTab(){
+  const s = document.querySelector('.section.active');
+  return s ? s.id.replace('section-','') : '';
+}
+function modalOpen(){ return !!document.querySelector('.modal-ov'); }
+
+// --------- Keyboard shortcuts ---------
+const TAB_KEYS = {'1':'today','2':'active','3':'planned','4':'offers','5':'calendar','6':'reports','7':'settings'};
+function showShortcuts(){
+  modal(`<p><strong>⌨ Keyboard shortcuts</strong></p>
+    <table class="sc-table" style="width:100%;font-size:13px">
+      <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Jump to Today / Active / Planned / Offers / Calendar / Reports / Settings</td></tr>
+      <tr><td><kbd>n</kbd></td><td>New — account (Active/Planned) or offer (Offers)</td></tr>
+      <tr><td><kbd>s</kbd></td><td>Save changes (in an account)</td></tr>
+      <tr><td><kbd>e</kbd></td><td>Edit — focus the first field (in an account)</td></tr>
+      <tr><td><kbd>/</kbd></td><td>Focus the search box (Active / Planned)</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close a dialog, or go back from an account</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+    </table>
+    <div class="row" style="margin-top:8px;justify-content:flex-end"><button data-mval="ok">Got it</button></div>`);
+}
+document.addEventListener('keydown', e => {
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  // Escape: close the top modal, else step back out of the detail view.
+  if(e.key === 'Escape'){
+    if(modalOpen()){ const o = document.querySelector('.modal-ov'); if(o && o._esc) o._esc(); return; }
+    if(currentTab() === 'detail'){ backFromDetail(); }
+    return;
+  }
+  // Don't hijack keys while typing or while a dialog is open.
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || modalOpen()) return;
+
+  if(TAB_KEYS[e.key]){ show(TAB_KEYS[e.key]); return; }
+  if(e.key === '?'){ showShortcuts(); return; }
+  const tab = currentTab();
+  if(e.key === 'n'){
+    if(tab === 'offers') addOffer();
+    else if(tab === 'active' || tab === 'planned') addAccount(tab === 'active' ? 'open' : 'planned');
+    return;
+  }
+  if(e.key === '/' && (tab === 'active' || tab === 'planned')){
+    const s = document.querySelector(`#section-${tab} .search-input`); if(s){ e.preventDefault(); s.focus(); }
+    return;
+  }
+  if(tab === 'detail'){
+    if(e.key === 's'){ e.preventDefault(); saveAccountDetail(); }
+    else if(e.key === 'e'){ const f = document.querySelector('#section-detail input, #section-detail select, #section-detail textarea'); if(f){ e.preventDefault(); f.focus(); } }
+  }
+});
+
 function modal(innerHtml){
   return new Promise(resolve => {
     const o = el('div', {class:'modal-ov'});
     o.innerHTML = `<div class="modal-card">${innerHtml}</div>`;
     const close = (val) => { if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    o._esc = () => close(null);   // let the global Esc handler cancel this modal
     o.addEventListener('click', e => { if(e.target===o) close(null); });
     document.body.appendChild(o);
+    const focusEl = o.querySelector('[autofocus]') || o.querySelector('input, select, textarea');
+    if(focusEl) setTimeout(() => focusEl.focus(), 30);
     o.querySelectorAll('[data-mval]').forEach(b => b.addEventListener('click', () => close(b.getAttribute('data-mval'))));
     o.querySelectorAll('[data-mcancel]').forEach(b => b.addEventListener('click', () => close(null)));
   });
@@ -292,6 +478,14 @@ async function saveJson(path, value, message){
 // --------- Tab navigation ---------
 let lastTab = 'today';
 
+function updateAppbarUser(){
+  const u = $('#appbar-user'); if(!u) return;
+  if(LS.token){
+    const who = LS.login ? '@'+LS.login : (LS.method==='oauth' ? 'GitHub' : 'Connected');
+    u.textContent = (LS.me ? LS.me + ' · ' : '') + who;
+  } else u.textContent = '';
+}
+
 function show(tab){
   $$('.section').forEach(s => s.classList.remove('active'));
   $$('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -304,6 +498,7 @@ function show(tab){
     const fn = window[`render_${tab}`];
     if(fn) fn();
   }
+  updateAppbarUser();
 }
 
 // --------- Data load ---------
@@ -405,7 +600,7 @@ function render_today(){
     if(toOpen.length) {
       html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';
       toOpen.forEach(a => {
-        html += `<div class="list-item"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:#666">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div></div>`;
+        html += `<div class="list-item"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div></div>`;
       });
       html += '</div>';
     }
@@ -460,56 +655,127 @@ async function markReminderDone(accountId, reminderId){
   }
 }
 
+// Per-tab browse filters (person + free-text search).
+const acctFilter = { active: {person:'all', q:''}, planned: {person:'all', q:''} };
+
+function filterBarHTML(tab){
+  const f = acctFilter[tab];
+  const chips = ['all', ...(config.people || [])].map(p =>
+    `<button class="chip ${f.person===p?'active':''}" onclick="setPersonFilter('${tab}','${esc(p)}')">${p==='all'?'Everyone':esc(p)}</button>`).join('');
+  const addLabel = tab==='active' ? '+ Add Account' : '+ Add Planned';
+  const addStatus = tab==='active' ? 'open' : 'planned';
+  return `<div class="filter-bar">
+      <div class="chips">${chips}</div>
+      <input class="search-input" type="search" placeholder="Search institution… ( / )" value="${esc(f.q)}"
+        oninput="setSearchFilter('${tab}', this.value)">
+      <button onclick="addAccount('${addStatus}')">${addLabel}</button>
+    </div>`;
+}
+function setPersonFilter(tab, person){ acctFilter[tab].person = person; window['render_'+tab](); }
+function setSearchFilter(tab, q){
+  acctFilter[tab].q = q;
+  const ql = q.trim().toLowerCase();
+  document.querySelectorAll(`#section-${tab} [data-inst]`).forEach(card => {
+    card.style.display = card.getAttribute('data-inst').includes(ql) ? '' : 'none';
+  });
+}
+function matchPerson(tab, a){ const p = acctFilter[tab].person; return p==='all' || a.person===p; }
+
 function render_active(){
   const section = $('#section-active');
-  const active = accounts.filter(a => a.status === 'open');
+  const active = accounts.filter(a => a.status === 'open' && matchPerson('active', a));
 
-  if(active.length === 0) {
-    section.innerHTML = '<div class="empty">No active accounts yet.</div>';
+  if(accounts.filter(a => a.status === 'open').length === 0){
+    section.innerHTML = `<div class="empty">No active accounts yet.
+      <div class="empty-cta"><button onclick="addAccount('open')">+ Add Account</button></div></div>`;
     return;
   }
 
-  let html = '';
+  let html = filterBarHTML('active');
   active.forEach(a => {
-    html += `<div class="card" onclick="editAccount('${a.id}')">
-      <div class="card-header">${esc(a.institution)}</div>
+    html += `<div class="card clickable st-open" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
+      <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('open')}</div>
       <div class="row">
-        <div class="row-item"><div class="label">Person</div><div class="value">${esc(a.person)}</div></div>
-        <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
-        <div class="row-item"><div class="label">DD Total</div><div class="value">${money(a.directDepositTotal)}</div></div>
-      </div>
-      <div class="row">
+        <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
+        <div class="row-item"><div class="label">DD Total</div><div class="value money">${money(a.directDepositTotal)}</div></div>
         <div class="row-item"><div class="label">Opened</div><div class="value">${fmtDate(a.dates.opened) || '—'}</div></div>
         <div class="row-item"><div class="label">First DD</div><div class="value">${fmtDate(a.dates.firstDD) || '—'}</div></div>
       </div>
     </div>`;
   });
+  if(active.length === 0) html += `<div class="empty">No matches for this filter.</div>`;
   section.innerHTML = html;
+  setSearchFilter('active', acctFilter.active.q);
 }
 
 function render_planned(){
   const section = $('#section-planned');
-  const planned = accounts.filter(a => a.status === 'planned');
+  const planned = accounts.filter(a => a.status === 'planned' && matchPerson('planned', a));
 
-  if(planned.length === 0) {
-    section.innerHTML = '<div class="empty">No planned accounts yet.</div>';
+  if(accounts.filter(a => a.status === 'planned').length === 0) {
+    section.innerHTML = `<div class="empty">No planned accounts yet.
+      <div class="empty-cta"><button onclick="addAccount('planned')">+ Add Planned</button></div></div>`;
     return;
   }
 
-  let html = '';
+  let html = filterBarHTML('planned');
   planned.forEach(a => {
-    html += `<div class="card">
-      <div class="card-header">${esc(a.institution)} <span style="color:#999;font-weight:normal">(${esc(a.person)})</span></div>
+    html += `<div class="card st-planned" data-inst="${esc((a.institution||'').toLowerCase())}">
+      <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('planned')}</div>
       <div class="row">
-        <div class="row-item"><div class="label">Bonus</div><div class="value">${money(a.bonus)}</div></div>
-        <div class="row-item"><div class="label">DD Req</div><div class="value">${money(a.directDepositTotal)}</div></div>
+        <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
+        <div class="row-item"><div class="label">DD Req</div><div class="value money">${money(a.directDepositTotal)}</div></div>
         <div class="row-item"><div class="label">Planned Open</div><div class="value">${fmtDate(a.dates.plannedOpen) || '—'}</div></div>
       </div>
-      <button onclick="openPlanned('${a.id}')">Mark Opened</button>
-      <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
+      <div class="action-bar" style="margin-top:0">
+        <button onclick="openPlanned('${a.id}')">Mark Opened</button>
+        <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
+      </div>
     </div>`;
   });
+  if(planned.length === 0) html += `<div class="empty">No matches for this filter.</div>`;
   section.innerHTML = html;
+  setSearchFilter('planned', acctFilter.planned.q);
+}
+
+// Create a fresh account directly (no offer detour).
+async function addAccount(defaultStatus='planned'){
+  if(!(config.people || []).length){ toast('Add people in Settings first'); return; }
+  const personOpts = (config.people || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  const statusOpts = ['planned','open'].map(s => `<option value="${s}" ${s===defaultStatus?'selected':''}>${s}</option>`).join('');
+  const r = await modal(`<p><strong>Add a new account</strong></p>
+    <input type="text" id="na_inst" placeholder="Institution name" autofocus>
+    <div class="row">
+      <div class="row-item"><div class="label">Person</div><select id="na_person">${personOpts}</select></div>
+      <div class="row-item"><div class="label">Status</div><select id="na_status">${statusOpts}</select></div>
+    </div>
+    <div class="row">
+      <div class="row-item"><div class="label">Bonus ($)</div><input type="number" id="na_bonus" placeholder="0"></div>
+      <div class="row-item"><div class="label">DD required ($)</div><input type="number" id="na_dd" placeholder="0"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Add</button></div>`);
+  if(r !== 'save') return;
+  const inst = $('#na_inst').value.trim();
+  if(!inst){ toast('Institution name required'); return; }
+  const status = $('#na_status').value;
+  const acc = {
+    id: uid('a'), offerId: null, institution: inst, person: $('#na_person').value, status,
+    bonus: parseFloat($('#na_bonus').value) || 0, referralValue: null,
+    directDepositTotal: parseFloat($('#na_dd').value) || 0, requiresMultipleDeposits: false,
+    nbDeposits: null, minBalance: null, minBalDays: null, additionalRequirements: '',
+    daysToCompleteReq: 90, bonusTiming: '', avoidFees: '', churnable: false, monthsTillReopen: null, notes: '',
+    dates: { plannedOpen: status==='planned'?todayISO():null, opened: status==='open'?todayISO():null,
+      firstDD: null, bonusPaidOut: null, closed: null, reopenAfter: null },
+    tasks: { estatements:false, alerts:false, ddSetup:false, documented:false, reminders:false, referrals:false },
+    reminders: [], ddPlan: []
+  };
+  accounts.push(acc);
+  try {
+    await saveAccounts('Add account: ' + inst);
+    show(status==='open' ? 'active' : 'planned');
+    render_today();
+    toast(inst + ' added');
+  } catch(e){ toast('Save error: ' + e.message); }
 }
 
 async function openPlanned(accountId){
@@ -531,22 +797,23 @@ function render_offers(){
   let html = '<button onclick="addOffer()" style="margin-bottom:16px">+ Add Offer</button>';
 
   if(backlog.length === 0) {
-    html += '<div class="empty">No offers in backlog yet.</div>';
+    html += `<div class="empty">No offers in backlog yet.
+      <div class="empty-cta"><button onclick="addOffer()">+ Add Offer</button></div></div>`;
   } else {
-    html += '<table><thead><tr><th>Institution</th><th>Bonus</th><th>DD Req</th><th>Actions</th></tr></thead><tbody>';
+    html += '<div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr><th>Institution</th><th class="num">Bonus</th><th class="num">DD Req</th><th>Actions</th></tr></thead><tbody>';
     backlog.forEach(o => {
       html += `<tr>
         <td>${esc(o.institution)}</td>
-        <td>${money(o.bonus)}</td>
-        <td>${money(o.directDepositTotal)}</td>
+        <td class="num">${money(o.bonus)}</td>
+        <td class="num">${money(o.directDepositTotal)}</td>
         <td>
-          <button class="sec" onclick="promoteOffer('${o.id}','planned')" style="font-size:12px;padding:4px 8px">Planned</button>
-          <button class="sec" onclick="promoteOffer('${o.id}','open')" style="font-size:12px;padding:4px 8px">Open</button>
-          <button class="sec" onclick="deleteOffer('${o.id}')" style="font-size:12px;padding:4px 8px">Del</button>
+          <button class="sec small" onclick="promoteOffer('${o.id}','planned')">Planned</button>
+          <button class="sec small" onclick="promoteOffer('${o.id}','open')">Open</button>
+          <button class="danger small" onclick="deleteOffer('${o.id}')">Del</button>
         </td>
       </tr>`;
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div></div>';
   }
 
   section.innerHTML = html;
@@ -691,48 +958,75 @@ function allocatedOn(date, exceptId){
   }, 0);
 }
 
+// Build one month's 7-column grid, marking payroll days with their allocation status.
+function calMonthGrid(ym, allocByDate, cap, today){
+  const [y, m] = ym.split('-').map(Number);
+  const startDow = new Date(Date.UTC(y, m-1, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const monthName = new Date(Date.UTC(y, m-1, 1)).toLocaleString('en-US', {month:'long', year:'numeric', timeZone:'UTC'});
+  const dows = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+  let cells = '';
+  for(let i=0;i<startDow;i++) cells += '<div class="cal-cell cal-empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = `${ym}-${String(d).padStart(2,'0')}`;
+    const alloc = allocByDate[iso];
+    let cls = 'cal-cell';
+    if(iso < today) cls += ' cal-past';
+    if(iso === today) cls += ' cal-today';
+    let inner = `<div class="cal-day">${d}</div>`;
+    if(alloc != null){
+      const st = alloc > cap ? 'over' : alloc === cap ? 'full' : 'partial';
+      cls += ' cal-pay cal-' + st;
+      inner += `<div class="cal-amt">${money(alloc)}</div>`;
+    }
+    cells += `<div class="${cls}">${inner}</div>`;
+  }
+  return `<div class="card"><div class="card-header">${esc(monthName)}</div>
+    <div class="cal-grid">${dows}${cells}</div></div>`;
+}
+
 function render_calendar(){
   const section = $('#section-calendar');
 
-  // Get all payroll dates from ddPlan across all accounts
-  const paydates = new Set();
-  accounts.forEach(a => {
-    if(a.ddPlan) {
-      a.ddPlan.forEach(dd => paydates.add(dd.payrollDate));
-    }
-  });
+  // Sum each payroll date's allocation across all accounts.
+  const allocByDate = {};
+  accounts.forEach(a => (a.ddPlan || []).forEach(dd => {
+    allocByDate[dd.payrollDate] = (allocByDate[dd.payrollDate] || 0) + dd.amount;
+  }));
+  const dates = Object.keys(allocByDate).sort();
 
-  const sortedDates = Array.from(paydates).sort();
-
-  if(sortedDates.length === 0) {
+  if(dates.length === 0) {
     section.innerHTML = '<div class="empty">No DD planned yet.<br><span style="font-size:13px">Open an account → "Auto-suggest" in its Direct Deposit Plan to fill the schedule.</span></div>';
     return;
   }
 
-  const paycheck = config.paycheck || {};
-  const checkAmount = paycheck.amount || 1930;
+  const cap = (config.paycheck || {}).amount || 1930;
+  const today = todayISO();
+  const totalPlanned = dates.reduce((s,d) => s + allocByDate[d], 0);
+  const upcoming = dates.filter(d => d >= today).length;
+  const overCount = dates.filter(d => allocByDate[d] > cap).length;
 
-  let html = '<table><thead><tr><th>Payroll Date</th><th>Allocated</th><th>Available</th><th>Status</th></tr></thead><tbody>';
+  let html = `<div class="summary-strip">
+      <div class="stat"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} paycheck(s)</div></div>
+      <div class="stat"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">paycheck(s) ahead</div></div>
+      <div class="stat"><div class="stat-label">Over-allocated</div><div class="stat-value">${overCount}</div><div class="stat-sub">need a fix</div></div>
+    </div>
+    <div class="cal-legend">
+      <span><i style="background:var(--open-bg)"></i> Full</span>
+      <span><i style="background:rgba(154,103,0,.18)"></i> Partial</span>
+      <span><i style="background:rgba(207,48,48,.18)"></i> Over</span>
+      <span><i style="outline:2px solid var(--accent);outline-offset:-2px"></i> Today</span>
+    </div>`;
 
-  sortedDates.forEach(date => {
-    const allocated = accounts.reduce((sum, a) => {
-      const dd = a.ddPlan.find(d => d.payrollDate === date);
-      return sum + (dd ? dd.amount : 0);
-    }, 0);
+  // One grid per month that has at least one payroll date.
+  const months = Array.from(new Set(dates.map(d => d.slice(0,7)))).sort();
+  months.forEach(ym => { html += calMonthGrid(ym, allocByDate, cap, today); });
 
-    const status = allocated > checkAmount ? '❌ Over' : allocated === checkAmount ? '✅ Full' : '⚪ Partial';
-
-    html += `<tr>
-      <td>${fmtDate(date)}</td>
-      <td>${money(allocated)}</td>
-      <td>${money(Math.max(0, checkAmount - allocated))}</td>
-      <td>${status}</td>
-    </tr>`;
-  });
-
-  html += '</tbody></table>';
   section.innerHTML = html;
 }
+
+let reportPerson = 'all';
+function setReportPerson(p){ reportPerson = p; render_reports(); }
 
 function render_reports(){
   const section = $('#section-reports');
@@ -762,34 +1056,47 @@ function render_reports(){
 
   const pct = (taxRate * 100).toFixed(2);
 
-  let html = '<div class="card">';
-  html += '<div class="card-header">Bonuses (gross → after-tax)</div>';
-  html += '<table><thead><tr><th></th><th>Gross</th><th>After-tax</th><th>#</th></tr></thead><tbody>';
-  html += `<tr><td>Earned (closed)</td><td>${money(earned)}</td><td>${money(afterTax(earned))}</td><td>${closed.length}</td></tr>`;
-  html += `<tr><td>Pending (open)</td><td>${money(pending)}</td><td>${money(afterTax(pending))}</td><td>${open.length}</td></tr>`;
-  html += `<tr><td>Planned</td><td>${money(plannedTot)}</td><td>${money(afterTax(plannedTot))}</td><td>${planned.length}</td></tr>`;
-  html += `<tr style="font-weight:600"><td>Total projected</td><td>${money(total)}</td><td>${money(afterTax(total))}</td><td>${accounts.length}</td></tr>`;
-  html += '</tbody></table>';
-  html += `<div style="font-size:12px;color:#666;margin-top:8px">After-tax applies your ${pct}% marginal rate to bonus + referral income.</div>`;
+  // Headline numbers up top.
+  let html = `<div class="summary-strip">
+      <div class="stat"><div class="stat-label">Total projected (after-tax)</div><div class="stat-value">${money(afterTax(total))}</div><div class="stat-sub">${money(total)} gross · ${accounts.length} accounts</div></div>
+      <div class="stat"><div class="stat-label">Earned</div><div class="stat-value">${money(afterTax(earned))}</div><div class="stat-sub">${closed.length} closed</div></div>
+      <div class="stat"><div class="stat-label">Pending</div><div class="stat-value">${money(afterTax(pending))}</div><div class="stat-sub">${open.length} open</div></div>
+      <div class="stat"><div class="stat-label">After-tax $/hr</div><div class="stat-value">${money(afterTaxRealized / Math.max(totalHours, 1))}</div><div class="stat-sub">${totalHours.toFixed(1)}h invested</div></div>
+    </div>`;
+
+  html += '<div class="card" style="padding:0"><div class="card-header" style="padding:16px 16px 0">Bonuses (gross → after-tax)</div>';
+  html += '<div class="table-wrap"><table><thead><tr><th></th><th class="num">Gross</th><th class="num">After-tax</th><th class="num">#</th></tr></thead><tbody>';
+  html += `<tr><td>Earned (closed)</td><td class="num">${money(earned)}</td><td class="num">${money(afterTax(earned))}</td><td class="num">${closed.length}</td></tr>`;
+  html += `<tr><td>Pending (open)</td><td class="num">${money(pending)}</td><td class="num">${money(afterTax(pending))}</td><td class="num">${open.length}</td></tr>`;
+  html += `<tr><td>Planned</td><td class="num">${money(plannedTot)}</td><td class="num">${money(afterTax(plannedTot))}</td><td class="num">${planned.length}</td></tr>`;
+  html += `<tr style="font-weight:700"><td>Total projected</td><td class="num">${money(total)}</td><td class="num">${money(afterTax(total))}</td><td class="num">${accounts.length}</td></tr>`;
+  html += '</tbody></table></div>';
+  html += `<div style="font-size:12px;color:var(--muted);padding:8px 16px 16px">After-tax applies your ${pct}% marginal rate to bonus + referral income.</div>`;
   html += '</div>';
 
   html += '<div class="card"><div class="card-header">Effort & return</div><div class="row">';
   html += `<div class="row-item"><div class="label">Est. hours (opened)</div><div class="value">${totalHours.toFixed(1)}h</div></div>`;
-  html += `<div class="row-item"><div class="label">After-tax realized+pending</div><div class="value">${money(afterTaxRealized)}</div></div>`;
-  html += `<div class="row-item"><div class="label">After-tax $/hr</div><div class="value">${money(afterTaxRealized / Math.max(totalHours, 1))}/hr</div></div>`;
+  html += `<div class="row-item"><div class="label">After-tax realized+pending</div><div class="value money">${money(afterTaxRealized)}</div></div>`;
+  html += `<div class="row-item"><div class="label">After-tax $/hr</div><div class="value money">${money(afterTaxRealized / Math.max(totalHours, 1))}/hr</div></div>`;
   html += '</div></div>';
 
-  html += '<div class="card"><div class="card-header">All accounts</div>';
-  html += '<table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th>Bonus</th><th>Referral</th><th>APY</th></tr></thead><tbody>';
-  accounts.forEach(a => {
+  // All-accounts table, filterable by person.
+  const personChips = ['all', ...(config.people || [])].map(p =>
+    `<button class="chip ${reportPerson===p?'active':''}" onclick="setReportPerson('${esc(p)}')">${p==='all'?'Everyone':esc(p)}</button>`).join('');
+  const rows = accounts.filter(a => reportPerson==='all' || a.person===reportPerson);
+
+  html += '<div class="card" style="padding:0"><div class="card-header" style="padding:16px 16px 0">All accounts</div>';
+  html += `<div style="padding:0 16px 12px"><div class="chips">${personChips}</div></div>`;
+  html += '<div class="table-wrap"><table><thead><tr><th>Institution</th><th>Person</th><th>Status</th><th class="num">Bonus</th><th class="num">Referral</th><th class="num">APY</th></tr></thead><tbody>';
+  rows.forEach(a => {
     let apy = '—';
     if (a.minBalance && a.minBalance > 0 && a.minBalDays && a.minBalDays > 0) {
       const afterTaxBonus = (a.bonus || 0) * (1 - taxRate);
       apy = `${(afterTaxBonus / a.minBalance * 365 / a.minBalDays * 100).toFixed(1)}%`;
     }
-    html += `<tr><td>${esc(a.institution)}</td><td>${esc(a.person)}</td><td>${a.status}</td><td>${money(a.bonus)}</td><td>${a.referralValue ? money(a.referralValue) : '—'}</td><td>${apy}</td></tr>`;
+    html += `<tr><td>${esc(a.institution)}</td><td>${personChip(a.person)}</td><td>${statusPill(a.status)}</td><td class="num">${money(a.bonus)}</td><td class="num">${a.referralValue ? money(a.referralValue) : '—'}</td><td class="num">${apy}</td></tr>`;
   });
-  html += '</tbody></table></div>';
+  html += '</tbody></table></div></div>';
 
   section.innerHTML = html;
 }
@@ -1009,12 +1316,12 @@ function render_detail(){
   // Reminders
   html += `<div class="card"><div class="card-header">Reminders</div><div class="reminder-list">`;
   if(a.reminders.length === 0) {
-    html += '<div style="color:#999;font-size:13px;margin-bottom:8px">No reminders yet.</div>';
+    html += '<div style="color:var(--muted);font-size:13px;margin-bottom:8px">No reminders yet.</div>';
   } else {
     a.reminders.forEach(r => {
       html += `<div class="reminder-item">
         <div><input type="checkbox" class="checkbox" ${r.done ? 'checked' : ''} onchange="toggleReminderDetail('${r.id}')">
-        <span style="${r.done ? 'text-decoration:line-through;color:#999' : ''}">${esc(r.note)}</span>
+        <span style="${r.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(r.note)}</span>
         <span class="reminder-date"> — ${esc(fmtDate(r.date))}</span></div>
         <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteReminder('${r.id}')">×</button>
       </div>`;
@@ -1029,7 +1336,7 @@ function render_detail(){
   // DD Plan
   html += `<div class="card"><div class="card-header">Direct Deposit Plan</div>`;
   if(a.ddPlan.length === 0) {
-    html += '<div style="color:#999;font-size:13px;margin-bottom:8px">No DD scheduled yet.</div>';
+    html += '<div style="color:var(--muted);font-size:13px;margin-bottom:8px">No DD scheduled yet.</div>';
   } else {
     a.ddPlan.forEach((dd, i) => {
       html += `<div class="reminder-item">
@@ -1041,7 +1348,7 @@ function render_detail(){
   html += `<div class="action-bar" style="margin-top:4px">
       <button class="sec" onclick="suggestDD()">⚡ Auto-suggest</button>
     </div>
-    <div style="font-size:12px;color:#666;margin:4px 0 8px">Auto-suggest fills paychecks from the planned/open date until the DD total is met, without over-filling any paycheck. Adjust by hand for split-deposit rules.</div>
+    <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Auto-suggest fills paychecks from the planned/open date until the DD total is met, without over-filling any paycheck. Adjust by hand for split-deposit rules.</div>
     <div class="row" style="margin-top:8px">
       <input type="date" id="d_new_dd_date">
       <input type="number" id="d_new_dd_amount" placeholder="Amount ($)" step="0.01" style="flex:1">
@@ -1094,6 +1401,7 @@ async function toggleReminderDetail(remId){
 }
 
 async function deleteReminder(remId){
+  if(!await confirmModal('Delete this reminder?', 'Delete', true)) return;
   captureFields();
   const a = accounts.find(x => x.id === editingId);
   if(!a) return;
@@ -1113,6 +1421,7 @@ async function addReminder(){
 }
 
 async function deleteDD(index){
+  if(!await confirmModal('Remove this direct-deposit entry?', 'Remove', true)) return;
   captureFields();
   const a = accounts.find(x => x.id === editingId);
   if(!a) return;
@@ -1202,8 +1511,9 @@ async function deleteAccountDetail(){
   }
 }
 
-// Initialize — handle the "back from GitHub sign-in" return first.
+// Initialize — apply theme, then handle the "back from GitHub sign-in" return first.
 (async ()=>{
+  applyTheme();
   const came = await handleOAuthRedirect();
   if(!came) init();
 })();

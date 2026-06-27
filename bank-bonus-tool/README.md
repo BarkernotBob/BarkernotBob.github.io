@@ -18,7 +18,9 @@ Manage requirements, reminders, and direct-deposit scheduling all in one place.
 ## The three pieces
 1. **The app** — `quartz/static/bank-bonus/index.html`. A single self-contained web page,
    served by your existing Quartz site at `/static/bank-bonus/`. Holds no data itself;
-   talks to your private data repo via the GitHub API using a token saved in the browser.
+   talks to your private data repo via the GitHub API. Sign in with the **🔐 Sign in with
+   GitHub** button (no token to paste — a shared OAuth App + Cloudflare Worker handle it);
+   pasting a personal access token still works as a fallback under Settings → Advanced.
 2. **The private data repo** — a separate, private GitHub repo (e.g. `bank-bonus-data`) that is
    the real database. Holds the JSON files (`db/*.json`). Only you can see it.
 3. **The daily email** — a free scheduled GitHub Action (`daily-email.yml`) that runs each

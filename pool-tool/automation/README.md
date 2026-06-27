@@ -1,54 +1,131 @@
-# Pool Care — email reminders (the scheduled part)
+# Pool Care — reminders (email) + RSS feed
 
-The app already shows what's due whenever you open it (**📅 Today**). This piece
-adds the **push**: an email when something is due, so you don't have to remember
-to open the app. It's the last step and is set up after sign-in works.
+The app shows what's due **when you open it**. This adds the **push**: a once-a-day
+job that emails you what's due, and publishes an **RSS feed** you can follow in a
+reader app. You chose **Option B** (a GitHub Action — fully automatic, runs on
+GitHub's schedule, independent of Claude).
 
-There are two ways to send it. Pick one — I'll wire it up.
+Both come from one small workflow file that lives in your private `pool-data`
+repo. The actual logic is a script hosted on your live site
+(`https://barkernotbob.github.io/static/pool/reminders.mjs`), so the workflow
+file stays tiny and always runs the latest version.
 
----
-
-## Option A (recommended) — Scheduled Claude session  ⭐
-Same pattern as your grocery tracker, and **no new passwords or secrets.**
-
-- A Claude session runs on a timer (e.g. every morning).
-- It reads `db/config.json` and `db/tests.json` from your private `pool-data`
-  repo, works out what's **due** (using the same season + cadence rules the app
-  uses), and emails you a short "here's what's due today" note plus any advice
-  from your latest test.
-- To turn it on, open a Claude session and say: **"set up my pool reminders."**
-  You approve it once.
-
-**Pros:** nothing new to configure, friendly wording, can include smart advice.
-**Cons:** relies on your Claude subscription running the scheduled session.
+> **Jargon, defined once:**
+> - **GitHub Action / workflow** = a small task GitHub runs for you automatically on a schedule.
+> - **Secret** = a private value (like a password) you paste into a repo's settings; the workflow can use it but nobody can read it back.
+> - **Gmail App Password** = a 16-character code Google gives you so a program can send email as you, without using your real password.
+> - **RSS feed** = a plain web file that lists updates; an "RSS reader" app checks it and shows you new items (and can notify you).
 
 ---
 
-## Option B — GitHub Action (self-contained, needs an email password)
-A scheduled job that lives inside the `pool-data` repo and emails via your Gmail.
+## Part 1 — Email reminders (do this first)
 
-- Runs on GitHub's free schedule (cron), computes what's due, emails you.
-- Needs a **Gmail App Password** (a 16-character code from your Google account)
-  stored as a repo **secret** so the job can send mail. That's the one fiddly bit.
+### Step 1. Make a Gmail App Password
+1. Go to <https://myaccount.google.com/apppasswords> (sign in if asked).
+   - If it says App Passwords aren't available, first turn on **2-Step
+     Verification** at <https://myaccount.google.com/signinoptions/twosv>, then
+     come back.
+2. Under **App name** type `Pool Care` and click **Create**.
+3. Google shows a **16-character code** (like `abcd efgh ijkl mnop`). Copy it.
+   You'll paste it in Step 3. (You can't see it again later — if you lose it,
+   just make a new one.)
 
-**Pros:** fully automatic, independent of Claude.
-**Cons:** you create a Gmail App Password and add two repo secrets
-(`MAIL_USERNAME`, `MAIL_PASSWORD`) once.
+### Step 2. Add the workflow file to your `pool-data` repo
+1. Open <https://github.com/barkernotbob/pool-data> in your browser.
+2. Click **Add file → Create new file**.
+3. In the filename box, type exactly:
+   ```
+   .github/workflows/pool-reminders.yml
+   ```
+   (Typing the slashes creates the folders automatically.)
+4. Open `pool-tool/automation/pool-reminders.yml` from your **website** repo,
+   copy everything, and paste it into the big box.
+5. Scroll down, click **Commit changes**.
 
-A ready-to-fill workflow template will be added here as
-`pool-reminders.yml` when you choose Option B — it drops into
-`pool-data/.github/workflows/`.
+### Step 3. Add your two email secrets
+1. Still in the `pool-data` repo, click **Settings** (top tab) →
+   **Secrets and variables** → **Actions**.
+2. Click **New repository secret**. Add the first one:
+   - **Name:** `MAIL_USERNAME`  •  **Secret:** your Gmail address
+   - Click **Add secret**.
+3. Click **New repository secret** again. Add the second:
+   - **Name:** `MAIL_PASSWORD`  •  **Secret:** the 16-character App Password
+     from Step 1 (spaces are fine)
+   - Click **Add secret**.
+
+### Step 4. Set your email in the app
+Open the Pool Care app → **⚙︎ Settings** → put your email in the reminder field
+→ save. (If you skip this, the reminder is sent to your `MAIL_USERNAME` address.)
+
+### Step 5. Test it now
+1. In `pool-data`, click the **Actions** tab.
+2. Click **Pool reminders** on the left → **Run workflow** → **Run workflow**.
+3. Wait ~30 seconds, refresh. A green check = it ran. If something was due, you'll
+   get an email within a minute. (If nothing's due today, no email is sent — that's
+   normal. To force a test email, open the app and set a task's "last done" date to
+   a couple weeks ago so it's due.)
+
+That's email done. It will now run **every morning** on its own.
 
 ---
 
-## How "due" is decided (both options use the same rules)
-- Routine tasks come from `config.tasks[]`, each with a `cadence`
-  (`weekly`, `biweekly`, `monthly`, `pump`) and a `last` date. Due when
-  `today >= last + cadence`. `pump` = daily in peak summer, ~twice weekly
-  otherwise.
-- Tasks are paused **off-season** (outside `config.season.open`..`close`).
-- Opening/closing get a heads-up in the ~3 weeks before `season.open` /
-  `season.close`.
-- The reminder email goes to `config.email` (set in the app's Settings).
+## Part 2 — RSS feed (optional, do whenever)
 
-Tell me which option you want and I'll build it.
+This publishes a `pool.xml` feed to a **public** `feeds` repo so you (and only
+you, really, since nobody knows the URL) can follow it in a reader. The feed
+only ever says things like "chlorine is due" — no private data.
+
+### Step 1. Create the public `feeds` repo
+1. Go to <https://github.com/new>.
+2. **Repository name:** `feeds`  •  **Visibility:** **Public**.
+3. Check **Add a README file**, then **Create repository**.
+4. (Optional landing page) Click **Add file → Create new file**, name it
+   `index.html`, paste in `pool-tool/automation/feeds-repo-index.html` from your
+   website repo, and **Commit**.
+
+### Step 2. Turn on GitHub Pages for it
+1. In the `feeds` repo: **Settings → Pages**.
+2. Under **Build and deployment → Source**, pick **Deploy from a branch**.
+3. Branch: **main**, folder: **/ (root)**. Click **Save**.
+4. After a minute your feed will live at:
+   **`https://barkernotbob.github.io/feeds/pool.xml`**
+
+### Step 3. Make a token so the job can write the feed
+1. Go to <https://github.com/settings/personal-access-tokens/new> (Fine-grained token).
+2. **Token name:** `feeds-writer`  •  **Expiration:** 1 year (or "No expiration").
+3. **Repository access:** *Only select repositories* → choose **feeds**.
+4. **Permissions:** expand **Repository permissions**, find **Contents**, set it
+   to **Read and write**. (Leave everything else as "No access".)
+5. Click **Generate token** and copy the value (starts with `github_pat_…`).
+
+### Step 4. Add the token secret to `pool-data`
+1. `pool-data` repo → **Settings → Secrets and variables → Actions →
+   New repository secret**.
+2. **Name:** `FEEDS_TOKEN`  •  **Secret:** the token you just copied → **Add secret**.
+
+### Step 5. Run it and subscribe
+1. `pool-data` → **Actions → Pool reminders → Run workflow**.
+2. Once it's green, open **`https://barkernotbob.github.io/feeds/pool.xml`** —
+   you should see XML.
+3. In an RSS reader app (e.g. **NetNewsWire**, free on iPhone), choose **Add feed**
+   and paste that URL. Turn on notifications in the reader if you want a phone ping.
+
+### Adding more apps later
+Each future app drops its own `xyz.xml` in the same `feeds` repo and reuses the
+same `FEEDS_TOKEN`. You subscribe to each one separately in your reader — exactly
+the "one subscription per app, all in one place" setup you wanted.
+
+---
+
+## How "due" is decided (matches the app exactly)
+- Routine tasks from `config.tasks[]`, each with a `cadence`
+  (`weekly`/`biweekly`/`monthly`/`pump`) and a `last` date. Due when
+  `today >= last + cadence`. `pump` = daily in peak summer, ~every 4 days otherwise.
+- Tasks pause **off-season** (outside `config.season.open`..`close`).
+- Opening/closing get a heads-up in the ~3 weeks before the season dates.
+- The reminder never marks a task done — you still do that in the app.
+- Email goes to `config.email` (set in Settings), falling back to `MAIL_USERNAME`.
+
+## Changing the time it runs
+In `pool-reminders.yml`, the `cron: '0 11 * * *'` line is the time in **UTC**.
+`11` = 7am Eastern in summer. Lower the number to make it earlier, raise it for later.

@@ -1,0 +1,83 @@
+# =============================================================================
+# Pool Care — daily email reminders + RSS feed
+# -----------------------------------------------------------------------------
+# WHERE THIS GOES: copy this file into your PRIVATE `pool-data` repo at
+#   .github/workflows/pool-reminders.yml
+# It runs once a day, reads your pool data, and (a) emails you what's due and
+# (b) publishes an RSS feed. See ../README.md (in the website repo's
+# pool-tool/automation folder) for the full step-by-step.
+#
+# SECRETS it uses (pool-data repo -> Settings -> Secrets and variables -> Actions):
+#   MAIL_USERNAME  your Gmail address                (required for email)
+#   MAIL_PASSWORD  a Gmail "App Password" (16 chars) (required for email)
+#   FEEDS_TOKEN    a token that can write the public `feeds` repo (RSS only)
+# Leave a secret unset to skip that part — e.g. no FEEDS_TOKEN = no RSS yet.
+# =============================================================================
+name: Pool reminders
+
+on:
+  schedule:
+    - cron: '0 11 * * *'   # 11:00 UTC ≈ 7:00am Eastern (Fort Wayne, summer)
+  workflow_dispatch: {}     # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write           # so it can save feed history back to this repo
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    env:
+      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+      FEEDS_TOKEN:   ${{ secrets.FEEDS_TOKEN }}
+    steps:
+      - name: Get your pool data
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch the reminder script (hosted on your site)
+        run: curl -fsSL https://barkernotbob.github.io/static/pool/reminders.mjs -o reminders.mjs
+
+      - name: Work out what's due
+        id: gen
+        env:
+          MAIL_FALLBACK: ${{ secrets.MAIL_USERNAME }}
+        run: node reminders.mjs
+
+      - name: Send the reminder email
+        if: ${{ steps.gen.outputs.has_due == 'true' && env.MAIL_USERNAME != '' && steps.gen.outputs.to != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: Pool Care <${{ secrets.MAIL_USERNAME }}>
+          to: ${{ steps.gen.outputs.to }}
+          subject: ${{ steps.gen.outputs.subject }}
+          html_body: ${{ steps.gen.outputs.body }}
+
+      - name: Remember what's already been sent
+        if: ${{ steps.gen.outputs.state_changed == 'true' }}
+        run: |
+          git config user.name  "pool-reminders"
+          git config user.email "actions@users.noreply.github.com"
+          git add db/feed-state.json
+          git commit -m "Update reminder feed history" || echo "nothing to commit"
+          git push || echo "push skipped"
+
+      - name: Publish the RSS feed
+        if: ${{ env.FEEDS_TOKEN != '' }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${FEEDS_TOKEN}@github.com/barkernotbob/feeds.git" feeds-repo
+          cp out/pool.xml feeds-repo/pool.xml
+          cd feeds-repo
+          git config user.name  "pool-reminders"
+          git config user.email "actions@users.noreply.github.com"
+          git add pool.xml
+          git commit -m "Update pool feed" || echo "nothing to commit"
+          git push || echo "push skipped"

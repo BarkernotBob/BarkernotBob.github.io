@@ -665,7 +665,7 @@ function renderSchedule(){
       <div class="flex"><div><b>${esc(t.title)}</b> <span class="small muted">· ${cadenceLabel(t)}</span></div>${status}</div>
       <div class="small muted" style="margin:2px 0 6px">${esc(t.detail)}</div>
       <div class="row"><button class="sec" style="flex:0 0 auto;width:auto" onclick="markTask('${t.id}')">Mark done</button>
-        <button class="link" onclick="editTask('${t.id}')">Edit cadence</button></div>
+        <button class="link" onclick="editTask('${t.id}')">Edit</button></div>
     </div>`;
   }).join('');
   html += `</div>`;
@@ -689,13 +689,28 @@ function checklistCard(kind, obj, icon){
 }
 async function editTask(id){
   const t=(D.config.tasks||[]).find(x=>x.id===id); if(!t) return;
-  const opts=['weekly','biweekly','monthly','pump'];
-  const v=await modal(`<h2>Edit cadence</h2><p class="small muted">${esc(t.title)}</p>
-    ${opts.map(o=>`<button class="${t.cadence===o?'':'sec'}" data-mval="${o}">${({weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',pump:'Twice weekly / daily in summer'})[o]}</button>`).join('')}
-    <button class="link" data-mcancel style="width:100%">Cancel</button>`);
-  if(!v) return;
-  t.cadence=v;
-  try{ await saveJson(FILES.config, D.config, 'Edit cadence: '+t.title); toast('Updated'); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
+  const opts=[['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['pump','Twice weekly / daily in summer']];
+  let cad=t.cadence, lastVal=t.last||'';
+  const p=modal(`<h2>Edit task</h2><p class="small muted" style="margin:0 0 8px">${esc(t.title)}</p>
+    <label>How often</label>
+    <div id="et_cad">${opts.map(([o,lbl])=>`<button type="button" class="${t.cadence===o?'':'sec'}" data-cad="${o}" style="margin:3px 0">${lbl}</button>`).join('')}</div>
+    <label style="margin-top:10px">Last done</label>
+    <input id="et_last" type="date" value="${t.last||''}" max="${todayISO()}"/>
+    <p class="small muted">Set this to an earlier date to make the task due sooner. Clear it to mark it as never done (due now).</p>
+    <div class="row" style="margin-top:12px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
+  // The modal removes its own DOM when it closes, so capture inputs while it's open.
+  const cadWrap=document.getElementById('et_cad');
+  if(cadWrap) cadWrap.querySelectorAll('[data-cad]').forEach(b=> b.addEventListener('click', ()=>{
+    cad=b.getAttribute('data-cad');
+    cadWrap.querySelectorAll('[data-cad]').forEach(x=>x.classList.toggle('sec', x!==b));
+  }));
+  const inp=document.getElementById('et_last');
+  if(inp) inp.addEventListener('input', e=>{ lastVal=e.target.value; });
+  const v=await p;
+  if(v!=='save') return;
+  t.cadence=cad;
+  t.last=lastVal?lastVal:null;
+  try{ await saveJson(FILES.config, D.config, 'Edit task: '+t.title); toast('Updated'); updateBadges(); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
 }
 async function editChecklist(kind){
   const obj=D.config[kind];

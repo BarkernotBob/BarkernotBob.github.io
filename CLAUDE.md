@@ -20,6 +20,10 @@ Beginner with Git, GitHub, and CLI. For any action I must take:
 - **Local vs live patch sync (critical):** the local Preview/Publish scripts patch plugins via `sed` (search `tokenize:"full"`; explorer breakpoint `800px`→`99999px`). `deploy.yml` must carry the SAME patches or local ≠ live. Keep them in sync.
 - Preview: `preview_start` config name `quartz` (port 8080 — kill any stray 8080 process first). Test desktop layout at width **≥1300px**; the preview often defaults to ~774px which renders the **mobile** layout. Breakpoints: mobile ≤800, tablet 800–1200, desktop >1200.
 
+# gstack
+- Use the `/browse` skill from gstack for **all web browsing** — never use `mcp__claude-in-chrome__*` tools directly.
+- Available gstack skills: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/setup-gbrain`, `/retro`, `/investigate`, `/document-release`, `/document-generate`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`, `/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`.
+
 # Site architecture notes
 - Home is a custom splash: `content/index.md` (`.home-splash` HTML) + CSS scoped `body:has(.home-splash)` in custom.scss. The 4 nav cards carry `.no-popover` (suppresses the empty hover-preview).
 - The file-tree explorer is deliberately patched into "drawer at all widths" so the home page's click-to-open drawer works; custom.scss then restores the always-visible sidebar on non-home pages (`body:not(:has(.home-splash))`, min-width 801). **This patch is load-bearing — removing it breaks the home page.**

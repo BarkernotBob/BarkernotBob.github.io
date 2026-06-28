@@ -53,8 +53,8 @@ jobs:
         run: |
           git config user.name  "pool-reminders"
           git config user.email "actions@users.noreply.github.com"
-          git add db/feed-state.json db/rain.json 2>/dev/null || true
-          git commit -m "Update reminder feed history & rain log" || echo "nothing to commit"
+          git add db/feed-state.json db/weather.json db/rain.json 2>/dev/null || true
+          git commit -m "Update reminder feed history & weather log" || echo "nothing to commit"
           git push || echo "push skipped"
 
       - name: Publish the RSS feed

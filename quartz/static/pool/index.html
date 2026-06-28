@@ -106,6 +106,7 @@
   <button data-tab="today"    onclick="show('today')"><span class="ic">📅</span>Today<span id="todayBadge" class="badge hidden">0</span></button>
   <button data-tab="test"     onclick="show('test')"><span class="ic">🧪</span>Test</button>
   <button data-tab="schedule" onclick="show('schedule')"><span class="ic">✅</span>Schedule</button>
+  <button data-tab="weather"  onclick="show('weather')"><span class="ic">🌦️</span>Weather</button>
   <button data-tab="history"  onclick="show('history')"><span class="ic">📈</span>History</button>
   <button data-tab="settings" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
 </nav>
@@ -226,6 +227,46 @@ const LEVELS = ['very low','low','normal','high','very high']; // index 0..4, no
 function levelIdx(l){ return LEVELS.indexOf(l); }
 function severity(l){ const i=levelIdx(l); return i<0?null:Math.abs(i-2); } // 0 good,1,2
 
+/* ---- Chemicals catalog + which one each fix needs (for the inventory) ---- */
+const CHEMS = {
+  chlorine_granular: 'Granular chlorine (cal-hypo / dichlor)',
+  ph_up:             'pH Up (soda ash)',
+  ph_down:           'pH Down (dry acid)',
+  muriatic_acid:     'Muriatic acid',
+  alkalinity_up:     'Baking soda (sodium bicarbonate)',
+  cya:               'Stabilizer / conditioner (cyanuric acid)',
+  calcium:           'Calcium chloride (hardness increaser)',
+  phosphate_remover: 'Phosphate remover',
+};
+const CHEM_KEYS = Object.keys(CHEMS);
+// per reading + direction, acceptable chemicals (first = preferred). [] = no chemical fix.
+function neededChem(key, dir){
+  const map = {
+    fc:  { low:['chlorine_granular'],          high:[] },
+    ph:  { low:['ph_up'],                       high:['ph_down','muriatic_acid'] },
+    ta:  { low:['alkalinity_up'],               high:['muriatic_acid'] },
+    cya: { low:['cya'],                         high:[] },
+    ch:  { low:['calcium'],                      high:[] },
+    po4: { low:['phosphate_remover'],            high:['phosphate_remover'] },
+  };
+  return (map[key]||{})[dir] || [];
+}
+function chemsOnHand(){ return (D.config.chemicals && D.config.chemicals.onHand) || {}; }
+// Given a list of acceptable chemicals, decide whether the user can act now.
+function chemPlan(chemArr){
+  if(!chemArr || !chemArr.length) return null; // no chemical needed (e.g. drain/dilute/wait)
+  const have = chemsOnHand();
+  const owned = chemArr.find(c=>have[c]);
+  return owned ? {have:true, use:owned} : {have:false, buy:chemArr[0]};
+}
+function chemNoteHtml(chemArr){
+  const p = chemPlan(chemArr);
+  if(!p) return '';
+  return p.have
+    ? `<div class="small" style="color:#1d7a4d;margin-top:4px">✓ You have this — use your <b>${esc(CHEMS[p.use])}</b>.</div>`
+    : `<div class="small" style="color:#b26a00;margin-top:4px">🛒 Not on hand — add <b>${esc(CHEMS[p.buy])}</b> to your shopping list.</div>`;
+}
+
 /* Qualitative level -> recommended action, per reading. {tone, text} */
 function recForLevel(key, level){
   const sev = severity(level);
@@ -302,6 +343,9 @@ function defaultConfig(){
     email:'',
     season:{ open:'04-20', close:'10-05', peakStart:'06-01', peakEnd:'08-31' },
     targets: READINGS.reduce((o,r)=>{ o[r.key]={range:r.numRange}; return o; }, {}),
+    // what you keep on hand — recommendations prefer these; missing ones become a shopping note
+    chemicals:{ onHand:{ chlorine_granular:true, phosphate_remover:true } },
+    insights:[],   // AI-derived correlations you paste back in (Stage 2)
     tasks: defaultTasks(),
     opening: defaultOpening(),
     closing: defaultClosing(),
@@ -346,17 +390,19 @@ function defaultClosing(){
 /* =========================================================================
    DATA LOAD
    ========================================================================= */
-const FILES = { config:'db/config.json', tests:'db/tests.json', log:'db/log.json' };
+const FILES = { config:'db/config.json', tests:'db/tests.json', log:'db/log.json', swim:'db/swim.json' };
 let D = {};
 async function loadAll(){
   D.config = await loadJson(FILES.config, defaultConfig());
   D.tests  = await loadJson(FILES.tests, []);
   D.log    = await loadJson(FILES.log, []);
+  D.swim   = await loadJson(FILES.swim, []);
   // merge any newly-added default keys into an older config (non-destructive)
   const dc = defaultConfig();
   for(const k in dc){ if(D.config[k]===undefined) D.config[k]=dc[k]; }
   updateBadges();
 }
+function swimForDate(d){ return (D.swim||[]).filter(s=>s.date===d).reduce((a,s)=>a+(+s.hours||0),0); }
 function lastTest(){ return (D.tests||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0]||null; }
 
 /* ---- season helpers ---- */
@@ -397,48 +443,98 @@ function updateBadges(){
 }
 
 /* =========================================================================
-   RAINFALL  (Open-Meteo — free, no key, no AI). Fetched live in the browser
-   and shown alongside your readings so you can see how rain moves your levels.
+   WEATHER  (Open-Meteo — free, no key, no AI). Hourly rain, temperature &
+   humidity at your Settings location, shown alongside your readings so you can
+   see how weather moves your levels.
    ========================================================================= */
-let _rain=null, _rainAt=0;
-async function getRain(days=30){
-  if(_rain && (Date.now()-_rainAt < 30*60*1000)) return _rain;
+let _wx=null, _wxAt=0;
+async function getWeather(days=30){
+  if(_wx && (Date.now()-_wxAt < 30*60*1000)) return _wx;
   const g = D.config.geo || {lat:41.0793, lon:-85.1394};
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}`
-            + `&daily=precipitation_sum&precipitation_unit=inch&timezone=auto&past_days=${days}&forecast_days=1`;
+            + `&hourly=precipitation,temperature_2m,relative_humidity_2m`
+            + `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min`
+            + `&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&past_days=${days}&forecast_days=1`;
   const r = await fetch(url);
   if(!r.ok) throw new Error('weather '+r.status);
-  const j = await r.json(); const t=j.daily.time, p=j.daily.precipitation_sum;
-  _rain = t.map((d,i)=>({date:d, in: p[i]==null?0:Number(p[i])})); _rainAt=Date.now();
-  return _rain;
+  const j = await r.json();
+  const dt=j.daily.time, dp=j.daily.precipitation_sum, dmax=j.daily.temperature_2m_max, dmin=j.daily.temperature_2m_min;
+  const ht=j.hourly.time, hp=j.hourly.precipitation, htemp=j.hourly.temperature_2m, hrh=j.hourly.relative_humidity_2m;
+  // per-day humidity average from hourly
+  const rhByDay={};
+  ht.forEach((ts,i)=>{ const d=ts.slice(0,10); (rhByDay[d]=rhByDay[d]||[]).push(hrh[i]); });
+  const daily = dt.map((d,i)=>({ date:d, in: dp[i]==null?0:Number(dp[i]), tmax:dmax[i], tmin:dmin[i],
+    rhAvg: rhByDay[d]&&rhByDay[d].length ? Math.round(rhByDay[d].reduce((a,b)=>a+b,0)/rhByDay[d].length) : null }));
+  const hourly = ht.map((ts,i)=>({ time:ts, in: hp[i]==null?0:Number(hp[i]), temp:htemp[i], rh:hrh[i] }));
+  _wx = { daily, hourly }; _wxAt=Date.now();
+  return _wx;
 }
-function rainStats(days){
+function rainStats(daily){
   const t=todayISO();
-  const yest=(days.find(x=>x.date===addDaysISO(t,-1))||{}).in||0;
-  const last7=days.filter(x=>x.date>addDaysISO(t,-8)&&x.date<=t).reduce((s,x)=>s+(x.in||0),0);
-  const heavy=days.some(x=>x.date>=addDaysISO(t,-2)&&x.date<=t&&(x.in||0)>=0.5);
-  return {yest,last7,heavy};
+  const yest=(daily.find(x=>x.date===addDaysISO(t,-1))||{}).in||0;
+  const last7=daily.filter(x=>x.date>addDaysISO(t,-8)&&x.date<=t).reduce((s,x)=>s+(x.in||0),0);
+  const heavy=daily.some(x=>x.date>=addDaysISO(t,-2)&&x.date<=t&&(x.in||0)>=0.5);
+  const td=daily.find(x=>x.date===t)||{};
+  return {yest,last7,heavy, tmax:td.tmax, tmin:td.tmin, rhAvg:td.rhAvg};
 }
-function rainBars(days){
-  const W=320,H=70,pad=4, max=Math.max(0.25,...days.map(d=>d.in||0)), n=days.length, bw=(W-2*pad)/n;
-  const bars=days.map((d,i)=>{ const h=(d.in||0)/max*(H-2*pad), x=pad+i*bw;
-    return `<rect x="${x.toFixed(1)}" y="${(H-pad-h).toFixed(1)}" width="${Math.max(1,bw*0.8).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" fill="#0d6ea8" opacity="${(d.in||0)>0?0.85:0.12}"><title>${esc(d.date)}: ${(d.in||0).toFixed(2)} in</title></rect>`;}).join('');
-  const total=days.reduce((s,d)=>s+(d.in||0),0);
-  return `<svg class="spark" style="height:70px" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>
-    <div class="small muted">${esc(days[0].date)} → ${esc(days[days.length-1].date)} · ${total.toFixed(2)} in total · wettest day ${max.toFixed(2)} in</div>`;
+function barChart(items, valOf, fmt, color='#0d6ea8'){
+  const W=320,H=70,pad=4, vals=items.map(valOf), max=Math.max(0.001,...vals), n=items.length, bw=(W-2*pad)/n;
+  const bars=items.map((d,i)=>{ const v=valOf(d)||0, h=v/max*(H-2*pad), x=pad+i*bw;
+    return `<rect x="${x.toFixed(1)}" y="${(H-pad-h).toFixed(1)}" width="${Math.max(0.8,bw*0.8).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" fill="${color}" opacity="${v>0?0.85:0.12}"><title>${esc(fmt(d))}</title></rect>`;}).join('');
+  return `<svg class="spark" style="height:70px" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
+}
+function lineChart(items, valOf, fmt, color='#b3261e'){
+  const W=320,H=70,pad=6, vals=items.map(valOf).filter(v=>v!=null);
+  if(!vals.length) return ''; const min=Math.min(...vals), max=Math.max(...vals), n=items.length;
+  const X=i=> n<2?W/2 : pad+i*(W-2*pad)/(n-1);
+  const Y=v=> H-pad-(v-min)*(H-2*pad)/((max-min)||1);
+  let dpath='', started=false;
+  items.forEach((d,i)=>{ const v=valOf(d); if(v==null) return; dpath += (started?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1)+' '; started=true; });
+  const titles=items.map((d,i)=>{ const v=valOf(d); return v==null?'':`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="1.6" fill="${color}"><title>${esc(fmt(d))}</title></circle>`; }).join('');
+  return `<svg class="spark" style="height:70px" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${dpath}" fill="none" stroke="${color}" stroke-width="1.4"/>${titles}</svg>
+    <div class="small muted">${min.toFixed(0)}–${max.toFixed(0)}</div>`;
 }
 async function fillRainToday(){
   const box=$('#rainToday'); if(!box) return;
-  try{ const days=await getRain(8); const s=rainStats(days);
-    box.innerHTML=`<div class="kv"><span>Yesterday</span><b>${s.yest.toFixed(2)} in</b></div>
-      <div class="kv"><span>Last 7 days</span><b>${s.last7.toFixed(2)} in</b></div>
+  try{ const {daily}=await getWeather(8); const s=rainStats(daily);
+    box.innerHTML=`<div class="kv"><span>Rain — yesterday / last 7 days</span><b>${s.yest.toFixed(2)} / ${s.last7.toFixed(2)} in</b></div>
+      <div class="kv"><span>Today high / low</span><b>${s.tmax!=null?Math.round(s.tmax)+'°':'—'} / ${s.tmin!=null?Math.round(s.tmin)+'°':'—'}F</b></div>
+      <div class="kv"><span>Humidity (avg today)</span><b>${s.rhAvg!=null?s.rhAvg+'%':'—'}</b></div>
       ${s.heavy?`<div class="rec warn small" style="margin-top:8px">Notable recent rain can dilute chlorine and lower stabilizer (CYA), and wash in phosphates. Worth testing soon.</div>`:''}`;
-  }catch(e){ box.innerHTML=`<p class="muted small">Couldn't load rain data right now.</p>`; }
+  }catch(e){ box.innerHTML=`<p class="muted small">Couldn't load weather right now.</p>`; }
 }
 async function fillRainHistory(){
   const box=$('#rainHist'); if(!box) return;
-  try{ const days=(await getRain(30)).slice(-30); box.innerHTML=rainBars(days); }
-  catch(e){ box.innerHTML=`<p class="muted small">Couldn't load rain data right now.</p>`; }
+  try{ const daily=(await getWeather(30)).daily.slice(-30);
+    const total=daily.reduce((s,d)=>s+(d.in||0),0);
+    box.innerHTML = barChart(daily, d=>d.in, d=>`${d.date}: ${(d.in||0).toFixed(2)} in`)
+      + `<div class="small muted">${esc(daily[0].date)} → ${esc(daily[daily.length-1].date)} · ${total.toFixed(2)} in total</div>`;
+  }catch(e){ box.innerHTML=`<p class="muted small">Couldn't load weather right now.</p>`; }
+}
+function renderWeather(){
+  $('#main').innerHTML = `<div class="card"><h2>🌦️ Weather</h2>
+    <p class="small muted" style="margin:0 0 4px">Hourly rain, temperature & humidity at ${esc((D.config.pool&&D.config.pool.location)||'your location')}. Source: Open-Meteo.</p></div>
+    <div class="card"><h2>🌡️ Temperature — last 48 h (°F)</h2><div id="wxTemp"><p class="muted small">Loading…</p></div></div>
+    <div class="card"><h2>💧 Humidity — last 48 h (%)</h2><div id="wxRh"><p class="muted small">Loading…</p></div></div>
+    <div class="card"><h2>🌧️ Rain — last 48 h (in/hr)</h2><div id="wxRain"><p class="muted small">Loading…</p></div></div>
+    <div class="card"><h2>📅 Daily summary (30 days)</h2><div id="wxDaily"><p class="muted small">Loading…</p></div></div>`;
+  fillWeatherTab();
+}
+async function fillWeatherTab(){
+  try{
+    const {daily,hourly}=await getWeather(30);
+    const nowH = hourly.filter(h=>h.time<=todayISO()+'T23:59').slice(-48);
+    const fmtH=h=>h.time.slice(5,16).replace('T',' ');
+    const t=$('#wxTemp'); if(t) t.innerHTML = nowH.length?lineChart(nowH, h=>h.temp, h=>`${fmtH(h)}: ${Math.round(h.temp)}°F`, '#b3261e'):'<p class="muted small">No data.</p>';
+    const rh=$('#wxRh'); if(rh) rh.innerHTML = nowH.length?lineChart(nowH, h=>h.rh, h=>`${fmtH(h)}: ${h.rh}%`, '#1565c0'):'<p class="muted small">No data.</p>';
+    const rn=$('#wxRain'); if(rn) rn.innerHTML = nowH.length?barChart(nowH, h=>h.in, h=>`${fmtH(h)}: ${(h.in||0).toFixed(2)} in`):'<p class="muted small">No data.</p>';
+    const dd=$('#wxDaily'); if(dd){ const d30=daily.slice(-30);
+      dd.innerHTML = `<table><thead><tr><th>Date</th><th>Rain</th><th>Hi/Lo °F</th><th>RH%</th></tr></thead><tbody>${
+        d30.slice().reverse().slice(0,14).map(d=>`<tr><td>${esc(d.date.slice(5))}</td><td>${(d.in||0).toFixed(2)}"</td><td>${d.tmax!=null?Math.round(d.tmax):'–'}/${d.tmin!=null?Math.round(d.tmin):'–'}</td><td>${d.rhAvg!=null?d.rhAvg:'–'}</td></tr>`).join('')
+      }</tbody></table><p class="small muted" style="margin-top:6px">Most recent 14 days shown; 30 logged for the model.</p>`; }
+  }catch(e){
+    ['wxTemp','wxRh','wxRain','wxDaily'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML='<p class="muted small">Couldn\'t load weather right now.</p>'; });
+  }
 }
 
 /* =========================================================================
@@ -455,6 +551,7 @@ async function show(tab){
     if(tab==='today') renderToday();
     else if(tab==='test') renderTest();
     else if(tab==='schedule') renderSchedule();
+    else if(tab==='weather') renderWeather();
     else if(tab==='history') renderHistory();
     else if(tab==='settings') renderSettings();
   }catch(e){
@@ -511,7 +608,7 @@ async function ensureRepoReady(){
   // verify repo, then create any missing db files
   const r = await fetch(`${API}/repos/${LS.repo}`, {headers:ghHeaders()});
   if(!r.ok) throw new Error('Could not open '+LS.repo+' ('+r.status+'). Check the name in Settings.');
-  const seed = { 'db/config.json':defaultConfig(), 'db/tests.json':[], 'db/log.json':[] };
+  const seed = { 'db/config.json':defaultConfig(), 'db/tests.json':[], 'db/log.json':[], 'db/swim.json':[] };
   for(const path in seed){
     const c = await ghContents(path);
     if(c===null) await ghPut(path, b64encode(JSON.stringify(seed[path],null,2)), null, 'Initialize '+path);
@@ -589,14 +686,20 @@ function renderToday(){
     const recs = testRecs(lt);
     const actionable = recs.filter(r=>r.rec.tone!=='ok');
     html += actionable.length
-      ? actionable.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div></div>`).join('')
+      ? actionable.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div>${chemNoteHtml(r.chem)}</div>`).join('')
       : `<p class="ok small">Everything was in range on the last test. 👍</p>`;
+    const shop = shoppingList(lt);
+    if(shop.length) html += `<div class="rec warn" style="margin-top:8px"><b>🛒 Shopping list</b><div class="small">To fully act on this test, pick up: ${shop.map(c=>esc(CHEMS[c])).join(', ')}.</div></div>`;
     html += `<button class="link" onclick="show('test')">Log a new test</button>`;
   }
   html += `</div>`;
 
-  html += `<div class="card"><h2>🌧️ Recent rain</h2>
-    <p class="small muted" style="margin:0 0 6px">Rainfall at your pool's location. Heavy rain often moves your chemistry.</p>
+  html += `<div class="card"><div class="flex"><h2 style="margin:0">🏊 Swim time</h2><span class="small muted">today: ${swimForDate(todayISO())} h</span></div>
+    <p class="small muted" style="margin:6px 0 0">Log time in the pool — heavier use burns chlorine faster.</p>
+    <button class="sec" style="margin-top:8px" onclick="logSwim()">Log swim time</button></div>`;
+
+  html += `<div class="card"><h2>🌦️ Recent weather</h2>
+    <p class="small muted" style="margin:0 0 6px">Rain, temperature & humidity at your pool. <button class="link" onclick="show('weather')">See hourly →</button></p>
     <div id="rainToday"><p class="muted small">Loading…</p></div></div>`;
 
   $('#main').innerHTML = html;
@@ -608,10 +711,18 @@ function testRecs(t){
   return READINGS.map(r=>{
     const q = t.levels && t.levels[r.key];
     const n = t.nums && (t.nums[r.key]!=null && t.nums[r.key]!=='') ? Number(t.nums[r.key]) : null;
-    if(n!=null) return {key:r.key, name:r.name, display:n+(r.numUnit?(' '+r.numUnit):''), rec:recForNumber(r.key, n, D.config.pool.gallons)};
-    if(q) return {key:r.key, name:r.name, display:q, rec:recForLevel(r.key, q)};
-    return null;
+    let dir=null, rec, display;
+    if(n!=null){ const [lo,hi]=r.numRange; dir = n<lo?'low':(n>hi?'high':null); rec=recForNumber(r.key, n, D.config.pool.gallons); display=n+(r.numUnit?(' '+r.numUnit):''); }
+    else if(q){ const i=levelIdx(q); dir = i<2?'low':(i>2?'high':null); rec=recForLevel(r.key, q); display=q; }
+    else return null;
+    return {key:r.key, name:r.name, display, rec, dir, chem: dir?neededChem(r.key,dir):[]};
   }).filter(Boolean);
+}
+// chemicals you'd need to buy to act on the latest test's open items
+function shoppingList(t){
+  const out=[];
+  testRecs(t).forEach(r=>{ if(r.rec.tone!=='ok'){ const p=chemPlan(r.chem); if(p && !p.have && !out.includes(p.buy)) out.push(p.buy); } });
+  return out;
 }
 
 async function markTask(id){
@@ -625,6 +736,24 @@ async function markTask(id){
   }catch(e){ toast(String(e.message||e)); }
 }
 function render(tab){ show(tab); }
+
+/* ---- swim-time logging (feeds the modeling/AI export) ---- */
+async function logSwim(){
+  let date=todayISO(), hrs='';
+  const p=modal(`<h2>🏊 Log swim time</h2>
+    <label>Date</label><input id="sw_date" type="date" value="${todayISO()}" max="${todayISO()}"/>
+    <label>Hours in the pool</label><input id="sw_hrs" type="number" step="0.25" min="0" inputmode="decimal" placeholder="e.g. 2"/>
+    <p class="small muted">Tracked so the model can relate swimmer load to how fast chlorine drops.</p>
+    <div class="row" style="margin-top:12px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
+  const di=document.getElementById('sw_date'); if(di) di.addEventListener('input',e=>{date=e.target.value;});
+  const hi=document.getElementById('sw_hrs');  if(hi) hi.addEventListener('input',e=>{hrs=e.target.value;});
+  const v=await p; if(v!=='save') return;
+  const h=parseFloat(hrs); if(isNaN(h)||h<=0){ toast('Enter the hours swum'); return; }
+  D.swim.push({id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''});
+  D.log.push({id:uid('l'), at:nowISO(), kind:'swim', title:`Swam ${h} h`, by:LS.login||LS.device||''});
+  try{ await saveJson(FILES.swim, D.swim, `Log swim ${date} ${h}h`); await saveJson(FILES.log, D.log, 'Log swim'); toast('Logged ✓'); render(CUR); }
+  catch(e){ toast(String(e.message||e)); }
+}
 
 /* =========================================================================
    TEST  (qualitative by default, numeric optional)
@@ -693,7 +822,7 @@ async function saveTest(){
 function recHtml(t){
   const recs=testRecs(t);
   if(!recs.length) return '<p class="muted small">No readings recorded.</p>';
-  return recs.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div></div>`).join('');
+  return recs.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div>${r.rec.tone!=='ok'?chemNoteHtml(r.chem):''}</div>`).join('');
 }
 function showRecModal(t){
   modal(`<h2>What to do 🧪</h2><p class="small muted" style="margin:0 0 8px">${fmtDate(t.date)} test</p>
@@ -807,6 +936,15 @@ function renderHistory(){
     <p class="small muted" style="margin:0 0 6px">Compare with your readings above to see how rain moves your levels.</p>
     <div id="rainHist"><p class="muted small">Loading…</p></div></div>`;
 
+  // swim hours (last 30 days, by day)
+  const swimDays=[]; for(let i=29;i>=0;i--){ const d=addDaysISO(todayISO(),-i); swimDays.push({date:d, hours:swimForDate(d)}); }
+  const swimTotal=swimDays.reduce((s,d)=>s+d.hours,0);
+  html += `<div class="card"><h2>🏊 Swim hours (30 days)</h2>`;
+  html += swimTotal>0
+    ? barChart(swimDays, d=>d.hours, d=>`${d.date}: ${d.hours} h`, '#1d7a4d') + `<div class="small muted">${swimTotal.toFixed(1)} h total · relate to how fast chlorine drops</div>`
+    : `<p class="muted small">No swim time logged yet. Log it from the Today tab.</p>`;
+  html += `</div>`;
+
   // recent activity
   const log=(D.log||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,40);
   html += `<div class="card"><h2>🗓 Recent activity</h2>`;
@@ -876,6 +1014,13 @@ function renderSettings(){
     <button style="margin-top:10px" onclick="saveTargets()">Save targets</button>
   </div>
   <div class="card">
+    <h2>🧪 Chemicals on hand</h2>
+    <p class="small muted">Check what you keep stocked. Recommendations prefer these; anything missing shows up as a “shopping list” note instead of telling you to dose something you don't have.</p>
+    ${CHEM_KEYS.map(k=>`<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:6px 0">
+      <input type="checkbox" class="chem" data-key="${k}" style="width:auto" ${((c.chemicals&&c.chemicals.onHand&&c.chemicals.onHand[k])?'checked':'')}/> ${esc(CHEMS[k])}</label>`).join('')}
+    <button style="margin-top:10px" onclick="saveChemicals()">Save chemicals</button>
+  </div>
+  <div class="card">
     <h2>This device</h2>
     <div class="kv"><span>Signed in as</span><b>${esc(LS.login||'—')}</b></div>
     <div class="kv"><span>Method</span><b>${esc(LS.method||'—')}</b></div>
@@ -891,7 +1036,7 @@ async function savePool(){
   D.config.pool.location=$('#s_loc').value.trim();
   const lat=parseFloat($('#s_lat').value), lon=parseFloat($('#s_lon').value);
   D.config.geo={ lat: isNaN(lat)?41.0793:lat, lon: isNaN(lon)?-85.1394:lon };
-  _rain=null; // location may have changed — refetch rain next time
+  _wx=null; // location may have changed — refetch weather next time
   await saveJson(FILES.config, D.config, 'Update pool settings'); toast('Saved');
 }
 async function saveEmail(){ D.config.email=$('#s_email').value.trim(); await saveJson(FILES.config, D.config, 'Update reminder email'); toast('Email saved'); }
@@ -905,6 +1050,11 @@ async function saveTargets(){
   // keep the live READINGS ranges in sync for this session
   READINGS.forEach(r=>{ r.numRange=D.config.targets[r.key].range; });
   await saveJson(FILES.config, D.config, 'Update target ranges'); toast('Targets saved');
+}
+async function saveChemicals(){
+  const onHand={}; document.querySelectorAll('.chem').forEach(i=>{ if(i.checked) onHand[i.dataset.key]=true; });
+  D.config.chemicals={ onHand };
+  await saveJson(FILES.config, D.config, 'Update chemicals on hand'); toast('Chemicals saved');
 }
 async function saveDevice(){ LS.device=$('#s_device').value.trim(); LS.repo=$('#s_repo').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
 async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('pl_token'); localStorage.removeItem('pl_login'); localStorage.removeItem('pl_method'); toast('Signed out'); renderSetup(); } }

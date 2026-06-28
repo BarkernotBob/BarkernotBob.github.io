@@ -126,16 +126,19 @@ the "one subscription per app, all in one place" setup you wanted.
 - The reminder never marks a task done — you still do that in the app.
 - Email goes to `config.email` (set in Settings), falling back to `MAIL_USERNAME`.
 
-## Rainfall (built into the report)
-Every run fetches your local daily rainfall from **Open-Meteo** (free, no API key,
-no AI) using the latitude/longitude in **Settings → Pool**. It:
-- adds a **🌧️ Rain** line to the email (yesterday + last 7 days),
+## Weather (built into the report)
+Every run fetches your local daily **rain, temperature, and humidity** from
+**Open-Meteo** (free, no API key, no AI) using the latitude/longitude in
+**Settings → Pool**. It:
+- adds a **🌦️ Weather** line to the email (rain yesterday + last 7 days, today's
+  high/low and humidity),
 - raises a **heavy-rain alert** (email + feed item) when a day in the last two
   hits **≥ 0.5 in** — a nudge to test, since rain dilutes chlorine/CYA and washes
   in phosphates, and
-- logs daily totals to **`db/rain.json`** so the history builds up over time.
+- logs daily summaries to **`db/weather.json`** so history builds up for modeling.
 
-The app's **📅 Today** and **📈 History** tabs show the same rainfall live.
+The app's **🌦️ Weather** tab shows hourly temperature, humidity and rain; **📅
+Today** and **📈 History** show summaries live.
 
 ## If you set this up before the rain update
 The workflow file changed (feed now publishes *before* email, and rain is logged).

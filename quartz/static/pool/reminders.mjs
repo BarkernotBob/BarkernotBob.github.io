@@ -161,32 +161,38 @@ const adv  = testAdvice(lt);
 const today = todayISO();
 const year  = today.slice(0,4);
 
-/* ---------- daily rainfall (Open-Meteo, no key, no AI) ---------- */
-async function getRainData(){
+/* ---------- daily weather: rain, temperature, humidity (Open-Meteo, no key, no AI) ---------- */
+async function getWeatherData(){
   const g = (config.geo && config.geo.lat!=null && config.geo.lon!=null) ? config.geo : {lat:41.0793, lon:-85.1394};
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}`
-            + `&daily=precipitation_sum&precipitation_unit=inch&timezone=auto&past_days=10&forecast_days=1`;
+            + `&hourly=relative_humidity_2m`
+            + `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min`
+            + `&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&past_days=10&forecast_days=1`;
   try{
     const r = await fetch(url);
-    if(!r.ok){ console.error('[rain] HTTP '+r.status); return null; }
+    if(!r.ok){ console.error('[weather] HTTP '+r.status); return null; }
     const j = await r.json();
-    const t=j.daily.time, p=j.daily.precipitation_sum;
-    return t.map((d,i)=>({date:d, in: p[i]==null?0:Number(p[i])}));
-  }catch(e){ console.error('[rain] fetch failed:', e.message); return null; }
+    const dt=j.daily.time, dp=j.daily.precipitation_sum, dmax=j.daily.temperature_2m_max, dmin=j.daily.temperature_2m_min;
+    const rhByDay={};
+    (j.hourly?.time||[]).forEach((ts,i)=>{ const d=ts.slice(0,10); (rhByDay[d]=rhByDay[d]||[]).push(j.hourly.relative_humidity_2m[i]); });
+    return dt.map((d,i)=>({ date:d, in: dp[i]==null?0:Number(dp[i]), tmax:dmax[i], tmin:dmin[i],
+      rhAvg: rhByDay[d]&&rhByDay[d].length ? Math.round(rhByDay[d].reduce((a,b)=>a+b,0)/rhByDay[d].length) : null }));
+  }catch(e){ console.error('[weather] fetch failed:', e.message); return null; }
 }
-const rainDays = await getRainData();
-let rainLog = readJson('db/rain.json', []); if(!Array.isArray(rainLog)) rainLog=[];
-let rainChanged=false, rainSummary=null, rainAlert=null;
-if(rainDays){
-  const byDate = new Map(rainLog.map(x=>[x.date,x]));
-  for(const d of rainDays){ const prev=byDate.get(d.date); if(!prev || prev.in!==d.in){ byDate.set(d.date,{date:d.date,in:d.in}); rainChanged=true; } }
-  rainLog = [...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-120);
+const wxDays = await getWeatherData();
+let wxLog = readJson('db/weather.json', []); if(!Array.isArray(wxLog)) wxLog=[];
+let wxChanged=false, rainSummary=null, rainAlert=null;
+if(wxDays){
+  const byDate = new Map(wxLog.map(x=>[x.date,x]));
+  for(const d of wxDays){ const prev=byDate.get(d.date); if(!prev || prev.in!==d.in || prev.tmax!==d.tmax || prev.rhAvg!==d.rhAvg){ byDate.set(d.date, d); wxChanged=true; } }
+  wxLog = [...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-120);
   const yIso = addDaysISO(today,-1);
-  const yest = (rainDays.find(x=>x.date===yIso)||{}).in || 0;
-  const last7 = rainDays.filter(x=>x.date>addDaysISO(today,-8) && x.date<=today).reduce((s,x)=>s+(x.in||0),0);
-  rainSummary = { yest, last7 };
+  const yRow = wxDays.find(x=>x.date===yIso) || {};
+  const tRow = wxDays.find(x=>x.date===today) || {};
+  const last7 = wxDays.filter(x=>x.date>addDaysISO(today,-8) && x.date<=today).reduce((s,x)=>s+(x.in||0),0);
+  rainSummary = { yest: yRow.in||0, last7, tmax: tRow.tmax, tmin: tRow.tmin, rhAvg: tRow.rhAvg };
   // a notable wet day in the last 2 days is worth flagging (dilutes chlorine/CYA, washes in phosphates)
-  const recent = rainDays.filter(x=>x.date>=addDaysISO(today,-2) && x.date<=today);
+  const recent = wxDays.filter(x=>x.date>=addDaysISO(today,-2) && x.date<=today);
   const peak = recent.reduce((m,x)=>Math.max(m, x.in||0), 0);
   const peakDay = recent.find(x=>(x.in||0)===peak);
   if(peak>=0.5 && peakDay) rainAlert = { date:peakDay.date, in:peak };
@@ -290,8 +296,10 @@ function emailHtml(){
     }
   }
   if(rainSummary){
-    rows.push(`<h3 style="margin:18px 0 6px">🌧️ Rain</h3>`);
-    rows.push(`<p style="margin:0;color:#333">Yesterday: <b>${rainSummary.yest.toFixed(2)} in</b> · Last 7 days: <b>${rainSummary.last7.toFixed(2)} in</b>${rainAlert?` <span style="color:#b26a00">— recent heavy rain may have thrown off your balance; test soon.</span>`:''}</p>`);
+    rows.push(`<h3 style="margin:18px 0 6px">🌦️ Weather</h3>`);
+    const temp = rainSummary.tmax!=null ? `${Math.round(rainSummary.tmax)}°/${rainSummary.tmin!=null?Math.round(rainSummary.tmin):'–'}°F` : '—';
+    const rh = rainSummary.rhAvg!=null ? `${rainSummary.rhAvg}%` : '—';
+    rows.push(`<p style="margin:0;color:#333">Rain — yesterday <b>${rainSummary.yest.toFixed(2)} in</b>, last 7 days <b>${rainSummary.last7.toFixed(2)} in</b>.<br>Today high/low <b>${temp}</b> · humidity <b>${rh}</b>.${rainAlert?` <span style="color:#b26a00">— recent heavy rain may have thrown off your balance; test soon.</span>`:''}</p>`);
   }
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:560px;margin:0 auto;color:#222">
     <h2 style="margin:0 0 2px">🏊 Pool Care — ${esc(fmtDate(today))}</h2>
@@ -315,7 +323,7 @@ writeFileSync('out/pool.xml', rss);
 writeFileSync('out/email_subject.txt', subject);
 writeFileSync('out/email_body.html', emailHtml());
 if(stateChanged) writeFileSync('db/feed-state.json', JSON.stringify(state,null,2)+'\n');
-if(rainChanged)  writeFileSync('db/rain.json', JSON.stringify(rainLog,null,2)+'\n');
+if(wxChanged)    writeFileSync('db/weather.json', JSON.stringify(wxLog,null,2)+'\n');
 
 const to = (config.email && config.email.trim()) || process.env.MAIL_FALLBACK || '';
 
@@ -330,4 +338,4 @@ setOutput('subject', subject);
 setOutput('body', emailHtml());
 setOutput('state_changed', stateChanged ? 'true' : 'false');
 
-console.error(`[reminders] today=${today} due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} rain=${rainSummary?('y'+rainSummary.yest.toFixed(2)+'/7d'+rainSummary.last7.toFixed(2)+(rainAlert?'/ALERT':'')):'n/a'} hasDue=${hasDue} to=${to||'(none)'}`);
+console.error(`[reminders] today=${today} due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} wx=${rainSummary?('rain'+rainSummary.last7.toFixed(2)+'/temp'+(rainSummary.tmax!=null?Math.round(rainSummary.tmax):'?')+'/rh'+(rainSummary.rhAvg??'?')+(rainAlert?'/ALERT':'')):'n/a'} hasDue=${hasDue} to=${to||'(none)'}`);

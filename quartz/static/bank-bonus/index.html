@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Bank Bonus Tracker</title>
   <style>
     /* =====================================================================
@@ -37,9 +37,13 @@
       --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow-md: 0 10px 28px rgba(0,0,0,.5);
     }
     * { box-sizing: border-box; }
+    /* Stop accidental mobile zoom: no double-tap zoom, no text inflation. (iOS also
+       won't focus-zoom because inputs are >=16px below.) */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       margin: 0; padding: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
-      letter-spacing: -0.006em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+      letter-spacing: -0.006em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      touch-action: manipulation; }
     #main { max-width: 940px; margin: 0 auto; padding: 24px 16px 96px; }
     :focus-visible { outline: none; }
 
@@ -100,7 +104,12 @@
     button.danger:hover { background: var(--danger-hover); }
     button.small { min-height: 32px; padding: 0 11px; font-size: 12.5px; border-radius: 7px; }
 
-    input, select, textarea { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; font-family: inherit; background: var(--surface); color: var(--text); min-height: 42px; transition: border-color .12s, box-shadow .12s; }
+    /* 16px keeps iOS Safari from auto-zooming when a field is focused. */
+    input, select, textarea { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 16px; font-family: inherit; background: var(--surface); color: var(--text); min-height: 42px; transition: border-color .12s, box-shadow .12s; }
+    /* Money fields: a fixed "$" sits inside the box; the input pads left to clear it. */
+    .money-field { position: relative; display: flex; align-items: center; }
+    .money-field > .money-prefix { position: absolute; left: 12px; color: var(--muted); font-size: 16px; pointer-events: none; }
+    .money-field > input { width: 100%; padding-left: 26px; }
     textarea { min-height: 0; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     ::placeholder { color: var(--faint); }
@@ -159,6 +168,11 @@
     .cal-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
     .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
     .cal-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+    .cal-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .cal-arrow { min-width: 44px; padding: 0 12px; font-size: 20px; line-height: 1; }
+    .cal-month { flex: 1; text-align: center; font-weight: 650; font-size: 16px; letter-spacing: -0.01em; }
+    .cal-month-sub { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+    .cal-today-btn { font-size: 13px; }
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
     .cal-dow { font-size: 11px; color: var(--faint); text-align: center; padding: 4px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
     .cal-cell { min-height: 60px; border: 1px solid var(--border); border-radius: 8px; padding: 5px; font-size: 12px; background: var(--surface); }
@@ -255,7 +269,23 @@ const el = (tag, attrs={}, html='') => {
   if(html !== '') e.innerHTML = html;
   return e;
 };
-const money = n => (n == null || isNaN(n)) ? '—' : '$' + Number(n).toFixed(2);
+const money = n => (n == null || isNaN(n)) ? '—' : '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+// Money INPUT helpers: format with thousands separators (no forced decimals) for
+// display in a text field, and parse back to a number tolerating "$" and commas.
+function parseMoney(str){
+  if(str == null) return null;
+  const c = String(str).replace(/[^0-9.\-]/g, '');
+  if(c === '' || c === '-' || c === '.') return null;
+  const n = parseFloat(c);
+  return isNaN(n) ? null : n;
+}
+function fmtMoneyInput(v){
+  if(v == null || v === '') return '';
+  const n = Number(v);
+  if(isNaN(n)) return '';
+  return n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+}
+function reformatMoney(elm){ const n = parseMoney(elm.value); elm.value = (n == null ? '' : fmtMoneyInput(n)); }
 const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // "Today" in the user's configured timezone (not the browser/UTC day), so
 // date-based alerts don't roll over a day early/late.
@@ -808,8 +838,8 @@ async function addAccount(defaultStatus='planned'){
       <div class="row-item"><div class="label">Status</div><select id="na_status">${statusOpts}</select></div>
     </div>
     <div class="row">
-      <div class="row-item"><div class="label">Bonus ($)</div><input type="number" id="na_bonus" placeholder="0"></div>
-      <div class="row-item"><div class="label">DD required ($)</div><input type="number" id="na_dd" placeholder="0"></div>
+      <div class="row-item"><div class="label">Bonus</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="na_bonus" placeholder="0" onblur="reformatMoney(this)"></div></div>
+      <div class="row-item"><div class="label">DD required</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="na_dd" placeholder="0" onblur="reformatMoney(this)"></div></div>
     </div>
     <div class="row" style="justify-content:flex-end"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Add</button></div>`);
   if(r !== 'save') return;
@@ -818,8 +848,8 @@ async function addAccount(defaultStatus='planned'){
   const status = $('#na_status').value;
   const acc = {
     id: uid('a'), offerId: null, institution: inst, person: $('#na_person').value, status,
-    bonus: parseFloat($('#na_bonus').value) || 0, referralValue: null,
-    directDepositTotal: parseFloat($('#na_dd').value) || 0, requiresMultipleDeposits: false,
+    bonus: parseMoney($('#na_bonus').value) || 0, referralValue: null,
+    directDepositTotal: parseMoney($('#na_dd').value) || 0, requiresMultipleDeposits: false,
     nbDeposits: null, minBalance: null, minBalDays: null, additionalRequirements: '',
     daysToCompleteReq: 90, bonusTiming: '', avoidFees: '', churnable: false, monthsTillReopen: null, notes: '',
     dates: { plannedOpen: status==='planned'?todayISO():null, opened: status==='open'?todayISO():null,
@@ -881,18 +911,20 @@ async function addOffer(){
   const result = await modal(`
     <p><strong>Add a new offer to backlog</strong></p>
     <input type="text" id="off_inst" placeholder="Institution name" autofocus>
-    <input type="number" id="off_bonus" placeholder="Bonus ($)">
-    <input type="number" id="off_dd" placeholder="DD Required ($)">
     <div class="row">
-      <button data-mcancel>Cancel</button>
+      <div class="row-item"><div class="label">Bonus</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="off_bonus" placeholder="0" onblur="reformatMoney(this)"></div></div>
+      <div class="row-item"><div class="label">DD required</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="off_dd" placeholder="0" onblur="reformatMoney(this)"></div></div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="sec" data-mcancel>Cancel</button>
       <button data-mval="save">Add</button>
     </div>
   `);
 
   if(result === 'save') {
     const inst = $('#off_inst').value.trim();
-    const bonus = parseFloat($('#off_bonus').value) || 0;
-    const dd = parseFloat($('#off_dd').value) || 0;
+    const bonus = parseMoney($('#off_bonus').value) || 0;
+    const dd = parseMoney($('#off_dd').value) || 0;
 
     if(!inst) { toast('Institution name required'); return; }
 
@@ -1021,7 +1053,6 @@ function calMonthGrid(ym, allocByDate, cap, today){
   const [y, m] = ym.split('-').map(Number);
   const startDow = new Date(Date.UTC(y, m-1, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const monthName = new Date(Date.UTC(y, m-1, 1)).toLocaleString('en-US', {month:'long', year:'numeric', timeZone:'UTC'});
   const dows = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
   let cells = '';
   for(let i=0;i<startDow;i++) cells += '<div class="cal-cell cal-empty"></div>';
@@ -1039,12 +1070,26 @@ function calMonthGrid(ym, allocByDate, cap, today){
     }
     cells += `<div class="${cls}">${inner}</div>`;
   }
-  return `<div class="card"><div class="card-header">${esc(monthName)}</div>
-    <div class="cal-grid">${dows}${cells}</div></div>`;
+  return `<div class="cal-grid">${dows}${cells}</div>`;
 }
+
+// Which month the Calendar is showing (YYYY-MM). Defaults to the current month;
+// the ‹ › buttons step back/forward and "Today" jumps home.
+let calMonth = null;
+function shiftMonth(ym, delta){
+  let [y, m] = ym.split('-').map(Number);
+  m += delta;
+  while(m < 1){ m += 12; y--; }
+  while(m > 12){ m -= 12; y++; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+function calNav(delta){ calMonth = shiftMonth(calMonth || todayISO().slice(0,7), delta); render_calendar(); }
+function calToday(){ calMonth = todayISO().slice(0,7); render_calendar(); }
 
 function render_calendar(){
   const section = $('#section-calendar');
+  const today = todayISO();
+  if(!calMonth) calMonth = today.slice(0,7);   // open on the current month
 
   // Sum each payroll date's allocation across all accounts.
   const allocByDate = {};
@@ -1052,34 +1097,40 @@ function render_calendar(){
     allocByDate[dd.payrollDate] = (allocByDate[dd.payrollDate] || 0) + dd.amount;
   }));
   const dates = Object.keys(allocByDate).sort();
-
-  if(dates.length === 0) {
-    section.innerHTML = '<div class="empty">No DD planned yet.<br><span style="font-size:13px">Open an account → "Auto-suggest" in its Direct Deposit Plan to fill the schedule.</span></div>';
-    return;
-  }
-
   const cap = (config.paycheck || {}).amount || 1930;
-  const today = todayISO();
   const totalPlanned = dates.reduce((s,d) => s + allocByDate[d], 0);
   const upcoming = dates.filter(d => d >= today).length;
   const overCount = dates.filter(d => allocByDate[d] > cap).length;
 
+  const [yy, mm] = calMonth.split('-').map(Number);
+  const monthName = new Date(Date.UTC(yy, mm-1, 1)).toLocaleString('en-US', {month:'long', year:'numeric', timeZone:'UTC'});
+  const monthTotal = dates.filter(d => d.slice(0,7) === calMonth).reduce((s,d) => s + allocByDate[d], 0);
+  const isThisMonth = calMonth === today.slice(0,7);
+
   let html = `<div class="summary-strip">
-      <div class="stat"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} paycheck(s)</div></div>
-      <div class="stat"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">paycheck(s) ahead</div></div>
+      <div class="stat"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} payday(s)</div></div>
+      <div class="stat"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">payday(s) ahead</div></div>
       <div class="stat"><div class="stat-label">Over-allocated</div><div class="stat-value">${overCount}</div><div class="stat-sub">need a fix</div></div>
     </div>
     <div class="cal-legend">
       <span><i style="background:var(--open-bg)"></i> Full</span>
-      <span><i style="background:rgba(154,103,0,.18)"></i> Partial</span>
-      <span><i style="background:rgba(207,48,48,.18)"></i> Over</span>
+      <span><i style="background:var(--warn-soft)"></i> Partial</span>
+      <span><i style="background:rgba(210,59,59,.18)"></i> Over</span>
       <span><i style="outline:2px solid var(--accent);outline-offset:-2px"></i> Today</span>
+    </div>
+    <div class="card">
+      <div class="cal-nav">
+        <button class="sec cal-arrow" onclick="calNav(-1)" aria-label="Previous month">‹</button>
+        <div class="cal-month">${esc(monthName)}${monthTotal>0?`<span class="cal-month-sub">${money(monthTotal)} planned</span>`:''}</div>
+        <button class="sec cal-arrow" onclick="calNav(1)" aria-label="Next month">›</button>
+        ${isThisMonth ? '' : '<button class="sec cal-today-btn" onclick="calToday()">Today</button>'}
+      </div>
+      ${calMonthGrid(calMonth, allocByDate, cap, today)}
     </div>`;
 
-  // One grid per month that has at least one payroll date.
-  const months = Array.from(new Set(dates.map(d => d.slice(0,7)))).sort();
-  months.forEach(ym => { html += calMonthGrid(ym, allocByDate, cap, today); });
-
+  if(totalPlanned === 0){
+    html += '<div class="empty" style="padding:24px">No direct deposits planned yet.<br><span style="font-size:13px">Open an account → ⚡ Auto-suggest in its Direct Deposit Plan, or add paydays by hand.</span></div>';
+  }
   section.innerHTML = html;
 }
 
@@ -1200,34 +1251,35 @@ function render_settings(){
   </div>`;
 
   html += `<div class="card">
-    <div class="card-header">Paycheck Settings</div>
+    <div class="card-header">Paycheck schedule</div>
+    <p style="margin:-8px 0 14px;color:var(--muted);font-size:13px">Only used by <b>⚡ Auto-suggest</b> to project your every-few-weeks paydays when planning direct deposits. You can leave these as-is if you add deposit dates by hand.</p>
     <div class="row">
       <div class="row-item">
-        <div class="label">Amount ($)</div>
-        <input type="number" id="set_amount" value="${config.paycheck?.amount || 1930}" step="0.01">
+        <div class="label">Paycheck amount</div>
+        <div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="set_amount" value="${fmtMoneyInput(config.paycheck?.amount ?? 1930)}" onblur="reformatMoney(this)"></div>
       </div>
       <div class="row-item">
-        <div class="label">Interval (days)</div>
-        <input type="number" id="set_interval" value="${config.paycheck?.intervalDays || 14}">
+        <div class="label">Paid every (days)</div>
+        <input type="number" id="set_interval" inputmode="numeric" value="${config.paycheck?.intervalDays || 14}">
       </div>
     </div>
     <div class="row">
       <div class="row-item">
-        <div class="label">First Date (YYYY-MM-DD)</div>
-        <input type="text" id="set_firstdate" value="${config.paycheck?.firstDate || '2024-12-27'}">
+        <div class="label">First payday</div>
+        <input type="date" id="set_firstdate" value="${esc(config.paycheck?.firstDate || '2024-12-27')}">
       </div>
       <div class="row-item">
-        <div class="label">DD Clear Days</div>
-        <input type="number" id="set_ddclear" value="${config.paycheck?.ddClearDays || 21}">
+        <div class="label">Days for DD to clear</div>
+        <input type="number" id="set_ddclear" inputmode="numeric" value="${config.paycheck?.ddClearDays || 21}">
       </div>
     </div>
     <div class="row">
       <div class="row-item">
-        <div class="label">Notify Email</div>
+        <div class="label">Notify email</div>
         <input type="email" id="set_email" value="${esc(notifyEmail)}">
       </div>
     </div>
-    <button onclick="savePaycheckSettings()">Save Paycheck Settings</button>
+    <button onclick="savePaycheckSettings()">Save</button>
   </div>`;
 
   section.innerHTML = html;
@@ -1258,7 +1310,7 @@ async function saveSettings(){
 }
 
 async function savePaycheckSettings(){
-  const amount = parseFloat($('#set_amount').value) || 1930;
+  const amount = parseMoney($('#set_amount').value) || 1930;
   const interval = parseInt($('#set_interval').value) || 14;
   const firstDate = $('#set_firstdate').value.trim();
   const ddClear = parseInt($('#set_ddclear').value) || 21;
@@ -1291,7 +1343,7 @@ function captureFields(){
   if(!a) return;
   const gv = id => { const e = $('#' + id); return e ? e.value : undefined; };
   const gs = id => { const v = gv(id); return v === undefined ? undefined : v.trim(); };
-  const gn = id => { const v = gv(id); if(v === undefined || v.trim() === '') return null; const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const gn = id => { const v = gv(id); if(v === undefined) return undefined; const c = String(v).replace(/[^0-9.\-]/g, ''); if(c === '' || c === '-' || c === '.') return null; const n = parseFloat(c); return isNaN(n) ? null : n; };
   const gd = id => { const v = gv(id); return v === undefined ? undefined : (v.trim() === '' ? null : v.trim()); };
 
   if(gs('d_institution') !== undefined) a.institution = gs('d_institution');
@@ -1340,6 +1392,8 @@ function render_detail(){
     `<div class="row-item"><div class="label">${label}</div><input type="text" id="${id}" value="${esc(val == null ? '' : val)}"></div>`;
   const dat = (id, label, val) =>
     `<div class="row-item"><div class="label">${label}</div><input type="date" id="${id}" value="${esc(val || '')}"></div>`;
+  const mon = (id, label, val) =>
+    `<div class="row-item"><div class="label">${label}</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="${id}" value="${fmtMoneyInput(val)}" onblur="reformatMoney(this)"></div></div>`;
 
   let html = `
     <div class="card">
@@ -1348,8 +1402,8 @@ function render_detail(){
         <div class="row-item"><div class="label">Person</div><select id="d_person">${peopleOpts}</select></div>
         <div class="row-item"><div class="label">Status</div><select id="d_status">${statusOpts}</select></div>
       </div>
-      <div class="row">${num('d_bonus','Bonus ($)', a.bonus)}${num('d_referralValue','Referral ($)', a.referralValue)}${num('d_directDepositTotal','DD Total ($)', a.directDepositTotal)}</div>
-      <div class="row">${num('d_nbDeposits','# Deposits', a.nbDeposits)}${num('d_minBalance','Min Balance ($)', a.minBalance)}${num('d_minBalDays','Min Bal Days', a.minBalDays)}</div>
+      <div class="row">${mon('d_bonus','Bonus', a.bonus)}${mon('d_referralValue','Referral', a.referralValue)}${mon('d_directDepositTotal','DD Total', a.directDepositTotal)}</div>
+      <div class="row">${num('d_nbDeposits','# Deposits', a.nbDeposits)}${mon('d_minBalance','Min Balance', a.minBalance)}${num('d_minBalDays','Min Bal Days', a.minBalDays)}</div>
       <div class="row">${num('d_daysToCompleteReq','Days to Complete Req', a.daysToCompleteReq)}${num('d_monthsTillReopen','Months till Reopen', a.monthsTillReopen)}${txt('d_bonusTiming','Bonus Timing', a.bonusTiming)}</div>
       <div class="row">${txt('d_avoidFees','Avoid Fees', a.avoidFees)}</div>
       <div class="row"><div class="row-item"><div class="label">Additional Requirements</div><textarea id="d_additionalRequirements" rows="2" style="width:100%">${esc(a.additionalRequirements || '')}</textarea></div></div>
@@ -1409,7 +1463,7 @@ function render_detail(){
     <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Auto-suggest fills paychecks from the planned/open date until the DD total is met, without over-filling any paycheck. Adjust by hand for split-deposit rules.</div>
     <div class="row" style="margin-top:8px">
       <input type="date" id="d_new_dd_date">
-      <input type="number" id="d_new_dd_amount" placeholder="Amount ($)" step="0.01" style="flex:1">
+      <div class="money-field" style="flex:1;min-width:120px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="d_new_dd_amount" placeholder="Amount" onblur="reformatMoney(this)"></div>
       <button onclick="addDD()">Add</button>
     </div></div>`;
 
@@ -1492,8 +1546,8 @@ async function addDD(){
   const a = accounts.find(x => x.id === editingId);
   if(!a) return;
   const payrollDate = $('#d_new_dd_date').value;
-  const amount = parseFloat($('#d_new_dd_amount').value);
-  if(!payrollDate || isNaN(amount)) { toast('DD entry needs a date and amount'); return; }
+  const amount = parseMoney($('#d_new_dd_amount').value);
+  if(!payrollDate || amount == null) { toast('DD entry needs a date and amount'); return; }
   a.ddPlan.push({ payrollDate, amount });
   a.ddPlan.sort((x, y) => x.payrollDate.localeCompare(y.payrollDate));
   await persistDetail('Add DD entry');

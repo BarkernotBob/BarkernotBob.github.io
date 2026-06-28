@@ -586,33 +586,7 @@ function copyModal(title, text){
     .then(async v=>{ if(v==='copy'){ try{ await navigator.clipboard.writeText(text); toast('Copied ✓'); }catch(e){ toast('Select the text above and copy manually'); } } });
 }
 
-/* ---- export 1: maintenance notes to verify with the previous owner ---- */
-function maintenanceText(){
-  const c=D.config, p=c.pool, L=[];
-  L.push(`POOL MAINTENANCE NOTES — ${p.name} (${p.location})`);
-  L.push(`Volume: ${(+p.gallons).toLocaleString()} gallons.  Sanitizer: granular chlorine.`);
-  L.push('');
-  L.push(`SEASON: open ~${c.season.open.replace('-','/')}, close ~${c.season.close.replace('-','/')} (peak ${c.season.peakStart.replace('-','/')}–${c.season.peakEnd.replace('-','/')}).`);
-  L.push(`WATER LEVEL: ${c.waterLevel.note}`);
-  L.push('');
-  L.push('ROUTINE TASKS:');
-  c.tasks.forEach(t=> L.push(`  • ${t.title} — ${cadenceLabel(t)}. ${t.detail}`));
-  L.push('');
-  L.push(`SPRING OPENING — ${c.opening.title}:`);
-  c.opening.steps.forEach((s,i)=> L.push(`  ${i+1}. ${s}`));
-  L.push('');
-  L.push(`FALL CLOSING — ${c.closing.title}:`);
-  c.closing.steps.forEach((s,i)=> L.push(`  ${i+1}. ${s}`));
-  L.push('');
-  L.push('TARGET RANGES:');
-  READINGS.forEach(r=>{ const rg=c.targets[r.key].range; L.push(`  • ${r.name}: ${rg[0]}–${rg[1]} ${r.numUnit||''}`.trimEnd()); });
-  L.push('');
-  L.push('Please confirm this matches how you maintained the pool, and flag anything wrong or missing — especially chemical amounts, timing, and the closing/opening steps.');
-  return L.join('\n');
-}
-function showMaintenanceExport(){ copyModal('Verify with previous owner', maintenanceText()); }
-
-/* ---- export 2: structured prompt + data for AI pattern-finding ---- */
+/* ---- structured prompt + data for AI pattern-finding ---- */
 async function aiExportText(){
   const c=D.config; let weather=[];
   try{ weather=(await getWeather(30)).daily; }catch(e){}
@@ -641,12 +615,22 @@ async function aiExportText(){
 '',
 'OUTPUT — respond in this exact order:',
 'A. FINDINGS — short bullets, each with the evidence behind it.',
-'B. RULES — a JSON array I can paste back into my app. Each item:',
-'   { "label": "...", "advice": "...",',
-'     "trigger": { "metric": "<one of: '+METRIC_KEYS.join(' | ')+'>",',
-'                  "op": ">= or <=", "value": <number> } }',
-'   Use ONLY those metric names. "trigger" may be null for a general note.',
-'   Max 8 rules, highest-confidence first.',
+'B. RULES — output ONE fenced ```json code block containing a JSON array I will',
+'   paste straight into my app. Each array item MUST use exactly these fields and',
+'   nothing else (extra keys are ignored):',
+'     - "label":  short title (string, required)        -> app field: Name',
+'     - "advice": what to do when it triggers (string)  -> app field: Advice',
+'     - "trigger": object, or null for a general note   -> app fields: metric/op/value',
+'         "metric": EXACTLY one of: '+METRIC_KEYS.join(' | '),
+'         "op":     EXACTLY ">=" or "<="',
+'         "value":  a plain number (no units, no quotes)',
+'   Definitions: rain_last7 = inches of rain over the last 7 days; temp_today =',
+'   today\'s high °F; humidity_today = today\'s average % humidity; days_since_test',
+'   = days since the last water test; swim_last7 = swim-hours over the last 7 days.',
+'   Do not invent other metric names or operators. Max 8 rules, best first.',
+'   Example item:',
+'     { "label": "Chlorine likely low in heat", "advice": "Test and add 1/2 cup chlorine",',
+'       "trigger": { "metric": "temp_today", "op": ">=", "value": 85 } }',
 'C. NEXT 2 WEEKS — recommended actions.',
 '',
 'DATA (JSON):',
@@ -656,6 +640,10 @@ JSON.stringify(data,null,2)
 async function showAiExport(){ toast('Preparing export…'); const txt=await aiExportText(); copyModal('Export for AI review', txt); }
 
 /* ---- AI insights: import from AI, add manually, delete ---- */
+// tolerate op spellings the AI might use (≥, >, gte, "greater than", …)
+const OP_ALIAS = {'>=':'>=','>':'>=','≥':'>=','gte':'>=','min':'>=','at least':'>=','greater than or equal to':'>=','greater than':'>=',
+                  '<=':'<=','<':'<=','≤':'<=','lte':'<=','max':'<=','at most':'<=','less than or equal to':'<=','less than':'<='};
+function normalizeOp(op){ return OP_ALIAS[String(op==null?'':op).trim().toLowerCase()] || null; }
 function parseInsightArray(text){
   let arr=null;
   try{ arr=JSON.parse(text); }catch(e){ const a=text.indexOf('['), b=text.lastIndexOf(']'); if(a>=0&&b>a){ try{ arr=JSON.parse(text.slice(a,b+1)); }catch(e2){} } }
@@ -663,8 +651,10 @@ function parseInsightArray(text){
   const out=[];
   arr.forEach(x=>{ if(!x||!x.label) return;
     let trig=null;
-    if(x.trigger && METRIC_KEYS.includes(x.trigger.metric) && ['>=','<='].includes(x.trigger.op) && typeof x.trigger.value==='number')
-      trig={metric:x.trigger.metric, op:x.trigger.op, value:x.trigger.value};
+    if(x.trigger && METRIC_KEYS.includes(x.trigger.metric)){
+      const op=normalizeOp(x.trigger.op), val=Number(x.trigger.value);
+      if(op && isFinite(val)) trig={metric:x.trigger.metric, op, value:val};
+    }
     out.push({ id:uid('in'), label:String(x.label).slice(0,140), advice:String(x.advice||'').slice(0,500), trigger:trig, source:'ai' });
   });
   return out;
@@ -1197,11 +1187,6 @@ function renderSettings(){
     ${CHEM_KEYS.map(k=>`<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:6px 0">
       <input type="checkbox" class="chem" data-key="${k}" style="width:auto" ${((c.chemicals&&c.chemicals.onHand&&c.chemicals.onHand[k])?'checked':'')}/> ${esc(CHEMS[k])}</label>`).join('')}
     <button style="margin-top:10px" onclick="saveChemicals()">Save chemicals</button>
-  </div>
-  <div class="card">
-    <h2>📋 Verify with previous owner</h2>
-    <p class="small muted">A clean text summary of everything captured about your pool's care. Copy it and send it to the previous homeowner to confirm it's right.</p>
-    <button class="sec" onclick="showMaintenanceExport()">Show copyable summary</button>
   </div>
   <div class="card">
     <h2>🔮 AI insights & modeling</h2>

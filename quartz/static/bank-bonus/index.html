@@ -595,7 +595,31 @@ function render_today(){
   const ddCleared = accounts.filter(a => a.dates.firstDD === yesterdayISO && a.status === 'open');
 
   if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
-    html = '<div class="empty">Nothing to do today!</div>';
+    if(accounts.length === 0){
+      // Truly no data loaded — point the user at sign-in rather than implying it's empty.
+      html = `<div class="empty">No accounts loaded.<br>
+        <span style="font-size:13px">If your data isn't showing, open <b>Settings</b> (press <kbd>7</kbd>) and tap <b>🔐 Sign in with GitHub</b>. Or add one on <b>Active</b> / <b>Planned</b>.</span></div>`;
+    } else {
+      // Caught up for today, but accounts still exist — show the totals so an empty
+      // Today screen is never mistaken for "my data is gone."
+      const o = accounts.filter(a => a.status === 'open').length;
+      const p = accounts.filter(a => a.status === 'planned').length;
+      const c = accounts.filter(a => a.status === 'closed').length;
+      html = `<div class="card">
+        <div class="card-header">✅ Nothing due today</div>
+        <p style="margin:0 0 12px;color:var(--muted)">You're all caught up. Your ${accounts.length} accounts are still here:</p>
+        <div class="summary-strip" style="margin:0 0 12px">
+          <div class="stat"><div class="stat-label">Open</div><div class="stat-value">${o}</div></div>
+          <div class="stat"><div class="stat-label">Planned</div><div class="stat-value">${p}</div></div>
+          <div class="stat"><div class="stat-label">Closed</div><div class="stat-value">${c}</div></div>
+        </div>
+        <div class="action-bar" style="margin:0">
+          <button onclick="show('active')">View Active</button>
+          <button class="sec" onclick="show('reports')">Reports</button>
+          <button class="sec" onclick="show('calendar')">Calendar</button>
+        </div>
+      </div>`;
+    }
   } else {
     if(toOpen.length) {
       html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';

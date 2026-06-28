@@ -43,7 +43,7 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       margin: 0; padding: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
       letter-spacing: -0.006em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-      touch-action: manipulation; }
+      touch-action: manipulation; overflow-x: hidden; }
     #main { max-width: 940px; margin: 0 auto; padding: 24px 16px 96px; }
     :focus-visible { outline: none; }
 
@@ -75,7 +75,7 @@
 
     .section { display: none; animation: fadeIn 0.18s ease; }
     .section.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     .card { background: var(--surface); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
     .card.clickable { cursor: pointer; transition: box-shadow .15s, transform .15s, border-color .15s; }
@@ -105,7 +105,7 @@
     button.small { min-height: 32px; padding: 0 11px; font-size: 12.5px; border-radius: 7px; }
 
     /* 16px keeps iOS Safari from auto-zooming when a field is focused. */
-    input, select, textarea { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 16px; font-family: inherit; background: var(--surface); color: var(--text); min-height: 42px; transition: border-color .12s, box-shadow .12s; }
+    input, select, textarea { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 16px; font-family: inherit; background: var(--surface); color: var(--text); min-height: 42px; max-width: 100%; min-width: 0; transition: border-color .12s, box-shadow .12s; }
     /* Money fields: a fixed "$" sits inside the box; the input pads left to clear it. */
     .money-field { position: relative; display: flex; align-items: center; }
     .money-field > .money-prefix { position: absolute; left: 12px; color: var(--muted); font-size: 16px; pointer-events: none; }
@@ -168,12 +168,18 @@
     .cal-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
     .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
     .cal-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
-    .cal-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .cal-arrow { min-width: 44px; padding: 0 12px; font-size: 20px; line-height: 1; }
-    .cal-month { flex: 1; text-align: center; font-weight: 650; font-size: 16px; letter-spacing: -0.01em; }
-    .cal-month-sub { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+    /* Fixed grid so arrows never move when you change months. */
+    .cal-nav { display: grid; grid-template-columns: 44px 1fr 44px auto; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .cal-arrow { padding: 0; font-size: 20px; line-height: 1; }
+    .cal-month { text-align: center; min-width: 0; }
+    .cal-month-name { font-weight: 650; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-month-sub { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cal-today-btn { font-size: 13px; }
+    .cal-hint { text-align: center; color: var(--muted); font-size: 12px; margin: 12px 0 0; }
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .cal-day-cell { cursor: pointer; }
+    .cal-day-cell:hover { border-color: var(--border-strong); }
+    .cal-dot { display: none; }
     .cal-dow { font-size: 11px; color: var(--faint); text-align: center; padding: 4px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
     .cal-cell { min-height: 60px; border: 1px solid var(--border); border-radius: 8px; padding: 5px; font-size: 12px; background: var(--surface); }
     .cal-empty { border: none; background: transparent; }
@@ -200,6 +206,19 @@
       input, select { min-height: 46px; }
       .summary-strip { grid-template-columns: repeat(2, 1fr); }
       #appbar-user { display: none; }
+      /* Stack form fields to full width — no input can spill into the next column. */
+      .row { flex-direction: column; gap: 14px; }
+      .row-item { min-width: 0; width: 100%; }
+      .filter-bar .search-input { min-width: 120px; }
+      /* Calendar: tighter cells; show a status dot instead of the (too-wide) amount. */
+      .cal-nav { grid-template-columns: 38px 1fr 38px auto; gap: 6px; }
+      .cal-grid { gap: 3px; }
+      .cal-cell { min-height: 46px; padding: 3px; border-radius: 6px; }
+      .cal-amt { display: none; }
+      .cal-dot { display: block; width: 7px; height: 7px; border-radius: 50%; margin-top: 3px; }
+      .cal-pay.cal-full .cal-dot { background: var(--open); }
+      .cal-pay.cal-partial .cal-dot { background: var(--warn); }
+      .cal-pay.cal-over .cal-dot { background: var(--danger); }
     }
   </style>
 </head>
@@ -557,7 +576,8 @@ function show(tab){
   if(section) {
     section.classList.add('active');
     const navBtn = $(`[data-tab="${tab}"]`);
-    if(navBtn) navBtn.classList.add('active');   // detail view has no nav button
+    if(navBtn){ navBtn.classList.add('active');   // detail view has no nav button
+      navBtn.scrollIntoView({inline: 'center', block: 'nearest'}); }   // keep active tab visible on the scrollable mobile bar
     if(tab !== 'detail') lastTab = tab;
     const fn = window[`render_${tab}`];
     if(fn) fn();
@@ -1048,7 +1068,9 @@ function allocatedOn(date, exceptId){
   }, 0);
 }
 
-// Build one month's 7-column grid, marking payroll days with their allocation status.
+// Build one month's 7-column grid. Always renders 6 week-rows (42 day cells) so
+// the calendar is the SAME height every month — switching months never shifts
+// anything below it. Payroll days are colored and tappable for a breakdown.
 function calMonthGrid(ym, allocByDate, cap, today){
   const [y, m] = ym.split('-').map(Number);
   const startDow = new Date(Date.UTC(y, m-1, 1)).getUTCDay();
@@ -1059,18 +1081,46 @@ function calMonthGrid(ym, allocByDate, cap, today){
   for(let d=1; d<=daysInMonth; d++){
     const iso = `${ym}-${String(d).padStart(2,'0')}`;
     const alloc = allocByDate[iso];
-    let cls = 'cal-cell';
+    let cls = 'cal-cell cal-day-cell';
     if(iso < today) cls += ' cal-past';
     if(iso === today) cls += ' cal-today';
     let inner = `<div class="cal-day">${d}</div>`;
     if(alloc != null){
       const st = alloc > cap ? 'over' : alloc === cap ? 'full' : 'partial';
       cls += ' cal-pay cal-' + st;
-      inner += `<div class="cal-amt">${money(alloc)}</div>`;
+      inner += `<div class="cal-amt">${money(alloc)}</div><span class="cal-dot"></span>`;
     }
-    cells += `<div class="${cls}">${inner}</div>`;
+    cells += `<div class="${cls}" onclick="calDay('${iso}')">${inner}</div>`;
   }
+  // Pad trailing cells out to a full 6 rows (42 cells) for constant height.
+  const filled = startDow + daysInMonth;
+  for(let i=filled;i<42;i++) cells += '<div class="cal-cell cal-empty"></div>';
   return `<div class="cal-grid">${dows}${cells}</div>`;
+}
+
+// Tap a calendar day → modal listing every direct deposit planned that day.
+function calDay(iso){
+  const items = [];
+  accounts.forEach(a => (a.ddPlan || []).forEach(dd => {
+    if(dd.payrollDate === iso) items.push({inst: a.institution, person: a.person, amount: dd.amount});
+  }));
+  const cap = (config.paycheck || {}).amount || 1930;
+  const total = items.reduce((s,x) => s + x.amount, 0);
+  const label = new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric', timeZone:'UTC'});
+  let body = `<p style="margin:0 0 14px"><strong>${esc(label)}</strong></p>`;
+  if(items.length === 0){
+    body += `<p style="color:var(--muted);margin:0 0 18px">No direct deposits planned on this day.</p>`;
+  } else {
+    body += '<div class="reminder-list" style="margin:0 0 14px">';
+    items.sort((a,b) => b.amount - a.amount).forEach(x => {
+      body += `<div class="reminder-item"><div style="display:flex;align-items:center;gap:8px">${personChip(x.person)} <strong>${esc(x.inst)}</strong></div><div class="value money">${money(x.amount)}</div></div>`;
+    });
+    body += '</div>';
+    const st = total > cap ? 'over' : total === cap ? 'full' : 'partial';
+    body += `<p style="margin:0 0 18px">Total <strong>${money(total)}</strong> of ${money(cap)} paycheck <span class="pill pill-${st}">${st}</span></p>`;
+  }
+  body += `<div class="row" style="justify-content:flex-end;margin:0"><button data-mval="ok">Close</button></div>`;
+  modal(body);
 }
 
 // Which month the Calendar is showing (YYYY-MM). Defaults to the current month;
@@ -1105,8 +1155,9 @@ function render_calendar(){
   const [yy, mm] = calMonth.split('-').map(Number);
   const monthName = new Date(Date.UTC(yy, mm-1, 1)).toLocaleString('en-US', {month:'long', year:'numeric', timeZone:'UTC'});
   const monthTotal = dates.filter(d => d.slice(0,7) === calMonth).reduce((s,d) => s + allocByDate[d], 0);
-  const isThisMonth = calMonth === today.slice(0,7);
 
+  // The nav uses a FIXED grid and an always-present Today button + subtitle line,
+  // so stepping between months never moves the arrows or resizes the controls.
   let html = `<div class="summary-strip">
       <div class="stat"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} payday(s)</div></div>
       <div class="stat"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">payday(s) ahead</div></div>
@@ -1121,16 +1172,16 @@ function render_calendar(){
     <div class="card">
       <div class="cal-nav">
         <button class="sec cal-arrow" onclick="calNav(-1)" aria-label="Previous month">‹</button>
-        <div class="cal-month">${esc(monthName)}${monthTotal>0?`<span class="cal-month-sub">${money(monthTotal)} planned</span>`:''}</div>
+        <div class="cal-month">
+          <div class="cal-month-name">${esc(monthName)}</div>
+          <div class="cal-month-sub">${monthTotal > 0 ? money(monthTotal) + ' planned' : 'No deposits this month'}</div>
+        </div>
         <button class="sec cal-arrow" onclick="calNav(1)" aria-label="Next month">›</button>
-        ${isThisMonth ? '' : '<button class="sec cal-today-btn" onclick="calToday()">Today</button>'}
+        <button class="sec cal-today-btn" onclick="calToday()">Today</button>
       </div>
       ${calMonthGrid(calMonth, allocByDate, cap, today)}
+      <p class="cal-hint">Tap any day to see what's planned.</p>
     </div>`;
-
-  if(totalPlanned === 0){
-    html += '<div class="empty" style="padding:24px">No direct deposits planned yet.<br><span style="font-size:13px">Open an account → ⚡ Auto-suggest in its Direct Deposit Plan, or add paydays by hand.</span></div>';
-  }
   section.innerHTML = html;
 }
 

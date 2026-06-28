@@ -56,6 +56,40 @@ check ✅ means it published successfully.
 
 ---
 
+## Two ways notes reach the site
+
+You have **two** publishing routes. Both end the same way — notes land in GitHub, GitHub
+rebuilds the site — but they start in different places. Use whichever fits the note.
+
+### Route A — notes in the `content` folder (`Publish Changes.command`)
+For notes that already live in the website's own **`content`** folder (and your games/apps):
+edit them, then double-click **`Publish Changes.command`**. The script saves and sends the
+whole site folder to GitHub. This is the route the rest of this guide describes.
+
+### Route B — notes in your main vault (Quartz Syncer plugin)
+Your **main Obsidian vault** has the **Quartz Syncer** community plugin installed. It lets
+you publish a note *without* it living in the `content` folder at all:
+
+1. Add `publish: true` to the note's frontmatter (the settings block at the top).
+2. Run the plugin's publish command (e.g. **"Quartz Syncer: Open Publication Center"** from
+   the command palette, then publish).
+3. The plugin **uploads a copy** of every `publish: true` note straight to this GitHub repo's
+   `content` folder, using a saved access token. The original note stays in your vault.
+4. GitHub rebuilds the site automatically (~1–2 min) — no Terminal, no `Publish Changes`.
+
+**Good to know about Route B:**
+- It's the flag that selects what syncs: no `publish: true` = the plugin ignores it.
+- **Remove the flag (or the note) and re-sync, and it comes back *off* the site** — the
+  plugin reconciles what's flagged against what's already published.
+- It uploads *copies*. The note you see in your main vault is never moved or deleted by it.
+- To change *which* repo/branch/folder it targets or to renew its access token: Obsidian →
+  **Settings** → **Community plugins** → **Quartz Syncer** → options.
+
+> Both routes push to the **same** GitHub repo, so a note should be published by **one**
+> route, not both — otherwise you can end up with two copies to keep in sync.
+
+---
+
 ## Removing or hiding a page (unpublish)
 
 You do **not** have to delete a note to take it off the website. To hide a page but keep

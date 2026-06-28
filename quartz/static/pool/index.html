@@ -538,6 +538,180 @@ async function fillWeatherTab(){
 }
 
 /* =========================================================================
+   MODELING — metrics, AI insights/inferences, and exports
+   ========================================================================= */
+const METRIC_LABEL = {
+  rain_last7:'rain last 7 days (in)', temp_today:'today high (°F)',
+  humidity_today:'today humidity (%)', days_since_test:'days since last test',
+  swim_last7:'swim hours last 7 days'
+};
+const METRIC_KEYS = Object.keys(METRIC_LABEL);
+async function modelMetrics(){
+  const t=todayISO();
+  let rain_last7=null, temp_today=null, humidity_today=null;
+  try{ const {daily}=await getWeather(8);
+    rain_last7=daily.filter(x=>x.date>addDaysISO(t,-8)&&x.date<=t).reduce((s,x)=>s+(x.in||0),0);
+    const td=daily.find(x=>x.date===t)||{}; temp_today=td.tmax??null; humidity_today=td.rhAvg??null;
+  }catch(e){}
+  const lt=lastTest();
+  const days_since_test = lt ? daysBetween(lt.date, t) : null;
+  let swim_last7=0; for(let i=0;i<7;i++) swim_last7+=swimForDate(addDaysISO(t,-i));
+  return { rain_last7, temp_today, humidity_today, days_since_test, swim_last7 };
+}
+function insightMatches(ins, m){
+  if(!ins.trigger) return false;
+  const v=m[ins.trigger.metric]; if(v==null) return false;
+  return ins.trigger.op==='>=' ? v>=ins.trigger.value : v<=ins.trigger.value;
+}
+async function fillInferences(){
+  const box=$('#inferToday'); if(!box) return;
+  const ins=(D.config.insights||[]);
+  if(!ins.length){ box.innerHTML=`<p class="muted small">No models yet. In Settings, use <b>Export for AI review</b>, send it to an AI, then paste its rules back — triggered rules will appear here.</p>`; return; }
+  const m=await modelMetrics();
+  const hits=ins.filter(x=>insightMatches(x,m));
+  const notes=ins.filter(x=>!x.trigger);
+  let h='';
+  h += hits.length
+    ? hits.map(x=>`<div class="rec warn"><b>${esc(x.label)}</b><div class="small">${esc(x.advice||'')}</div></div>`).join('')
+    : `<p class="ok small">No model rules are triggering right now.</p>`;
+  if(notes.length) h += `<div class="small muted" style="margin-top:8px"><b>Notes:</b> ${notes.map(n=>esc(n.label)).join(' · ')}</div>`;
+  box.innerHTML=h;
+}
+
+/* ---- copyable text modal (clipboard from closure; textarea for manual copy) ---- */
+function copyModal(title, text){
+  return modal(`<h2>${esc(title)}</h2><p class="small muted" style="margin:0 0 6px">Tap Copy, then paste wherever you need it.</p>
+    <textarea readonly rows="14" style="font-size:12px;width:100%">${esc(text)}</textarea>
+    <div class="row" style="margin-top:10px"><button class="sec" data-mcancel>Close</button><button data-mval="copy">Copy</button></div>`)
+    .then(async v=>{ if(v==='copy'){ try{ await navigator.clipboard.writeText(text); toast('Copied ✓'); }catch(e){ toast('Select the text above and copy manually'); } } });
+}
+
+/* ---- export 1: maintenance notes to verify with the previous owner ---- */
+function maintenanceText(){
+  const c=D.config, p=c.pool, L=[];
+  L.push(`POOL MAINTENANCE NOTES — ${p.name} (${p.location})`);
+  L.push(`Volume: ${(+p.gallons).toLocaleString()} gallons.  Sanitizer: granular chlorine.`);
+  L.push('');
+  L.push(`SEASON: open ~${c.season.open.replace('-','/')}, close ~${c.season.close.replace('-','/')} (peak ${c.season.peakStart.replace('-','/')}–${c.season.peakEnd.replace('-','/')}).`);
+  L.push(`WATER LEVEL: ${c.waterLevel.note}`);
+  L.push('');
+  L.push('ROUTINE TASKS:');
+  c.tasks.forEach(t=> L.push(`  • ${t.title} — ${cadenceLabel(t)}. ${t.detail}`));
+  L.push('');
+  L.push(`SPRING OPENING — ${c.opening.title}:`);
+  c.opening.steps.forEach((s,i)=> L.push(`  ${i+1}. ${s}`));
+  L.push('');
+  L.push(`FALL CLOSING — ${c.closing.title}:`);
+  c.closing.steps.forEach((s,i)=> L.push(`  ${i+1}. ${s}`));
+  L.push('');
+  L.push('TARGET RANGES:');
+  READINGS.forEach(r=>{ const rg=c.targets[r.key].range; L.push(`  • ${r.name}: ${rg[0]}–${rg[1]} ${r.numUnit||''}`.trimEnd()); });
+  L.push('');
+  L.push('Please confirm this matches how you maintained the pool, and flag anything wrong or missing — especially chemical amounts, timing, and the closing/opening steps.');
+  return L.join('\n');
+}
+function showMaintenanceExport(){ copyModal('Verify with previous owner', maintenanceText()); }
+
+/* ---- export 2: structured prompt + data for AI pattern-finding ---- */
+async function aiExportText(){
+  const c=D.config; let weather=[];
+  try{ weather=(await getWeather(30)).daily; }catch(e){}
+  const onHand=chemsOnHand();
+  const data={
+    pool:{ name:c.pool.name, gallons:c.pool.gallons, location:c.pool.location, sanitizer:'granular chlorine' },
+    target_ranges: READINGS.reduce((o,r)=>{ o[r.key]={name:r.name, unit:r.numUnit, range:c.targets[r.key].range}; return o; }, {}),
+    chemicals_on_hand: CHEM_KEYS.filter(k=>onHand[k]).map(k=>CHEMS[k]),
+    tests: (D.tests||[]).map(t=>({date:t.date, mode:t.mode, levels:t.levels||{}, nums:t.nums||{}, notes:t.notes||''})),
+    tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:(l.at||'').slice(0,10), task:l.title})),
+    swim_hours: (D.swim||[]).map(s=>({date:s.date, hours:s.hours})),
+    weather_daily: weather.map(w=>({date:w.date, rain_in:w.in, temp_max:w.tmax, temp_min:w.tmin, humidity_pct:w.rhAvg})),
+  };
+  return [
+'You are a swimming-pool water-chemistry analyst. Analyze the JSON dataset from a',
+'residential pool (below) and find actionable patterns. Be concise and concrete;',
+'if the data is too sparse for a claim, say so rather than guessing.',
+'',
+'WHAT TO DO:',
+'1. Find correlations between weather (rain, temperature, humidity), swimmer hours,',
+'   and days-elapsed vs. each reading (free chlorine, pH, alkalinity, CYA, calcium,',
+'   phosphates). Quantify where you can.',
+'2. Estimate how fast free chlorine drops per day given temperature/use, and how',
+'   rain shifts pH / alkalinity / CYA / phosphates.',
+'3. Note the biggest data gaps and what to log more of.',
+'',
+'OUTPUT — respond in this exact order:',
+'A. FINDINGS — short bullets, each with the evidence behind it.',
+'B. RULES — a JSON array I can paste back into my app. Each item:',
+'   { "label": "...", "advice": "...",',
+'     "trigger": { "metric": "<one of: '+METRIC_KEYS.join(' | ')+'>",',
+'                  "op": ">= or <=", "value": <number> } }',
+'   Use ONLY those metric names. "trigger" may be null for a general note.',
+'   Max 8 rules, highest-confidence first.',
+'C. NEXT 2 WEEKS — recommended actions.',
+'',
+'DATA (JSON):',
+JSON.stringify(data,null,2)
+  ].join('\n');
+}
+async function showAiExport(){ toast('Preparing export…'); const txt=await aiExportText(); copyModal('Export for AI review', txt); }
+
+/* ---- AI insights: import from AI, add manually, delete ---- */
+function parseInsightArray(text){
+  let arr=null;
+  try{ arr=JSON.parse(text); }catch(e){ const a=text.indexOf('['), b=text.lastIndexOf(']'); if(a>=0&&b>a){ try{ arr=JSON.parse(text.slice(a,b+1)); }catch(e2){} } }
+  if(!Array.isArray(arr)) return null;
+  const out=[];
+  arr.forEach(x=>{ if(!x||!x.label) return;
+    let trig=null;
+    if(x.trigger && METRIC_KEYS.includes(x.trigger.metric) && ['>=','<='].includes(x.trigger.op) && typeof x.trigger.value==='number')
+      trig={metric:x.trigger.metric, op:x.trigger.op, value:x.trigger.value};
+    out.push({ id:uid('in'), label:String(x.label).slice(0,140), advice:String(x.advice||'').slice(0,500), trigger:trig, source:'ai' });
+  });
+  return out;
+}
+async function importInsights(){
+  let text='';
+  const p=modal(`<h2>Paste rules from AI</h2><p class="small muted">Paste the AI's <b>RULES</b> block (the JSON array). I'll pull the valid rules out.</p>
+    <textarea id="imp_ta" rows="9" placeholder='[ { "label":"...", "advice":"...", "trigger":{ "metric":"rain_last7", "op":">=", "value":1 } } ]'></textarea>
+    <div class="row" style="margin-top:10px"><button class="sec" data-mcancel>Cancel</button><button data-mval="import">Import</button></div>`);
+  const ta=document.getElementById('imp_ta'); if(ta) ta.addEventListener('input',e=>{text=e.target.value;});
+  const v=await p; if(v!=='import') return;
+  const parsed=parseInsightArray(text);
+  if(!parsed||!parsed.length){ toast('Couldn\'t find valid rules in that text'); return; }
+  D.config.insights=(D.config.insights||[]).concat(parsed);
+  try{ await saveJson(FILES.config, D.config, `Import ${parsed.length} AI insight(s)`); toast(`Imported ${parsed.length} ✓`); renderSettings(); }
+  catch(e){ toast(String(e.message||e)); }
+}
+async function addInsightManual(){
+  let label='', advice='', metric='', op='>=', value='';
+  const p=modal(`<h2>Add a rule</h2>
+    <label>Name</label><input id="ai_label" placeholder="e.g. Chlorine likely low after heavy use"/>
+    <label>Advice when it triggers</label><input id="ai_advice" placeholder="e.g. Test and add ½ cup chlorine"/>
+    <label>Trigger (optional)</label>
+    <select id="ai_metric"><option value="">— none (just a note) —</option>${METRIC_KEYS.map(k=>`<option value="${k}">${METRIC_LABEL[k]}</option>`).join('')}</select>
+    <div class="row" style="margin-top:6px"><select id="ai_op" style="flex:0 0 70px"><option value=">=">≥</option><option value="<=">≤</option></select><input id="ai_value" inputmode="decimal" placeholder="value"/></div>
+    <div class="row" style="margin-top:12px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
+  const g=id=>document.getElementById(id);
+  if(g('ai_label')) g('ai_label').addEventListener('input',e=>{label=e.target.value;});
+  if(g('ai_advice')) g('ai_advice').addEventListener('input',e=>{advice=e.target.value;});
+  if(g('ai_metric')) g('ai_metric').addEventListener('change',e=>{metric=e.target.value;});
+  if(g('ai_op')) g('ai_op').addEventListener('change',e=>{op=e.target.value;});
+  if(g('ai_value')) g('ai_value').addEventListener('input',e=>{value=e.target.value;});
+  const v=await p; if(v!=='save') return;
+  if(!label.trim()){ toast('Give the rule a name'); return; }
+  const trig = (metric && value!=='' && !isNaN(parseFloat(value))) ? {metric, op, value:parseFloat(value)} : null;
+  D.config.insights=(D.config.insights||[]);
+  D.config.insights.push({ id:uid('in'), label:label.trim(), advice:advice.trim(), trigger:trig, source:'manual' });
+  try{ await saveJson(FILES.config, D.config, 'Add insight'); toast('Saved ✓'); renderSettings(); }
+  catch(e){ toast(String(e.message||e)); }
+}
+async function deleteInsight(id){
+  D.config.insights=(D.config.insights||[]).filter(x=>x.id!==id);
+  try{ await saveJson(FILES.config, D.config, 'Delete insight'); renderSettings(); }
+  catch(e){ toast(String(e.message||e)); }
+}
+
+/* =========================================================================
    ROUTER
    ========================================================================= */
 let CUR='today';
@@ -679,6 +853,9 @@ function renderToday(){
   }
   html += `</div>`;
 
+  // model inferences (from your AI insight rules)
+  html += `<div class="card"><h2>🔮 Inferences</h2><div id="inferToday"><p class="muted small">Checking…</p></div></div>`;
+
   // recommendations from the latest test
   html += `<div class="card"><div class="flex"><h2 style="margin:0">🧪 Latest test</h2>${lt?`<span class="small muted">${fmtDate(lt.date)}</span>`:''}</div>`;
   if(!lt){ html += `<p class="muted small">No test logged yet. <button class="link" onclick="show('test')">Log one</button></p>`; }
@@ -704,6 +881,7 @@ function renderToday(){
 
   $('#main').innerHTML = html;
   fillRainToday();
+  fillInferences();
 }
 
 /* Build per-reading recommendation list from a test record. */
@@ -1019,6 +1197,21 @@ function renderSettings(){
     ${CHEM_KEYS.map(k=>`<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:6px 0">
       <input type="checkbox" class="chem" data-key="${k}" style="width:auto" ${((c.chemicals&&c.chemicals.onHand&&c.chemicals.onHand[k])?'checked':'')}/> ${esc(CHEMS[k])}</label>`).join('')}
     <button style="margin-top:10px" onclick="saveChemicals()">Save chemicals</button>
+  </div>
+  <div class="card">
+    <h2>📋 Verify with previous owner</h2>
+    <p class="small muted">A clean text summary of everything captured about your pool's care. Copy it and send it to the previous homeowner to confirm it's right.</p>
+    <button class="sec" onclick="showMaintenanceExport()">Show copyable summary</button>
+  </div>
+  <div class="card">
+    <h2>🔮 AI insights & modeling</h2>
+    <p class="small muted">Export your tracked data for an AI to find patterns, then paste its rules back. Rules with a trigger show up as <b>Inferences</b> on Today.</p>
+    <div class="row"><button class="sec" onclick="showAiExport()">Export for AI review</button><button class="sec" onclick="importInsights()">Paste rules from AI</button></div>
+    <button class="link" onclick="addInsightManual()">+ Add a rule manually</button>
+    ${(c.insights||[]).length
+      ? (c.insights).map(x=>`<div class="item"><div class="flex"><b class="small">${esc(x.label)}</b><button class="link" style="color:#b3261e;flex:0 0 auto" onclick="deleteInsight('${x.id}')">delete</button></div>
+          <div class="small muted">${x.trigger?`<b>when ${esc(METRIC_LABEL[x.trigger.metric]||x.trigger.metric)} ${esc(x.trigger.op)} ${esc(String(x.trigger.value))}:</b> `:''}${esc(x.advice||'')}${x.source==='ai'?' <span class="pill gray">AI</span>':''}</div></div>`).join('')
+      : `<p class="muted small" style="margin-top:8px">No rules yet.</p>`}
   </div>
   <div class="card">
     <h2>This device</h2>

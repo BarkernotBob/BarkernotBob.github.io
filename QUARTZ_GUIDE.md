@@ -221,10 +221,12 @@ so you can never forget a step.
 1. **Install the extension.** Open
    https://obsidian.md/clipper and add **Obsidian Web Clipper** to your browser
    (Chrome, Edge, Safari, Firefox, etc.). It's the official Obsidian extension.
-2. **Point it at your vault.** Click the extension icon → the gear/⚙️ **Settings** →
-   **General**. Set **Vault** to the same vault you edit your site in (the **`content`**
-   folder). If your vault isn't listed, open Obsidian once with that folder as a vault,
-   then reload the extension.
+2. **Point it at your main vault.** Click the extension icon → the gear/⚙️ **Settings** →
+   **General**. Set **Vault** to your **main Obsidian vault** (the one with the **Quartz
+   Syncer** plugin — likely shown as *KnoxLox*; confirm in Obsidian's vault switcher). Videos
+   will be saved there and go live the same way the rest of your notes do (see *"Two ways
+   notes reach the site"* above). If the vault isn't listed, open Obsidian on it once, then
+   reload the extension.
 3. **Create the template.** In Web Clipper Settings → **Templates** → **New template**.
    Either **import the ready-made file** (fastest) or **fill the fields by hand**.
 
@@ -248,6 +250,11 @@ so you can never forget a step.
    The **Triggers** line is what makes this template auto-select itself whenever you're on a
    YouTube video, so you never pick the wrong one.
 
+   > **Why `youtube/recommended` still works in your main vault:** Quartz Syncer mirrors a
+   > note's folder path (from your vault root) into the site's `content` folder. So a note
+   > saved to a `youtube/recommended` folder in your main vault lands at
+   > `content/youtube/recommended` on the site — the right section — automatically.
+
 ### Using it (every video, from now on)
 
 1. On the YouTube video page, click the **Obsidian Web Clipper** icon. The template is
@@ -257,8 +264,10 @@ so you can never forget a step.
    popup. You can also do this later in Obsidian.
 3. *(Optional)* to file it under a subtopic instead of the top level, change the **path**
    in the popup from `youtube/recommended` to e.g. `youtube/recommended/theology`.
-4. Click **Save / Add to Obsidian**. The note lands in `content/youtube/recommended`.
-5. Double-click **Publish Changes.command**.
+4. Click **Save / Add to Obsidian**. The note lands in your main vault's
+   `youtube/recommended` folder with `publish: true` already set.
+5. In Obsidian, **run Quartz Syncer** to push it live (command palette → *"Quartz Syncer:
+   Open Publication Center"* → publish). No `Publish Changes.command` needed for videos.
 
 That's it — the video plays on its own page with your note underneath, and it auto-appears
 in the list at `/youtube`. No video-ID copying, no forgetting `publish: true`.

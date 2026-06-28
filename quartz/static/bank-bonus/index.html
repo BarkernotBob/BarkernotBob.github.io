@@ -149,7 +149,18 @@
     .person-x:hover { color: var(--danger); background: none; }
 
     /* Date fields: never let the native control exceed its column. */
-    input[type="date"] { width: 100%; max-width: 100%; box-sizing: border-box; }
+    input[type="date"] { width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0; }
+    /* On touch devices (iOS/Android), the native date control has an intrinsic
+       min-width that can spill past its column. Neutralizing the native appearance
+       lets width:100% win; the date picker still opens on tap. */
+    @media (pointer: coarse) {
+      input[type="date"] { -webkit-appearance: none; appearance: none; }
+    }
+    /* Progress bar (calendar paycheck usage) */
+    .prog { height: 12px; border-radius: 7px; background: var(--surface-3); overflow: hidden; }
+    .prog > i { display: block; height: 100%; border-radius: 7px; }
+    .cal-bar { height: 3px; border-radius: 2px; background: var(--surface-3); overflow: hidden; margin-top: 3px; }
+    .cal-bar > i { display: block; height: 100%; }
 
     .empty { text-align: center; color: var(--muted); padding: 48px 20px; }
     .empty .empty-cta { margin-top: 18px; }
@@ -227,7 +238,7 @@
       .cal-nav { grid-template-columns: 44px 1fr 44px auto; gap: 6px; }
       .cal-grid { gap: 3px; }
       .cal-cell { min-height: 46px; padding: 3px; border-radius: 6px; }
-      .cal-amt { display: none; }
+      .cal-amt, .cal-bar { display: none; }
       .cal-dot { display: block; width: 7px; height: 7px; border-radius: 50%; margin-top: 3px; }
       .cal-pay.cal-full .cal-dot { background: var(--open); }
       .cal-pay.cal-partial .cal-dot { background: var(--warn); }
@@ -275,6 +286,10 @@ const OAUTH = {
   clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
   workerUrl: 'https://pool-auth.isaiahmail97.workers.dev'  // Cloudflare Worker base URL
 };
+
+// Bump this on each deploy so the Settings footer shows which build is live —
+// lets you confirm a phone isn't serving a cached old copy.
+const BUILD = '2026-06-28 · r8';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -1128,7 +1143,9 @@ function calMonthGrid(ym, allocByDate, today){
       const cap = paycheckAmountOn(iso);
       const st = alloc > cap ? 'over' : alloc === cap ? 'full' : 'partial';
       cls += ' cal-pay cal-' + st;
-      inner += `<div class="cal-amt">${money(alloc)}</div><span class="cal-dot"></span>`;
+      const pct = cap > 0 ? Math.min(100, Math.round(alloc / cap * 100)) : 100;
+      const fill = st === 'over' ? 'var(--danger)' : st === 'full' ? 'var(--open)' : 'var(--warn)';
+      inner += `<div class="cal-amt">${money(alloc)}</div><div class="cal-bar"><i style="width:${pct}%;background:${fill}"></i></div><span class="cal-dot"></span>`;
     }
     cells += `<div class="${cls}" onclick="calDay('${iso}')">${inner}</div>`;
   }
@@ -1157,7 +1174,15 @@ function calDay(iso){
     });
     body += '</div>';
     const st = total > cap ? 'over' : total === cap ? 'full' : 'partial';
-    body += `<p style="margin:0 0 18px">Total <strong>${money(total)}</strong> of ${money(cap)} paycheck <span class="pill pill-${st}">${st}</span></p>`;
+    const pct = cap > 0 ? Math.min(100, Math.round(total / cap * 100)) : 100;
+    const free = Math.max(0, cap - total);
+    const fill = st === 'over' ? 'var(--danger)' : st === 'full' ? 'var(--open)' : 'var(--warn)';
+    body += `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px">
+        <span style="font-weight:600">${money(total)} of ${money(cap)}</span>
+        <span class="pill pill-${st}">${st}</span>
+      </div>
+      <div class="prog"><i style="width:${pct}%;background:${fill}"></i></div>
+      <p style="margin:6px 0 18px;font-size:13px;color:var(--muted)">${pct}% of paycheck used · ${money(free)} still free${st === 'over' ? ' · over by ' + money(total - cap) : ''}</p>`;
   }
   body += `<div class="row" style="justify-content:flex-end;margin:0"><button data-mval="ok">Close</button></div>`;
   modal(body);
@@ -1412,6 +1437,8 @@ function render_settings(){
     </div>
     <p style="margin:8px 0 0;color:var(--muted);font-size:12px">Test runs the email workflow now and sends a sample to the address above (requires the mail secrets set in your data repo).</p>
   </div>`;
+
+  html += `<p style="text-align:center;color:var(--faint);font-size:11px;margin:18px 0 0">Bank Bonus Tracker · build ${esc(BUILD)}</p>`;
 
   section.innerHTML = html;
 }

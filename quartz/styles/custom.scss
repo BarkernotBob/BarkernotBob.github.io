@@ -322,3 +322,113 @@ body:has(.page-listing) .content-meta { display: none !important; }
     }
   }
 }
+
+// ============================================================
+//  Ko-fi "Support me" floating button (all pages)
+//  Rendered by quartz/components/Body.tsx. Hidden automatically
+//  when KOFI_NAME is unset there.
+// ============================================================
+.kofi-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 100; // above content, below the explorer drawer/backdrop (z 1000)
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  color: #ffffff;
+  text-decoration: none;
+  background: #ff5e5b; // Ko-fi brand red
+  border: 2.5px solid var(--ink, #1c1430);
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--ink, #1c1430);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.kofi-fab:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink, #1c1430);
+  color: #ffffff;
+}
+.kofi-fab:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0 var(--ink, #1c1430);
+}
+.kofi-fab .kofi-fab-cup {
+  font-size: 18px;
+  // Gentle nudge so the cup looks vertically centered next to the text.
+  transform: translateY(-1px);
+}
+:root[saved-theme="dark"] .kofi-fab {
+  border-color: #f3ead9;
+  box-shadow: 4px 4px 0 #000;
+}
+:root[saved-theme="dark"] .kofi-fab:hover {
+  box-shadow: 6px 6px 0 #000;
+}
+// On narrow screens, collapse to just the cup so it never crowds the content.
+@media (max-width: 600px) {
+  .kofi-fab {
+    right: 12px;
+    bottom: 12px;
+    padding: 12px;
+  }
+  .kofi-fab .kofi-fab-text {
+    display: none;
+  }
+  .kofi-fab .kofi-fab-cup {
+    font-size: 20px;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kofi-fab {
+    transition: none;
+  }
+}
+
+// ============================================================
+//  Home splash — "Subscribe via RSS" link (under the nav grid)
+// ============================================================
+.home-splash .splash-sub {
+  margin-top: 28px;
+}
+.home-splash .splash-rss {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  background: transparent;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.home-splash .splash-rss:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ink);
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-splash .splash-rss {
+    transition: none;
+  }
+}
+
+// ============================================================
+//  Comments (giscus) — small breathing room above the widget
+// ============================================================
+.giscus,
+.giscus-frame {
+  margin-top: 2.5rem;
+}
+

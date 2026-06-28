@@ -216,14 +216,38 @@ plugins:
       position: beforeBody
       priority: 5
       condition: not-index
+  # Page comments, backed by GitHub Discussions via giscus.
+  # Every comment posts to this repo's Discussions, so GitHub emails you on each
+  # new one (watch the repo → All Activity / Custom → Discussions). That is the
+  # "notify me" mechanism — no extra service needed.
+  #
+  # ⚠️ ONE-TIME SETUP before this works (see QUARTZ_GUIDE.md → "Comments"):
+  #   1. Repo Settings → General → Features → tick "Discussions".
+  #   2. Install the giscus app: https://github.com/apps/giscus → only this repo.
+  #   3. Open https://giscus.app, enter repo "barkernotbob/barkernotbob.github.io",
+  #      pick the Discussion category, then copy the data-repo-id and
+  #      data-category-id it shows you into repoId / categoryId below.
+  # Comments stay hidden/incomplete until those two IDs are filled in.
   - source: github:quartz-community/comments
-    enabled: false
+    enabled: true
     options:
       provider: giscus
-      options: {}
+      options:
+        repo: barkernotbob/barkernotbob.github.io
+        repoId: "" # ← paste data-repo-id from giscus.app
+        category: Announcements
+        categoryId: "" # ← paste data-category-id from giscus.app
+        mapping: pathname
+        strict: false
+        reactionsEnabled: true
+        inputPosition: bottom
+        lang: en
     layout:
       position: afterBody
       priority: 10
+      # Keep comments off the home splash. Folder/tag/canvas/bases index pages are
+      # excluded separately under layout.byPageType below.
+      condition: not-index
   - source: github:quartz-community/footer
     enabled: false
     options:
@@ -291,6 +315,8 @@ layout:
       gap: 0.5rem
   byPageType:
     "404":
+      exclude:
+        - comments
       positions:
         beforeBody: []
         left: []
@@ -299,12 +325,18 @@ layout:
     folder:
       exclude:
         - reader-mode
+        - comments
       positions:
         right: []
     tag:
       exclude:
         - reader-mode
+        - comments
       positions:
         right: []
-    canvas: {}
-    bases: {}
+    canvas:
+      exclude:
+        - comments
+    bases:
+      exclude:
+        - comments

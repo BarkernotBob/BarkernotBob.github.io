@@ -209,9 +209,13 @@
       /* Stack form fields to full width — no input can spill into the next column. */
       .row { flex-direction: column; gap: 14px; }
       .row-item { min-width: 0; width: 100%; }
+      /* Full-width, comfortably spaced action buttons — never squished or overlapping. */
+      .action-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+      .action-bar > button { width: 100%; }
       .filter-bar .search-input { min-width: 120px; }
+      .chip { min-height: 44px; }   /* easy-tap filter segments */
       /* Calendar: tighter cells; show a status dot instead of the (too-wide) amount. */
-      .cal-nav { grid-template-columns: 38px 1fr 38px auto; gap: 6px; }
+      .cal-nav { grid-template-columns: 44px 1fr 44px auto; gap: 6px; }
       .cal-grid { gap: 3px; }
       .cal-cell { min-height: 46px; padding: 3px; border-radius: 6px; }
       .cal-amt { display: none; }
@@ -902,26 +906,28 @@ function render_offers(){
   const section = $('#section-offers');
   const backlog = offers.filter(o => o.status === 'backlog');
 
-  let html = '<button onclick="addOffer()" style="margin-bottom:16px">+ Add Offer</button>';
+  // Cards (not a table) so there's no horizontal scroll on phones and the
+  // action buttons get full, non-overlapping tap targets.
+  let html = `<div class="filter-bar"><button onclick="addOffer()">+ Add Offer</button></div>`;
 
   if(backlog.length === 0) {
-    html += `<div class="empty">No offers in backlog yet.
+    html += `<div class="empty">No offers in your backlog yet.
       <div class="empty-cta"><button onclick="addOffer()">+ Add Offer</button></div></div>`;
   } else {
-    html += '<div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr><th>Institution</th><th class="num">Bonus</th><th class="num">DD Req</th><th>Actions</th></tr></thead><tbody>';
     backlog.forEach(o => {
-      html += `<tr>
-        <td>${esc(o.institution)}</td>
-        <td class="num">${money(o.bonus)}</td>
-        <td class="num">${money(o.directDepositTotal)}</td>
-        <td>
-          <button class="sec small" onclick="promoteOffer('${o.id}','planned')">Planned</button>
-          <button class="sec small" onclick="promoteOffer('${o.id}','open')">Open</button>
-          <button class="danger small" onclick="deleteOffer('${o.id}')">Del</button>
-        </td>
-      </tr>`;
+      html += `<div class="card">
+        <div class="card-header"><span class="card-title">${esc(o.institution)}${o.person ? ' ' + personChip(o.person) : ''}</span></div>
+        <div class="row">
+          <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(o.bonus)}</div></div>
+          <div class="row-item"><div class="label">DD Required</div><div class="value money">${money(o.directDepositTotal)}</div></div>
+        </div>
+        <div class="action-bar">
+          <button onclick="promoteOffer('${o.id}','planned')">Move to Planned</button>
+          <button class="sec" onclick="promoteOffer('${o.id}','open')">Open now</button>
+          <button class="danger" onclick="deleteOffer('${o.id}')">Delete</button>
+        </div>
+      </div>`;
     });
-    html += '</tbody></table></div></div>';
   }
 
   section.innerHTML = html;

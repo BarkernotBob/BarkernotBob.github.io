@@ -175,7 +175,69 @@ settings block of each page you want to place.
 
 ---
 
-## Adding a video to Curated YouTube (in Obsidian)
+## Adding a video — the one-click way (Obsidian Web Clipper)
+
+This is the **fast, bulletproof** way to add a one-off video to your *Individual videos*
+section. You set it up **once**, then every future video is two clicks from the video page.
+All the publishing metadata (`title`, `publish: true`, the embed) is baked into a template,
+so you can never forget a step.
+
+### One-time setup (do this once)
+
+1. **Install the extension.** Open
+   https://obsidian.md/clipper and add **Obsidian Web Clipper** to your browser
+   (Chrome, Edge, Safari, Firefox, etc.). It's the official Obsidian extension.
+2. **Point it at your vault.** Click the extension icon → the gear/⚙️ **Settings** →
+   **General**. Set **Vault** to the same vault you edit your site in (the **`content`**
+   folder). If your vault isn't listed, open Obsidian once with that folder as a vault,
+   then reload the extension.
+3. **Create the template.** In Web Clipper Settings → **Templates** → **New template**.
+   Either **import the ready-made file** (fastest) or **fill the fields by hand**.
+
+   **Option A — import (one click):** in Templates, use **Import** and choose
+   `Website Setup/YouTube Web Clipper Template.json` from your site folder. Done — skip to
+   "Using it" below. *(If your Web Clipper version can't read the file, use Option B.)*
+
+   **Option B — fill it in by hand** (these fields are the source of truth; copy each value
+   exactly, the `{{…}}` bits are variables the clipper fills in for you):
+
+   | Field | Value |
+   |---|---|
+   | **Template name** | `YouTube → Individual videos` |
+   | **Behavior** | `Create new note` |
+   | **Note location / path** | `youtube/recommended` |
+   | **Note name** | `{{title\|replace:" - YouTube":""\|safe_name}}` |
+   | **Properties** (frontmatter) | add **`title`** = `{{title\|replace:" - YouTube":""}}` (type *Text*), and **`publish`** = `true` (type *Checkbox*) |
+   | **Template content** (body) | `![]({{url}})` then a blank line, then `**Why it's worth a look:** ` |
+   | **Triggers** | `https://www.youtube.com/watch` (one per line; optionally also `https://youtu.be/` and `https://m.youtube.com/watch`) |
+
+   The **Triggers** line is what makes this template auto-select itself whenever you're on a
+   YouTube video, so you never pick the wrong one.
+
+### Using it (every video, from now on)
+
+1. On the YouTube video page, click the **Obsidian Web Clipper** icon. The template is
+   already selected (because of the trigger). You'll see the title, the `publish` box
+   (ticked), and the embed filled in.
+2. *(Optional)* type your one-line take after **"Why it's worth a look:"** right in the
+   popup. You can also do this later in Obsidian.
+3. *(Optional)* to file it under a subtopic instead of the top level, change the **path**
+   in the popup from `youtube/recommended` to e.g. `youtube/recommended/theology`.
+4. Click **Save / Add to Obsidian**. The note lands in `content/youtube/recommended`.
+5. Double-click **Publish Changes.command**.
+
+That's it — the video plays on its own page with your note underneath, and it auto-appears
+in the list at `/youtube`. No video-ID copying, no forgetting `publish: true`.
+
+> **Phone note:** the Web Clipper is a *browser* extension, so on iPhone it works from a
+> mobile browser that supports extensions, not the YouTube app. If you mostly save videos on
+> your phone, tell Claude and we'll set up a share-sheet shortcut instead — same end result.
+
+---
+
+## Adding a video — the manual way (in Obsidian)
+
+*(Use this if you haven't set up the Web Clipper above, or you're already in Obsidian.)*
 
 1. In Obsidian, open the **`youtube`** folder (inside `content`). The example note
    **"The first-ever YouTube video"** shows the exact pattern.

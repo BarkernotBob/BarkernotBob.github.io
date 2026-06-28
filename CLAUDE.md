@@ -1,6 +1,10 @@
 # Open questions (to address later)
 - **Game publish naming convention:** the Publish/Preview commands now auto-publish any `*.standalone.html` in the iCloud Claude folder. Decide how to handle games whose source file ISN'T named `*.standalone.html` (e.g. VeggieTales-Chess): either rename the source to end in `.standalone.html`, or add a one-line special case (path|Name.html) to the `GAMES=( … )` block in both `Publish Changes.command` and `Preview Website.command`. Confirm VeggieTales-Chess's actual source path/filename.
 
+# App requirements (every app I create or update)
+- **No zoom at all (whole app):** disable every form of zoom app-wide. Put `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">` in the `<head>`, AND set `touch-action: manipulation` on the app body/root so double-tap zoom is killed even where the viewport tag is ignored. This applies to the entire app surface, not just interactive elements.
+- **Clicking must never reflow the UI:** clicking/tapping a button (or any control) must never resize a menu or shift other elements up/over/around. Reserve stable space so state changes don't move neighbors — e.g. fixed/min dimensions on containers, `visibility:hidden` instead of `display:none` when toggling, and avoid layout-affecting changes (added borders, font-size/weight swaps, inserted nodes) on click. The clicked element and everything around it must stay put.
+
 # Response style
 - Be terse. No narration, reasoning summaries, or "I'll now…" preambles. Execute first, then report only the result (a short "what I did" summary).
 - Lead with the outcome; no preamble, no recap of the process.

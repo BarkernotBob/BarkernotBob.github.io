@@ -130,6 +130,8 @@ plugins:
     enabled: true
   - source: ./quartz/plugins/custom/tag-filter
     enabled: true
+  - source: ./quartz/plugins/custom/pwa
+    enabled: true
   - source: github:quartz-community/explorer
     enabled: true
     options:

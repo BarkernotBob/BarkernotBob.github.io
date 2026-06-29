@@ -1,5 +1,9 @@
 @use "./variables.scss" as *;
 
+body {
+  touch-action: manipulation;
+}
+
 // ============================================================
 //  Home splash page (Pop theme) — custom landing in front of
 //  the notes site. Scoped to pages containing .home-splash.

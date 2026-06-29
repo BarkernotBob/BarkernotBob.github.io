@@ -10,6 +10,35 @@ the basics. The rest of this page is optional.
 
 ---
 
+## Install it (recommended — 20 seconds)
+
+Installing makes the app open like a normal app, **keeps your data from being cleared**,
+and is **required on iPhone** for reminders and the app-icon badge to work.
+
+- **iPhone / iPad:** open this page in **Safari** → tap **Share** (the square with an ↑) →
+  **Add to Home Screen** → **Add**. Open it from the new icon from now on.
+  - *Why it matters:* a Safari **tab** can have its saved data — including your sync token —
+    wiped after 7 days of no use. The installed Home Screen app is exempt, so your data and
+    token stay put.
+- **Android (Chrome):** tap the **⋮** menu → **Install app** → **Install**.
+- **Desktop (Chrome / Edge):** click the **install icon** (a monitor with a ↓) at the right
+  of the address bar → **Install**.
+
+---
+
+## Notifications — three ways, lowest-friction first
+
+1. **On-device reminders (free, no account).** In **Settings ⚙️ → 🔔 Reminders on this
+   device**, tap **Turn on notifications**. When you open the app, it puts a count on the
+   app icon and shows a notification for anything due today. Works offline. On iPhone you
+   must **install the app first** (above) — this never works in a plain Safari tab.
+   *Caveat:* these appear **when you open the app**, not while it's closed.
+2. **Daily email (reaches you while the app is closed).** Needs GitHub sync on plus a small
+   one-time setup — see "Optional: daily email reminders" below.
+3. **RSS feed.** Once synced, enable the feed in Settings and subscribe in any RSS reader.
+
+---
+
 ## Using it day to day
 
 1. **Offers tab** 📋 — the preloaded catalog of bank bonuses. Tap **Move to Planned** (you

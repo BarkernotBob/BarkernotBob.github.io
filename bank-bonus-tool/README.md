@@ -18,6 +18,8 @@ Syncing across devices is optional (see below).
 - 🗓 **Today dashboard** — accounts to open/close today, reminders due today.
 - 👥 **Multi-person** — track accounts for yourself, a partner, a business, or whoever.
 - 💾 **Backup & restore** — export your data to a file and import it anywhere.
+- 📲 **Installable** — add it to your Home Screen so it opens like a normal app and keeps your data safe.
+- 🔔 **On-device reminders** — a free, private notification + app-icon badge for what's due, shown when you open the app.
 - ☁️ **Optional sync** — connect your own private GitHub repo to sync across devices.
 - 📧 **Optional daily email** — once synced, a free GitHub Action emails you when there's something to do.
 

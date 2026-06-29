@@ -13,6 +13,17 @@ Your data saves automatically in this browser. Done.
 
 ---
 
+## 📲 Install + on-device reminders (recommended, free, no account)
+
+- [ ] **Install it** (required on iPhone for reminders/badge, and keeps your data safe):
+  - [ ] **iPhone/iPad:** Safari → **Share** ↑ → **Add to Home Screen** → **Add**, then open from the icon
+  - [ ] **Android:** Chrome **⋮** → **Install app**
+  - [ ] **Desktop:** address-bar **install icon** → **Install**
+- [ ] **Turn on reminders:** Settings ⚙️ → **🔔 Reminders on this device** → **Turn on notifications**
+- [ ] Now opening the app shows a badge + a notification for anything due today (works offline)
+
+---
+
 ## ☁️ Optional: sync across devices (one-time, ~10 min)
 
 **Time: 1 min** — Create a free GitHub account (skip if you have one)

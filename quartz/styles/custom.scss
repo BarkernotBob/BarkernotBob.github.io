@@ -69,7 +69,30 @@ body:has(.home-splash) {
   // Hide Quartz's auto heading-anchor (chain) icon on the splash
   & a[role="anchor"] { display: none !important; }
 
-  & .splash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  // Bento layout (mockup-faithful): a tall Notes card on the left spanning two
+  // rows, with Tools / YouTube across the top-right and a wide Games card below.
+  & .splash-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    grid-template-areas:
+      "notes tools yt"
+      "notes games games";
+    gap: 18px;
+  }
+
+  // Recent-notes list shown inside the (tall) Notes card.
+  & .splash-recent {
+    margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  & .splash-recent .rrow {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    font-size: 14px; color: var(--ink);
+  }
+  & .splash-recent .rrow span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  & .splash-recent .rrow-date {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
 
   & .splash-card {
     position: relative; background: var(--card); border: 1px solid var(--line);
@@ -95,10 +118,10 @@ body:has(.home-splash) {
   & .splash-card p { font-size: 14px; line-height: 1.5; color: var(--muted); margin: 0; }
   & .splash-go { margin-top: auto; padding-top: 6px; font-weight: 500; font-size: 14px; color: var(--accent-c); }
 
-  & .splash-card.notes { --accent-c: var(--c-notes); }
-  & .splash-card.tools { --accent-c: var(--c-tools); }
-  & .splash-card.games { --accent-c: var(--c-games); }
-  & .splash-card.yt    { --accent-c: var(--c-yt); }
+  & .splash-card.notes { --accent-c: var(--c-notes); grid-area: notes; }
+  & .splash-card.tools { --accent-c: var(--c-tools); grid-area: tools; }
+  & .splash-card.games { --accent-c: var(--c-games); grid-area: games; }
+  & .splash-card.yt    { --accent-c: var(--c-yt);    grid-area: yt; }
 }
 
 // Dark-mode variant of the splash (bg + text follow the site theme)
@@ -111,7 +134,7 @@ body:has(.home-splash) {
 @media (max-width: 800px) {
   .home-splash { padding-top: 0; }
   .home-splash .splash-title { font-size: 34px; }
-  .home-splash .splash-grid { grid-template-columns: 1fr; grid-template-areas: "notes" "tools" "games" "yt"; }
+  .home-splash .splash-grid { grid-template-columns: 1fr; grid-template-areas: "notes" "tools" "yt" "games"; }
   .home-splash .splash-strip { grid-template-columns: 1fr; }
   .home-splash .splash-card { flex-direction: row; align-items: center; gap: 14px; min-height: 0; padding: 15px; }
   .home-splash .splash-card .splash-ic { flex: 0 0 auto; }
@@ -375,6 +398,30 @@ blockquote {
     margin-top: 0.75rem;
     padding-top: 1.4rem;
   }
+
+  // Folder rows vs. note rows. A folder entry's link href ends in "/"
+  // (e.g. ".../logical-fallacies/"); an individual note's does not. Give
+  // folders a tinted band, a folder glyph before the title, and a mono
+  // "Folder" badge so they read as containers, not leaf notes.
+  .section-li:has(.desc h3 a[href$="/"]) > .section {
+    background: color-mix(in srgb, var(--secondary) 6%, transparent);
+    border-left-color: color-mix(in srgb, var(--secondary) 35%, transparent);
+  }
+  .section-li:has(.desc h3 a[href$="/"]) .desc h3 {
+    font-family: var(--titleFont, "Fraunces"), serif;
+  }
+  .section-li:has(.desc h3 a[href$="/"]) .desc h3 a::before {
+    content: "🗂";
+    margin-right: 0.5rem;
+    font-size: 0.95em;
+  }
+  .section-li:has(.desc h3 a[href$="/"]) > .section::after {
+    content: "Folder";
+    grid-column: 2; grid-row: 1; align-self: start;
+    font-family: "IBM Plex Mono", monospace; font-size: 0.66rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--secondary); white-space: nowrap;
+  }
 }
 
 @media (max-width: 800px) {
@@ -480,6 +527,41 @@ body:has(.page-listing) .content-meta { display: none !important; }
 .search .result-card:hover,
 .search .result-card.focus {
   background: color-mix(in srgb, var(--secondary) 10%, transparent) !important;
+}
+
+// Blank (pre-search) state: a boxier, squarer search field. Once a term is
+// typed the results layout shows and the field returns to its connected shape.
+.search > .search-container > .search-space:has(> .search-layout:not(.display-results)) > input {
+  border-radius: 12px !important;
+  min-height: 4.2rem;
+  padding: 1rem 1.2rem !important;
+}
+
+// Preview is disabled, but the attribute data-preview="false" is still present,
+// so the base stylesheet's [data-preview] rules (narrow 30% column, fixed tall
+// height, hidden snippets, divider) still fire. Undo them for the compact,
+// mockup-style results list.
+.search .search-layout[data-preview="false"] {
+  display: block !important;
+}
+.search .search-layout[data-preview="false"] > .results-container {
+  flex: 1 1 100% !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: 60vh !important;
+  border-right: none !important;
+  border-radius: 5px !important;
+}
+.search .search-layout[data-preview="false"] .result-card > p.card-description {
+  display: block;
+}
+
+// Highlight for the live "scroll the open note to the search term" feature.
+.rr-search-hit {
+  background: color-mix(in srgb, var(--c-yt, #b07a1e) 32%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-yt, #b07a1e) 32%, transparent);
 }
 
 // ============================================================

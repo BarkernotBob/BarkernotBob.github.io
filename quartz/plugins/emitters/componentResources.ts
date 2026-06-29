@@ -329,6 +329,20 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   `)
   // --------------------------------------------------------------------------
 
+  // --- Explorer auto-collapse (custom): the file tree should always open ONLY
+  // --- the path to the current page and keep every other folder collapsed,
+  // --- resetting on each navigation. The explorer reads its open/closed state
+  // --- from localStorage("fileTree") at the top of every "nav" render (before
+  // --- it awaits data), so clearing that key on load and before each SPA
+  // --- navigation makes the tree fall back to "collapsed except current path".
+  // --- Manual folder toggles still work within a page; they reset on nav.
+  componentResources.afterDOMLoaded.push(`
+    function quartzResetTree() { try { localStorage.removeItem("fileTree") } catch (e) {} }
+    quartzResetTree()
+    document.addEventListener("prenav", quartzResetTree)
+  `)
+  // --------------------------------------------------------------------------
+
   // --- Reading Room whimsy (custom): a subtle pointer-tilt on the home cards.
   componentResources.afterDOMLoaded.push(`
     if (!window.matchMedia("(pointer: coarse)").matches) {
@@ -413,23 +427,8 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
 
       const listing = document.querySelector(".page-listing")
       if (listing) {
-        // --- Browse by tag ---
-        const tagMap = new Map()
-        listing.querySelectorAll(".section-li .tag-link").forEach((a) => {
-          const t = (a.textContent || "").trim()
-          if (t && !tagMap.has(t)) tagMap.set(t, a.getAttribute("href"))
-        })
-        if (tagMap.size) {
-          const made = quartzMakeRail("Browse by tag", "rr-tagcloud")
-          Array.from(tagMap.keys()).sort().forEach((t) => {
-            const a = document.createElement("a")
-            a.className = "internal tag-link"
-            a.setAttribute("href", tagMap.get(t))
-            a.textContent = t
-            made.body.appendChild(a)
-          })
-          right.prepend(made.rail)
-        }
+        // (No "Browse by tag" rail: it duplicates the in-page tag-filter pills.
+        // Tags still appear on individual note pages.)
         // --- Recently tended (listing is date-sorted; take the first few
         // dated entries, skipping folders / undated rows) ---
         const rows = Array.from(listing.querySelectorAll(".section-li")).filter((li) => {
@@ -490,6 +489,126 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     }
     document.addEventListener("nav", quartzBuildRails)
     quartzBuildRails()
+  `)
+  // --------------------------------------------------------------------------
+
+  // --- "/" opens search (custom) --------------------------------------------
+  // Pressing "/" anywhere focuses the search box, unless the user is already
+  // typing in a field (input/textarea/select/contenteditable) or search is open.
+  componentResources.afterDOMLoaded.push(`
+    function quartzIsTypingTarget(el) {
+      if (!el || !el.tagName) return false
+      const tag = el.tagName
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable === true
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return
+      if (quartzIsTypingTarget(e.target)) return
+      if (document.querySelector(".search-container.active")) return
+      const btn = document.querySelector(".search > .search-button")
+      if (!btn) return
+      e.preventDefault()
+      btn.click()
+    })
+  `)
+  // --------------------------------------------------------------------------
+
+  // --- Live "scroll the open note to the search term" (custom) ---------------
+  // While the search box is open and you're reading a note, typing a term jumps
+  // the underlying article to (and highlights) the first occurrence of that
+  // text, so dismissing search lands you right on it. Independent of the
+  // result list, which still filters as usual.
+  componentResources.afterDOMLoaded.push(`
+    function quartzClearNoteHit() {
+      document.querySelectorAll(".rr-search-hit").forEach((s) => {
+        const p = s.parentNode
+        if (!p) return
+        p.replaceChild(document.createTextNode(s.textContent || ""), s)
+        p.normalize()
+      })
+    }
+    function quartzScrollNoteToTerm(term) {
+      quartzClearNoteHit()
+      if (!term || term.length < 2) return
+      const article = document.querySelector(".center article")
+      if (!article) return
+      const lower = term.toLowerCase()
+      const candidates = article.querySelectorAll("p, li, td, th, blockquote, h1, h2, h3, h4, h5, h6")
+      for (const el of candidates) {
+        const text = el.textContent || ""
+        const idx = text.toLowerCase().indexOf(lower)
+        if (idx === -1) continue
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+        let charCount = 0, startNode = null, startOffset = 0, endNode = null, endOffset = 0, node
+        while ((node = walker.nextNode())) {
+          const len = node.nodeValue ? node.nodeValue.length : 0
+          if (!startNode && charCount + len > idx) { startNode = node; startOffset = idx - charCount }
+          if (startNode && charCount + len >= idx + term.length) { endNode = node; endOffset = idx + term.length - charCount; break }
+          charCount += len
+        }
+        if (!startNode || !endNode) continue
+        try {
+          const range = document.createRange()
+          range.setStart(startNode, startOffset)
+          range.setEnd(endNode, endOffset)
+          const span = document.createElement("span")
+          span.className = "rr-search-hit"
+          range.surroundContents(span)
+          span.scrollIntoView({ block: "center", behavior: "smooth" })
+        } catch (e) {
+          el.scrollIntoView({ block: "center", behavior: "smooth" })
+        }
+        return
+      }
+    }
+    let quartzTermTimer = null
+    document.addEventListener("input", (e) => {
+      const t = e.target
+      if (!t || !t.classList || !t.classList.contains("search-bar")) return
+      const query = (t.value || "").split(/\\s+/).filter((w) => w && w[0] !== "#").join(" ").trim()
+      if (quartzTermTimer) clearTimeout(quartzTermTimer)
+      quartzTermTimer = setTimeout(() => quartzScrollNoteToTerm(query), 200)
+    })
+    document.addEventListener("nav", quartzClearNoteHit)
+  `)
+  // --------------------------------------------------------------------------
+
+  // --- Home "recent notes" (custom) -----------------------------------------
+  // The home Notes card shows the most recent dated notes. contentIndex has no
+  // dates, so pull them from the rendered /notes/ listing (already date-sorted),
+  // skipping folder rows (their href ends in "/").
+  componentResources.afterDOMLoaded.push(`
+    async function quartzHomeRecent() {
+      const slot = document.querySelector(".home-splash .splash-recent")
+      if (!slot) return
+      try {
+        const res = await fetch("/notes/")
+        const html = new DOMParser().parseFromString(await res.text(), "text/html")
+        const rows = Array.from(html.querySelectorAll(".page-listing .section-li")).filter((li) => {
+          const a = li.querySelector(".desc a, h3 a")
+          const m = li.querySelector(".meta")
+          return a && a.getAttribute("href") && !a.getAttribute("href").endsWith("/") && m && m.textContent.trim()
+        }).slice(0, 4)
+        slot.replaceChildren()
+        rows.forEach((li) => {
+          const a = li.querySelector(".desc a, h3 a")
+          const row = document.createElement("span")
+          row.className = "rrow"
+          const name = document.createElement("span")
+          name.textContent = (a.textContent || "").trim()
+          const date = document.createElement("span")
+          date.className = "rrow-date"
+          date.textContent = (li.querySelector(".meta").textContent || "").trim()
+          row.appendChild(name)
+          row.appendChild(date)
+          slot.appendChild(row)
+        })
+      } catch (e) {
+        console.error("[home-recent]", e)
+      }
+    }
+    document.addEventListener("nav", quartzHomeRecent)
+    quartzHomeRecent()
   `)
   // --------------------------------------------------------------------------
 

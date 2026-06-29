@@ -171,6 +171,11 @@ plugins:
       priority: 10
   - source: github:quartz-community/search
     enabled: true
+    options:
+      # Compact, mockup-style results list. Disabling the side preview pane keeps
+      # the modal small so the underlying note (which scrolls to the searched
+      # term) stays visible.
+      enablePreview: false
     layout:
       position: header
       priority: 20

@@ -4,7 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Trashback 2025</title>
+<title>Trashback Guarantee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <!--
   ┌──────────────────────────────────────────────────────────────────────┐
@@ -17,17 +20,18 @@
 </script>
 
 <style>
+  /* Warm "Reading Room" espresso palette — cohesive with the main site's dark mode. */
   :root{
-    --bg:#0f1419; --panel:#171e26; --panel2:#1d2630; --line:#2a3744;
-    --txt:#e6edf3; --muted:#8b9aa7; --accent:#46c2a8; --accent2:#f2b134;
-    --win:#46c2a8; --loss:#e2575a; --chip:#222e3a;
-    --heat0:#1d2630;
+    --bg:#181410; --panel:#221c16; --panel2:#2a221b; --line:#3a3027;
+    --txt:#efe7d6; --muted:#a99d86; --accent:#62b5a3; --accent2:#e0a463;
+    --win:#62b5a3; --loss:#e0805f; --chip:#2a221b;
+    --heat0:#221c16;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
     background:var(--bg); color:var(--txt);
-    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font:15px/1.5 "Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-text-size-adjust:100%;
   }
   a{color:var(--accent)}
@@ -53,7 +57,7 @@
     display:flex; align-items:center; gap:12px; flex-wrap:wrap;
     padding-top:max(10px,env(safe-area-inset-top));
   }
-  header.app h1{font-size:18px; margin:0; letter-spacing:.5px; white-space:nowrap}
+  header.app h1{font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:20px; margin:0; letter-spacing:-.2px; white-space:nowrap}
   header.app .grow{flex:1}
   .tabs{display:flex; gap:6px; flex-wrap:wrap}
   .tabs button{
@@ -63,7 +67,7 @@
   .tabs button.active{background:var(--accent); color:#06231d; border-color:var(--accent)}
   .wrap{max-width:1200px; margin:0 auto; padding:16px}
   .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px}
-  .panel h2{margin:0 0 12px; font-size:16px}
+  .panel h2{font-family:"Fraunces",Georgia,serif; font-weight:600; margin:0 0 12px; font-size:18px; letter-spacing:-.2px}
   .panel h3{margin:18px 0 8px; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
   .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
   .muted{color:var(--muted)}
@@ -119,7 +123,7 @@
   /* login gate */
   .gate{position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px}
   .gate .box{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 24px; max-width:360px; width:100%; text-align:center}
-  .gate h1{font-size:22px; margin:0 0 4px}
+  .gate h1{font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:-.3px}
   .gate p{color:var(--muted); font-size:13px; margin:4px 0 0}
   .gate input{width:100%; margin:18px 0 12px; text-align:center; font-size:18px; min-height:50px}
   .gate .btn{width:100%}
@@ -144,7 +148,7 @@
 <!-- ───────────── LOGIN GATE ───────────── -->
 <div id="gate" class="gate hide">
   <div class="box">
-    <h1>🥏 Trashback</h1>
+    <h1>🥏 Trashback Guarantee</h1>
     <p>Enter the group passcode to view and add games.</p>
     <input type="password" id="gatePass" inputmode="text" autocomplete="current-password" placeholder="passcode" />
     <button class="btn" id="gateBtn">Enter</button>
@@ -153,7 +157,7 @@
 </div>
 
 <header class="app" id="appHeader">
-  <h1>🥏 Trashback&nbsp;2025</h1>
+  <h1>🥏 Trashback&nbsp;Guarantee</h1>
   <nav class="tabs" id="tabs">
     <button data-tab="overview" class="active">Overview</button>
     <button data-tab="reports">Charts &amp; Reports</button>
@@ -526,7 +530,7 @@ function renderLeagueCards(games,stats,rows){
 
 // reports
 function destroyChart(id){ if(CHARTS[id]){CHARTS[id].destroy(); delete CHARTS[id];} }
-const PALETTE=["#46c2a8","#f2b134","#7aa2f7","#e2575a","#bb9af7","#9ece6a","#ff9e64","#2ac3de","#f7768e","#e0af68","#73daca","#c0caf5"];
+const PALETTE=["#62b5a3","#e0a463","#7ea3c4","#e0805f","#bb9af7","#9ece6a","#ff9e64","#2ac3de","#f7768e","#d9a949","#73daca","#c0caf5"];
 function barOpts(unit,grouped){ return {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!grouped}},scales:{x:{ticks:{maxRotation:60,minRotation:0}},y:{beginAtZero:true,ticks:{callback:v=>v+(unit||"")}}}}; }
 
 function renderReports(){
@@ -535,12 +539,12 @@ function renderReports(){
   const minG=+($("#minGames").value||0);
   const rows=Object.values(stats).filter(s=>s.games>=minG).sort((a,b)=>(b.ratio||0)-(a.ratio||0));
   const names=rows.map(r=>r.name);
-  Chart.defaults.color="#8b9aa7"; Chart.defaults.borderColor="#2a3744"; Chart.defaults.font.family="inherit";
+  Chart.defaults.color="#a99d86"; Chart.defaults.borderColor="#3a3027"; Chart.defaults.font.family="inherit";
 
   destroyChart("ratio");
-  CHARTS.ratio=new Chart($("#chartRatio"),{type:"bar",data:{labels:names,datasets:[{label:"Win %",data:rows.map(r=>+(100*(r.ratio||0)).toFixed(1)),backgroundColor:"#46c2a8"}]},options:barOpts("%")});
+  CHARTS.ratio=new Chart($("#chartRatio"),{type:"bar",data:{labels:names,datasets:[{label:"Win %",data:rows.map(r=>+(100*(r.ratio||0)).toFixed(1)),backgroundColor:"#62b5a3"}]},options:barOpts("%")});
   destroyChart("streak");
-  CHARTS.streak=new Chart($("#chartStreak"),{type:"bar",data:{labels:names,datasets:[{label:"Longest win streak",data:rows.map(r=>r.streak),backgroundColor:"#f2b134"}]},options:barOpts("")});
+  CHARTS.streak=new Chart($("#chartStreak"),{type:"bar",data:{labels:names,datasets:[{label:"Longest win streak",data:rows.map(r=>r.streak),backgroundColor:"#e0a463"}]},options:barOpts("")});
   destroyChart("side");
   CHARTS.side=new Chart($("#chartSide"),{type:"bar",data:{labels:names,datasets:[
     {label:"Open win %",data:rows.map(r=>r.openRatio!=null?+(100*r.openRatio).toFixed(1):null),backgroundColor:"#7aa2f7"},
@@ -592,7 +596,8 @@ function renderRecent(){
 
 // ───────────────────────── enter game ─────────────────────────
 const NAME_FIELDS=["o1","o2","w1","w2"];
-const FIELD_ORDER=["o1","o2","w1","w2","oScore","wScore"]; // Tab/Enter flow
+// Visual order, left→right then top→bottom, ending on the Add-game button; wraps.
+const FIELD_ORDER=["o1","o2","oScore","w1","w2","wScore","submitGame"];
 let entryBuilt=false;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -617,9 +622,11 @@ function buildEntryForm(){
   } else {
     NAME_FIELDS.forEach(id=>setupCombo($("#"+id)));
   }
-  // score keyboard flow: Enter on Open score → Wall score; Enter on Wall → submit
-  $("#oScore").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#wScore").focus(); }});
+  // score keyboard flow: Enter on Open score → next field; Enter on Wall score → submit
+  $("#oScore").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); advanceFrom("oScore"); }});
   $("#wScore").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); submitGame(); }});
+  // Tab / Shift+Tab walk the form in visual order and wrap around at the ends.
+  $("#tab-enter").addEventListener("keydown",onEntryTab);
   entryBuilt=true;
   updateEntryOptions();
 }
@@ -642,7 +649,19 @@ function onNewPlayerSelect(sel){
 }
 // Match a typed name to an existing player case-insensitively (avoids "logan" vs "Logan").
 function canonPlayer(name){ const t=String(name||"").trim(); return PLAYERS.find(p=>p.toLowerCase()===t.toLowerCase())||t; }
-function advanceFrom(id){ const i=FIELD_ORDER.indexOf(id); if(i>=0 && i<FIELD_ORDER.length-1){ const nxt=$("#"+FIELD_ORDER[i+1]); if(nxt) nxt.focus(); } }
+function advanceFrom(id,dir){ const i=FIELD_ORDER.indexOf(id); if(i<0) return; const n=(i+(dir||1)+FIELD_ORDER.length)%FIELD_ORDER.length; const el=$("#"+FIELD_ORDER[n]); if(el) el.focus(); }
+// Tab focus trap for the entry form: keeps Tab order visual and wraps around.
+function onEntryTab(e){
+  if(e.key!=="Tab") return;
+  const cur=document.activeElement; if(!cur||!cur.id||FIELD_ORDER.indexOf(cur.id)<0) return;
+  // tabbing forward out of a name field with an open suggestion takes the top one
+  if(!e.shiftKey && combo && combo.input===cur && combo.items.length && (cur.value.trim()||combo.touched)){
+    const val=combo.items[combo.active]; if(val) cur.value=val;
+  }
+  closeCombo();
+  e.preventDefault();
+  advanceFrom(cur.id, e.shiftKey?-1:1);
+}
 
 // ── custom name autocomplete (desktop) ──────────────────────────
 // Suggestions are prefix matches anchored to the START of a word only: "Le"
@@ -707,7 +726,7 @@ function onComboKey(e,input){
   if(e.key==="ArrowUp"){ if(open){ e.preventDefault(); combo.active=(combo.active-1+combo.items.length)%combo.items.length; combo.touched=true; markActive(); } return; }
   if(e.key==="Enter"){ e.preventDefault(); if(willPick) pickCombo(combo.active); else { closeCombo(); canonField(input); advanceFrom(input.id); } return; }
   if(e.key==="Escape"){ closeCombo(); return; }
-  if(e.key==="Tab"){ if(willPick){ e.preventDefault(); pickCombo(combo.active); } else closeCombo(); return; }
+  // Tab is handled by onEntryTab (the form-wide focus trap).
 }
 function canonField(input){ const c=canonPlayer(input.value); if(c) input.value=c; }
 

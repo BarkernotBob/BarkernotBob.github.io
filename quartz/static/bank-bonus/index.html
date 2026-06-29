@@ -169,6 +169,8 @@
     @media (pointer: coarse) {
       input[type="date"] { -webkit-appearance: none; appearance: none; }
     }
+    /* Compact inline date pickers used inside list-card value cells. */
+    input.date-quick { min-height: 34px; padding: 4px 7px; font-size: 13px; font-weight: 600; width: 100%; border-radius: 6px; }
     /* Progress bar (calendar paycheck usage) */
     .prog { height: 12px; border-radius: 7px; background: var(--surface-3); overflow: hidden; }
     .prog > i { display: block; height: 100%; border-radius: 7px; }
@@ -271,13 +273,13 @@
 </header>
 
 <nav id="nav">
-  <button data-tab="today" class="nav-btn active" onclick="show('today')" title="Today (1)"><span class="ic">🗓</span>Today</button>
-  <button data-tab="active" class="nav-btn" onclick="show('active')" title="Active (2)"><span class="ic">📂</span>Active</button>
-  <button data-tab="planned" class="nav-btn" onclick="show('planned')" title="Planned (3)"><span class="ic">🗒</span>Planned</button>
-  <button data-tab="offers" class="nav-btn" onclick="show('offers')" title="Offers (4)"><span class="ic">🧰</span>Offers</button>
-  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')" title="Calendar (5)"><span class="ic">📅</span>Calendar</button>
-  <button data-tab="reports" class="nav-btn" onclick="show('reports')" title="Reports (6)"><span class="ic">📊</span>Reports</button>
-  <button data-tab="settings" class="nav-btn" onclick="show('settings')" title="Settings (7)"><span class="ic">⚙︎</span>Settings</button>
+  <button data-tab="today" class="nav-btn active" onclick="show('today')" title="Today (T)"><span class="ic">🗓</span><u>T</u>oday</button>
+  <button data-tab="active" class="nav-btn" onclick="show('active')" title="Active (A)"><span class="ic">📂</span><u>A</u>ctive</button>
+  <button data-tab="planned" class="nav-btn" onclick="show('planned')" title="Planned (P)"><span class="ic">🗒</span><u>P</u>lanned</button>
+  <button data-tab="offers" class="nav-btn" onclick="show('offers')" title="Offers (O)"><span class="ic">🧰</span><u>O</u>ffers</button>
+  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')" title="Calendar (C)"><span class="ic">📅</span><u>C</u>alendar</button>
+  <button data-tab="reports" class="nav-btn" onclick="show('reports')" title="Reports (R)"><span class="ic">📊</span><u>R</u>eports</button>
+  <button data-tab="settings" class="nav-btn" onclick="show('settings')" title="Settings (S)"><span class="ic">⚙︎</span><u>S</u>ettings</button>
 </nav>
 
 <main id="main"></main>
@@ -302,7 +304,7 @@ const OAUTH = {
 
 // Bump this on each deploy so the Settings footer shows which build is live —
 // lets you confirm a phone isn't serving a cached old copy.
-const BUILD = '2026-06-29 · r9 · PWA';
+const BUILD = '2026-06-29 · r10';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -422,35 +424,38 @@ function currentTab(){
 function modalOpen(){ return !!document.querySelector('.modal-ov'); }
 
 // --------- Keyboard shortcuts ---------
-const TAB_KEYS = {'1':'today','2':'active','3':'planned','4':'offers','5':'calendar','6':'reports','7':'settings'};
+const TAB_KEYS = {'t':'today','a':'active','p':'planned','o':'offers','c':'calendar','r':'reports','s':'settings'};
 function showShortcuts(){
   modal(`<p><strong>⌨ Keyboard shortcuts</strong></p>
     <table class="sc-table" style="width:100%;font-size:13px">
-      <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Jump to Today / Active / Planned / Offers / Calendar / Reports / Settings</td></tr>
+      <tr><td><kbd>T</kbd><kbd>A</kbd><kbd>P</kbd><kbd>O</kbd><kbd>C</kbd><kbd>R</kbd><kbd>S</kbd></td><td>Jump to <u>T</u>oday / <u>A</u>ctive / <u>P</u>lanned / <u>O</u>ffers / <u>C</u>alendar / <u>R</u>eports / <u>S</u>ettings</td></tr>
       <tr><td><kbd>n</kbd></td><td>New — account (Active/Planned) or offer (Offers)</td></tr>
-      <tr><td><kbd>s</kbd></td><td>Save changes (in an account)</td></tr>
-      <tr><td><kbd>e</kbd></td><td>Edit — focus the first field (in an account)</td></tr>
+      <tr><td><kbd>s</kbd></td><td>Save changes (while editing an account)</td></tr>
+      <tr><td><kbd>e</kbd></td><td>Edit — focus the first field (while editing an account)</td></tr>
       <tr><td><kbd>/</kbd></td><td>Focus the search box (Active / Planned)</td></tr>
-      <tr><td><kbd>Esc</kbd></td><td>Close a dialog, or go back from an account</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Exit a text field, close a dialog, or go back from an account</td></tr>
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
     </table>
     <div class="row" style="margin-top:8px;justify-content:flex-end"><button data-mval="ok">Got it</button></div>`);
 }
 document.addEventListener('keydown', e => {
   if(e.metaKey || e.ctrlKey || e.altKey) return;
-  // Escape: close the top modal, else step back out of the detail view.
+  const activeTag = (document.activeElement && document.activeElement.tagName) || '';
+  const inInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+  // Escape: blur focused input first; if nothing focused, close modal or go back.
   if(e.key === 'Escape'){
+    if(inInput && !modalOpen()){ document.activeElement.blur(); return; }
     if(modalOpen()){ const o = document.querySelector('.modal-ov'); if(o && o._esc) o._esc(); return; }
     if(currentTab() === 'detail'){ backFromDetail(); }
     return;
   }
   // Don't hijack keys while typing or while a dialog is open.
-  const tag = (document.activeElement && document.activeElement.tagName) || '';
-  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || modalOpen()) return;
+  if(inInput || modalOpen()) return;
 
-  if(TAB_KEYS[e.key]){ show(TAB_KEYS[e.key]); return; }
-  if(e.key === '?'){ showShortcuts(); return; }
   const tab = currentTab();
+  // Tab nav keys (TAPOCRS). In detail view, 's' means save — don't switch tabs.
+  if(TAB_KEYS[e.key] && !(tab === 'detail' && (e.key === 's' || e.key === 'e'))){ show(TAB_KEYS[e.key]); return; }
+  if(e.key === '?'){ showShortcuts(); return; }
   if(e.key === 'n'){
     if(tab === 'offers') addOffer();
     else if(tab === 'active' || tab === 'planned') addAccount(tab === 'active' ? 'open' : 'planned');
@@ -646,6 +651,7 @@ async function loadAll(){
 
 async function saveAccounts(msg='Update accounts'){
   await saveJson('db/accounts.json', accounts, msg);
+  if(config.rssEnabled) saveRSS().catch(() => {});
 }
 
 async function saveOffers(msg='Update offers'){
@@ -850,8 +856,8 @@ function render_active(){
       <div class="row">
         <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
         <div class="row-item"><div class="label">DD Total</div><div class="value money">${money(a.directDepositTotal)}</div></div>
-        <div class="row-item"><div class="label">Opened</div><div class="value">${fmtDate(a.dates.opened) || '—'}</div></div>
-        <div class="row-item"><div class="label">First DD</div><div class="value">${fmtDate(a.dates.firstDD) || '—'}</div></div>
+        <div class="row-item"><div class="label">Opened</div><input type="date" class="date-quick" value="${esc(a.dates.opened||'')}" title="Opened date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','opened',this.value)"></div>
+        <div class="row-item"><div class="label">First DD</div><input type="date" class="date-quick" value="${esc(a.dates.firstDD||'')}" title="First DD date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','firstDD',this.value)"></div>
       </div>
     </div>`;
   });
@@ -877,7 +883,7 @@ function render_planned(){
       <div class="row">
         <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
         <div class="row-item"><div class="label">DD Req</div><div class="value money">${money(a.directDepositTotal)}</div></div>
-        <div class="row-item"><div class="label">Planned Open</div><div class="value">${fmtDate(a.dates.plannedOpen) || '—'}</div></div>
+        <div class="row-item"><div class="label">Planned Open</div><input type="date" class="date-quick" value="${esc(a.dates.plannedOpen||'')}" title="Planned open date" onchange="quickUpdateDate('${a.id}','plannedOpen',this.value)"></div>
       </div>
       <div class="action-bar" style="margin-top:0">
         <button onclick="openPlanned('${a.id}')">Mark as opened</button>
@@ -888,6 +894,15 @@ function render_planned(){
   if(planned.length === 0) html += `<div class="empty">No matches for this filter.</div>`;
   section.innerHTML = html;
   setSearchFilter('planned', acctFilter.planned.q);
+}
+
+// Quick inline date edit from the list cards (no detail-view round trip).
+async function quickUpdateDate(accountId, field, iso){
+  const a = accounts.find(x => x.id === accountId);
+  if(!a) return;
+  a.dates[field] = iso || null;
+  try { await saveAccounts('Update ' + field); render_today(); toast('Date updated'); }
+  catch(e){ toast('Save error: ' + e.message); }
 }
 
 // Create a fresh account directly (no offer detour).
@@ -1168,11 +1183,15 @@ function calMonthGrid(ym, allocByDate, today){
   return `<div class="cal-grid">${dows}${cells}</div>`;
 }
 
+// Tracks which calendar month the user came from when drilling into a bank detail.
+let calReturnMonth = null;
+
 // Tap a calendar day → modal listing every direct deposit planned that day.
-function calDay(iso){
+// Each bank row has a "View →" button that drills into the account detail.
+async function calDay(iso){
   const items = [];
   accounts.forEach(a => (a.ddPlan || []).forEach(dd => {
-    if(dd.payrollDate === iso) items.push({inst: a.institution, person: a.person, amount: dd.amount});
+    if(dd.payrollDate === iso) items.push({inst: a.institution, person: a.person, amount: dd.amount, id: a.id});
   }));
   const cap = paycheckAmountOn(iso);
   const total = items.reduce((s,x) => s + x.amount, 0);
@@ -1183,7 +1202,13 @@ function calDay(iso){
   } else {
     body += '<div class="reminder-list" style="margin:0 0 14px">';
     items.sort((a,b) => b.amount - a.amount).forEach(x => {
-      body += `<div class="reminder-item"><div style="display:flex;align-items:center;gap:8px">${personChip(x.person)} <strong>${esc(x.inst)}</strong></div><div class="value money">${money(x.amount)}</div></div>`;
+      body += `<div class="reminder-item">
+        <div style="display:flex;align-items:center;gap:8px">${personChip(x.person)} <strong>${esc(x.inst)}</strong></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="value money">${money(x.amount)}</span>
+          <button class="sec small" data-mval="goto_${x.id}">View →</button>
+        </div>
+      </div>`;
     });
     body += '</div>';
     const st = total > cap ? 'over' : total === cap ? 'full' : 'partial';
@@ -1198,7 +1223,22 @@ function calDay(iso){
       <p style="margin:6px 0 18px;font-size:13px;color:var(--muted)">${pct}% of paycheck used · ${money(free)} still free${st === 'over' ? ' · over by ' + money(total - cap) : ''}</p>`;
   }
   body += `<div class="row" style="justify-content:flex-end;margin:0"><button data-mval="ok">Close</button></div>`;
-  modal(body);
+  const result = await modal(body);
+  if(result && result.startsWith('goto_')){
+    calReturnMonth = iso.slice(0, 7);
+    editAccount(result.slice(5));
+  }
+}
+
+// Navigate from calendar-sourced detail back to the exact calendar month.
+function backToCalendar(){
+  const month = calReturnMonth;
+  calReturnMonth = null;
+  captureFields();
+  saveAccounts('Update account').catch(e => toast('Save error: ' + e.message));
+  editingId = null;
+  calMonth = month;
+  show('calendar');
 }
 
 // Which month the Calendar is showing (YYYY-MM). Defaults to the current month;
@@ -1213,6 +1253,75 @@ function shiftMonth(ym, delta){
 }
 function calNav(delta){ calMonth = shiftMonth(calMonth || todayISO().slice(0,7), delta); render_calendar(); }
 function calToday(){ calMonth = todayISO().slice(0,7); render_calendar(); }
+
+// Click "Over-allocated" stat → list every over-budget payday with drill-in to each account.
+async function showOverAllocated(){
+  const allocByDate = {};
+  accounts.forEach(a => (a.ddPlan||[]).forEach(dd => {
+    allocByDate[dd.payrollDate] = (allocByDate[dd.payrollDate]||0) + dd.amount;
+  }));
+  const overDates = Object.keys(allocByDate).filter(d => allocByDate[d] > paycheckAmountOn(d)).sort();
+  if(overDates.length === 0){ toast('No over-allocated dates — you\'re good!'); return; }
+  let body = `<p style="margin:0 0 14px"><strong>${overDates.length} over-allocated payday(s)</strong></p>`;
+  overDates.forEach(d => {
+    const total = allocByDate[d];
+    const cap = paycheckAmountOn(d);
+    const excess = total - cap;
+    const label = new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+    const dayAccts = [];
+    accounts.forEach(a => (a.ddPlan||[]).forEach(dd => {
+      if(dd.payrollDate === d) dayAccts.push({inst: a.institution, amount: dd.amount, id: a.id});
+    }));
+    body += `<div class="reminder-item" style="flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+        <strong>${esc(label)}</strong>
+        <span class="pill pill-over">over by ${money(excess)}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${dayAccts.map(x => `<button class="sec small" data-mval="goto_${x.id}">${esc(x.inst)} ${money(x.amount)}</button>`).join('')}
+      </div>
+    </div>`;
+  });
+  body += `<div class="row" style="justify-content:flex-end;margin:8px 0 0"><button data-mval="ok">Close</button></div>`;
+  const result = await modal(body);
+  if(result && result.startsWith('goto_')){
+    calReturnMonth = calMonth;
+    editAccount(result.slice(5));
+  }
+}
+
+// Click "Total planned DD" stat → show a per-account breakdown table.
+function showCalTotalDD(){
+  const allocByDate = {};
+  const byAccount = {};
+  accounts.forEach(a => (a.ddPlan||[]).forEach(dd => {
+    allocByDate[dd.payrollDate] = (allocByDate[dd.payrollDate]||0) + dd.amount;
+    byAccount[a.id] = (byAccount[a.id]||0) + dd.amount;
+  }));
+  const rows = accounts.filter(a => byAccount[a.id] > 0)
+    .sort((a,b) => (byAccount[b.id]||0) - (byAccount[a.id]||0));
+  let body = `<p style="margin:0 0 14px"><strong>Planned DD by account</strong></p>
+    <div class="table-wrap"><table><thead><tr><th>Institution</th><th>Person</th><th class="num">Total DD</th></tr></thead><tbody>`;
+  rows.forEach(a => {
+    body += `<tr><td>${esc(a.institution)}</td><td>${personChip(a.person)}</td><td class="num">${money(byAccount[a.id])}</td></tr>`;
+  });
+  body += `</tbody></table></div>
+    <div class="row" style="justify-content:flex-end;margin:12px 0 0"><button data-mval="ok">Close</button></div>`;
+  modal(body);
+}
+
+// Click "Upcoming" stat → jump the calendar to the first month with a future payday.
+function calJumpUpcoming(){
+  const today = todayISO();
+  const allocByDate = {};
+  accounts.forEach(a => (a.ddPlan||[]).forEach(dd => {
+    allocByDate[dd.payrollDate] = (allocByDate[dd.payrollDate]||0) + dd.amount;
+  }));
+  const next = Object.keys(allocByDate).filter(d => d >= today).sort()[0];
+  if(!next){ toast('No upcoming paychecks scheduled'); return; }
+  calMonth = next.slice(0, 7);
+  render_calendar();
+}
 
 function render_calendar(){
   const section = $('#section-calendar');
@@ -1236,9 +1345,9 @@ function render_calendar(){
   // The nav uses a FIXED grid and an always-present Today button + subtitle line,
   // so stepping between months never moves the arrows or resizes the controls.
   let html = `<div class="summary-strip">
-      <div class="stat"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} payday(s)</div></div>
-      <div class="stat"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">payday(s) ahead</div></div>
-      <div class="stat"><div class="stat-label">Over-allocated</div><div class="stat-value">${overCount}</div><div class="stat-sub">need a fix</div></div>
+      <div class="stat clickable" onclick="showCalTotalDD()" style="cursor:pointer"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} payday(s) · tap for breakdown</div></div>
+      <div class="stat clickable" onclick="calJumpUpcoming()" style="cursor:pointer"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">payday(s) ahead · tap to jump</div></div>
+      <div class="stat clickable" onclick="showOverAllocated()" style="cursor:pointer;${overCount>0?'border-left:3px solid var(--danger)':''}"><div class="stat-label">Over-allocated</div><div class="stat-value" style="${overCount>0?'color:var(--danger)':''}">${overCount}</div><div class="stat-sub">${overCount>0?'tap to fix':'all good'}</div></div>
     </div>
     <div class="cal-legend">
       <span><i style="background:var(--open-bg)"></i> Full</span>
@@ -1436,7 +1545,9 @@ function render_settings(){
     <button onclick="savePaycheckSettings()">Save</button>
   </div>`;
 
-  // Notifications — email + a "send test" button.
+  // Notifications — email + RSS.
+  const rssEnabled = !!(config.rssEnabled);
+  const rssUrl = LS.repo ? 'https://raw.githubusercontent.com/'+LS.repo+'/main/db/rss.xml' : '';
   html += `<div class="card">
     <div class="card-header">Notifications</div>
     <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">A daily email when there's something to do (open/close an account, a reminder due, a DD cleared). Sent by a free GitHub Action in your data repo.</p>
@@ -1448,7 +1559,20 @@ function render_settings(){
       <button onclick="saveNotifyEmail()">Save email</button>
       <button class="sec" onclick="testNotification()">📧 Send test email</button>
     </div>
-    <p style="margin:8px 0 0;color:var(--muted);font-size:12px">Test runs the email workflow now and sends a sample to the address above (requires the mail secrets set in your data repo).</p>
+    <p style="margin:8px 0 12px;color:var(--muted);font-size:12px">Test runs the email workflow now and sends a sample to the address above (requires the mail secrets set in your data repo).</p>
+    <hr style="border:none;border-top:1px solid var(--border);margin:0 0 12px">
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:10px">
+      <input type="checkbox" class="checkbox" id="set_rss" ${rssEnabled?'checked':''} onchange="toggleRSS(this.checked)">
+      <span><strong>Enable RSS feed</strong> — subscribe in any RSS reader</span>
+    </label>
+    ${rssEnabled && rssUrl ? `<div class="row" style="align-items:flex-end">
+      <div class="row-item">
+        <div class="label">RSS feed URL (paste into your RSS reader)</div>
+        <input type="text" readonly value="${esc(rssUrl)}" onclick="this.select()" style="font-size:12px;color:var(--muted)">
+      </div>
+      <button class="sec" onclick="saveRSS().then(()=>toast('RSS updated ✓')).catch(e=>toast('Error: '+e.message))">Refresh</button>
+    </div>
+    <p style="margin:4px 0 0;color:var(--faint);font-size:11px">Requires your data repo to be public, or use a reader that supports private GitHub raw URLs.</p>` : ''}
   </div>`;
 
   html += `<p style="text-align:center;color:var(--faint);font-size:11px;margin:18px 0 0">Bank Bonus Tracker · build ${esc(BUILD)}</p>`;
@@ -1571,7 +1695,7 @@ function captureFields(){
 
   if(gs('d_institution') !== undefined) a.institution = gs('d_institution');
   if(gv('d_person') !== undefined) a.person = gv('d_person');
-  if(gv('d_status') !== undefined) a.status = gv('d_status');
+  if(gv('d_status') !== undefined && gv('d_status') !== 'move_offers') a.status = gv('d_status');
   if(gn('d_bonus') !== undefined) a.bonus = gn('d_bonus');
   if(gn('d_referralValue') !== undefined) a.referralValue = gn('d_referralValue');
   if(gn('d_directDepositTotal') !== undefined) a.directDepositTotal = gn('d_directDepositTotal');
@@ -1607,7 +1731,8 @@ function render_detail(){
   const peopleOpts = (config.people || []).map(p =>
     `<option value="${esc(p)}" ${p === a.person ? 'selected' : ''}>${esc(p)}</option>`).join('');
   const statusOpts = ['planned','open','closed'].map(s =>
-    `<option value="${s}" ${s === a.status ? 'selected' : ''}>${s}</option>`).join('');
+    `<option value="${s}" ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')
+    + `<option value="move_offers">→ Move to Offers backlog</option>`;
 
   const num = (id, label, val) =>
     `<div class="row-item"><div class="label">${label}</div><input type="number" id="${id}" value="${val == null ? '' : val}" step="0.01"></div>`;
@@ -1618,12 +1743,15 @@ function render_detail(){
   const mon = (id, label, val) =>
     `<div class="row-item"><div class="label">${label}</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="${id}" value="${fmtMoneyInput(val)}" onblur="reformatMoney(this)"></div></div>`;
 
+  const backLabel = (lastTab === 'calendar' || calReturnMonth) ? '← Calendar' : '← Back';
+  const backFn = calReturnMonth ? 'backToCalendar()' : 'backFromDetail()';
+
   let html = `
     <div class="card">
-      <button class="sec" onclick="backFromDetail()" style="margin-bottom:12px">← Back</button>
+      <button class="sec" onclick="${backFn}" style="margin-bottom:12px">${backLabel}</button>
       <div class="row">${txt('d_institution','Institution', a.institution)}
         <div class="row-item"><div class="label">Person</div><select id="d_person">${peopleOpts}</select></div>
-        <div class="row-item"><div class="label">Status</div><select id="d_status">${statusOpts}</select></div>
+        <div class="row-item"><div class="label">Status</div><select id="d_status" onchange="onStatusSelectChange(this)">${statusOpts}</select></div>
       </div>
       <div class="row">${mon('d_bonus','Bonus', a.bonus)}${mon('d_referralValue','Referral', a.referralValue)}${mon('d_directDepositTotal','DD Total', a.directDepositTotal)}</div>
       <div class="row">${num('d_nbDeposits','# Deposits', a.nbDeposits)}${mon('d_minBalance','Min Balance', a.minBalance)}${num('d_minBalDays','Min Bal Days', a.minBalDays)}</div>
@@ -1847,9 +1975,19 @@ async function closeAccountDetail(){
   }
 }
 
+// Status dropdown handler: intercept "move to offers" and reset on cancel.
+function onStatusSelectChange(sel){
+  if(sel.value !== 'move_offers') return;
+  const a = accounts.find(x => x.id === editingId);
+  const prev = a ? a.status : 'planned';
+  moveToOffers().then(ok => {
+    if(!ok && sel && sel.isConnected) sel.value = prev;
+  });
+}
+
 // Move an account back to the Offers backlog (the reverse of "Promote").
 async function moveToOffers(){
-  if(!await confirmModal('Move this account back to the Offers backlog? Its open/close dates, reminders, and DD plan will be cleared.', 'Move to Offers')) return;
+  if(!await confirmModal('Move this account back to the Offers backlog? Its open/close dates, reminders, and DD plan will be cleared.', 'Move to Offers')) return false;
   captureFields();
   const a = accounts.find(x => x.id === editingId);
   if(!a) return;
@@ -1868,8 +2006,10 @@ async function moveToOffers(){
     toast(a.institution + ' moved to Offers');
     editingId = null;
     show('offers');
+    return true;
   } catch(e) {
     toast('Save error: ' + e.message);
+    return false;
   }
 }
 
@@ -1886,6 +2026,60 @@ async function deleteAccountDetail(){
   } catch(e) {
     toast('Save error: ' + e.message);
   }
+}
+
+// --------- RSS feed ---------
+function generateRSS(){
+  const today = todayISO();
+  const appUrl = 'https://barkernotbob.github.io/static/bank-bonus/';
+  const rawUrl = LS.repo ? 'https://raw.githubusercontent.com/' + LS.repo + '/main/db/rss.xml' : '';
+  const ex = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const items = [];
+  const addItem = (title, desc, date, guid) => {
+    items.push(`    <item>
+      <title>${ex(title)}</title>
+      <description>${ex(desc)}</description>
+      <pubDate>${new Date(date+'T12:00:00Z').toUTCString()}</pubDate>
+      <guid isPermaLink="false">${ex(guid)}</guid>
+      <link>${appUrl}</link>
+    </item>`);
+  };
+  accounts.filter(a => (a.status==='planned' && a.dates.plannedOpen===today) || a.dates.reopenAfter===today)
+    .forEach(a => addItem(`Open: ${a.institution} (${a.person})`, `Bonus ${money(a.bonus)}, DD required ${money(a.directDepositTotal)}`, today, `${a.id}-open-${today}`));
+  accounts.filter(a => a.dates.closed===today)
+    .forEach(a => addItem(`Close: ${a.institution} (${a.person})`, `Bonus ${money(a.bonus)}`, today, `${a.id}-close-${today}`));
+  const soon = shiftISO(today, 14);
+  accounts.forEach(a => (a.reminders||[]).forEach(r => {
+    if(!r.done && r.date>=today && r.date<=soon)
+      addItem(`Reminder: ${a.institution} — ${r.note}`, `Due ${fmtDate(r.date)} for ${a.person}`, r.date, r.id+'-'+r.date);
+  }));
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Bank Bonus Tracker</title>
+    <link>${appUrl}</link>
+    <description>Bank bonus alerts, reminders, and upcoming events</description>
+    <language>en-us</language>
+    <atom:link href="${ex(rawUrl)}" rel="self" type="application/rss+xml"/>
+${items.join('\n')}
+  </channel>
+</rss>`;
+}
+
+async function saveRSS(){
+  const xml = generateRSS();
+  let sha = DB['db/rss.xml'] ? DB['db/rss.xml'].sha : null;
+  try {
+    const res = await ghPut('db/rss.xml', b64encode(xml), sha, 'Update RSS feed');
+    DB['db/rss.xml'] = {value: xml, sha: res.content.sha};
+  } catch(e) { console.error('RSS save error', e); throw e; }
+}
+
+async function toggleRSS(enabled){
+  config.rssEnabled = enabled;
+  await saveConfig('Toggle RSS feed');
+  render_settings();
+  if(enabled){ try { await saveRSS(); toast('RSS feed enabled and generated'); } catch(e){ toast('RSS error: '+e.message); } }
 }
 
 // Initialize — apply theme, then handle the "back from GitHub sign-in" return first.

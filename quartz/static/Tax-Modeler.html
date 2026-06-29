@@ -437,6 +437,8 @@
       #mobDock{ display:none; }
       @media (max-width:959px){
         body{ padding-bottom:124px; }
+        /* iOS zooms any focused control under 16px — pin form controls to 16px on mobile (no zoom, pinch-zoom still allowed) */
+        input, select, textarea, .inp input, .sbf input, .deprow input, .segctl select, #form input[type=text]{ font-size:16px !important; }
         /* view routing: Build shows the form; Summary/Optimize show the results */
         body.mview-build #mobTabsContainer, body.mview-build .results{ display:none; }
         body.mview-results .form-panel{ display:none; }
@@ -1067,7 +1069,7 @@ function field(label,key,opts={}){
   const money=opts.money!==undefined?opts.money:!(opts.step!==undefined&&opts.step<10); // rates/ages/counts (small step) stay plain number inputs
   const inp=money
     ? `<input type="text" inputmode="decimal" id="f_${key}" data-key="${key}" data-money value="${cfmt(val)}" ${cap?`data-cap="${key}"`:""}/>`
-    : `<input type="number" id="f_${key}" data-key="${key}" value="${val}" step="${opts.step||100}" min="${opts.min??0}" ${cap?`max="${cap}" data-cap="${key}"`:""}/>`;
+    : `<input type="number" inputmode="${(opts.step&&opts.step%1!==0)?'decimal':'numeric'}" id="f_${key}" data-key="${key}" value="${val}" step="${opts.step||100}" min="${opts.min??0}" ${cap?`max="${cap}" data-cap="${key}"`:""}/>`;
   return `<div class="row" ${opts.rowId?`id="${opts.rowId}"`:""}>
     <label class="lbl" for="f_${key}">${label}${opts.est?'<span class="estTag">auto-estimated</span>':''}${tipIcon(opts.tip)}${capNote}</label>
     ${inp}
@@ -1079,7 +1081,7 @@ function pairField(label,keyYou,keySpouse,opts={}){
   const money=opts.money!==undefined?opts.money:!(opts.step!==undefined&&opts.step<10);
   const inp=(k,cap)=> money
     ? `<input type="text" inputmode="decimal" data-key="${k}" data-money value="${cfmt(S[k])}" ${cap?`data-cap="${k}"`:""}/>`
-    : `<input type="number" data-key="${k}" value="${S[k]}" step="${opts.step||100}" min="0" ${cap?`max="${cap}" data-cap="${k}"`:""}/>`;
+    : `<input type="number" inputmode="${(opts.step&&opts.step%1!==0)?'decimal':'numeric'}" data-key="${k}" value="${S[k]}" step="${opts.step||100}" min="0" ${cap?`max="${cap}" data-cap="${k}"`:""}/>`;
   return `<div class="row" ${opts.rowId?`id="${opts.rowId}"`:""}>
     <label class="lbl">${label}${tipIcon(opts.tip)}${opts.capFn?`<span class="capTag">max ${usd(capY)}${on&&capS!==capY?" / "+usd(capS):""}</span>`:""}</label>
     <div class="pair ${on?'spouseOn':''}">
@@ -1093,7 +1095,7 @@ function renderForm(){
   const prevOpen=[...document.querySelectorAll('#form details.sec')].map(d=>d.open);
   const married=isMarried(S);
   const countyOpts=COUNTIES.map(c=>`<option ${c.name===S.county?'selected':''}>${c.name}</option>`).join("");
-  const depRows=S.dependents.map((d,i)=>`<div class="depRow"><span>Dependent ${i+1}</span><input type="number" data-dep="${i}" value="${d.age}" min="0" step="1" style="width:90px" title="age at year end"/> <button data-deldep="${i}">Remove</button>${(S.state==="IN"&&n(d.age)<19)?`<label class="check" style="grid-column:1/-1;margin-top:2px"><input type="checkbox" data-depfy="${i}" ${d.firstYear?'checked':''}/> First year claiming this child in Indiana ${tipIcon("Indiana doubles the additional dependent-child exemption to $3,000 (from $1,500) the first year you claim the child — e.g., a birth, adoption, foster placement, new guardianship, or the child's first year living in Indiana.")}</label>`:''}</div>`).join("");
+  const depRows=S.dependents.map((d,i)=>`<div class="depRow"><span>Dependent ${i+1}</span><input type="number" inputmode="numeric" data-dep="${i}" value="${d.age}" min="0" step="1" style="width:90px" title="age at year end"/> <button data-deldep="${i}">Remove</button>${(S.state==="IN"&&n(d.age)<19)?`<label class="check" style="grid-column:1/-1;margin-top:2px"><input type="checkbox" data-depfy="${i}" ${d.firstYear?'checked':''}/> First year claiming this child in Indiana ${tipIcon("Indiana doubles the additional dependent-child exemption to $3,000 (from $1,500) the first year you claim the child — e.g., a birth, adoption, foster placement, new guardianship, or the child's first year living in Indiana.")}</label>`:''}</div>`).join("");
 
   const full=true;
   const stateSel=`<div class="row"><label class="lbl">State ${tipIcon("Federal tax is computed for everyone. Indiana is modeled in full (including county tax). For other states you can enter an approximate rate, or pick a no-income-tax state. Your federal numbers are always complete.")}</label>

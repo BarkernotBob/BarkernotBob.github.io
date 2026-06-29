@@ -541,3 +541,92 @@ body:has(.page-listing) .content-meta { display: none !important; }
   transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 .home-splash .splash-foot a:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
+
+// ============================================================
+//  Mobile-first polish & whimsy
+//  This site lives mostly on phones, so these add touch-native
+//  feedback and a few small, uncommon delights. Everything is
+//  additive and respects `prefers-reduced-motion`.
+// ============================================================
+
+// Respect the notch / rounded corners on the sticky top bar.
+.topbar {
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
+}
+
+// --- Whimsy: the brand dot quietly "breathes" ---
+@media (prefers-reduced-motion: no-preference) {
+  .page-title a::before { animation: rr-breathe 4.5s ease-in-out infinite; }
+  @keyframes rr-breathe {
+    0%, 100% { transform: scale(1);    opacity: 1; }
+    50%      { transform: scale(1.35); opacity: 0.7; }
+  }
+}
+
+// --- Whimsy: home cards & list rows lift in on load, gently staggered ---
+@media (prefers-reduced-motion: no-preference) {
+  .home-splash .splash-card,
+  .page-listing .section-li {
+    animation: rr-rise 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+  .home-splash .splash-card:nth-child(1) { animation-delay: 0.04s; }
+  .home-splash .splash-card:nth-child(2) { animation-delay: 0.10s; }
+  .home-splash .splash-card:nth-child(3) { animation-delay: 0.16s; }
+  .home-splash .splash-card:nth-child(4) { animation-delay: 0.22s; }
+  .page-listing .section-li:nth-child(1) { animation-delay: 0.03s; }
+  .page-listing .section-li:nth-child(2) { animation-delay: 0.09s; }
+  .page-listing .section-li:nth-child(3) { animation-delay: 0.15s; }
+  .page-listing .section-li:nth-child(n+4) { animation-delay: 0.20s; }
+  @keyframes rr-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+// --- Touch devices: real press feedback (hover never fires on a phone) ---
+@media (hover: none) {
+  .home-splash .splash-card:active,
+  .channel-card:active,
+  .page-listing .section-li > .section:active {
+    transform: scale(0.975);
+    transition: transform 0.08s ease;
+  }
+  .home-splash .splash-card:active { border-color: var(--accent-c); }
+  a.tag-link:active,
+  .home-splash .splash-foot a:active,
+  .rr-nav-link:active { transform: scale(0.92); }
+
+  // The coloured accent edge can't wait for a hover that never comes — show it.
+  .home-splash .splash-card::before { transform: scaleY(1); opacity: 0.45; }
+  .home-splash .splash-card:active::before { opacity: 1; }
+}
+
+// --- Whimsy: the mobile card chevron gives a friendly little nudge ---
+@media (max-width: 800px) and (prefers-reduced-motion: no-preference) {
+  .home-splash .splash-card::after { animation: rr-nudge 2.8s ease-in-out infinite; }
+  @keyframes rr-nudge {
+    0%, 86%, 100% { transform: translateX(0); }
+    91%           { transform: translateX(4px); }
+    96%           { transform: translateX(0); }
+  }
+}
+
+// --- Mobile-first comfort: roomier reading + bigger tap targets ---
+@media (max-width: 800px) {
+  // Section nav: momentum scroll, hidden bar, soft fade at both edges.
+  .topbar .rr-nav {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  }
+  .topbar .rr-nav::-webkit-scrollbar { display: none; }
+  .rr-nav-link { scroll-snap-align: start; padding: 8px 0; }
+
+  // Comfortable body reading on small screens.
+  article p { line-height: 1.65; }
+
+  // Friendlier tag pills to tap.
+  a.tag-link { padding: 6px 13px; }
+}

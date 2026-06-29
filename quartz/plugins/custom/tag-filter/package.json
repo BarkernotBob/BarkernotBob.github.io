@@ -1,0 +1,30 @@
+{
+  "name": "tag-filter",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    },
+    "./components": {
+      "import": "./dist/components/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "quartz": {
+    "name": "tag-filter",
+    "displayName": "Tag Filter",
+    "description": "Interactive tag-based filtering for folder index pages",
+    "version": "1.0.0",
+    "category": "component",
+    "components": {
+      "TagFilter": {
+        "name": "TagFilter",
+        "displayName": "Tag Filter",
+        "description": "Injects filter buttons above page listings when 2+ tags are present",
+        "version": "1.0.0"
+      }
+    }
+  }
+}

@@ -128,6 +128,8 @@ plugins:
       showFolderCount: false
   - source: github:quartz-community/tag-page
     enabled: true
+  - source: ./quartz/plugins/custom/tag-filter
+    enabled: true
   - source: github:quartz-community/explorer
     enabled: true
     options:
@@ -139,7 +141,7 @@ plugins:
       #   3. Everything else falls back to folders-first, then A–Z.
       sortFn: |
         (a, b) => {
-          const order = ["Notes", "Tools", "Games", "Curated YouTube"]
+          const order = ["Notes", "Tools", "Games", "Curated YouTube", "Tags"]
           const ia = order.indexOf(a.displayName)
           const ib = order.indexOf(b.displayName)
           if (ia !== -1 || ib !== -1) {

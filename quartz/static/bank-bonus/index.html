@@ -298,25 +298,32 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Starter catalog of bank bonus offers (scrubbed). Defines global STARTER_OFFERS,
+     seeded into a fresh install so a new user starts with banks to work from. -->
+<script src="starter-offers.js"></script>
+
 <script>
 /* =========================================================================
-   Bank Bonus Tracker — single-file app.
-   Stores everything in a PRIVATE GitHub repo (the "data repo") via the GitHub API.
-   No data lives in this file; settings live in localStorage.
+   Bank Bonus Tracker — single-file, local-first app.
+   By default all data lives in this browser (localStorage). Optional GitHub
+   sync stores it in the user's own private repo via their own token.
    ========================================================================= */
 
-/* ---- App-wide sign-in config. Shared with the Pool app: one GitHub OAuth App
-        + one Cloudflare Worker cover all of barkernotbob.github.io/static/*.
-        These two values are PUBLIC (not secrets). The token-paste fallback works
-        even before OAuth is set. ---- */
-const OAUTH = {
-  clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
-  workerUrl: 'https://pool-auth.isaiahmail97.workers.dev'  // Cloudflare Worker base URL
-};
+/* ---- Public-safe storage model ---------------------------------------------
+   This app is local-first: by default ALL data lives in this browser
+   (localStorage) and is never sent anywhere. There is no shared sign-in and no
+   third-party server in the loop — nothing routes through anyone else's
+   infrastructure.
+
+   Cross-device sync is OPTIONAL and "bring your own token": a user pastes a
+   GitHub fine-grained token scoped to their OWN private data repo. That token
+   is stored only in this browser and talks directly to api.github.com. No
+   Cloudflare Worker, no shared OAuth App, no operator who can see your token.
+   ----------------------------------------------------------------------------- */
 
 // Bump this on each deploy so the Settings footer shows which build is live —
 // lets you confirm a phone isn't serving a cached old copy.
-const BUILD = '2026-06-29 · r13';
+const BUILD = '2026-06-29 · r14';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -327,9 +334,28 @@ const LS = {
   set me(v){ localStorage.setItem('bb_me', v) },
   get login(){ return localStorage.getItem('bb_login') || '' },      // GitHub username (from OAuth)
   set login(v){ localStorage.setItem('bb_login', v) },
-  get method(){ return localStorage.getItem('bb_method') || '' },    // 'oauth' | 'token'
+  get method(){ return localStorage.getItem('bb_method') || '' },    // 'token' (GitHub sync) or ''
   set method(v){ localStorage.setItem('bb_method', v) },
 };
+
+/* Where data is read/written:
+     'local'  — this browser only (default; no account, no network)
+     'github' — synced to the user's own private repo via their own token
+   The token (when present) persists in localStorage indefinitely — a user
+   connects once per device and stays connected until they explicitly disconnect. */
+const STORE = {
+  get mode(){
+    const m = localStorage.getItem('bb_store_mode');
+    if(m) return m;
+    // Migrate installs from before local-first: if this device already has a
+    // saved token + repo (an earlier connected version), keep syncing instead
+    // of silently flipping to a fresh local store.
+    if(localStorage.getItem('bb_token') && localStorage.getItem('bb_repo')) return 'github';
+    return 'local';
+  },
+  set mode(v){ localStorage.setItem('bb_store_mode', v) },
+};
+const LKEY = path => 'bb_local_' + path;   // localStorage key for a data file
 
 const API = 'https://api.github.com';
 const DB = {};
@@ -518,50 +544,67 @@ function ghHeaders(){
 }
 
 /* =========================================================================
-   SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
+   GITHUB SYNC  (optional, bring-your-own-token — no shared server)
+   The user pastes a fine-grained token scoped to their own private data repo.
+   We validate it, then either pull the repo's existing data or seed the repo
+   from what's already in this browser. The token lives only in localStorage.
    ========================================================================= */
-function oauthReady(){ return OAUTH.clientId && OAUTH.workerUrl; }
-function appRedirect(){ return location.origin + location.pathname; }
 
-function signInWithGitHub(){
-  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use a token below for now.'); return; }
-  const state = uid('s'); localStorage.setItem('bb_oauth_state', state);
-  const u = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(OAUTH.clientId)}`
-          + `&scope=repo&redirect_uri=${encodeURIComponent(appRedirect())}&state=${encodeURIComponent(state)}`;
-  location.href = u;
-}
-async function handleOAuthRedirect(){
-  const p = new URLSearchParams(location.search);
-  const code = p.get('code'), state = p.get('state');
-  if(!code) return false;
-  history.replaceState({}, '', appRedirect()); // clean the URL no matter what
-  if(state !== localStorage.getItem('bb_oauth_state')){ toast('Sign-in expired, please try again.'); return false; }
+// Connect this device to a GitHub data repo. On success, future reads/writes
+// go to GitHub and the token persists until the user disconnects.
+async function connectGitHub(repo, token){
+  repo = (repo||'').trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'');
+  token = (token||'').trim();
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ toast('Repo must look like  your-username/bank-bonus-data'); return false; }
+  if(!token){ toast('Paste your GitHub token'); return false; }
+
+  // Validate the token against this repo without committing to github mode yet.
+  let who = '';
   try{
-    const r = await fetch(OAUTH.workerUrl.replace(/\/$/,'')+'/exchange', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ code, redirect_uri: appRedirect() })
-    });
-    const j = await r.json();
-    if(!j.access_token) throw new Error(j.error_description||j.error||'No token returned');
-    LS.token = j.access_token; LS.method='oauth';
-    await afterSignIn();
-    return true;
-  }catch(e){ toast('Sign-in failed: '+(e.message||e)); return false; }
-}
-/* After we have a token: learn the username, default the data repo, then load. */
-async function afterSignIn(){
+    const u = await fetch(`${API}/user`, {headers: ghHead(token)});
+    if(u.ok){ who = (await u.json()).login || ''; }
+    const r = await fetch(`${API}/repos/${repo}`, {headers: ghHead(token)});
+    if(r.status === 404) throw new Error('Repo not found — create a private repo named bank-bonus-data first, and make sure the token can see it.');
+    if(r.status === 401 || r.status === 403) throw new Error('Token rejected — check it has Contents: Read and write on this repo.');
+    if(!r.ok) throw new Error('GitHub error '+r.status);
+  }catch(e){ toast('Could not connect: '+(e.message||e)); return false; }
+
+  // Commit to github mode, then reconcile data.
+  LS.repo = repo; LS.token = token; LS.login = who; LS.method = 'token';
+  const prevMode = STORE.mode; STORE.mode = 'github';
   try{
-    const r = await fetch(`${API}/user`, {headers:ghHeaders()});
-    if(r.ok){ const u=await r.json(); LS.login=u.login; if(!LS.repo) LS.repo = u.login+'/bank-bonus-data'; }
-  }catch(e){}
-  toast('Signed in 🎉');
-  await init();
-}
-async function signOut(){
-  if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){
-    localStorage.removeItem('bb_token'); localStorage.removeItem('bb_login'); localStorage.removeItem('bb_method');
-    toast('Signed out'); init();
+    const existing = await ghContents('db/config.json');   // null if the repo has no data yet
+    if(existing === null){
+      // Empty repo → push whatever this browser currently has (first device).
+      await saveJson('db/config.json', config, 'Seed config from device');
+      await saveJson('db/accounts.json', accounts, 'Seed accounts from device');
+      await saveJson('db/offers.json', offers, 'Seed offers from device');
+      toast('Connected — your data is now synced to GitHub ✓');
+    } else {
+      toast('Connected — loaded the data already in your repo ✓');
+    }
+  }catch(e){
+    STORE.mode = prevMode;                                  // roll back on failure
+    toast('Connected but sync failed: '+(e.message||e));
+    return false;
   }
+  await init();
+  return true;
+}
+
+// Stop syncing on this device and return to local-only. The GitHub repo keeps
+// its data untouched; we just forget the token here.
+async function disconnectGitHub(){
+  if(!await confirmModal('Disconnect GitHub sync on this device? Your synced data stays safe in your repo; this browser switches back to its own local copy.','Disconnect',true)) return;
+  localStorage.removeItem('bb_token'); localStorage.removeItem('bb_login'); localStorage.removeItem('bb_method');
+  STORE.mode = 'local';
+  toast('Disconnected — back to local-only');
+  init();
+}
+
+// Headers for an arbitrary token (used while validating, before we store it).
+function ghHead(token){
+  return { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
 }
 
 async function ghContents(path){
@@ -584,6 +627,18 @@ async function ghPut(path, contentB64, sha, message){
 }
 
 async function loadJson(path, fallback){
+  // Local-first: read from this browser unless GitHub sync is on.
+  if(STORE.mode !== 'github'){
+    const raw = localStorage.getItem(LKEY(path));
+    if(raw == null){
+      const v = JSON.parse(JSON.stringify(fallback));
+      DB[path] = {value: v, sha: null};
+      return v;
+    }
+    const value = JSON.parse(raw);
+    DB[path] = {value, sha: null};
+    return value;
+  }
   try {
     const c = await ghContents(path);
     if(c === null){
@@ -600,6 +655,11 @@ async function loadJson(path, fallback){
 }
 
 async function saveJson(path, value, message){
+  if(STORE.mode !== 'github'){
+    localStorage.setItem(LKEY(path), JSON.stringify(value, null, 2));
+    DB[path] = {value, sha: null};
+    return;
+  }
   let sha = DB[path] ? DB[path].sha : null;
   let retries = 1;
   while(retries-- >= 0) {
@@ -621,8 +681,8 @@ let lastTab = 'today';
 
 function updateAppbarUser(){
   const u = $('#appbar-user'); if(!u) return;
-  if(LS.token){
-    const who = LS.login ? '@'+LS.login : (LS.method==='oauth' ? 'GitHub' : 'Connected');
+  if(STORE.mode === 'github'){
+    const who = LS.login ? '@'+LS.login : 'synced';
     u.textContent = (LS.me ? LS.me + ' · ' : '') + who;
   } else u.textContent = '';
 }
@@ -648,9 +708,30 @@ let config = {};
 let accounts = [];
 let offers = [];
 
+// A fresh, personal-data-free starting config.
+function defaultConfig(){
+  return {owner:'Me', people:['Me'], paycheck:{amount:2000, firstDate:'2025-01-03', intervalDays:14, ddClearDays:21},
+    taxRate:0.1675, laborHours:{open:0.35, adjustDD:0.15, requirements:0.5, close:0.5}, notify:[], timezone:'America/New_York'};
+}
+
+// First run on this device (local mode): pre-fill the browser store with a
+// generic config and the starter catalog of offers, so the app opens with
+// banks to work from instead of an empty screen. Runs once, ever.
+function seedLocalIfNeeded(){
+  if(STORE.mode === 'github') return;
+  if(localStorage.getItem('bb_seeded')) return;
+  if(localStorage.getItem(LKEY('db/config.json')) == null)
+    localStorage.setItem(LKEY('db/config.json'), JSON.stringify(defaultConfig(), null, 2));
+  if(localStorage.getItem(LKEY('db/offers.json')) == null)
+    localStorage.setItem(LKEY('db/offers.json'), JSON.stringify(typeof STARTER_OFFERS !== 'undefined' ? STARTER_OFFERS : [], null, 2));
+  if(localStorage.getItem(LKEY('db/accounts.json')) == null)
+    localStorage.setItem(LKEY('db/accounts.json'), '[]');
+  localStorage.setItem('bb_seeded', '1');
+}
+
 async function loadAll(){
   try {
-    config = await loadJson('db/config.json', {owner:'User', people:[], paycheck:{amount:1930,firstDate:'2024-12-27',intervalDays:14,ddClearDays:21}, taxRate:0.1675, laborHours:{open:0.35,adjustDD:0.15,requirements:0.5,close:0.5}, notify:[], timezone:'America/New_York'});
+    config = await loadJson('db/config.json', defaultConfig());
     accounts = await loadJson('db/accounts.json', []);
     offers = await loadJson('db/offers.json', []);
     return true;
@@ -663,7 +744,7 @@ async function loadAll(){
 
 async function saveAccounts(msg='Update accounts'){
   await saveJson('db/accounts.json', accounts, msg);
-  if(config.rssEnabled) saveRSS().catch(() => {});
+  if(config.rssEnabled && STORE.mode === 'github') saveRSS().catch(() => {});
 }
 
 async function saveOffers(msg='Update offers'){
@@ -695,12 +776,16 @@ async function init(){
     `;
   }
 
-  // If no repo/token configured yet, send the user straight to Settings.
-  if(!LS.repo || !LS.token) {
-    loadError = 'Welcome! Enter your data repo and GitHub token below to get started.';
+  // GitHub sync is on but the token is gone (e.g. cleared) — guide to Settings.
+  if(STORE.mode === 'github' && (!LS.repo || !LS.token)) {
+    loadError = 'GitHub sync is on but no token is saved. Reconnect below, or it will stay local-only.';
     show('settings');
     return;
   }
+
+  // Local-first: seed the browser store on the very first run so the app opens
+  // with the starter catalog instead of an empty screen.
+  seedLocalIfNeeded();
 
   // Load data and render. On failure, fall back to Settings (which stays
   // reachable) rather than wiping the page.
@@ -711,7 +796,9 @@ async function init(){
     const saved = localStorage.getItem('bb_tab');
     show(TABS.includes(saved) ? saved : 'today');
   } else {
-    loadError = 'Could not load data. Check your repo name and token below.';
+    loadError = STORE.mode === 'github'
+      ? 'Could not load from GitHub. Check your repo name and token below.'
+      : 'Could not load your local data.';
     show('settings');
   }
 }
@@ -742,9 +829,9 @@ function render_today(){
 
   if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
     if(accounts.length === 0){
-      // Truly no data loaded — point the user at sign-in rather than implying it's empty.
-      html = `<div class="empty">No accounts loaded.<br>
-        <span style="font-size:13px">If your data isn't showing, open <b>Settings</b> (press <kbd>7</kbd>) and tap <b>🔐 Sign in with GitHub</b>. Or add one on <b>Active</b> / <b>Planned</b>.</span></div>`;
+      // No accounts yet — point the user at the Offers catalog to get started.
+      html = `<div class="empty">No accounts yet.<br>
+        <span style="font-size:13px">Head to <b>Offers</b> (press <kbd>O</kbd>) and tap <b>Move to Planned</b> or <b>Open now</b> on a bank to start tracking it — or add one on <b>Active</b> / <b>Planned</b>.</span></div>`;
     } else {
       // Caught up for today, but accounts still exist — show the totals so an empty
       // Today screen is never mistaken for "my data is gone."
@@ -1495,38 +1582,51 @@ function render_settings(){
     html += `<div class="card" style="border-left:4px solid #cc8800;background:#fff8e6"><p style="margin:0">${esc(loadError)}</p></div>`;
   }
 
-  const signedIn = LS.token ? `<p class="small" style="margin:0 0 10px">${LS.method==='oauth'?'✅ Signed in with GitHub':'✅ Connected'}${LS.login?(' as '+esc(LS.login)):''}. <a href="#" onclick="signOut();return false">Sign out</a></p>` : '';
+  const synced = STORE.mode === 'github';
 
+  // Storage / sync card.
   html += `<div class="card">
-    <div class="card-header">Sign-in &amp; sync</div>
-    ${signedIn}`;
-  // Only show the sign-in button + token-paste when NOT already signed in.
-  if(!LS.token){
-    html += `<button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
-    <p class="small muted" style="margin:6px 0">${oauthReady()?'Approve on GitHub and you\'ll come right back here — no token to copy.':'<b>Not set up yet</b> — use a token below until OAuth is configured.'}</p>`;
+    <div class="card-header">Your data &amp; sync</div>`;
+  if(synced){
+    html += `<p class="small" style="margin:0 0 10px">☁️ <b>Synced to GitHub</b> — repo <code>${esc(LS.repo)}</code>${LS.login?(' · @'+esc(LS.login)):''}. Saved on every change; open on any device by connecting the same repo. <a href="#" onclick="disconnectGitHub();return false">Disconnect</a></p>`;
+  } else {
+    html += `<p class="small" style="margin:0 0 10px">📱 <b>Saved on this device only.</b> Your data lives in this browser and is never sent anywhere. Clearing the browser erases it — back it up with <b>Export</b>, or turn on optional GitHub sync below.</p>`;
   }
+  // Local backup / restore — works in either mode.
+  html += `<div class="action-bar" style="margin:4px 0 6px">
+      <button class="sec" onclick="exportData()">⬇︎ Export backup</button>
+      <button class="sec" onclick="document.getElementById('importFile').click()">⬆︎ Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(this)">
+    </div>`;
   html += `<div class="row"><div class="row-item">
       <div class="label">Your name (on this device)</div>
-      <select id="set_me">`;
+      <select id="set_me" onchange="saveMe(this.value)">`;
   (config.people || []).forEach(p => {
     html += `<option value="${esc(p)}" ${p === LS.me ? 'selected' : ''}>${esc(p)}</option>`;
   });
   html += `</select>
     </div></div>`;
-  if(!LS.token){
-    html += `<details style="margin-top:6px"><summary>Advanced: paste a token instead</summary>
+  // Optional GitHub sync (bring your own token) — only shown when local.
+  if(!synced){
+    html += `<details style="margin-top:10px"><summary>☁️ Sync across devices with GitHub (optional)</summary>
+      <p class="small muted" style="margin:8px 0">One-time setup, then this device stays connected. Your token is stored only here and talks straight to GitHub — no middle-man server.</p>
+      <ol class="small muted" style="margin:0 0 10px 18px;padding:0;line-height:1.5">
+        <li>Make a free account at <a href="https://github.com/signup" target="_blank" rel="noopener">github.com/signup</a> (skip if you have one).</li>
+        <li>Create a private repo: <a href="https://github.com/new?name=bank-bonus-data&visibility=private" target="_blank" rel="noopener">github.com/new</a> → name it <code>bank-bonus-data</code> → <b>Private</b> → Create.</li>
+        <li>Make a token: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained token</a> → <b>Expiration: No expiration</b> → <b>Repository access</b>: Only select repositories → pick <code>bank-bonus-data</code> → <b>Permissions → Contents: Read and write</b> → Generate, then copy it.</li>
+      </ol>
       <div class="row"><div class="row-item">
-        <div class="label">Data Repo (owner/name)</div>
-        <input type="text" id="set_repo" value="${esc(LS.repo)}" placeholder="e.g., username/bank-bonus-data">
+        <div class="label">Data repo (your-username/bank-bonus-data)</div>
+        <input type="text" id="set_repo" value="${esc(LS.repo)}" placeholder="your-username/bank-bonus-data">
       </div></div>
       <div class="row"><div class="row-item">
-        <div class="label">GitHub Token</div>
-        <input type="password" id="set_token" value="${esc(LS.token)}" placeholder="github_pat_...">
+        <div class="label">GitHub token (stored only on this device)</div>
+        <input type="password" id="set_token" value="" placeholder="github_pat_...">
       </div></div>
+      <button style="margin-top:10px" onclick="saveSettings()">Connect &amp; sync</button>
     </details>`;
   }
-  html += `<button style="margin-top:10px" onclick="saveSettings()">Save Settings</button>
-  </div>`;
+  html += `</div>`;
 
   // People — editable list that drives every Person dropdown.
   html += `<div class="card">
@@ -1583,7 +1683,9 @@ function render_settings(){
     <button onclick="savePaycheckSettings()">Save</button>
   </div>`;
 
-  // Notifications — email + RSS.
+  // Notifications — email + RSS. These ride on a GitHub Action in the data
+  // repo, so they only apply once GitHub sync is connected.
+  if(synced){
   const rssEnabled = !!(config.rssEnabled);
   const rssUrl = LS.repo ? 'https://raw.githubusercontent.com/'+LS.repo+'/main/db/rss.xml' : '';
   html += `<div class="card">
@@ -1612,27 +1714,61 @@ function render_settings(){
     </div>
     <p style="margin:4px 0 0;color:var(--faint);font-size:11px">Requires your data repo to be public, or use a reader that supports private GitHub raw URLs.</p>` : ''}
   </div>`;
+  } else {
+    html += `<div class="card">
+      <div class="card-header">Notifications</div>
+      <p style="margin:0;color:var(--muted);font-size:13px">📧 Daily email reminders run from a free GitHub Action in your data repo. Turn on <b>GitHub sync</b> above to enable them.</p>
+    </div>`;
+  }
 
   html += `<p style="text-align:center;color:var(--faint);font-size:11px;margin:18px 0 0">Bank Bonus Tracker · build ${esc(BUILD)}</p>`;
 
   section.innerHTML = html;
 }
 
+// "Connect & sync": validate the repo+token and switch this device to GitHub
+// sync (connectGitHub reconciles the data and re-inits).
 async function saveSettings(){
-  if($('#set_me')) LS.me = $('#set_me').value;
-  // The repo/token fields only exist on the paste-a-token path (signed out).
   const repoEl = $('#set_repo'), tokenEl = $('#set_token');
   if(repoEl && tokenEl){
-    const repo = repoEl.value.trim(), token = tokenEl.value.trim();
-    if(token !== LS.token){ LS.method = 'token'; }
-    LS.repo = repo; LS.token = token;
-    if(!LS.repo || !LS.token){ toast('Repo and token required'); return; }
-    try { await loadAll(); toast('Settings saved and data loaded'); init(); }
-    catch(e){ toast('Error: ' + e.message); }
+    await connectGitHub(repoEl.value, tokenEl.value);
     return;
   }
   toast('Saved');
   updateAppbarUser();
+}
+
+// "Your name on this device" — remembered locally, no save round-trip.
+function saveMe(v){ LS.me = v; updateAppbarUser(); toast('Saved'); }
+
+// --------- Local backup / restore (works in local or synced mode) ---------
+function exportData(){
+  const blob = new Blob([JSON.stringify({ config, accounts, offers, exportedFrom: 'bank-bonus-tracker', version: 1 }, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bank-bonus-backup.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Backup downloaded');
+}
+
+async function importData(input){
+  const file = input.files && input.files[0];
+  input.value = '';   // allow re-importing the same file later
+  if(!file) return;
+  if(!await confirmModal('Import this backup? It REPLACES the accounts, offers, and settings currently on this device.', 'Import', true)) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if(!data || !Array.isArray(data.accounts) || !Array.isArray(data.offers) || typeof data.config !== 'object'){
+      throw new Error('Not a Bank Bonus Tracker backup file');
+    }
+    config = data.config; accounts = data.accounts; offers = data.offers;
+    await saveConfig('Import backup');
+    await saveAccounts('Import backup');
+    await saveOffers('Import backup');
+    toast('Backup imported ✓');
+    init();
+  } catch(e){ toast('Import failed: ' + (e.message || e)); }
 }
 
 async function savePaycheckSettings(){
@@ -1700,7 +1836,7 @@ async function saveNotifyEmail(){
   catch(e){ toast('Error: ' + e.message); }
 }
 async function testNotification(){
-  if(!LS.token || !LS.repo){ toast('Sign in first'); return; }
+  if(STORE.mode !== 'github' || !LS.token || !LS.repo){ toast('Connect GitHub sync first'); return; }
   const email = ($('#set_email') && $('#set_email').value.trim()) || '';
   try {
     if(email){ if(!config.notify) config.notify = []; config.notify[0] = { email, enabled: true }; await saveConfig('Update notify email'); }
@@ -2127,11 +2263,10 @@ async function toggleRSS(enabled){
   if(enabled){ try { await saveRSS(); toast('RSS feed enabled and generated'); } catch(e){ toast('RSS error: '+e.message); } }
 }
 
-// Initialize — apply theme, then handle the "back from GitHub sign-in" return first.
+// Initialize — apply theme, then load (local-first; no sign-in round-trip).
 (async ()=>{
   applyTheme();
-  const came = await handleOAuthRedirect();
-  if(!came) init();
+  init();
 })();
 </script>
 

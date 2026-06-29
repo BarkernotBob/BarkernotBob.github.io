@@ -3,10 +3,11 @@
    fresh in the background so the next open always has the latest version.
    GitHub API calls always go to the network. */
 
-const CACHE = 'bb-v2';
+const CACHE = 'bb-v3';
 const SHELL = [
   '/static/bank-bonus/',
   '/static/bank-bonus/index.html',
+  '/static/bank-bonus/starter-offers.js',
   '/static/bank-bonus/manifest.json',
   '/static/bank-bonus/icon-192.png',
   '/static/bank-bonus/icon-512.png',
@@ -30,8 +31,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always fetch GitHub API and Cloudflare Worker calls from the network.
-  if (url.hostname === 'api.github.com' || url.hostname.endsWith('.workers.dev')) {
+  // Always fetch GitHub API calls from the network.
+  if (url.hostname === 'api.github.com') {
     return;
   }
 

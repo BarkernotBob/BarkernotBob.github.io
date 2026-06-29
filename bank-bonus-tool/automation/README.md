@@ -49,7 +49,7 @@ your actual Gmail password).
 
    | Name | Value |
    |---|---|
-   | `MAIL_USERNAME` | your Gmail address (e.g., `isaiahmail97@gmail.com`) |
+   | `MAIL_USERNAME` | your Gmail address (e.g., `you@example.com`) |
    | `MAIL_PASSWORD` | the 16-character app password from Step 2 (with spaces) |
    | `MAIL_TO` | the email to send daily reports to (can be same as `MAIL_USERNAME`) |
 

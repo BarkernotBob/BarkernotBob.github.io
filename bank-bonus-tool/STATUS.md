@@ -24,7 +24,7 @@ all shipped (sections 4 and 5). What's left is your eyes on it — verify it liv
    Calendar had nothing to draw and showed "No DD planned yet."
    - Filled in `ddPlan` for **20 accounts**, matched on **both person and
      institution** (the data has two US Banks, two Citis, two Wells, and two
-     Affinity FCUs across Grace/Isaiah, so person alone wasn't enough).
+     Affinity FCUs across two people, so person alone wasn't enough).
    - Totals **$31,425.55** across all planned deposits — matches the source sheet.
    - Lives in the **`bank-bonus-data`** repo → `db/accounts.json`, on the `main`
      branch. **Merged** (was PR #1).
@@ -137,6 +137,6 @@ Every item from the old "rough edges" backlog shipped. All in the one file
   Keep `payrollDate` in ISO (`YYYY-MM-DD`) — the app sorts/compares dates as text,
   so any other format breaks ordering.
 - An account's `dates.firstDD` can legitimately differ from its first `ddPlan` date
-  (e.g. Grace/Huntington firstDD `2024-12-27` but first deposit landed
+  (e.g. a Huntington firstDD `2025-01-15` but first deposit landed
   `2025-01-10`). That's expected; don't "fix" it.
 - Accounts not in the schedule had no DD requirement ($0) and keep `ddPlan: []`.

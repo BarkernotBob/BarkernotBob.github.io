@@ -344,7 +344,15 @@ const LS = {
    The token (when present) persists in localStorage indefinitely — a user
    connects once per device and stays connected until they explicitly disconnect. */
 const STORE = {
-  get mode(){ return localStorage.getItem('bb_store_mode') || 'local' },
+  get mode(){
+    const m = localStorage.getItem('bb_store_mode');
+    if(m) return m;
+    // Migrate installs from before local-first: if this device already has a
+    // saved token + repo (an earlier connected version), keep syncing instead
+    // of silently flipping to a fresh local store.
+    if(localStorage.getItem('bb_token') && localStorage.getItem('bb_repo')) return 'github';
+    return 'local';
+  },
   set mode(v){ localStorage.setItem('bb_store_mode', v) },
 };
 const LKEY = path => 'bb_local_' + path;   // localStorage key for a data file

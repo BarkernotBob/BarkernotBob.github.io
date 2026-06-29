@@ -20,18 +20,36 @@
 </script>
 
 <style>
-  /* Warm "Reading Room" espresso palette — cohesive with the main site's dark mode. */
+  /* Theme: light (default) + dark override. Warm "Reading Room" palette,
+     tuned for high contrast / readability. Toggle sets <html data-theme>. */
   :root{
-    --bg:#181410; --panel:#221c16; --panel2:#2a221b; --line:#3a3027;
-    --txt:#efe7d6; --muted:#a99d86; --accent:#62b5a3; --accent2:#e0a463;
-    --win:#62b5a3; --loss:#e0805f; --chip:#2a221b;
-    --heat0:#221c16;
+    color-scheme: light;
+    --bg:#f4eee2; --panel:#fdfaf4; --panel2:#efe6d4; --line:#d8cab1;
+    --txt:#1f1a14; --muted:#6a6151; --accent:#1f5d52; --accent2:#a8481f;
+    --win:#17795c; --loss:#bd4628; --chip:#ece2cf; --heat0:#efe6d4;
+    --on-accent:#fdfaf4;
+    --shadow:0 12px 32px -20px rgba(70,45,20,.45);
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#14100c; --panel:#211b15; --panel2:#2c241c; --line:#43382d;
+    --txt:#f5ecdb; --muted:#bcae95; --accent:#74c8b6; --accent2:#e7ad6c;
+    --win:#74c8b6; --loss:#e88a6a; --chip:#2c241c; --heat0:#211b15;
+    --on-accent:#06231d;
+    --shadow:0 12px 32px -20px rgba(0,0,0,.65);
+  }
+  /* yellow ball wordmark icon (replaces the disc) */
+  .ball{
+    display:inline-block; width:.92em; height:.92em; border-radius:50%;
+    background:radial-gradient(circle at 33% 28%, #ffe9a3 0%, #f3bf3e 48%, #d9981f 100%);
+    box-shadow:inset -1.5px -2px 3px rgba(120,70,0,.35), 0 1px 2px rgba(0,0,0,.25);
+    vertical-align:-0.06em;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
     background:var(--bg); color:var(--txt);
-    font:15px/1.5 "Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font:16px/1.55 "Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-text-size-adjust:100%;
   }
   a{color:var(--accent)}
@@ -64,9 +82,9 @@
     background:var(--chip); color:var(--muted); border:1px solid var(--line);
     padding:8px 13px; border-radius:999px; cursor:pointer; font-size:13px; font-weight:600; min-height:auto;
   }
-  .tabs button.active{background:var(--accent); color:#06231d; border-color:var(--accent)}
+  .tabs button.active{background:var(--accent); color:var(--on-accent); border-color:var(--accent)}
   .wrap{max-width:1200px; margin:0 auto; padding:16px}
-  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:var(--shadow)}
   .panel h2{font-family:"Fraunces",Georgia,serif; font-weight:600; margin:0 0 12px; font-size:18px; letter-spacing:-.2px}
   .panel h3{margin:18px 0 8px; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
   .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
@@ -82,7 +100,7 @@
   .ac .opt.active,.ac .opt:hover{background:var(--accent); color:#06231d; font-weight:600}
   .ac .opt .nu{color:var(--accent2)}
   .ac .opt.active .nu,.ac .opt:hover .nu{color:#06231d}
-  .btn{background:var(--accent); color:#06231d; border:none; border-radius:8px; padding:11px 16px; font-weight:700; cursor:pointer; min-height:44px}
+  .btn{background:var(--accent); color:var(--on-accent); border:none; border-radius:8px; padding:11px 16px; font-weight:700; cursor:pointer; min-height:44px}
   .btn.secondary{background:var(--chip); color:var(--txt); border:1px solid var(--line)}
   .btn.small{padding:7px 12px; min-height:auto; font-size:13px}
   .btn:disabled{opacity:.5; cursor:not-allowed}
@@ -148,7 +166,7 @@
 <!-- ───────────── LOGIN GATE ───────────── -->
 <div id="gate" class="gate hide">
   <div class="box">
-    <h1>🥏 Trashback Guarantee</h1>
+    <h1><span class="ball"></span> Trashback Guarantee</h1>
     <p>Enter the group passcode to view and add games.</p>
     <input type="password" id="gatePass" inputmode="text" autocomplete="current-password" placeholder="passcode" />
     <button class="btn" id="gateBtn">Enter</button>
@@ -157,7 +175,7 @@
 </div>
 
 <header class="app" id="appHeader">
-  <h1>🥏 Trashback&nbsp;Guarantee</h1>
+  <h1><span class="ball"></span> Trashback&nbsp;Guarantee</h1>
   <nav class="tabs" id="tabs">
     <button data-tab="overview" class="active">Overview</button>
     <button data-tab="reports">Charts &amp; Reports</button>
@@ -165,6 +183,7 @@
   </nav>
   <span class="grow"></span>
   <span class="muted small" id="staleNote"></span>
+  <button class="btn secondary small" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light or dark mode">🌙</button>
   <button class="btn secondary small" id="refreshBtn" title="Reload from the sheet">⟳</button>
   <button class="btn secondary small" id="logoutBtn" title="Log out of this device">Log out</button>
 </header>
@@ -284,6 +303,7 @@ const LS_PASS  = "tb_passcode";
 const LS_CACHE = "tb_cache";
 const LS_URL   = "tb_backend_url"; // optional override for testing
 const LS_TAB   = "tb_tab";          // remembers which tab you were on across reloads
+const LS_THEME = "tb_theme";        // "light" | "dark"
 let GAMES = [];
 let PLAYERS = [];
 let CHARTS = {};
@@ -298,6 +318,24 @@ function isConfigured(){ const u=backendUrl(); return u && u.indexOf("PASTE_YOUR
 
 const $  = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ── light / dark theme ──────────────────────────────────────────
+function applyTheme(t){
+  const dark = t==="dark";
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  const b=$("#themeBtn"); if(b) b.textContent = dark ? "☀️" : "🌙";
+}
+function initTheme(){
+  let t=localStorage.getItem(LS_THEME);
+  if(t!=="light" && t!=="dark"){ t=(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; }
+  applyTheme(t);
+}
+function toggleTheme(){
+  const next = document.documentElement.dataset.theme==="dark" ? "light" : "dark";
+  localStorage.setItem(LS_THEME,next); applyTheme(next);
+  if(typeof Chart!=="undefined" && GAMES.length) renderAll();   // re-tint charts
+}
 const pct = n => (n==null || isNaN(n)) ? "—" : (n*100).toFixed(1)+"%";
 const n2  = n => (n==null || isNaN(n)) ? "—" : n.toFixed(2);
 
@@ -539,12 +577,12 @@ function renderReports(){
   const minG=+($("#minGames").value||0);
   const rows=Object.values(stats).filter(s=>s.games>=minG).sort((a,b)=>(b.ratio||0)-(a.ratio||0));
   const names=rows.map(r=>r.name);
-  Chart.defaults.color="#a99d86"; Chart.defaults.borderColor="#3a3027"; Chart.defaults.font.family="inherit";
+  Chart.defaults.color=cssVar('--muted'); Chart.defaults.borderColor=cssVar('--line'); Chart.defaults.font.family="inherit";
 
   destroyChart("ratio");
-  CHARTS.ratio=new Chart($("#chartRatio"),{type:"bar",data:{labels:names,datasets:[{label:"Win %",data:rows.map(r=>+(100*(r.ratio||0)).toFixed(1)),backgroundColor:"#62b5a3"}]},options:barOpts("%")});
+  CHARTS.ratio=new Chart($("#chartRatio"),{type:"bar",data:{labels:names,datasets:[{label:"Win %",data:rows.map(r=>+(100*(r.ratio||0)).toFixed(1)),backgroundColor:cssVar('--accent')}]},options:barOpts("%")});
   destroyChart("streak");
-  CHARTS.streak=new Chart($("#chartStreak"),{type:"bar",data:{labels:names,datasets:[{label:"Longest win streak",data:rows.map(r=>r.streak),backgroundColor:"#e0a463"}]},options:barOpts("")});
+  CHARTS.streak=new Chart($("#chartStreak"),{type:"bar",data:{labels:names,datasets:[{label:"Longest win streak",data:rows.map(r=>r.streak),backgroundColor:cssVar('--accent2')}]},options:barOpts("")});
   destroyChart("side");
   CHARTS.side=new Chart($("#chartSide"),{type:"bar",data:{labels:names,datasets:[
     {label:"Open win %",data:rows.map(r=>r.openRatio!=null?+(100*r.openRatio).toFixed(1):null),backgroundColor:"#7aa2f7"},
@@ -800,6 +838,7 @@ $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-t
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ const p=localStorage.getItem(LS_PASS); if(p) refresh(p); } });
 $("#scope").addEventListener("change",()=>{ const c=$("#scope").value==="custom"; $("#fromWrap").style.display=c?"flex":"none"; $("#toWrap").style.display=c?"flex":"none"; if(!c)$("#scopeInfo").textContent=""; renderOverview(); renderReports(); });
 ["fromDate","toDate","minGames"].forEach(id=>$("#"+id).addEventListener("change",()=>{renderOverview();renderReports();}));
+$("#themeBtn").addEventListener("click",toggleTheme);
 $("#refreshBtn").addEventListener("click",()=>{ const p=localStorage.getItem(LS_PASS); if(p){setStale("Refreshing…"); refresh(p);} });
 $("#logoutBtn").addEventListener("click",()=>{ localStorage.removeItem(LS_PASS); showGate(); });
 $("#submitGame").addEventListener("click",submitGame);
@@ -814,6 +853,7 @@ $("#gateBtn").addEventListener("click",async()=>{
 });
 $("#gatePass").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#gateBtn").click(); });
 
+initTheme();
 boot();
 </script>
 </body>

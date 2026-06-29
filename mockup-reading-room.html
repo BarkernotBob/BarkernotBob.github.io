@@ -25,7 +25,6 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 .frame.dark{--paper:#1a1613;--card:#241f1a;--ink:#efe7d6;--muted:#a99d86;--line:#37302a;--green:#5aa882;--slate:#7ea3c4;--clay:#e08a63;--ochre:#d9a949;--accent:#62b5a3}
 .frame{position:relative;background:var(--paper);color:var(--ink);border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,.12);box-shadow:0 30px 60px -30px rgba(0,0,0,.45);transition:max-width .35s ease;max-width:1180px;margin:0 auto}
 .frame.mob{max-width:390px}
-@media (pointer:fine){.frame *{cursor:none}}
 
 .chrome{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--card);border-bottom:1px solid var(--line)}
 .tl{width:11px;height:11px;border-radius:50%}
@@ -70,13 +69,13 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 .epi{font-family:'Fraunces',serif;font-style:italic;font-size:21px;line-height:1.4;margin:0}
 .epi small{display:block;font-style:normal;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:10px}
 .tags{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
-.tag{font:400 13px 'IBM Plex Mono',monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 13px}
+.tag{font:400 13px 'IBM Plex Mono',monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 13px;text-decoration:none;transition:color .18s ease,border-color .18s ease,transform .18s ease}
+.tag:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-2px)}
 .foot{border-top:1px solid var(--line);padding:16px 0 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font:400 12px 'IBM Plex Mono',monospace;color:var(--muted)}
 .foot .dot{width:10px;height:10px}
 
-.cur{position:absolute;top:0;left:0;pointer-events:none;z-index:50;opacity:0}
-.cur-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);position:absolute;transform:translate(-50%,-50%)}
-.cur-ring{width:34px;height:34px;border:1.5px solid var(--accent);border-radius:50%;position:absolute;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease,background .18s ease}
+.cur{position:absolute;top:0;left:0;pointer-events:none;z-index:50;opacity:0;will-change:transform;transition:opacity .2s ease}
+.cur-ring{width:30px;height:30px;margin:-15px 0 0 -15px;border:1.5px solid var(--accent);border-radius:50%;transition:width .15s ease,height .15s ease,margin .15s ease,background .15s ease}
 
 .marrow{display:none}
 .burger{display:none}
@@ -154,26 +153,26 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 
 <div class="strip">
 <p class="epi">"Build the thing you wish existed, then leave the door open."<small>the workshop, est. 2024</small></p>
-<div class="tags"><span class="tag">#theology</span><span class="tag">#finance</span><span class="tag">#science</span><span class="tag">#language</span><span class="tag">#logic</span></div>
+<div class="tags"><a href="#" class="tag">#theology</a><a href="#" class="tag">#finance</a><a href="#" class="tag">#science</a><a href="#" class="tag">#language</a><a href="#" class="tag">#logic</a></div>
 </div>
 <div class="foot"><span class="dot"></span><span>set in fraunces &amp; hanken grotesk</span><span>·</span><span>tended 29 jun 2026</span><span>·</span><span>made in the workshop</span></div>
 </div>
-<div class="cur" id="cur"><div class="cur-ring" id="ring"></div><div class="cur-dot" id="cdot"></div></div>
+<div class="cur" id="cur"><div class="cur-ring" id="ring"></div></div>
 </div>
 </div>
 
 <script>
 (function(){
-var f=document.getElementById('frame'),cur=document.getElementById('cur'),ring=document.getElementById('ring'),cdot=document.getElementById('cdot');
-var mx=0,my=0,rx=0,ry=0,fine=window.matchMedia('(pointer:fine)').matches;
+var f=document.getElementById('frame'),cur=document.getElementById('cur'),ring=document.getElementById('ring');
+var mx=0,my=0,rx=0,ry=0,seen=false,fine=window.matchMedia('(pointer:fine)').matches;
 if(fine){
 f.addEventListener('mouseenter',function(){cur.style.opacity=1});
 f.addEventListener('mouseleave',function(){cur.style.opacity=0});
-f.addEventListener('mousemove',function(e){var r=f.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;cdot.style.left=mx+'px';cdot.style.top=my+'px';});
-(function loop(){rx+=(mx-rx)*0.18;ry+=(my-ry)*0.18;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+f.addEventListener('mousemove',function(e){var r=f.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;if(!seen){rx=mx;ry=my;seen=true;}},{passive:true});
+(function loop(){rx+=(mx-rx)*0.32;ry+=(my-ry)*0.32;cur.style.transform='translate3d('+rx+'px,'+ry+'px,0)';requestAnimationFrame(loop);})();
 f.querySelectorAll('a').forEach(function(el){
-el.addEventListener('mouseenter',function(){ring.style.width='52px';ring.style.height='52px';ring.style.background='color-mix(in srgb,var(--accent) 14%,transparent)';});
-el.addEventListener('mouseleave',function(){ring.style.width='34px';ring.style.height='34px';ring.style.background='transparent';});
+el.addEventListener('mouseenter',function(){ring.style.width='48px';ring.style.height='48px';ring.style.margin='-24px 0 0 -24px';ring.style.background='color-mix(in srgb,var(--accent) 14%,transparent)';});
+el.addEventListener('mouseleave',function(){ring.style.width='30px';ring.style.height='30px';ring.style.margin='-15px 0 0 -15px';ring.style.background='transparent';});
 });
 }
 f.querySelectorAll('.card').forEach(function(c){

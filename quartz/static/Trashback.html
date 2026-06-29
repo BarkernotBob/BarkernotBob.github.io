@@ -105,6 +105,12 @@
   .btn.small{padding:7px 12px; min-height:auto; font-size:13px}
   .btn:disabled{opacity:.5; cursor:not-allowed}
 
+  /* segmented control (time scope) */
+  .seg{display:inline-flex; flex-wrap:wrap; gap:2px; padding:3px; background:var(--panel2); border:1px solid var(--line); border-radius:10px}
+  .seg button{background:transparent; color:var(--muted); border:none; border-radius:7px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; min-height:auto; white-space:nowrap}
+  .seg button:hover{color:var(--txt)}
+  .seg button.active{background:var(--accent); color:var(--on-accent)}
+
   .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px}
   .card{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px}
   .card .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px}
@@ -123,8 +129,8 @@
   .bar{height:7px; border-radius:4px; background:var(--accent); display:inline-block; vertical-align:middle; margin-left:6px}
 
   table.heat th,table.heat td{text-align:center; border:1px solid var(--line); padding:6px 8px; min-width:54px}
-  table.heat td.diag{background:#0c1116; color:var(--muted)}
-  table.heat td.empty{color:#445}
+  table.heat td.diag{background:var(--heat0); color:var(--muted)}
+  table.heat td.empty{color:var(--muted); opacity:.5}
 
   canvas{max-width:100%}
   .chartbox{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:14px}
@@ -158,6 +164,11 @@
     #tab-enter select, #tab-enter input{width:100% !important; min-height:50px; font-size:16px}
     #tab-enter .btn{width:100%; padding:15px; font-size:17px}
     #tab-enter h3{margin:16px 0 4px}
+    /* time-scope buttons span the row and share width evenly on phones */
+    #scopeBar .seg{display:flex; width:100%}
+    #scopeBar .seg button{flex:1 1 auto; padding:10px 8px}
+    #scopeBar #fromWrap, #scopeBar #toWrap{width:100%}
+    #scopeBar #fromWrap input, #scopeBar #toWrap input{width:100%}
   }
 </style>
 </head>
@@ -200,23 +211,18 @@
   <div id="loading" class="panel center muted hide">Loading games…</div>
 
   <div id="scopeBar" class="panel hide">
-    <div class="row">
-      <label class="fld">Time scope
-        <select id="scope">
-          <option value="all">All time</option>
-          <option value="month">Latest month</option>
-          <option value="day">Latest day</option>
-          <option value="custom">Custom range…</option>
-        </select>
-      </label>
+    <div class="row" style="align-items:flex-end">
+      <div class="seg" id="scopeSeg" role="group" aria-label="Time scope">
+        <button type="button" data-scope="day">Today</button>
+        <button type="button" data-scope="month">This month</button>
+        <button type="button" data-scope="all" class="active">All time</button>
+        <button type="button" data-scope="custom">Custom…</button>
+      </div>
       <label class="fld" id="fromWrap" style="display:none">From
         <input type="date" id="fromDate" />
       </label>
       <label class="fld" id="toWrap" style="display:none">To
         <input type="date" id="toDate" />
-      </label>
-      <label class="fld">Min. games
-        <input type="number" id="minGames" value="0" min="0" style="width:90px" />
       </label>
       <span class="grow"></span>
       <span class="muted small" id="scopeInfo"></span>
@@ -308,6 +314,7 @@ let GAMES = [];
 let PLAYERS = [];
 let CHARTS = {};
 let currentTab = "overview";
+let scope = "all";        // time-scope filter: all | day | month | custom
 let lastSig = null;       // signature of the games currently rendered (skip redundant re-renders)
 let autoTimer = null;     // 60s auto-refresh timer
 // Phones/tablets get native dropdowns; computers get type-to-autocomplete name fields.
@@ -435,16 +442,21 @@ function collectPlayers(games){
 
 // ───────────────────────── scope filter ─────────────────────────
 function filteredGames(){
-  const scope=$("#scope").value;
   if(scope==="all") return GAMES.slice();
-  const wd=GAMES.filter(g=>g.date);
-  if(!wd.length) return GAMES.slice();
-  if(scope==="day"){ const last=wd[wd.length-1].date,k=dayKey(last); $("#scopeInfo").textContent="Showing "+last.toLocaleDateString(); return GAMES.filter(g=>g.date&&dayKey(g.date)===k); }
-  if(scope==="month"){ const last=wd[wd.length-1].date,k=monKey(last); $("#scopeInfo").textContent="Showing "+last.toLocaleString(undefined,{month:"long",year:"numeric"}); return GAMES.filter(g=>g.date&&monKey(g.date)===k); }
+  if(scope==="day"){
+    const now=new Date(), k=dayKey(now);
+    $("#scopeInfo").textContent="Today · "+now.toLocaleDateString();
+    return GAMES.filter(g=>g.date&&dayKey(g.date)===k);
+  }
+  if(scope==="month"){
+    const now=new Date(), k=monKey(now);
+    $("#scopeInfo").textContent="This month · "+now.toLocaleString(undefined,{month:"long",year:"numeric"});
+    return GAMES.filter(g=>g.date&&monKey(g.date)===k);
+  }
   if(scope==="custom"){
     const f=$("#fromDate").value?new Date($("#fromDate").value+"T00:00:00"):null;
     const t=$("#toDate").value?new Date($("#toDate").value+"T23:59:59"):null;
-    $("#scopeInfo").textContent="Custom range";
+    $("#scopeInfo").textContent=(f||t)?"Custom range":"Custom range — pick dates";
     return GAMES.filter(g=> g.date && (!f||g.date>=f) && (!t||g.date<=t));
   }
   return GAMES.slice();
@@ -506,11 +518,10 @@ let sortKey="ratio", sortAsc=false;
 function renderOverview(){
   const games=filteredGames();
   const stats=computeStats(games);
-  const minG=+($("#minGames").value||0);
-  let rows=Object.values(stats).filter(s=>s.games>=minG);
+  let rows=Object.values(stats);
   const ranked=rows.slice().sort((a,b)=>(b.ratio||0)-(a.ratio||0)||b.games-a.games);
   ranked.forEach((r,i)=>r.place=i+1);
-  const change=($("#scope").value==="all")?dailyChange():null;
+  const change=(scope==="all")?dailyChange():null;
   $("#ovScope").textContent="· "+rows.length+" players · "+games.length+" games";
 
   const cols=[
@@ -551,7 +562,7 @@ function renderLeagueCards(games,stats,rows){
   const players=Object.values(stats);
   const totalPoints=players.reduce((a,p)=>a+p.score,0);
   const openWins=games.filter(g=>g.openScore>g.wallScore).length, wallWins=games.length-openWins;
-  const minG=Math.max(5,+($("#minGames").value||0));
+  const minG=5; // "Top win %" still needs a small sample to be meaningful
   const topRatio=rows.filter(r=>r.games>=minG).slice().sort((a,b)=>(b.ratio||0)-(a.ratio||0))[0];
   const topStreak=players.slice().sort((a,b)=>b.streak-a.streak)[0];
   const topVol=players.slice().sort((a,b)=>b.games-a.games)[0];
@@ -574,8 +585,7 @@ function barOpts(unit,grouped){ return {responsive:true,maintainAspectRatio:fals
 function renderReports(){
   if(typeof Chart==="undefined") return;
   const games=filteredGames(); const stats=computeStats(games);
-  const minG=+($("#minGames").value||0);
-  const rows=Object.values(stats).filter(s=>s.games>=minG).sort((a,b)=>(b.ratio||0)-(a.ratio||0));
+  const rows=Object.values(stats).sort((a,b)=>(b.ratio||0)-(a.ratio||0));
   const names=rows.map(r=>r.name);
   Chart.defaults.color=cssVar('--muted'); Chart.defaults.borderColor=cssVar('--line'); Chart.defaults.font.family="inherit";
 
@@ -588,7 +598,7 @@ function renderReports(){
     {label:"Open win %",data:rows.map(r=>r.openRatio!=null?+(100*r.openRatio).toFixed(1):null),backgroundColor:"#7aa2f7"},
     {label:"Wall win %",data:rows.map(r=>r.wallRatio!=null?+(100*r.wallRatio).toFixed(1):null),backgroundColor:"#bb9af7"}]},options:barOpts("%",true)});
 
-  renderTrend(minG);
+  renderTrend();
 
   const order=names.length?names:collectPlayers(games);
   heatmap("#heatTeam",order,(a,b)=>{const s=stats[a]; if(!s||!s.withC[b])return null; return s.withW[b]?s.withW[b]/s.withC[b]:0;},"pct");
@@ -598,9 +608,9 @@ function renderReports(){
   heatmap("#heatAgainst",order,(a,b)=>{const s=stats[a]; return s&&s.againstC[b]?s.againstC[b]:null;},"int");
 }
 
-function renderTrend(minG){
+function renderTrend(){
   const all=computeStats(GAMES);
-  const players=Object.values(all).filter(s=>s.games>=Math.max(minG,8)).sort((a,b)=>b.games-a.games).slice(0,8).map(s=>s.name);
+  const players=Object.values(all).filter(s=>s.games>=8).sort((a,b)=>b.games-a.games).slice(0,8).map(s=>s.name);
   const series={}; players.forEach(p=>series[p]={w:0,g:0,pts:[]});
   GAMES.forEach(g=>{ const openWin=g.openScore>g.wallScore;
     const apply=(team,win)=>team.forEach(p=>{ if(series[p]){ series[p].g++; if(win)series[p].w++; series[p].pts.push(+(100*series[p].w/series[p].g).toFixed(1)); }});
@@ -650,7 +660,7 @@ function buildEntryForm(){
       ? `<select id="${id}" class="pName"></select>`
       : `<input id="${id}" type="text" class="pName" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="type a name" />`;
   });
-  [["oScore","7"],["wScore",""]].forEach(([id,def])=>{
+  [["oScore",""],["wScore",""]].forEach(([id,def])=>{
     const w=$("#wrap-"+id); if(!w) return;
     let o=`<option value="">–</option>`; for(let i=0;i<=7;i++) o+=`<option${String(i)===def?" selected":""}>${i}</option>`;
     w.innerHTML=`<select id="${id}" class="sSel">${o}</select>`;
@@ -770,7 +780,7 @@ function canonField(input){ const c=canonPlayer(input.value); if(c) input.value=
 
 function resetEntryForm(){
   NAME_FIELDS.forEach(id=>{ const el=$("#"+id); if(el) el.value=""; });
-  const os=$("#oScore"); if(os) os.value="7";
+  const os=$("#oScore"); if(os) os.value="";
   const ws=$("#wScore"); if(ws) ws.value="";
   const first=$("#o1"); if(first) first.focus();
 }
@@ -836,8 +846,17 @@ function setTab(t){
 $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(!b)return; setTab(b.dataset.tab); });
 // Coming back to the page (tab/app re-focus) pulls fresh data immediately.
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ const p=localStorage.getItem(LS_PASS); if(p) refresh(p); } });
-$("#scope").addEventListener("change",()=>{ const c=$("#scope").value==="custom"; $("#fromWrap").style.display=c?"flex":"none"; $("#toWrap").style.display=c?"flex":"none"; if(!c)$("#scopeInfo").textContent=""; renderOverview(); renderReports(); });
-["fromDate","toDate","minGames"].forEach(id=>$("#"+id).addEventListener("change",()=>{renderOverview();renderReports();}));
+$("#scopeSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-scope]"); if(!b) return;
+  scope=b.dataset.scope;
+  $$("#scopeSeg button").forEach(x=>x.classList.toggle("active",x===b));
+  const c=scope==="custom";
+  $("#fromWrap").style.display=c?"flex":"none";
+  $("#toWrap").style.display=c?"flex":"none";
+  if(!c) $("#scopeInfo").textContent="";
+  renderOverview(); renderReports();
+});
+["fromDate","toDate"].forEach(id=>$("#"+id).addEventListener("change",()=>{renderOverview();renderReports();}));
 $("#themeBtn").addEventListener("click",toggleTheme);
 $("#refreshBtn").addEventListener("click",()=>{ const p=localStorage.getItem(LS_PASS); if(p){setStale("Refreshing…"); refresh(p);} });
 $("#logoutBtn").addEventListener("click",()=>{ localStorage.removeItem(LS_PASS); showGate(); });

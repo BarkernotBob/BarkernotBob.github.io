@@ -1,4 +1,8 @@
 ---
+tags:
+  - logic
+  - science
+  - statistics
 aliases:
   - Single Factor Analysis
 updated: 2025-06-26T15:45:04.057-04:00

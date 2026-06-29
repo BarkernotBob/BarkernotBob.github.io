@@ -1,6 +1,8 @@
 ---
 tags:
   - bible
+  - theology
+  - rhetoric
 created: 07/01/25
 aliases: 
 passages: 

@@ -1,5 +1,7 @@
 ---
-tags: 
+tags:
+  - language
+  - writing
 created:  08/11/25
 aliases:
 ---

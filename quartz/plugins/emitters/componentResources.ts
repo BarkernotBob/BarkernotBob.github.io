@@ -377,6 +377,43 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   `)
   // --------------------------------------------------------------------------
 
+  // --- Listing descriptions (custom): the remote folder/tag listing plugin
+  // --- renders title + date + tags but no excerpt. Pull a short excerpt from
+  // --- the content index and inject it into each row so folder/tag pages read
+  // --- like the editorial index (title + description + date + tags).
+  componentResources.afterDOMLoaded.push(`
+    async function quartzListingDesc() {
+      const rows = document.querySelectorAll(".page-listing .section-li")
+      if (!rows.length) return
+      try {
+        const res = await fetch("/static/contentIndex.json")
+        const idx = await res.json()
+        rows.forEach((li) => {
+          const desc = li.querySelector(".desc")
+          const a = li.querySelector(".desc a")
+          if (!desc || !a || desc.querySelector(".desc-text")) return
+          let slug = ""
+          try { slug = new URL(a.href).pathname.replace(/^\\//, "").replace(/\\/$/, "") } catch (e) { return }
+          const entry = idx[slug] || idx[slug + "/index"]
+          if (!entry || !entry.content) return
+          const text = entry.content.replace(/\\s+/g, " ").trim()
+          if (!text) return
+          const max = 150
+          const snip = text.length > max ? text.slice(0, max).replace(/\\s+\\S*$/, "") + "\\u2026" : text
+          const p = document.createElement("p")
+          p.className = "desc-text"
+          p.textContent = snip
+          desc.appendChild(p)
+        })
+      } catch (e) {
+        console.error("[listing-desc]", e)
+      }
+    }
+    document.addEventListener("nav", quartzListingDesc)
+    quartzListingDesc()
+  `)
+  // --------------------------------------------------------------------------
+
   if (cfg.enableSPA) {
     componentResources.afterDOMLoaded.push(spaRouterScript)
   } else {

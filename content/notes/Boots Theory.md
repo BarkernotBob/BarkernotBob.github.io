@@ -1,4 +1,8 @@
 ---
+tags:
+  - finance
+  - economics
+  - logic
 updated: 2025-06-26T15:31:27.353-04:00
 edited_seconds: 336
 ---

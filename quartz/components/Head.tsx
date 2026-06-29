@@ -60,7 +60,7 @@ export default (() => {
           </>
         )}
         <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossOrigin="anonymous" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
         <meta name="og:site_name" content={cfg.pageTitle}></meta>
         <meta property="og:title" content={title} />
@@ -92,8 +92,20 @@ export default (() => {
         )}
 
         <link rel="icon" href={iconPath} />
+        <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content="#e8443a" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#1c1430" media="(prefers-color-scheme: dark)" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content={cfg.pageTitle} />
         <meta name="description" content={description} />
         <meta name="generator" content="Quartz" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');`,
+          }}
+        />
 
         {css.map((resource) => CSSResourceToStyleElement(resource, true))}
         {js

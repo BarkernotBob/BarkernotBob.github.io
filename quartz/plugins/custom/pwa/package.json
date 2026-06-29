@@ -1,0 +1,16 @@
+{
+  "name": "pwa",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": { "import": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "quartz": {
+    "name": "pwa",
+    "displayName": "PWA",
+    "description": "Emits sw.js and manifest.webmanifest for Progressive Web App support",
+    "version": "1.0.0"
+  }
+}

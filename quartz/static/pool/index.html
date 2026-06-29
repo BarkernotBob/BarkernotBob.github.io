@@ -4,6 +4,15 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0f6b70" />
+<!-- PWA: installable on the iPhone Home Screen and works offline -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pool Care">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -205,6 +214,17 @@ function addDaysISO(iso, n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getD
 function daysBetween(a,b){ return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/86400000); }
 function mmdd(iso){ return (iso||todayISO()).slice(5,10); }
 function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${m}/${d}/${y.slice(2)}`; }
+/* MM-DD <-> a full date the native date-picker accepts (year is a placeholder, ignored). */
+function mdToDate(md){ return /^\d{2}-\d{2}$/.test(md||'') ? '2024-'+md : ''; }
+function dateToMd(v){ return (v && v.length>=10) ? v.slice(5,10) : ''; }
+/* Look up coordinates for a place name (free, no key — Open-Meteo geocoder). */
+async function geocodePlace(q){
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
+  if(!r.ok) throw new Error('geocode '+r.status);
+  const hit = ((await r.json()).results||[])[0];
+  if(!hit) return null;
+  return { lat:hit.latitude, lon:hit.longitude, name:[hit.name, hit.admin1, hit.country_code].filter(Boolean).join(', ') };
+}
 function toast(msg, ms=2800){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
 function modal(innerHtml){
   return new Promise(resolve=>{
@@ -900,13 +920,7 @@ function renderToday(){
   html += `<div class="card"><div class="flex"><h2 style="margin:0">🧪 Latest test</h2>${lt?`<span class="small muted">${fmtDate(lt.date)}</span>`:''}</div>`;
   if(!lt){ html += `<p class="muted small">No test logged yet. <button class="link" onclick="show('test')">Log one</button></p>`; }
   else {
-    const recs = testRecs(lt);
-    const actionable = recs.filter(r=>r.rec.tone!=='ok');
-    html += actionable.length
-      ? actionable.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div>${chemNoteHtml(r.chem)}</div>`).join('')
-      : `<p class="ok small">Everything was in range on the last test. 👍</p>`;
-    const shop = shoppingList(lt);
-    if(shop.length) html += `<div class="rec warn" style="margin-top:8px"><b>🛒 Shopping list</b><div class="small">To fully act on this test, pick up: ${shop.map(c=>esc(CHEMS[c])).join(', ')}.</div></div>`;
+    html += recHtml(lt);
     html += `<button class="link" onclick="show('test')">Log a new test</button>`;
   }
   html += `</div>`;
@@ -977,6 +991,24 @@ async function logSwim(){
    TEST  (qualitative by default, numeric optional)
    ========================================================================= */
 let testMode='qual';
+/* Settings location entry mode: 'address' (look up a place name) or 'latlon'. */
+let geoMode=null;
+function curGeoMode(){ return geoMode || ((D.config.geo&&D.config.geo.mode)||'latlon'); }
+function setGeoMode(m){ geoMode=m; if(D.config.geo) D.config.geo.mode=m; renderSettings(); }
+async function lookupGeo(){
+  const q=($('#s_addr')&&$('#s_addr').value.trim())||'';
+  const out=$('#geoStatus');
+  if(!q){ toast('Type a city or place name first'); return; }
+  if(out) out.innerHTML='<span class="spin"></span> Looking up…';
+  try{
+    const hit=await geocodePlace(q);
+    if(!hit){ if(out) out.innerHTML='<span class="sev2">No match — try a nearby city name.</span>'; return; }
+    D.config.geo={ ...(D.config.geo||{}), lat:hit.lat, lon:hit.lon, mode:'address' };
+    if(!$('#s_loc').value.trim()) $('#s_loc').value=hit.name;
+    _wx=null;
+    if(out) out.innerHTML=`✓ Found <b>${esc(hit.name)}</b> — ${hit.lat.toFixed(4)}, ${hit.lon.toFixed(4)}. Tap <b>Save pool</b> to keep it.`;
+  }catch(e){ if(out) out.innerHTML='<span class="sev2">Lookup failed — check your connection.</span>'; }
+}
 function renderTest(){
   const lt=lastTest();
   $('#main').innerHTML = `
@@ -1037,10 +1069,70 @@ async function saveTest(){
     showRecModal(rec);
   }catch(e){ toast(String(e.message||e)); btn.disabled=false; btn.innerHTML='Save & get advice'; }
 }
+/* Plain-language consequence of leaving a reading off — used in the caveat. */
+function ramification(key, dir){
+  const M={
+    fc:{low:'Chlorine stays low, so algae and bacteria can take hold and the water can cloud or turn green.',
+        high:'Very high chlorine can irritate eyes and skin and fade swimwear until it drops back down.'},
+    ph:{low:'Low pH is acidic — it stings eyes and can slowly corrode metal fittings and pump parts.',
+        high:'High pH makes your chlorine sluggish (it works far less effectively) and can cloud the water and leave scale.'},
+    ta:{low:'Low alkalinity lets pH bounce around, so nothing else will hold steady until it\'s fixed.',
+        high:'High alkalinity drags pH up with it and can cause cloudy water and scale.'},
+    cya:{low:'Without enough stabilizer, sunlight burns off your chlorine fast — you\'ll use a lot more and may still test low.',
+        high:'Too much stabilizer "locks up" chlorine so it can\'t sanitize well; only draining and refilling brings it down.'},
+    ch:{low:'Soft water is hungry for calcium and can etch plaster, grout and stone over time.',
+        high:'Hard water scales surfaces and equipment and can cloud the water.'},
+    po4:{low:'',high:'Phosphates are algae food — leaving them high makes green blooms much more likely between doses.'},
+  };
+  return ((M[key]||{})[dir])||'Leaving this off-target makes the rest of your chemistry harder to keep balanced.';
+}
+/* Split a test's recommendations into: do-now (free), needs-buy, and order them. */
+const BALANCE_ORDER=['ta','ph','fc','cya','ch','po4']; // sensible order of operations
+function recPlan(t){
+  const all=testRecs(t);
+  const off=all.filter(r=>r.rec.tone!=='ok');
+  const sevOf=r=>r.rec.tone==='danger'?2:1;
+  off.sort((a,b)=>(sevOf(b)-sevOf(a))||(BALANCE_ORDER.indexOf(a.key)-BALANCE_ORDER.indexOf(b.key)));
+  const now=[], buy=[];
+  off.forEach(r=>{ const p=chemPlan(r.chem); r._plan=p; (p&&!p.have)?buy.push(r):now.push(r); });
+  return {all, off, now, buy};
+}
+/* Overall, prioritized headline recommendation (shown at the top of the results). */
+function overallRecHtml(t){
+  const {off, now, buy}=recPlan(t);
+  if(!off.length) return `<div class="rec ok"><b>Overall — you're in good shape 👍</b><div class="small">Every reading was in range. Keep your normal routine and re-test in about a week.</div></div>`;
+  const urgent=off.filter(r=>r.rec.tone==='danger');
+  let s=`${off.length} reading${off.length>1?'s are':' is'} off target.`;
+  if(off.length>1) s+=` Work in this order: <b>${off.map(r=>esc(r.name)).join(' → ')}</b> (balance alkalinity & pH before chasing chlorine).`;
+  if(urgent.length) s+=` Most urgent: <b>${urgent.map(r=>esc(r.name)).join(' and ')}</b>.`;
+  if(now.length) s+=` You can act on ${now.length} of them right now with what you have.`;
+  if(buy.length) s+=` ${buy.length} also need${buy.length>1?'':'s'} a quick purchase (see below).`;
+  return `<div class="rec ${urgent.length?'danger':'warn'}"><b>Overall — what to do</b><div class="small">${s}</div></div>`;
+}
 function recHtml(t){
-  const recs=testRecs(t);
-  if(!recs.length) return '<p class="muted small">No readings recorded.</p>';
-  return recs.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div>${r.rec.tone!=='ok'?chemNoteHtml(r.chem):''}</div>`).join('');
+  const {all, now, buy}=recPlan(t);
+  if(!all.length) return '<p class="muted small">No readings recorded.</p>';
+  let h=overallRecHtml(t);
+  // 1) what you can do without buying anything
+  if(now.length){
+    h+=`<div class="rec ok"><b>✅ Do now — nothing to buy</b>`;
+    h+=now.map(r=>`<div class="small" style="margin-top:6px"><b>${esc(r.name)} (${esc(r.display)}):</b> ${esc(r.rec.text)}${r._plan&&r._plan.have?` <span class="muted">— using your ${esc(CHEMS[r._plan.use])}.</span>`:''}</div>`).join('');
+    h+=`</div>`;
+  }
+  // 2) caveat: what the free steps won't fix, and why it matters
+  if(buy.length){
+    h+=`<div class="rec warn"><b>⚠️ Caveat — this won't fix everything</b>`
+      + `<div class="small" style="margin-top:4px">The steps above leave ${buy.map(r=>`<b>${esc(r.name)} ${esc(r.dir||'off')}</b>`).join(' and ')} unaddressed. ${buy.map(r=>esc(ramification(r.key, r.dir))).join(' ')}</div></div>`;
+    // 3) deeper recommendation: what to buy and how it fixes the problem
+    h+=`<div class="rec"><b>🛒 To fully fix it — what to buy &amp; why</b>`;
+    h+=buy.map(r=>`<div class="small" style="margin-top:6px"><b>${esc(CHEMS[r._plan.buy])}</b> — fixes <b>${esc(r.name)} (${esc(r.display)})</b>. ${esc(r.rec.text)}</div>`).join('');
+    h+=`</div>`;
+  }
+  // 4) full per-reading detail
+  h+=`<details style="margin-top:8px"><summary>All readings &amp; detail</summary><div style="margin-top:6px">`
+    + all.map(r=>`<div class="rec ${r.rec.tone}"><b>${esc(r.name)} — ${esc(r.display)}</b><div class="small">${esc(r.rec.text)}</div>${r.rec.tone!=='ok'?chemNoteHtml(r.chem):''}</div>`).join('')
+    + `</div></details>`;
+  return h;
 }
 function showRecModal(t){
   modal(`<h2>What to do 🧪</h2><p class="small muted" style="margin:0 0 8px">${fmtDate(t.date)} test</p>
@@ -1202,10 +1294,25 @@ function renderSettings(){
     <h2>🏊 Pool</h2>
     <label>Name</label><input id="s_name" value="${esc(c.pool.name)}"/>
     <label>Volume (gallons)</label><input id="s_gal" inputmode="numeric" value="${esc(c.pool.gallons)}"/>
-    <label>Location</label><input id="s_loc" value="${esc(c.pool.location)}"/>
-    <div class="row"><div><label>Latitude</label><input id="s_lat" inputmode="decimal" value="${esc((c.geo||{}).lat ?? 41.0793)}"/></div>
-      <div><label>Longitude</label><input id="s_lon" inputmode="decimal" value="${esc((c.geo||{}).lon ?? -85.1394)}"/></div></div>
-    <p class="small muted">Used to fetch your daily rainfall. Fort Wayne is pre-filled; change it if your pool is elsewhere.</p>
+    <label>Location label</label><input id="s_loc" value="${esc(c.pool.location)}"/>
+    <p class="small muted" style="margin:4px 0 0">Shown on the Today screen. Your <b>coordinates</b> (below) are what fetch the weather.</p>
+
+    <label style="margin-top:14px">How do you want to set your location?</label>
+    <div class="row" style="gap:6px">
+      <button class="${curGeoMode()==='address'?'':'sec'}" style="margin:0" onclick="setGeoMode('address')">By address</button>
+      <button class="${curGeoMode()==='latlon'?'':'sec'}" style="margin:0" onclick="setGeoMode('latlon')">By lat/lon</button>
+    </div>
+
+    ${curGeoMode()==='address' ? `
+      <label style="margin-top:12px">City or place name</label>
+      <input id="s_addr" placeholder="e.g. Fort Wayne, IN" value="${esc(c.pool.location||'')}" autocapitalize="words"/>
+      <button class="sec" style="margin-top:8px" onclick="lookupGeo()">📍 Look up coordinates</button>
+      <p class="small muted" id="geoStatus" style="margin-top:8px">Using ${esc(((c.geo||{}).lat ?? 41.0793))}, ${esc(((c.geo||{}).lon ?? -85.1394))}. Type a place and tap look up to change it.</p>
+    ` : `
+      <div class="row" style="margin-top:6px"><div><label>Latitude</label><input id="s_lat" inputmode="decimal" value="${esc((c.geo||{}).lat ?? 41.0793)}"/></div>
+        <div><label>Longitude</label><input id="s_lon" inputmode="decimal" value="${esc((c.geo||{}).lon ?? -85.1394)}"/></div></div>
+      <p class="small muted" style="margin-top:6px">Don't know your lat/lon? <a href="https://www.latlong.net/" target="_blank" rel="noopener">Find it on latlong.net →</a> (search your address, then copy the Latitude &amp; Longitude it shows).</p>
+    `}
     <button style="margin-top:10px" onclick="savePool()">Save pool</button>
   </div>
   <div class="card">
@@ -1216,11 +1323,11 @@ function renderSettings(){
   </div>
   <div class="card">
     <h2>🗓 Season (Fort Wayne defaults)</h2>
-    <p class="small muted">Used to know when to prompt opening/closing and when to pause off-season tasks. Format MM-DD.</p>
-    <div class="row"><div><label>Open</label><input id="s_open" value="${esc(c.season.open)}"/></div>
-      <div><label>Close</label><input id="s_close" value="${esc(c.season.close)}"/></div></div>
-    <div class="row"><div><label>Peak start</label><input id="s_pstart" value="${esc(c.season.peakStart)}"/></div>
-      <div><label>Peak end</label><input id="s_pend" value="${esc(c.season.peakEnd)}"/></div></div>
+    <p class="small muted">Used to know when to prompt opening/closing and when to pause off-season tasks. Pick the month &amp; day — the year is ignored (this repeats every year).</p>
+    <div class="row"><div><label>Open</label><input id="s_open" type="date" value="${esc(mdToDate(c.season.open))}"/></div>
+      <div><label>Close</label><input id="s_close" type="date" value="${esc(mdToDate(c.season.close))}"/></div></div>
+    <div class="row"><div><label>Peak start</label><input id="s_pstart" type="date" value="${esc(mdToDate(c.season.peakStart))}"/></div>
+      <div><label>Peak end</label><input id="s_pend" type="date" value="${esc(mdToDate(c.season.peakEnd))}"/></div></div>
     <button style="margin-top:10px" onclick="saveSeason()">Save season</button>
   </div>
   <div class="card">
@@ -1262,15 +1369,22 @@ async function savePool(){
   D.config.pool.name=$('#s_name').value.trim()||'Our Pool';
   D.config.pool.gallons=parseInt($('#s_gal').value,10)||10000;
   D.config.pool.location=$('#s_loc').value.trim();
-  const lat=parseFloat($('#s_lat').value), lon=parseFloat($('#s_lon').value);
-  D.config.geo={ lat: isNaN(lat)?41.0793:lat, lon: isNaN(lon)?-85.1394:lon };
+  const prev=D.config.geo||{};
+  if(curGeoMode()==='latlon' && $('#s_lat') && $('#s_lon')){
+    const lat=parseFloat($('#s_lat').value), lon=parseFloat($('#s_lon').value);
+    D.config.geo={ ...prev, lat: isNaN(lat)?(prev.lat??41.0793):lat, lon: isNaN(lon)?(prev.lon??-85.1394):lon, mode:'latlon' };
+  } else {
+    // address mode — coordinates were set by "Look up coordinates"; just record the mode
+    D.config.geo={ lat: prev.lat??41.0793, lon: prev.lon??-85.1394, ...prev, mode:'address' };
+  }
   _wx=null; // location may have changed — refetch weather next time
   await saveJson(FILES.config, D.config, 'Update pool settings'); toast('Saved');
 }
 async function saveEmail(){ D.config.email=$('#s_email').value.trim(); await saveJson(FILES.config, D.config, 'Update reminder email'); toast('Email saved'); }
 async function saveSeason(){
-  D.config.season.open=$('#s_open').value.trim(); D.config.season.close=$('#s_close').value.trim();
-  D.config.season.peakStart=$('#s_pstart').value.trim(); D.config.season.peakEnd=$('#s_pend').value.trim();
+  const md=(id,fallback)=>{ const v=dateToMd($(id).value); return v||fallback; };
+  D.config.season.open=md('#s_open', D.config.season.open); D.config.season.close=md('#s_close', D.config.season.close);
+  D.config.season.peakStart=md('#s_pstart', D.config.season.peakStart); D.config.season.peakEnd=md('#s_pend', D.config.season.peakEnd);
   await saveJson(FILES.config, D.config, 'Update season dates'); toast('Saved'); updateBadges();
 }
 async function saveTargets(){
@@ -1297,6 +1411,11 @@ window.addEventListener('load', async ()=>{
     try{ await loadAll(); READINGS.forEach(r=>{ if(D.config.targets[r.key]) r.numRange=D.config.targets[r.key].range; }); updateBadges(); }catch(e){}
   } else renderSetup();
 });
+
+/* ---------- PWA: register the service worker (offline app shell) ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 </script>
 </body>
 </html>

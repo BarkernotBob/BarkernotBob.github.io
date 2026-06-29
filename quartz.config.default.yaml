@@ -16,30 +16,30 @@ configuration:
     fontOrigin: googleFonts
     cdnCaching: true
     typography:
-      header: "Space Grotesk"
-      body: "Outfit"
-      code: "JetBrains Mono"
+      header: "Fraunces"
+      body: "Hanken Grotesk"
+      code: "IBM Plex Mono"
     colors:
       lightMode:
-        light: "#fff6ea"          # Pop — warm cream background
-        lightgray: "#efe3d0"      # soft warm dividers
-        gray: "#6b6280"           # muted ink-gray
-        darkgray: "#1c1430"       # body text — deep ink
-        dark: "#1c1430"           # headings — deep ink
-        secondary: "#e8443a"      # bold red — links & accents
-        tertiary: "#2f7bff"       # blue — hover/secondary accent
-        highlight: "rgba(255, 159, 28, 0.18)"   # warm amber highlight
-        textHighlight: "#ffd24d88"
+        light: "#f3ede1"          # Reading Room — warm paper background
+        lightgray: "#e4dac6"      # soft hairline dividers
+        gray: "#7d745f"           # muted ink
+        darkgray: "#231f1a"       # body text — espresso ink
+        dark: "#231f1a"           # headings — espresso ink
+        secondary: "#1f5d52"      # library teal — links & accents
+        tertiary: "#b5512f"       # warm clay — hover/secondary accent
+        highlight: "rgba(31, 93, 82, 0.10)"   # soft teal wash
+        textHighlight: "#d9a94955"            # warm ochre highlight
       darkMode:
-        light: "#1c1430"          # deep ink background
-        lightgray: "#2e2740"      # dark surface
-        gray: "#9a93b0"           # muted gray
-        darkgray: "#e9e4f6"       # light text
-        dark: "#ffffff"           # headings — white
-        secondary: "#ff7a6e"      # lighter red for dark mode
-        tertiary: "#6aa0ff"       # lighter blue
-        highlight: "rgba(255, 159, 28, 0.15)"
-        textHighlight: "#ffd24d55"
+        light: "#1a1613"          # deep espresso background
+        lightgray: "#37302a"      # dark hairline
+        gray: "#a99d86"           # muted warm gray
+        darkgray: "#efe7d6"       # warm light text
+        dark: "#f3ead9"           # headings — warm near-white
+        secondary: "#62b5a3"      # lighter teal for dark mode
+        tertiary: "#e08a63"       # lighter clay
+        highlight: "rgba(98, 181, 163, 0.12)"
+        textHighlight: "#d9a94944"
 plugins:
   - source: github:quartz-community/created-modified-date
     enabled: true

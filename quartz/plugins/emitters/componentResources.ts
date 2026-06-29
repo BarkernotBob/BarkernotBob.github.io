@@ -329,6 +329,54 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   `)
   // --------------------------------------------------------------------------
 
+  // --- Reading Room whimsy (custom): a trailing accent-ring cursor that swells
+  // --- over interactive elements, plus a subtle pointer-tilt on the home cards.
+  // --- The native cursor is left fully responsive; the ring is decorative only.
+  componentResources.afterDOMLoaded.push(`
+    if (!window.matchMedia("(pointer: coarse)").matches) {
+      var ring = document.querySelector(".rr-cursor")
+      if (!ring) {
+        ring = document.createElement("div")
+        ring.className = "rr-cursor"
+        document.body.appendChild(ring)
+      }
+      var mx = 0, my = 0, rx = 0, ry = 0, seen = false
+      var hot = "a,button,input,textarea,select,summary,.splash-card,.tag-link,[role='button']"
+      document.addEventListener("mousemove", (e) => {
+        mx = e.clientX; my = e.clientY
+        if (!seen) { rx = mx; ry = my; seen = true }
+        ring.classList.add("show")
+      }, { passive: true })
+      document.addEventListener("mouseleave", () => ring.classList.remove("show"))
+      document.addEventListener("mouseover", (e) => { if (e.target.closest && e.target.closest(hot)) ring.classList.add("big") })
+      document.addEventListener("mouseout", (e) => { if (e.target.closest && e.target.closest(hot)) ring.classList.remove("big") })
+      ;(function loop() {
+        rx += (mx - rx) * 0.32; ry += (my - ry) * 0.32
+        ring.style.transform = "translate3d(" + rx + "px," + ry + "px,0)"
+        requestAnimationFrame(loop)
+      })()
+      document.addEventListener("nav", () => { if (!document.querySelector(".rr-cursor")) document.body.appendChild(ring) })
+
+      function quartzCardTilt() {
+        document.querySelectorAll(".splash-card").forEach((c) => {
+          if (c.__rrTilt) return
+          c.__rrTilt = true
+          c.addEventListener("mousemove", (e) => {
+            if (window.innerWidth <= 800) return
+            const r = c.getBoundingClientRect()
+            const px = (e.clientX - r.left) / r.width - 0.5
+            const py = (e.clientY - r.top) / r.height - 0.5
+            c.style.transform = "perspective(800px) rotateX(" + (-py * 4) + "deg) rotateY(" + (px * 5) + "deg) translateY(-3px)"
+          })
+          c.addEventListener("mouseleave", () => { c.style.transform = "" })
+        })
+      }
+      document.addEventListener("nav", quartzCardTilt)
+      quartzCardTilt()
+    }
+  `)
+  // --------------------------------------------------------------------------
+
   if (cfg.enableSPA) {
     componentResources.afterDOMLoaded.push(spaRouterScript)
   } else {

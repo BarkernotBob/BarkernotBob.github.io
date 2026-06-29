@@ -82,83 +82,188 @@ body:has(.home-splash) {
   }
 }
 
+// ------------------------------------------------------------------
+//  Reading Room splash — editorial bento home. Warm paper, library
+//  jewel-tone section accents, soft lift on hover (no hard shadows).
+// ------------------------------------------------------------------
 .home-splash {
-  --c-games: #ff5a4d;
-  --c-tools: #2f7bff;
-  --c-notes: #1fb86b;
-  --c-yt: #ff9f1c;
-  --ink: #1c1430;
-  --muted: #6b6280;
-  font-family: "Outfit", system-ui, sans-serif;
+  --c-notes: #2f6b4f;   // library green
+  --c-tools: #3a5a78;   // slate blue
+  --c-games: #b5512f;   // warm clay
+  --c-yt:    #b07a1e;   // ochre
+  --accent:  #1f5d52;   // signature teal
+  --ink:   #231f1a;
+  --muted: #7d745f;
+  --line:  #e4dac6;
+  --card:  #fbf8f1;
+  font-family: "Hanken Grotesk", system-ui, sans-serif;
   color: var(--ink);
-  padding: 10px 0 48px;
+  padding: 6px 0 40px;
 
-  & .splash-top { margin-bottom: 56px; }
   & .splash-mark {
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-weight: 700; font-size: 20px; letter-spacing: -0.5px;
-    display: inline-flex; align-items: center; gap: 9px; color: var(--ink);
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 20px;
+    letter-spacing: -0.2px; display: inline-flex; align-items: center; gap: 9px; color: var(--ink);
   }
-  & .splash-dot {
-    width: 13px; height: 13px; border-radius: 50%;
-    background: #ff5a4d; border: 2px solid var(--ink);
-  }
+  & .splash-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--c-games); }
 
-  & .splash-hero { max-width: 760px; margin-bottom: 48px; }
+  & .splash-hero { max-width: 820px; margin: 14px 0 30px; }
   & .splash-kicker {
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-weight: 500; font-size: 15px; letter-spacing: 3px;
-    text-transform: uppercase; color: #ff5a4d; margin-bottom: 16px;
+    font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 13px;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--c-games); margin-bottom: 14px;
   }
   & .splash-title {
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-weight: 700; font-size: 60px; line-height: 1.03;
-    letter-spacing: -2px; margin: 0 0 18px; color: var(--ink); border: none;
+    font-family: "Fraunces", serif; font-weight: 400; font-size: 54px; line-height: 1.06;
+    letter-spacing: -1px; margin: 0; color: var(--ink); border: none;
   }
-  & .splash-accent { color: #ff5a4d; }
+  & .splash-title em { font-style: italic; color: var(--accent); }
   // Hide Quartz's auto heading-anchor (chain) icon on the splash
   & a[role="anchor"] { display: none !important; }
-  & .splash-lede { font-size: 20px; line-height: 1.5; color: var(--muted); max-width: 620px; }
 
-  & .splash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-  & .splash-card {
-    position: relative; background: #ffffff; border: 2.5px solid var(--ink);
-    border-radius: 16px; padding: 26px; display: flex; flex-direction: column;
-    gap: 12px; min-height: 172px; text-decoration: none; color: var(--ink);
-    box-shadow: 6px 6px 0 var(--ink);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  & .splash-grid {
+    display: grid; grid-template-columns: 1.5fr 1fr 1fr;
+    grid-template-areas: "notes tools yt" "notes games games"; gap: 18px;
   }
-  & .splash-card:hover { transform: translate(-2px, -2px); box-shadow: 9px 9px 0 var(--ink); }
-  & .splash-bar { display: none; }
+  & .splash-card.notes { grid-area: notes; }
+  & .splash-card.tools { grid-area: tools; }
+  & .splash-card.yt    { grid-area: yt; }
+  & .splash-card.games { grid-area: games; }
+
+  & .splash-card {
+    position: relative; background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px; display: flex; flex-direction: column;
+    gap: 8px; min-height: 150px; text-decoration: none; color: var(--ink); overflow: hidden;
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  & .splash-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    background: var(--accent-c); transform: scaleY(0); transform-origin: bottom; transition: transform 0.3s ease;
+  }
+  & .splash-card:hover::before { transform: scaleY(1); }
+  & .splash-card:hover { border-color: var(--accent-c); box-shadow: 0 22px 44px -22px rgba(0, 0, 0, 0.35); }
   & .splash-ic {
-    width: 50px; height: 50px; border-radius: 14px; display: flex;
-    align-items: center; justify-content: center; font-size: 26px;
-    background: var(--accent); border: 2px solid var(--ink);
+    width: 46px; height: 46px; border-radius: 12px; display: flex;
+    align-items: center; justify-content: center; font-size: 24px; border: none;
+    background: color-mix(in srgb, var(--accent-c) 16%, transparent);
   }
   & .splash-card .splash-h {
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-weight: 700; font-size: 24px; letter-spacing: -0.5px; margin: 0; color: var(--ink);
+    font-family: "Fraunces", serif; font-weight: 500; font-size: 23px;
+    letter-spacing: -0.3px; margin: 6px 0 0; color: var(--ink);
   }
-  & .splash-card p { font-size: 15px; line-height: 1.45; color: var(--muted); margin: 0; }
-  & .splash-go { margin-top: auto; font-weight: 600; font-size: 14px; color: var(--ink); }
+  & .splash-card p { font-size: 14px; line-height: 1.5; color: var(--muted); margin: 0; }
+  & .splash-go { margin-top: auto; padding-top: 6px; font-weight: 500; font-size: 14px; color: var(--accent-c); }
 
-  & .splash-card.games { --accent: var(--c-games); }
-  & .splash-card.tools { --accent: var(--c-tools); }
-  & .splash-card.notes { --accent: var(--c-notes); }
-  & .splash-card.yt { --accent: var(--c-yt); }
+  & .splash-recent {
+    margin-top: 6px; border-top: 1px solid var(--line); padding-top: 10px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  & .splash-rrow {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    font-size: 14px; color: var(--ink);
+  }
+  & .splash-card:hover .splash-rrow { color: var(--ink); }
+  & .splash-when { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  & .splash-strip {
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px;
+    border-top: 1px solid var(--line); margin-top: 26px; padding: 22px 0;
+  }
+  & .splash-epi {
+    font-family: "Fraunces", serif; font-style: italic; font-size: 21px; line-height: 1.4;
+    color: var(--ink); margin: 0;
+  }
+  & .splash-epi small {
+    display: block; font-style: normal; font-family: "IBM Plex Mono", monospace;
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 10px;
+  }
+  & .splash-tags { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
+  & .splash-tags a {
+    font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 13px; text-decoration: none;
+    transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  }
+  & .splash-tags a:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
+
+  & .splash-foot {
+    border-top: 1px solid var(--line); padding: 16px 0 0; display: flex; align-items: center;
+    gap: 12px; flex-wrap: wrap; font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted);
+  }
+  & .splash-foot .splash-dot { width: 10px; height: 10px; }
+
+  & .splash-card.notes { --accent-c: var(--c-notes); }
+  & .splash-card.tools { --accent-c: var(--c-tools); }
+  & .splash-card.games { --accent-c: var(--c-games); }
+  & .splash-card.yt    { --accent-c: var(--c-yt); }
 }
 
-// Dark-mode variant of the splash cards (page bg + text follow the site theme)
+// Dark-mode variant of the splash (bg + text follow the site theme)
 :root[saved-theme="dark"] .home-splash {
-  --ink: #f3ead9;
-  --muted: #a79fc0;
+  --ink: #f3ead9; --muted: #a99d86; --line: #37302a; --card: #241f1a; --accent: #62b5a3;
+  --c-notes: #5aa882; --c-tools: #7ea3c4; --c-games: #e08a63; --c-yt: #d9a949;
 }
-:root[saved-theme="dark"] .home-splash .splash-card { background: #251f3a; }
 
-@media (max-width: 750px) {
-  .home-splash .splash-title { font-size: 40px; }
-  .home-splash .splash-grid { grid-template-columns: 1fr; }
+// Mobile: distinct row-list layout — cards collapse to icon + title rows.
+@media (max-width: 800px) {
+  .home-splash { padding-top: 0; }
+  .home-splash .splash-title { font-size: 34px; }
+  .home-splash .splash-grid { grid-template-columns: 1fr; grid-template-areas: "notes" "tools" "games" "yt"; }
+  .home-splash .splash-strip { grid-template-columns: 1fr; }
+  .home-splash .splash-card { flex-direction: row; align-items: center; gap: 14px; min-height: 0; padding: 15px; }
+  .home-splash .splash-card .splash-ic { flex: 0 0 auto; }
+  .home-splash .splash-card .splash-h { margin: 0; font-size: 18px; flex: 1; }
+  .home-splash .splash-card p,
+  .home-splash .splash-card .splash-recent,
+  .home-splash .splash-card .splash-go { display: none; }
+  .home-splash .splash-card::after { content: "›"; font-family: "Fraunces", serif; font-size: 26px; color: var(--muted); }
 }
+
+// ------------------------------------------------------------------
+//  Global Reading Room touches (all pages)
+// ------------------------------------------------------------------
+
+// Brand dot before the wordmark in the page title.
+.page-title a::before {
+  content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--tertiary); margin-right: 9px; vertical-align: middle;
+}
+
+// Tags rendered as quiet monospace pills that lift on hover.
+a.tag-link {
+  display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 0.8rem;
+  color: var(--gray); background: transparent; border: 1px solid var(--lightgray);
+  border-radius: 999px; padding: 3px 11px;
+  transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+a.tag-link:hover { color: var(--secondary); border-color: var(--secondary); transform: translateY(-2px); }
+
+// Editorial blockquote — accent rule, serif italic voice.
+blockquote {
+  border-left: 3px solid var(--secondary) !important;
+  font-family: "Fraunces", serif; font-style: italic;
+}
+
+// Folder/index listing rows lift and draw an accent edge on hover.
+.page-listing .section-li {
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.18s ease, border-color 0.18s ease, padding-left 0.18s ease;
+}
+.page-listing .section-li:hover {
+  background: color-mix(in srgb, var(--secondary) 7%, transparent);
+  border-left-color: var(--secondary); padding-left: 8px;
+}
+
+// Trailing accent-ring cursor (desktop pointers only; native cursor stays).
+.rr-cursor {
+  position: fixed; top: 0; left: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px;
+  border: 1.5px solid var(--secondary); border-radius: 50%; pointer-events: none; z-index: 9999;
+  opacity: 0; will-change: transform;
+  transition: opacity 0.2s ease, width 0.15s ease, height 0.15s ease, margin 0.15s ease, background 0.15s ease;
+}
+.rr-cursor.show { opacity: 1; }
+.rr-cursor.big {
+  width: 48px; height: 48px; margin: -24px 0 0 -24px;
+  background: color-mix(in srgb, var(--secondary) 14%, transparent);
+}
+@media (pointer: coarse) { .rr-cursor { display: none !important; } }
 
 // "Random page" button injected at the top of the file tree (all pages).
 .random-page-btn {

@@ -13,12 +13,12 @@
 html,body{margin:0}
 body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;padding:28px 16px 60px;touch-action:manipulation}
 .page{max-width:1180px;margin:0 auto}
-.intro{text-align:center;margin-bottom:22px;color:#5a5346}
+.intro{text-align:center;margin-bottom:18px;color:#5a5346}
 .intro h1{font-family:'Fraunces',serif;font-weight:500;font-size:22px;margin:0 0 4px;color:#231f1a}
 .intro p{margin:0;font-size:13px}
-.controls{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
 .seg{display:inline-flex;border:1px solid #b9ad96;border-radius:999px;overflow:hidden;background:#f3ede1}
-.seg button{border:none;background:transparent;font:500 13px 'Hanken Grotesk',sans-serif;padding:7px 18px;cursor:pointer;color:#7d745f}
+.seg button{border:none;background:transparent;font:500 13px 'Hanken Grotesk',sans-serif;padding:7px 16px;cursor:pointer;color:#7d745f}
 .seg button.on{background:#231f1a;color:#f3ede1}
 
 .frame{--paper:#f3ede1;--card:#fbf8f1;--ink:#231f1a;--muted:#7d745f;--line:#e4dac6;--green:#2f6b4f;--slate:#3a5a78;--clay:#b5512f;--ochre:#b07a1e;--accent:#1f5d52}
@@ -28,28 +28,34 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 
 .chrome{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--card);border-bottom:1px solid var(--line)}
 .tl{width:11px;height:11px;border-radius:50%}
-.url{margin-left:8px;font:400 12px 'IBM Plex Mono',monospace;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:4px 16px}
+.url{margin-left:8px;font:400 12px 'IBM Plex Mono',monospace;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:4px 16px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 
-.pad{padding:26px 34px 0}
-.frame.mob .pad{padding:18px 20px 0}
-.topbar{display:flex;align-items:center;gap:24px;padding-bottom:18px;border-bottom:1px solid var(--line)}
-.mark{display:inline-flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.2px}
+.pad{padding:24px 34px 0}
+.frame.mob .pad{padding:16px 18px 0}
+.topbar{display:flex;align-items:center;gap:24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.mark{display:inline-flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.2px;cursor:pointer;color:var(--ink)}
 .dot{width:13px;height:13px;border-radius:50%;background:var(--clay);transition:transform .3s ease}
 .frame:hover .dot{transform:scale(1.25) translateY(-1px)}
 .nav{display:flex;gap:26px;margin-left:auto}
-.nav a{position:relative;font:500 15px 'Hanken Grotesk';color:var(--ink);text-decoration:none;padding:2px 0}
+.nav a{position:relative;font:500 15px 'Hanken Grotesk';color:var(--ink);text-decoration:none;padding:2px 0;cursor:pointer}
 .nav a::after{content:'';position:absolute;left:0;bottom:-3px;height:2px;width:0;background:var(--accent);transition:width .25s ease}
-.nav a:hover::after{width:100%}
-.ico{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:17px;text-decoration:none}
+.nav a:hover::after,.nav a.active::after{width:100%}
+.ico{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:17px;text-decoration:none;cursor:pointer}
+
+.view{display:none}
+.frame[data-page="home"] .view-home{display:block}
+.frame[data-page="index"] .view-index{display:block}
+.frame[data-page="note"] .view-note{display:block}
+.frame[data-page="search"] .view-index{display:block}
 
 .hero{padding:30px 0 26px}
 .kick{font:500 12px 'IBM Plex Mono',monospace;letter-spacing:3px;text-transform:uppercase;color:var(--clay)}
-.h1{font-family:'Fraunces',serif;font-weight:400;font-size:52px;line-height:1.06;letter-spacing:-1px;margin:14px 0 0;max-width:760px}
+.h1{font-family:'Fraunces',serif;font-weight:400;font-size:50px;line-height:1.06;letter-spacing:-1px;margin:14px 0 0;max-width:760px}
 .h1 em{font-style:italic;color:var(--accent)}
 .frame.mob .h1{font-size:30px}
 
 .bento{display:grid;grid-template-columns:1.5fr 1fr 1fr;grid-template-areas:"notes tools yt" "notes games games";gap:18px;padding-bottom:24px}
-.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;text-decoration:none;color:var(--ink);overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.3,1),box-shadow .25s ease,border-color .25s ease;transform-style:preserve-3d}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;text-decoration:none;color:var(--ink);overflow:hidden;cursor:pointer;transition:transform .25s cubic-bezier(.2,.8,.3,1),box-shadow .25s ease,border-color .25s ease;transform-style:preserve-3d}
 .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ac);transform:scaleY(0);transform-origin:bottom;transition:transform .3s ease}
 .card:hover::before{transform:scaleY(1)}
 .card:hover{border-color:var(--ac);box-shadow:0 22px 44px -22px rgba(0,0,0,.45)}
@@ -69,57 +75,127 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 .epi{font-family:'Fraunces',serif;font-style:italic;font-size:21px;line-height:1.4;margin:0}
 .epi small{display:block;font-style:normal;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:10px}
 .tags{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
-.tag{font:400 13px 'IBM Plex Mono',monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 13px;text-decoration:none;transition:color .18s ease,border-color .18s ease,transform .18s ease}
+.tag{font:400 13px 'IBM Plex Mono',monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 13px;text-decoration:none;cursor:pointer;transition:color .18s ease,border-color .18s ease,transform .18s ease}
 .tag:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-2px)}
 .foot{border-top:1px solid var(--line);padding:16px 0 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font:400 12px 'IBM Plex Mono',monospace;color:var(--muted)}
 .foot .dot{width:10px;height:10px}
 
-.cur{position:absolute;top:0;left:0;pointer-events:none;z-index:50;opacity:0;will-change:transform;transition:opacity .2s ease}
+.inner{display:grid;grid-template-columns:215px minmax(0,1fr) 200px;gap:32px;padding:22px 0 30px}
+.frame.mob .inner{grid-template-columns:1fr;gap:0;padding-top:16px}
+.rail{font-size:14px}
+.frame.mob .rail{display:none}
+.rndm{display:inline-flex;align-items:center;gap:6px;font:500 13px 'Hanken Grotesk';color:var(--clay);background:none;border:none;cursor:pointer;padding:0 0 12px;margin-bottom:6px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.tsec{font:500 11px 'IBM Plex Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.titem{display:block;padding:5px 10px;border-radius:7px;color:var(--ink);text-decoration:none;cursor:pointer;border-left:2px solid transparent;transition:background .15s ease,color .15s ease}
+.titem:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.titem.sub{padding-left:20px;font-size:13.5px;color:var(--muted)}
+.titem.active{color:var(--accent);border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.titem .ti{font-size:14px;vertical-align:-2px;margin-right:3px}
+
+.railR .tsec:first-child{margin-top:0}
+.toc{list-style:none;margin:0;padding:0;border-left:1px solid var(--line)}
+.toc a{display:block;padding:5px 0 5px 12px;margin-left:-1px;border-left:2px solid transparent;color:var(--muted);text-decoration:none;font-size:13.5px;cursor:pointer;transition:color .15s ease,border-color .15s ease}
+.toc a:hover,.toc a.active{color:var(--accent);border-left-color:var(--accent)}
+
+.crumb{font:400 12px 'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.crumb a{color:var(--muted);text-decoration:none;cursor:pointer}
+.crumb a:hover{color:var(--accent)}
+.ptitle{font-family:'Fraunces',serif;font-weight:400;font-size:40px;line-height:1.1;letter-spacing:-.6px;margin:0}
+.frame.mob .ptitle{font-size:30px}
+.pmeta{font:400 12px 'IBM Plex Mono',monospace;color:var(--muted);margin:12px 0 6px;display:flex;gap:10px;flex-wrap:wrap}
+
+.listing{margin-top:18px;border-top:1px solid var(--line)}
+.lrow{display:grid;grid-template-columns:1fr auto;gap:6px 16px;padding:16px 12px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);cursor:pointer;border-left:3px solid transparent;transition:background .18s ease,border-color .18s ease,padding-left .18s ease}
+.lrow:hover{background:var(--card);border-left-color:var(--accent);padding-left:18px}
+.lname{font-family:'Fraunces',serif;font-weight:500;font-size:19px}
+.ldate{font:400 11px 'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap;text-align:right}
+.ldesc{font-size:13.5px;color:var(--muted);line-height:1.5}
+.ltags{display:flex;gap:6px;justify-self:end;align-self:start}
+.ltag{font:400 11px 'IBM Plex Mono',monospace;color:var(--muted)}
+
+.art{font-size:16px;line-height:1.75;color:var(--ink);max-width:660px}
+.art p{margin:0 0 1.1em}
+.art h2{font-family:'Fraunces',serif;font-weight:500;font-size:25px;margin:1.6em 0 .5em;letter-spacing:-.3px}
+.art blockquote{margin:1.3em 0;padding:4px 0 4px 20px;border-left:3px solid var(--accent);font-family:'Fraunces',serif;font-style:italic;font-size:19px;color:var(--ink)}
+.art ul{margin:0 0 1.1em;padding-left:20px}
+.art li{margin:.3em 0}
+.art a.ilink{color:var(--accent);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;cursor:pointer}
+.art strong{font-weight:600}
+
+.search-overlay{display:none;position:absolute;inset:0;z-index:60;background:rgba(20,16,30,.45);align-items:flex-start;justify-content:center;padding:64px 16px 0}
+.frame[data-page="search"] .search-overlay{display:flex}
+.spanel{width:580px;max-width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);overflow:hidden;animation:pop .18s ease}
+@keyframes pop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.sbar{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.sbar i{font-size:20px;color:var(--muted)}
+.sbar input{flex:1;border:none;background:none;outline:none;font:400 18px 'Hanken Grotesk';color:var(--ink)}
+.sbar input::placeholder{color:var(--muted)}
+.skey{font:400 11px 'IBM Plex Mono',monospace;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.sres{max-height:300px;overflow-y:auto}
+.shit{display:block;padding:12px 18px;text-decoration:none;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line)}
+.shit:first-child{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.shit:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.shtitle{font-family:'Fraunces',serif;font-weight:500;font-size:17px}
+.shtitle b{color:var(--accent);font-weight:600}
+.shpath{font:400 11px 'IBM Plex Mono',monospace;color:var(--muted);margin-top:2px}
+.shsnip{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45}
+.shsnip b{color:var(--ink);font-weight:600;background:color-mix(in srgb,var(--ochre) 30%,transparent)}
+.sfoot{display:flex;gap:16px;padding:10px 18px;border-top:1px solid var(--line);font:400 11px 'IBM Plex Mono',monospace;color:var(--muted)}
+
+.cur{position:absolute;top:0;left:0;pointer-events:none;z-index:80;opacity:0;will-change:transform;transition:opacity .2s ease}
 .cur-ring{width:30px;height:30px;margin:-15px 0 0 -15px;border:1.5px solid var(--accent);border-radius:50%;transition:width .15s ease,height .15s ease,margin .15s ease,background .15s ease}
 
-.marrow{display:none}
+.mbar{display:none;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.frame.mob .topbar .nav{display:none}
+.frame.mob[data-page="index"] .mbar,.frame.mob[data-page="note"] .mbar{display:flex}
+.mbar a{font:500 13px 'Hanken Grotesk';color:var(--accent);text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
 .burger{display:none}
+.frame.mob .burger{display:inline-flex}
+.marrow{display:none}
+.frame.mob .marrow{display:inline-flex;color:var(--muted);font-size:20px}
 .frame.mob .bento{grid-template-columns:1fr;grid-template-areas:"notes" "tools" "games" "yt"}
-.frame.mob .nav{display:none}
 .frame.mob .strip{grid-template-columns:1fr}
 .frame.mob .card{display:flex;align-items:center;gap:15px;padding:15px}
 .frame.mob .cico{flex:0 0 auto;width:42px;height:42px;font-size:21px}
 .frame.mob .ct{margin:0 0 2px;font-size:18px}
 .frame.mob .cp,.frame.mob .recent,.frame.mob .go{display:none}
 .frame.mob .mbody{flex:1}
-.frame.mob .marrow{display:inline-flex;color:var(--muted);font-size:20px}
-.frame.mob .burger{display:inline-flex}
+.frame.mob .lrow{grid-template-columns:1fr}
+.frame.mob .ltags{justify-self:start;margin-top:4px}
+.frame.mob .spanel{width:100%}
 </style>
 </head>
 <body>
 <div class="page">
 <div class="intro">
 <h1>Reading Room — redesign mockup</h1>
-<p>Move your mouse over the frame. Toggle Desktop/Mobile and Light/Dark.</p>
+<p>Pick a page below. Toggle Desktop/Mobile and Light/Dark. The nav, cards, tags, and search all click through.</p>
 </div>
 <div class="controls">
+<div class="seg" id="pageSeg"><button class="on" data-p="home">Home</button><button data-p="index">Notes index</button><button data-p="note">Note</button><button data-p="search">Search</button></div>
 <div class="seg" id="layout"><button class="on" data-m="desk">Desktop</button><button data-m="mob">Mobile</button></div>
 <div class="seg" id="theme"><button class="on" data-t="light">Light</button><button data-t="dark">Dark</button></div>
 </div>
 
-<div class="frame" id="frame">
-<div class="chrome"><span class="tl" style="background:#e26d5c"></span><span class="tl" style="background:#dcae54"></span><span class="tl" style="background:#7fae6f"></span><span class="url">barkernotbob.github.io</span></div>
+<div class="frame" id="frame" data-page="home">
+<div class="chrome"><span class="tl" style="background:#e26d5c"></span><span class="tl" style="background:#dcae54"></span><span class="tl" style="background:#7fae6f"></span><span class="url" id="url">barkernotbob.github.io</span></div>
 <div class="pad">
+
 <div class="topbar">
-<span class="mark"><span class="dot"></span>Isaiah Barker</span>
-<a href="#" class="ico burger" aria-label="menu"><i class="ti ti-menu-2"></i></a>
-<nav class="nav"><a href="#">Notes</a><a href="#">Tools</a><a href="#">Games</a><a href="#">YouTube</a></nav>
-<a href="#" class="ico" aria-label="search"><i class="ti ti-search"></i></a>
-<a href="#" class="ico" aria-label="theme"><i class="ti ti-moon"></i></a>
+<span class="mark" data-go="home"><span class="dot"></span>Isaiah Barker</span>
+<a class="ico burger" aria-label="menu"><i class="ti ti-menu-2"></i></a>
+<nav class="nav"><a data-go="index">Notes</a><a>Tools</a><a>Games</a><a>YouTube</a></nav>
+<a class="ico" aria-label="search" data-go="search"><i class="ti ti-search"></i></a>
+<a class="ico" aria-label="theme"><i class="ti ti-moon"></i></a>
 </div>
 
+<div class="view view-home">
 <div class="hero">
 <div class="kick">welcome — the workshop</div>
 <h1 class="h1">A place for <em>ideas</em>, tools, and good video.</h1>
 </div>
-
 <div class="bento">
-<a href="#" class="card notes" style="--ac:var(--green)">
+<a class="card notes" data-go="index" style="--ac:var(--green)">
 <span class="cico"><i class="ti ti-notebook"></i></span>
 <div class="ct">Notes</div>
 <p class="cp">Essays on theology, finance, and language — the long-form thinking.</p>
@@ -131,31 +207,158 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 <span class="go">Start reading <i class="ti ti-arrow-right"></i></span>
 <i class="ti ti-chevron-right marrow"></i>
 </a>
-<a href="#" class="card tools" style="--ac:var(--slate)">
+<a class="card tools" style="--ac:var(--slate)">
 <span class="cico"><i class="ti ti-tools"></i></span>
 <div class="mbody"><div class="ct">Tools</div><p class="cp">Calculators and little utilities, like the tax modeler.</p></div>
 <span class="go">Open toolbox <i class="ti ti-arrow-right"></i></span>
 <i class="ti ti-chevron-right marrow"></i>
 </a>
-<a href="#" class="card yt" style="--ac:var(--ochre)">
+<a class="card yt" style="--ac:var(--ochre)">
 <span class="cico"><i class="ti ti-player-play"></i></span>
 <div class="mbody"><div class="ct">YouTube</div><p class="cp">Hand-picked channels and videos worth your time.</p></div>
 <span class="go">Watch picks <i class="ti ti-arrow-right"></i></span>
 <i class="ti ti-chevron-right marrow"></i>
 </a>
-<a href="#" class="card games" style="--ac:var(--clay)">
+<a class="card games" style="--ac:var(--clay)">
 <span class="cico"><i class="ti ti-device-gamepad-2"></i></span>
 <div class="mbody"><div class="ct">Games</div><p class="cp">Browser games — the Chain series and VeggieTales Chess.</p></div>
 <span class="go">Enter the arcade <i class="ti ti-arrow-right"></i></span>
 <i class="ti ti-chevron-right marrow"></i>
 </a>
 </div>
-
 <div class="strip">
 <p class="epi">"Build the thing you wish existed, then leave the door open."<small>the workshop, est. 2024</small></p>
-<div class="tags"><a href="#" class="tag">#theology</a><a href="#" class="tag">#finance</a><a href="#" class="tag">#science</a><a href="#" class="tag">#language</a><a href="#" class="tag">#logic</a></div>
+<div class="tags"><a class="tag">#theology</a><a class="tag">#finance</a><a class="tag">#science</a><a class="tag">#language</a><a class="tag">#logic</a></div>
 </div>
 <div class="foot"><span class="dot"></span><span>set in fraunces &amp; hanken grotesk</span><span>·</span><span>tended 29 jun 2026</span><span>·</span><span>made in the workshop</span></div>
+</div>
+
+<div class="view view-index">
+<div class="mbar"><a data-go="home"><i class="ti ti-chevron-left"></i> Home</a></div>
+<div class="inner">
+<aside class="rail rail-left">
+<button class="rndm"><i class="ti ti-arrows-shuffle"></i> Random page</button>
+<div class="tsec">Sections</div>
+<a class="titem active"><i class="ti ti-notebook"></i> Notes</a>
+<a class="titem sub" data-go="note">The Boots Theory</a>
+<a class="titem sub">Affect or Effect?</a>
+<a class="titem sub">The Centrism Fallacy</a>
+<a class="titem sub">Chiasm</a>
+<a class="titem sub"><i class="ti ti-folder"></i> Logical Fallacies</a>
+<a class="titem"><i class="ti ti-tools"></i> Tools</a>
+<a class="titem"><i class="ti ti-device-gamepad-2"></i> Games</a>
+<a class="titem"><i class="ti ti-player-play"></i> Curated YouTube</a>
+<a class="titem"><i class="ti ti-tag"></i> Tags</a>
+</aside>
+<div>
+<div class="crumb"><a data-go="home">home</a> / <span>notes</span></div>
+<h1 class="ptitle">Notes</h1>
+<p class="cp" style="margin-top:10px;max-width:560px">Long-form writing on theology, finance, language, and the occasional logical fallacy. Newest first.</p>
+<div class="listing">
+<a class="lrow" data-go="note">
+<div class="lname">The Boots Theory</div><div class="ldate">jun 21 2026</div>
+<div class="ldesc">Why being poor is expensive — Vimes' boots, and the compounding cost of cheap.</div>
+<div class="ltags"><span class="ltag">#finance</span><span class="ltag">#logic</span></div>
+</a>
+<a class="lrow">
+<div class="lname">Affect or Effect?</div><div class="ldate">jun 14 2026</div>
+<div class="ldesc">A rule that finally makes the affect/effect split stick.</div>
+<div class="ltags"><span class="ltag">#language</span></div>
+</a>
+<a class="lrow">
+<div class="lname">The Centrism Fallacy</div><div class="ldate">jun 02 2026</div>
+<div class="ldesc">The midpoint of two claims is not automatically the truth.</div>
+<div class="ltags"><span class="ltag">#logic</span></div>
+</a>
+<a class="lrow">
+<div class="lname">Chiasm</div><div class="ldate">may 24 2026</div>
+<div class="ldesc">The ancient mirror structure hiding in scripture and speeches.</div>
+<div class="ltags"><span class="ltag">#theology</span></div>
+</a>
+</div>
+</div>
+<aside class="rail railR">
+<div class="tsec">Browse by tag</div>
+<div class="tags" style="margin-bottom:22px"><a class="tag">#finance</a><a class="tag">#logic</a><a class="tag">#language</a><a class="tag">#theology</a></div>
+<div class="tsec">Recently tended</div>
+<div class="rrow" style="margin:6px 0"><span>The Boots Theory</span><span>jun 21</span></div>
+<div class="rrow" style="margin:6px 0"><span>Affect or Effect?</span><span>jun 14</span></div>
+</aside>
+</div>
+</div>
+
+<div class="view view-note">
+<div class="mbar"><a data-go="index"><i class="ti ti-chevron-left"></i> Notes</a></div>
+<div class="inner">
+<aside class="rail rail-left">
+<button class="rndm"><i class="ti ti-arrows-shuffle"></i> Random page</button>
+<div class="tsec">Sections</div>
+<a class="titem"><i class="ti ti-notebook"></i> Notes</a>
+<a class="titem sub active">The Boots Theory</a>
+<a class="titem sub">Affect or Effect?</a>
+<a class="titem sub">The Centrism Fallacy</a>
+<a class="titem sub">Chiasm</a>
+<a class="titem sub"><i class="ti ti-folder"></i> Logical Fallacies</a>
+<a class="titem"><i class="ti ti-tools"></i> Tools</a>
+<a class="titem"><i class="ti ti-device-gamepad-2"></i> Games</a>
+<a class="titem"><i class="ti ti-player-play"></i> Curated YouTube</a>
+<a class="titem"><i class="ti ti-tag"></i> Tags</a>
+</aside>
+<div>
+<div class="crumb"><a data-go="home">home</a> / <a data-go="index">notes</a> / <span>the boots theory</span></div>
+<h1 class="ptitle">The Boots Theory</h1>
+<div class="pmeta"><span>jun 21 2026</span><span>·</span><span>4 min read</span><span>·</span><span>updated jun 28</span></div>
+<div class="tags" style="margin-bottom:22px"><a class="tag">#finance</a><a class="tag">#logic</a></div>
+<div class="art">
+<p>Terry Pratchett put a whole theory of economic unfairness into a pair of boots. A good pair costs fifty dollars and lasts ten years. The cheap pair costs ten dollars and is destroyed in a season — so the person who can only ever afford the cheap pair pays more, over a decade, and still has wet feet.</p>
+<blockquote>"The reason that the rich were so rich was because they managed to spend less money."</blockquote>
+<h2>The compounding cost of cheap</h2>
+<p>The boot is a stand-in. The same shape shows up in <a class="ilink">interest rates</a>, in housing, in the time tax of unreliable transport. Scarcity forces short-horizon decisions, and short-horizon decisions are, in aggregate, more expensive.</p>
+<ul>
+<li>A buffer turns emergencies into inconveniences.</li>
+<li>Durable goods reward whoever can pay upfront.</li>
+<li>Time saved compounds the same way money does.</li>
+</ul>
+<h2>Why it matters</h2>
+<p>Naming the pattern is useful because it moves the blame off the individual and onto the <strong>structure</strong>. You don't fix the boots theory with budgeting tips — you fix it by making the durable option reachable.</p>
+</div>
+</div>
+<aside class="rail railR">
+<div class="tsec">On this page</div>
+<ul class="toc">
+<li><a class="active">The boots theory</a></li>
+<li><a>The compounding cost of cheap</a></li>
+<li><a>Why it matters</a></li>
+</ul>
+<div class="tsec">Linked from</div>
+<a class="titem sub" style="padding-left:0">The Centrism Fallacy</a>
+</aside>
+</div>
+</div>
+
+</div>
+<div class="search-overlay">
+<div class="spanel" id="spanel">
+<div class="sbar"><i class="ti ti-search"></i><input id="sinput" placeholder="Search notes, tools, games…" value="boot"><span class="skey">esc</span></div>
+<div class="sres">
+<a class="shit" data-go="note">
+<div class="shtitle">The <b>Boot</b>s Theory</div>
+<div class="shpath">notes / the-boots-theory</div>
+<div class="shsnip">…a good pair of <b>boot</b>s costs fifty dollars and lasts ten years, while the cheap pair…</div>
+</a>
+<a class="shit">
+<div class="shtitle">Tax Modeler</div>
+<div class="shpath">tools / tax-modeler</div>
+<div class="shsnip">…model take-home pay and marginal brackets to plan the <b>boot</b>strap budget…</div>
+</a>
+<a class="shit">
+<div class="shtitle">All about using wood screws</div>
+<div class="shpath">youtube / all-about-using-wood-screws</div>
+<div class="shsnip">…why pre-drilling matters before you <b>boot</b> the drill driver to full torque…</div>
+</a>
+</div>
+<div class="sfoot"><span>↑↓ to navigate</span><span>↵ to open</span><span>esc to close</span></div>
+</div>
 </div>
 <div class="cur" id="cur"><div class="cur-ring" id="ring"></div></div>
 </div>
@@ -163,24 +366,27 @@ body{background:#e9e2d4;font-family:'Hanken Grotesk',system-ui,sans-serif;paddin
 
 <script>
 (function(){
-var f=document.getElementById('frame'),cur=document.getElementById('cur'),ring=document.getElementById('ring');
+var f=document.getElementById('frame'),cur=document.getElementById('cur'),ring=document.getElementById('ring'),url=document.getElementById('url');
+var urls={home:'barkernotbob.github.io',index:'barkernotbob.github.io/notes',note:'barkernotbob.github.io/notes/the-boots-theory',search:'barkernotbob.github.io/notes'};
+function go(p){f.setAttribute('data-page',p);url.textContent=urls[p]||urls.home;document.querySelectorAll('#pageSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.p===p)});document.querySelectorAll('.nav a').forEach(function(a){a.classList.toggle('active',a.dataset.go===p&&p==='index')});}
+document.addEventListener('click',function(e){var el=e.target.closest('[data-go]');if(el){e.preventDefault();go(el.getAttribute('data-go'));}});
+document.getElementById('pageSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(b)go(b.dataset.p)});
+document.getElementById('layout').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;this.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');f.classList.toggle('mob',b.dataset.m==='mob')});
+document.getElementById('theme').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;this.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');f.classList.toggle('dark',b.dataset.t==='dark')});
+
 var mx=0,my=0,rx=0,ry=0,seen=false,fine=window.matchMedia('(pointer:fine)').matches;
 if(fine){
 f.addEventListener('mouseenter',function(){cur.style.opacity=1});
 f.addEventListener('mouseleave',function(){cur.style.opacity=0});
 f.addEventListener('mousemove',function(e){var r=f.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;if(!seen){rx=mx;ry=my;seen=true;}},{passive:true});
 (function loop(){rx+=(mx-rx)*0.32;ry+=(my-ry)*0.32;cur.style.transform='translate3d('+rx+'px,'+ry+'px,0)';requestAnimationFrame(loop);})();
-f.querySelectorAll('a').forEach(function(el){
-el.addEventListener('mouseenter',function(){ring.style.width='48px';ring.style.height='48px';ring.style.margin='-24px 0 0 -24px';ring.style.background='color-mix(in srgb,var(--accent) 14%,transparent)';});
-el.addEventListener('mouseleave',function(){ring.style.width='30px';ring.style.height='30px';ring.style.margin='-15px 0 0 -15px';ring.style.background='transparent';});
-});
+f.addEventListener('mouseover',function(e){if(e.target.closest('a,button,input,.card,.tag,.lrow,.titem,.shit,.toc a')){ring.style.width='48px';ring.style.height='48px';ring.style.margin='-24px 0 0 -24px';ring.style.background='color-mix(in srgb,var(--accent) 14%,transparent)';}});
+f.addEventListener('mouseout',function(e){if(e.target.closest('a,button,input,.card,.tag,.lrow,.titem,.shit,.toc a')){ring.style.width='30px';ring.style.height='30px';ring.style.margin='-15px 0 0 -15px';ring.style.background='transparent';}});
 }
 f.querySelectorAll('.card').forEach(function(c){
 c.addEventListener('mousemove',function(e){if(f.classList.contains('mob'))return;var r=c.getBoundingClientRect();var px=(e.clientX-r.left)/r.width-0.5,py=(e.clientY-r.top)/r.height-0.5;c.style.transform='perspective(800px) rotateX('+(-py*5)+'deg) rotateY('+(px*6)+'deg) translateY(-4px)';});
 c.addEventListener('mouseleave',function(){c.style.transform='';});
 });
-document.getElementById('layout').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;this.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');f.classList.toggle('mob',b.dataset.m==='mob');});
-document.getElementById('theme').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;this.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');f.classList.toggle('dark',b.dataset.t==='dark');});
 })();
 </script>
 </body>

@@ -1,6 +1,6 @@
 ---
 title: The first-ever YouTube video
-publish: true
+publish: false
 ---
 
 This is an example entry so you can see how a curated video looks. The video plays right here on the page, with my note underneath.

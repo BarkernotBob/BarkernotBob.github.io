@@ -69,8 +69,12 @@ SITE_ORIGIN="https://barkernotbob.github.io"
 # Which menu folder each app belongs in (default: games). Add a line per new app.
 typeset -A LAUNCH_FOLDER
 LAUNCH_FOLDER=(Blockchain games Hexchain games BallChain games Dodecachain games Tax-Modeler tools)
+# Apps that stay HIDDEN: no menu/sidebar page is made; share their /static URL directly.
+typeset -A LAUNCH_SKIP
+LAUNCH_SKIP=(Trashback 1)
 for f in quartz/static/*.html(N); do
   fname="${f:t}"; base="${f:t:r}"
+  if [ -n "${LAUNCH_SKIP[$base]}" ]; then continue; fi
   folder="${LAUNCH_FOLDER[$base]:-games}"
   note="content/${folder}/${base}.md"
   if [ ! -f "$note" ]; then

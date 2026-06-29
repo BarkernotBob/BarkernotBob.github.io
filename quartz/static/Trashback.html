@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Trashback 2025</title>
+
+<!--
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │  CONNECT YOUR DATA: paste your Apps Script Web app URL below.          │
+  │  See trashback-tool/SETUP.md for how to get it. Keep the quotes.       │
+  └──────────────────────────────────────────────────────────────────────┘
+-->
+<script>
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3feFX7pblnrwNBbWnbiG6dFtMEXA8xinQR0_CqRi6Ik0V6OWXQdRhQ1Ej3iGPYZaxcA/exec";
+</script>
+
+<style>
+  :root{
+    --bg:#0f1419; --panel:#171e26; --panel2:#1d2630; --line:#2a3744;
+    --txt:#e6edf3; --muted:#8b9aa7; --accent:#46c2a8; --accent2:#f2b134;
+    --win:#46c2a8; --loss:#e2575a; --chip:#222e3a;
+    --heat0:#1d2630; --heatlo:#3a2a2e; --heathi:#1c3b39;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  a{color:var(--accent)}
+  header.app{
+    position:sticky; top:0; z-index:20; background:rgba(15,20,25,.92);
+    backdrop-filter:saturate(140%) blur(8px);
+    border-bottom:1px solid var(--line); padding:10px 16px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  header.app h1{font-size:18px; margin:0; letter-spacing:.5px}
+  header.app .grow{flex:1}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap}
+  .tabs button{
+    background:var(--chip); color:var(--muted); border:1px solid var(--line);
+    padding:7px 13px; border-radius:999px; cursor:pointer; font-size:13px; font-weight:600;
+  }
+  .tabs button.active{background:var(--accent); color:#06231d; border-color:var(--accent)}
+  .wrap{max-width:1200px; margin:0 auto; padding:16px}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px}
+  .panel h2{margin:0 0 12px; font-size:16px}
+  .panel h3{margin:18px 0 8px; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
+  .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+  .muted{color:var(--muted)}
+  .pill{display:inline-block; background:var(--chip); border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12px; margin:2px}
+  select,input,button{font:inherit}
+  select,input[type=text],input[type=number],input[type=date],input[type=password]{
+    background:var(--panel2); color:var(--txt); border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; outline:none;
+  }
+  label.fld{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); min-width:130px}
+  .btn{background:var(--accent); color:#06231d; border:none; border-radius:8px; padding:10px 16px; font-weight:700; cursor:pointer}
+  .btn.secondary{background:var(--chip); color:var(--txt); border:1px solid var(--line)}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+
+  /* cards */
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px}
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px}
+  .card .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px}
+  .card .v{font-size:22px; font-weight:800; margin-top:2px}
+  .card .s{font-size:12px; color:var(--muted)}
+
+  /* tables */
+  .scroll{overflow:auto; -webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse; width:100%; font-size:13px}
+  th,td{padding:7px 9px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left; position:sticky; left:0; background:var(--panel)}
+  thead th{position:sticky; top:0; background:var(--panel2); color:var(--muted); font-weight:600; cursor:pointer; z-index:1}
+  thead th.sorted::after{content:" ▾"; color:var(--accent)}
+  thead th.sorted.asc::after{content:" ▴"}
+  tbody tr:hover td{background:rgba(70,194,168,.06)}
+  td.name{font-weight:700}
+  .bar{height:7px; border-radius:4px; background:var(--accent); display:inline-block; vertical-align:middle; margin-left:6px}
+
+  /* heatmap */
+  table.heat th,table.heat td{text-align:center; border:1px solid var(--line); padding:6px 8px; min-width:54px}
+  table.heat td.diag{background:#0c1116; color:var(--muted)}
+  table.heat td.empty{color:#445}
+
+  canvas{max-width:100%}
+  .chartbox{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:14px}
+  .banner{background:#3a2e12; border:1px solid #6b541d; color:#f2dca0; padding:12px 14px; border-radius:10px; margin-bottom:16px}
+  .banner code{background:#00000040; padding:1px 5px; border-radius:4px}
+  .err{background:#3a1518; border:1px solid #7a2a2e; color:#ffd2d2; padding:12px 14px; border-radius:10px; margin-bottom:16px}
+  .ok{color:var(--win); font-weight:700}
+  .hide{display:none !important}
+  .center{text-align:center}
+  .small{font-size:12px}
+  .winpos{color:var(--win)} .losneg{color:var(--loss)}
+  footer{color:var(--muted); font-size:12px; text-align:center; padding:24px 0}
+  @media (max-width:640px){
+    .card .v{font-size:19px}
+    header.app h1{font-size:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="app">
+  <h1>🥏 Trashback&nbsp;2025</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="reports">Charts &amp; Reports</button>
+    <button data-tab="enter">Enter Game</button>
+  </nav>
+  <span class="grow"></span>
+  <button class="btn secondary small" id="refreshBtn" title="Reload from the sheet">⟳ Refresh</button>
+</header>
+
+<div class="wrap">
+
+  <div id="setupBanner" class="banner hide">
+    <strong>Almost there.</strong> This app isn't connected to your sheet yet.
+    Paste your Apps Script Web app URL into the <code>APPS_SCRIPT_URL</code> line
+    near the top of <code>Trashback.html</code> (see <code>trashback-tool/SETUP.md</code>),
+    then republish.
+  </div>
+  <div id="errBox" class="err hide"></div>
+  <div id="loading" class="panel center muted">Loading games…</div>
+
+  <!-- scope controls (shared by Overview + Reports) -->
+  <div id="scopeBar" class="panel hide">
+    <div class="row">
+      <label class="fld">Time scope
+        <select id="scope">
+          <option value="all">All time</option>
+          <option value="month">Latest month</option>
+          <option value="day">Latest day</option>
+          <option value="custom">Custom range…</option>
+        </select>
+      </label>
+      <label class="fld" id="fromWrap" style="display:none">From
+        <input type="date" id="fromDate" />
+      </label>
+      <label class="fld" id="toWrap" style="display:none">To
+        <input type="date" id="toDate" />
+      </label>
+      <label class="fld">Min. games
+        <input type="number" id="minGames" value="0" min="0" style="width:90px" />
+      </label>
+      <span class="grow"></span>
+      <span class="muted small" id="scopeInfo"></span>
+    </div>
+  </div>
+
+  <!-- ───────────── OVERVIEW ───────────── -->
+  <section id="tab-overview">
+    <div class="panel">
+      <h2>Standings <span class="muted small" id="ovScope"></span></h2>
+      <div class="scroll">
+        <table id="standings"><thead></thead><tbody></tbody></table>
+      </div>
+      <p class="muted small">Tap a column header to sort. “Best side” compares each player’s Open vs Wall win rate.</p>
+    </div>
+
+    <div class="panel">
+      <h2>League snapshot</h2>
+      <div class="cards" id="leagueCards"></div>
+    </div>
+  </section>
+
+  <!-- ───────────── REPORTS ───────────── -->
+  <section id="tab-reports" class="hide">
+    <div class="panel">
+      <h2>Win rate</h2>
+      <div class="chartbox"><canvas id="chartRatio" height="240"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Longest win streak</h2>
+      <div class="chartbox"><canvas id="chartStreak" height="220"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Side performance (Open vs Wall)</h2>
+      <div class="chartbox"><canvas id="chartSide" height="240"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Win rate over time</h2>
+      <p class="muted small">Cumulative all-time win rate as games are played (whole season, ignores the scope filter).</p>
+      <div class="chartbox"><canvas id="chartTrend" height="260"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Team chemistry — win % when teamed together</h2>
+      <p class="muted small">Row player’s win rate when partnered with the column player. Greener = better together.</p>
+      <div class="scroll"><div id="heatTeam"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Enemy chemistry — win % when up against</h2>
+      <p class="muted small">Row player’s win rate when the column player is on the other team.</p>
+      <div class="scroll"><div id="heatEnemy"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Teammate spread — % of your games spent with each partner</h2>
+      <div class="scroll"><div id="heatSpread"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Games on the same team</h2>
+      <div class="scroll"><div id="heatSame"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Games against each other</h2>
+      <div class="scroll"><div id="heatAgainst"></div></div>
+    </div>
+  </section>
+
+  <!-- ───────────── ENTER GAME ───────────── -->
+  <section id="tab-enter" class="hide">
+    <div class="panel">
+      <h2>Enter a game</h2>
+      <p class="muted small">2-on-2, first to 7. Pick the four players and the two scores.</p>
+
+      <div id="enterMsg"></div>
+
+      <h3>Open side</h3>
+      <div class="row">
+        <label class="fld">Player 1<select class="pSel" id="o1"></select></label>
+        <label class="fld">Player 2<select class="pSel" id="o2"></select></label>
+        <label class="fld">Open score<input type="number" id="oScore" min="0" max="30" value="7" style="width:110px"/></label>
+      </div>
+
+      <h3>Wall side</h3>
+      <div class="row">
+        <label class="fld">Player 1<select class="pSel" id="w1"></select></label>
+        <label class="fld">Player 2<select class="pSel" id="w2"></select></label>
+        <label class="fld">Wall score<input type="number" id="wScore" min="0" max="30" value="5" style="width:110px"/></label>
+      </div>
+
+      <h3>Passcode</h3>
+      <div class="row" id="passRow">
+        <label class="fld">Group passcode
+          <input type="password" id="passcode" placeholder="entered once, then remembered" autocomplete="off" style="width:240px"/>
+        </label>
+        <label class="fld" style="min-width:auto;flex-direction:row;align-items:center;gap:6px;margin-top:18px">
+          <input type="checkbox" id="rememberPass" checked/> remember on this device
+        </label>
+      </div>
+      <p class="muted small" id="passSaved"></p>
+
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="submitGame">Add game</button>
+        <button class="btn secondary" id="forgetPass">Forget saved passcode</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Recent games</h2>
+      <div class="scroll"><table id="recent"><thead><tr><th>When</th><th>Open</th><th></th><th>Wall</th><th></th><th>Winner</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <footer>
+    Data lives in your Google Sheet · this page recomputes everything in your browser ·
+    <span id="gameCount"></span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+"use strict";
+
+// ───────────────────────── state ─────────────────────────
+const LS_PASS = "tb_passcode";
+const LS_URL  = "tb_backend_url"; // optional override for testing
+let GAMES = [];      // all games (raw, chronological as in sheet)
+let PLAYERS = [];    // sorted unique player names
+let CHARTS = {};     // live Chart.js instances
+
+function backendUrl(){
+  const override = localStorage.getItem(LS_URL);
+  if (override) return override;
+  return APPS_SCRIPT_URL;
+}
+function isConfigured(){
+  const u = backendUrl();
+  return u && u.indexOf("PASTE_YOUR") === -1 && /^https?:\/\//.test(u);
+}
+
+// ───────────────────────── helpers ─────────────────────────
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const pct = n => (n==null || isNaN(n)) ? "—" : (n*100).toFixed(1)+"%";
+const n1  = n => (n==null || isNaN(n)) ? "—" : n.toFixed(1);
+const n2  = n => (n==null || isNaN(n)) ? "—" : n.toFixed(2);
+
+function parseTs(s){
+  // "M/D/YYYY H:MM:SS" -> Date
+  if (s instanceof Date) return s;
+  const str = String(s||"").trim();
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m){
+    let [_,mo,d,y,h,mi,se]=m; y=+y; if(y<100)y+=2000;
+    return new Date(y,+mo-1,+d,+(h||0),+(mi||0),+(se||0));
+  }
+  const dt = new Date(str);
+  return isNaN(dt) ? null : dt;
+}
+function dayKey(dt){ return dt? dt.getFullYear()+"-"+(dt.getMonth()+1)+"-"+dt.getDate() : ""; }
+function monKey(dt){ return dt? dt.getFullYear()+"-"+(dt.getMonth()+1) : ""; }
+function ymd(dt){ const p=x=>String(x).padStart(2,"0"); return dt.getFullYear()+"-"+p(dt.getMonth()+1)+"-"+p(dt.getDate()); }
+
+// ───────────────────────── data load ─────────────────────────
+async function load(){
+  $("#errBox").classList.add("hide");
+  if (!isConfigured()){
+    $("#loading").classList.add("hide");
+    $("#setupBanner").classList.remove("hide");
+    return;
+  }
+  $("#loading").classList.remove("hide");
+  try{
+    const res = await fetch(backendUrl(), {method:"GET"});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error||"backend error");
+    GAMES = (data.games||[])
+      .map(g=>({
+        ts: g.timestamp,
+        date: parseTs(g.timestamp),
+        openTeam: (g.openTeam||[]).map(String),
+        wallTeam: (g.wallTeam||[]).map(String),
+        openScore: Number(g.openScore),
+        wallScore: Number(g.wallScore),
+      }))
+      .filter(g=> g.openTeam.length && g.wallTeam.length);
+    // chronological
+    GAMES.sort((a,b)=> (a.date?+a.date:0) - (b.date?+b.date:0));
+    PLAYERS = collectPlayers(GAMES);
+    $("#loading").classList.add("hide");
+    $("#scopeBar").classList.remove("hide");
+    $("#gameCount").textContent = GAMES.length+" games on record";
+    fillPlayerSelects();
+    renderAll();
+  }catch(err){
+    $("#loading").classList.add("hide");
+    showErr("Couldn’t load data: "+err.message+
+      ". If you just deployed, double-check the URL ends in /exec and access is set to “Anyone”.");
+  }
+}
+function showErr(msg){ const b=$("#errBox"); b.textContent=msg; b.classList.remove("hide"); }
+
+function collectPlayers(games){
+  const s = new Set();
+  games.forEach(g=>{ g.openTeam.forEach(p=>s.add(p)); g.wallTeam.forEach(p=>s.add(p)); });
+  return [...s].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+}
+
+// ───────────────────────── scope filter ─────────────────────────
+function filteredGames(){
+  const scope = $("#scope").value;
+  if (scope==="all") return GAMES.slice();
+  const withDates = GAMES.filter(g=>g.date);
+  if (!withDates.length) return GAMES.slice();
+  if (scope==="day"){
+    const last = withDates[withDates.length-1].date;
+    const k = dayKey(last);
+    $("#scopeInfo").textContent = "Showing "+last.toLocaleDateString();
+    return GAMES.filter(g=>g.date && dayKey(g.date)===k);
+  }
+  if (scope==="month"){
+    const last = withDates[withDates.length-1].date;
+    const k = monKey(last);
+    $("#scopeInfo").textContent = "Showing "+last.toLocaleString(undefined,{month:"long",year:"numeric"});
+    return GAMES.filter(g=>g.date && monKey(g.date)===k);
+  }
+  if (scope==="custom"){
+    const f = $("#fromDate").value ? new Date($("#fromDate").value+"T00:00:00") : null;
+    const t = $("#toDate").value ? new Date($("#toDate").value+"T23:59:59") : null;
+    $("#scopeInfo").textContent = "Custom range";
+    return GAMES.filter(g=> g.date && (!f||g.date>=f) && (!t||g.date<=t));
+  }
+  return GAMES.slice();
+}
+
+// ───────────────────────── core stats engine ─────────────────────────
+// Build per-player stats from a list of games.
+function computeStats(games){
+  const P = {};
+  const ensure = name => P[name] || (P[name]={
+    name, games:0, wins:0, score:0, lossScoreSum:0, losses:0,
+    openG:0, openW:0, wallG:0, wallW:0,
+    withC:{}, withW:{},          // teammate counts / wins
+    againstC:{}, againstW:{},    // opponent counts / wins-by-this-player
+  });
+
+  // ordered per-player game outcomes for streaks
+  const order = {};
+
+  games.forEach(g=>{
+    const openWin = g.openScore > g.wallScore;
+    const sides = [
+      {team:g.openTeam, opp:g.wallTeam, score:g.openScore, win:openWin, side:"open"},
+      {team:g.wallTeam, opp:g.openTeam, score:g.wallScore, win:!openWin, side:"wall"},
+    ];
+    sides.forEach(s=>{
+      s.team.forEach(p=>{
+        const me = ensure(p);
+        me.games++; me.score += s.score;
+        if (s.win) me.wins++; else { me.losses++; me.lossScoreSum += s.score; }
+        if (s.side==="open"){ me.openG++; if(s.win) me.openW++; }
+        else { me.wallG++; if(s.win) me.wallW++; }
+        // teammates
+        s.team.forEach(t=>{ if(t!==p){
+          me.withC[t]=(me.withC[t]||0)+1;
+          if (s.win) me.withW[t]=(me.withW[t]||0)+1;
+        }});
+        // opponents
+        s.opp.forEach(o=>{
+          me.againstC[o]=(me.againstC[o]||0)+1;
+          if (s.win) me.againstW[o]=(me.againstW[o]||0)+1;
+        });
+        (order[p]||(order[p]=[])).push(s.win?1:0);
+      });
+    });
+  });
+
+  Object.values(P).forEach(me=>{
+    me.ratio = me.games? me.wins/me.games : null;
+    me.avgScore = me.games? me.score/me.games : null;
+    me.avgLossScore = me.losses? me.lossScoreSum/me.losses : null;
+    me.openRatio = me.openG? me.openW/me.openG : null;
+    me.wallRatio = me.wallG? me.wallW/me.wallG : null;
+    me.streak = longestStreak(order[me.name]||[]);
+    // best side
+    const o=me.openRatio, w=me.wallRatio;
+    if (o==null && w==null){ me.bestSide=null; }
+    else if (o==null){ me.bestSide={side:"Wall",r:w}; me.otherSide={side:"Open",r:o}; }
+    else if (w==null){ me.bestSide={side:"Open",r:o}; me.otherSide={side:"Wall",r:w}; }
+    else if (o>=w){ me.bestSide={side:"Open",r:o}; me.otherSide={side:"Wall",r:w}; }
+    else { me.bestSide={side:"Wall",r:w}; me.otherSide={side:"Open",r:o}; }
+    // played most / least with
+    let mostT=null,leastT=null,mx=-1,mn=Infinity;
+    for (const [t,c] of Object.entries(me.withC)){
+      if (c>mx){mx=c;mostT=t;} if (c<mn){mn=c;leastT=t;}
+    }
+    me.mostWith=mostT; me.leastWith=leastT;
+  });
+
+  return P;
+}
+function longestStreak(arr){
+  let best=0,cur=0;
+  arr.forEach(v=>{ if(v){cur++; if(cur>best)best=cur;} else cur=0; });
+  return best;
+}
+
+// Daily W/L change = all-time ratio minus ratio excluding the most recent day.
+function dailyChange(){
+  const withDates = GAMES.filter(g=>g.date);
+  if (!withDates.length) return {};
+  const lastKey = dayKey(withDates[withDates.length-1].date);
+  const before = GAMES.filter(g=> !g.date || dayKey(g.date)!==lastKey);
+  const A = computeStats(GAMES), B = computeStats(before);
+  const out={};
+  Object.keys(A).forEach(p=>{
+    const a=A[p].ratio, b=B[p]?B[p].ratio:null;
+    out[p] = (a!=null && b!=null) ? (a-b) : (a!=null && B[p]==null ? a : 0);
+  });
+  return out;
+}
+
+// ───────────────────────── rendering ─────────────────────────
+function renderAll(){ renderOverview(); renderReports(); renderRecent(); }
+
+let sortKey="ratio", sortAsc=false;
+function renderOverview(){
+  const games = filteredGames();
+  const stats = computeStats(games);
+  const minG = +($("#minGames").value||0);
+  let rows = Object.values(stats).filter(s=>s.games>=minG);
+  // ranking (place) by ratio among shown
+  const ranked = rows.slice().sort((a,b)=> (b.ratio||0)-(a.ratio||0) || b.games-a.games);
+  ranked.forEach((r,i)=> r.place=i+1);
+
+  const change = (sameScope() ) ? dailyChange() : null;
+
+  $("#ovScope").textContent = "· "+rows.length+" players · "+games.length+" games";
+
+  const cols = [
+    {k:"place", t:"#", fmt:r=>r.place, num:true},
+    {k:"name",  t:"Player", fmt:r=>r.name, cls:"name"},
+    {k:"ratio", t:"Win %", fmt:r=>pct(r.ratio), num:true, bar:r=>r.ratio},
+    {k:"wins",  t:"W", fmt:r=>r.wins, num:true},
+    {k:"games", t:"G", fmt:r=>r.games, num:true},
+    {k:"streak",t:"Streak", fmt:r=>r.streak, num:true},
+    {k:"score", t:"Points", fmt:r=>r.score, num:true},
+    {k:"avgScore", t:"Avg pts", fmt:r=>n2(r.avgScore), num:true},
+    {k:"avgLossScore", t:"Avg in loss", fmt:r=>n2(r.avgLossScore), num:true},
+    {k:"bestSide", t:"Best side", fmt:r=> r.bestSide? r.bestSide.side+" "+pct(r.bestSide.r):"—",
+       sortVal:r=> r.bestSide? r.bestSide.r:-1},
+    {k:"mostWith", t:"Most with", fmt:r=> r.mostWith||"—", sortVal:r=> r.mostWith||""},
+    {k:"leastWith",t:"Least with", fmt:r=> r.leastWith||"—", sortVal:r=> r.leastWith||""},
+  ];
+  if (change){
+    cols.splice(3,0,{k:"chg", t:"Day Δ",
+      fmt:r=>{ const c=change[r.name]; if(c==null||isNaN(c))return "—";
+        const cls=c>0?"winpos":(c<0?"losneg":"muted"); const sg=c>0?"+":"";
+        return `<span class="${cls}">${sg}${(c*100).toFixed(2)}%</span>`; },
+      sortVal:r=> change[r.name]||0, num:true});
+  }
+
+  // header
+  const thead = $("#standings thead");
+  thead.innerHTML = "<tr>"+cols.map(c=>{
+    const sorted = c.k===sortKey ? " sorted"+(sortAsc?" asc":"") : "";
+    return `<th class="${(c.num?'':'')}${sorted}" data-k="${c.k}">${c.t}</th>`;
+  }).join("")+"</tr>";
+  $$("#standings thead th").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;
+    if (k===sortKey) sortAsc=!sortAsc; else { sortKey=k; sortAsc=(k==="name"||k==="mostWith"||k==="leastWith"); }
+    renderOverview();
+  });
+
+  // sort
+  const sv = c => c.sortVal || (r=> r[c.k]);
+  const col = cols.find(c=>c.k===sortKey) || cols[2];
+  const getv = col.sortVal || (r=> r[sortKey]);
+  rows.sort((a,b)=>{
+    let av=getv(a), bv=getv(b);
+    if (typeof av==="string"||typeof bv==="string"){ av=String(av); bv=String(bv); return sortAsc? av.localeCompare(bv):bv.localeCompare(av); }
+    av=av==null?-Infinity:av; bv=bv==null?-Infinity:bv;
+    return sortAsc? av-bv : bv-av;
+  });
+
+  const maxBar=120;
+  const tb = $("#standings tbody");
+  tb.innerHTML = rows.map(r=>"<tr>"+cols.map(c=>{
+    let inner = c.fmt(r);
+    if (c.bar){ const v=c.bar(r)||0; inner += `<span class="bar" style="width:${Math.round(v*maxBar)}px"></span>`; }
+    return `<td class="${c.cls||''}">${inner}</td>`;
+  }).join("")+"</tr>").join("");
+
+  renderLeagueCards(games, stats, rows);
+}
+function sameScope(){ return $("#scope").value==="all"; }
+
+function renderLeagueCards(games, stats, rows){
+  const players = Object.values(stats);
+  const totalPoints = players.reduce((a,p)=>a+p.score,0);
+  const openWins = games.filter(g=>g.openScore>g.wallScore).length;
+  const wallWins = games.length-openWins;
+  const topRatio = rows.filter(r=>r.games>=Math.max(5,+($("#minGames").value||0)))
+                       .slice().sort((a,b)=>(b.ratio||0)-(a.ratio||0))[0];
+  const topStreak = players.slice().sort((a,b)=>b.streak-a.streak)[0];
+  const topVol = players.slice().sort((a,b)=>b.games-a.games)[0];
+  const card=(k,v,s)=>`<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s||""}</div></div>`;
+  $("#leagueCards").innerHTML = [
+    card("Games", games.length, players.length+" players"),
+    card("Open vs Wall", openWins+" : "+wallWins, games.length? pct(openWins/games.length)+" open wins":""),
+    card("Top win %", topRatio? topRatio.name:"—", topRatio? pct(topRatio.ratio)+" ("+topRatio.games+"g)":"min 5 games"),
+    card("Longest streak", topStreak? topStreak.streak:"—", topStreak? topStreak.name:""),
+    card("Most active", topVol? topVol.name:"—", topVol? topVol.games+" games":""),
+    card("Total points", totalPoints, ""),
+  ].join("");
+}
+
+// ───────────────────────── reports / charts ─────────────────────────
+function destroyChart(id){ if(CHARTS[id]){CHARTS[id].destroy(); delete CHARTS[id];} }
+const PALETTE=["#46c2a8","#f2b134","#7aa2f7","#e2575a","#bb9af7","#9ece6a","#ff9e64","#2ac3de","#f7768e","#e0af68","#73daca","#c0caf5"];
+
+function renderReports(){
+  if (typeof Chart==="undefined"){ return; } // CDN blocked; tables still render
+  const games = filteredGames();
+  const stats = computeStats(games);
+  const minG = +($("#minGames").value||0);
+  const rows = Object.values(stats).filter(s=>s.games>=minG).sort((a,b)=>(b.ratio||0)-(a.ratio||0));
+  const names = rows.map(r=>r.name);
+
+  Chart.defaults.color="#8b9aa7"; Chart.defaults.borderColor="#2a3744"; Chart.defaults.font.family="inherit";
+
+  destroyChart("ratio");
+  CHARTS.ratio = new Chart($("#chartRatio"),{
+    type:"bar",
+    data:{labels:names, datasets:[{label:"Win %", data:rows.map(r=>+(100*(r.ratio||0)).toFixed(1)),
+      backgroundColor:"#46c2a8"}]},
+    options:barOpts("%")
+  });
+
+  destroyChart("streak");
+  CHARTS.streak = new Chart($("#chartStreak"),{
+    type:"bar",
+    data:{labels:names, datasets:[{label:"Longest win streak", data:rows.map(r=>r.streak),
+      backgroundColor:"#f2b134"}]},
+    options:barOpts("")
+  });
+
+  destroyChart("side");
+  CHARTS.side = new Chart($("#chartSide"),{
+    type:"bar",
+    data:{labels:names, datasets:[
+      {label:"Open win %", data:rows.map(r=>r.openRatio!=null?+(100*r.openRatio).toFixed(1):null), backgroundColor:"#7aa2f7"},
+      {label:"Wall win %", data:rows.map(r=>r.wallRatio!=null?+(100*r.wallRatio).toFixed(1):null), backgroundColor:"#bb9af7"},
+    ]},
+    options:barOpts("%",true)
+  });
+
+  renderTrend(minG);
+
+  // heatmaps (full-season ALL games so the matrices match the sheet's lifetime view,
+  // but respect the scope filter for consistency with the rest of the page)
+  const matStats = stats;
+  const order = names.length?names:collectPlayers(games);
+  heatmap("#heatTeam",   order, (a,b)=>{ const s=matStats[a]; if(!s||!s.withC[b])return null; return s.withW[b]?s.withW[b]/s.withC[b]:0; }, "pct");
+  heatmap("#heatEnemy",  order, (a,b)=>{ const s=matStats[a]; if(!s||!s.againstC[b])return null; return (s.againstW[b]||0)/s.againstC[b]; }, "pct");
+  heatmap("#heatSpread", order, (a,b)=>{ const s=matStats[a]; if(!s||!s.withC[b])return null; return s.withC[b]/s.games; }, "pct");
+  heatmap("#heatSame",   order, (a,b)=>{ const s=matStats[a]; return s&&s.withC[b]?s.withC[b]:null; }, "int");
+  heatmap("#heatAgainst",order, (a,b)=>{ const s=matStats[a]; return s&&s.againstC[b]?s.againstC[b]:null; }, "int");
+}
+
+function barOpts(unit,grouped){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:!!grouped}},
+    scales:{x:{ticks:{maxRotation:60,minRotation:0}}, y:{beginAtZero:true, ticks:{callback:v=>v+(unit||"")}}}
+  };
+}
+
+function renderTrend(minG){
+  // cumulative win rate over each player's game index across the WHOLE season
+  const all = computeStats(GAMES);
+  const players = Object.values(all).filter(s=>s.games>=Math.max(minG,8))
+                    .sort((a,b)=>b.games-a.games).slice(0,8).map(s=>s.name);
+  const series = {}; players.forEach(p=>series[p]={w:0,g:0,pts:[]});
+  GAMES.forEach(g=>{
+    const openWin=g.openScore>g.wallScore;
+    const apply=(team,win)=> team.forEach(p=>{ if(series[p]){ series[p].g++; if(win)series[p].w++; series[p].pts.push(+(100*series[p].w/series[p].g).toFixed(1)); }});
+    apply(g.openTeam, openWin); apply(g.wallTeam, !openWin);
+  });
+  const maxLen = Math.max(1,...players.map(p=>series[p].pts.length));
+  destroyChart("trend");
+  CHARTS.trend = new Chart($("#chartTrend"),{
+    type:"line",
+    data:{
+      labels:[...Array(maxLen).keys()].map(i=>i+1),
+      datasets:players.map((p,i)=>({label:p, data:series[p].pts, borderColor:PALETTE[i%PALETTE.length],
+        backgroundColor:"transparent", borderWidth:2, pointRadius:0, tension:.25}))
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:"nearest",intersect:false},
+      plugins:{legend:{position:"bottom"}},
+      scales:{x:{title:{display:true,text:"games played"}}, y:{title:{display:true,text:"win %"},suggestedMin:0,suggestedMax:100}}}
+  });
+}
+
+function heatColor(v, mode){
+  if (v==null) return "var(--heat0)";
+  if (mode==="pct"){
+    // 0 -> red-ish, .5 neutral, 1 -> green-ish
+    const t=Math.max(0,Math.min(1,v));
+    const r=Math.round(226 - t*140), g=Math.round(60 + t*130), b=Math.round(70 + t*50);
+    return `rgba(${r},${g},${b},0.55)`;
+  }
+  return "var(--panel2)";
+}
+function heatmap(sel, order, fn, mode){
+  const el=$(sel);
+  if (!order.length){ el.innerHTML="<p class='muted small'>No data.</p>"; return; }
+  let html="<table class='heat'><thead><tr><th></th>"+order.map(p=>`<th>${p}</th>`).join("")+"</tr></thead><tbody>";
+  order.forEach(a=>{
+    html+="<tr><th>"+a+"</th>";
+    order.forEach(b=>{
+      if (a===b){ html+="<td class='diag'>·</td>"; return; }
+      const v=fn(a,b);
+      if (v==null){ html+="<td class='empty'>—</td>"; return; }
+      const disp = mode==="pct"? (v*100).toFixed(0)+"%" : v;
+      html+=`<td style="background:${heatColor(v,mode)}">${disp}</td>`;
+    });
+    html+="</tr>";
+  });
+  html+="</tbody></table>";
+  el.innerHTML=html;
+}
+
+// ───────────────────────── recent games ─────────────────────────
+function renderRecent(){
+  const tb=$("#recent tbody");
+  const last = GAMES.slice(-25).reverse();
+  tb.innerHTML = last.map(g=>{
+    const openWin=g.openScore>g.wallScore;
+    const win = openWin? g.openTeam.join(" & ") : g.wallTeam.join(" & ");
+    return `<tr>
+      <td>${g.date? g.date.toLocaleDateString():g.ts}</td>
+      <td class="${openWin?'winpos':''}">${g.openTeam.join(" & ")}</td>
+      <td class="${openWin?'winpos':''}">${g.openScore}</td>
+      <td class="${!openWin?'winpos':''}">${g.wallTeam.join(" & ")}</td>
+      <td class="${!openWin?'winpos':''}">${g.wallScore}</td>
+      <td>${win}</td></tr>`;
+  }).join("");
+}
+
+// ───────────────────────── enter game ─────────────────────────
+function fillPlayerSelects(){
+  const opts = `<option value="">—</option>`+PLAYERS.map(p=>`<option>${p}</option>`).join("")
+             + `<option value="__new">➕ Add new player…</option>`;
+  $$(".pSel").forEach(sel=>{ const cur=sel.value; sel.innerHTML=opts; sel.value=cur; });
+  $$(".pSel").forEach(sel=> sel.onchange=()=>{
+    if (sel.value==="__new"){
+      const name=(prompt("New player name?")||"").trim();
+      if (name){ if(!PLAYERS.includes(name)){PLAYERS.push(name);PLAYERS.sort((a,b)=>a.localeCompare(b));} fillPlayerSelects(); sel.value=name; }
+      else sel.value="";
+    }
+  });
+  const saved=localStorage.getItem(LS_PASS);
+  if (saved){ $("#passcode").value=saved; $("#passSaved").textContent="Passcode is saved on this device — you won’t need to type it again."; }
+}
+
+async function submitGame(){
+  const msg=$("#enterMsg"); msg.innerHTML="";
+  const o1=$("#o1").value,o2=$("#o2").value,w1=$("#w1").value,w2=$("#w2").value;
+  const open=[o1,o2].filter(Boolean), wall=[w1,w2].filter(Boolean);
+  const oS=$("#oScore").value, wS=$("#wScore").value;
+  const all=[...open,...wall];
+  if (open.length!==2||wall.length!==2){ return note(msg,"Pick two players on each side.",true); }
+  if (new Set(all).size!==4){ return note(msg,"A player can’t appear twice.",true); }
+  if (oS===""||wS===""){ return note(msg,"Enter both scores.",true); }
+  if (Number(oS)===Number(wS)){ return note(msg,"Scores can’t be tied.",true); }
+  const pass=$("#passcode").value.trim();
+  if (!pass){ return note(msg,"Enter the group passcode.",true); }
+
+  const btn=$("#submitGame"); btn.disabled=true; btn.textContent="Adding…";
+  try{
+    const res = await fetch(backendUrl(),{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"}, // text/plain avoids CORS preflight
+      body: JSON.stringify({passcode:pass, openTeam:open, openScore:Number(oS), wallTeam:wall, wallScore:Number(wS)})
+    });
+    const data=await res.json();
+    if (!data.ok){
+      if (data.error==="bad_passcode"){ localStorage.removeItem(LS_PASS); return note(msg,"Wrong passcode. Try again.",true); }
+      return note(msg,"Couldn’t save: "+(data.error||"unknown"),true);
+    }
+    if ($("#rememberPass").checked){ localStorage.setItem(LS_PASS,pass); $("#passSaved").textContent="Passcode saved on this device."; }
+    note(msg,"✅ Game added! "+open.join(" & ")+" ("+oS+") vs "+wall.join(" & ")+" ("+wS+").",false);
+    $("#oScore").value=7; $("#wScore").value=5;
+    await load();
+  }catch(err){ note(msg,"Network error: "+err.message,true); }
+  finally{ btn.disabled=false; btn.textContent="Add game"; }
+}
+function note(el,text,isErr){ el.innerHTML=`<div class="${isErr?'err':'banner'}" style="margin:8px 0">${text}</div>`; if(!isErr)el.firstChild.classList.add('ok'); }
+
+// ───────────────────────── wiring ─────────────────────────
+$("#tabs").addEventListener("click", e=>{
+  const b=e.target.closest("button[data-tab]"); if(!b)return;
+  $$("#tabs button").forEach(x=>x.classList.toggle("active",x===b));
+  const t=b.dataset.tab;
+  $("#tab-overview").classList.toggle("hide",t!=="overview");
+  $("#tab-reports").classList.toggle("hide",t!=="reports");
+  $("#tab-enter").classList.toggle("hide",t!=="enter");
+  $("#scopeBar").classList.toggle("hide", t==="enter" || !isConfigured());
+});
+$("#scope").addEventListener("change",()=>{
+  const c=$("#scope").value==="custom";
+  $("#fromWrap").style.display=c?"flex":"none";
+  $("#toWrap").style.display=c?"flex":"none";
+  if(!c) $("#scopeInfo").textContent="";
+  renderOverview(); renderReports();
+});
+["fromDate","toDate","minGames"].forEach(id=>$("#"+id).addEventListener("change",()=>{renderOverview();renderReports();}));
+$("#refreshBtn").addEventListener("click",load);
+$("#submitGame").addEventListener("click",submitGame);
+$("#forgetPass").addEventListener("click",()=>{ localStorage.removeItem(LS_PASS); $("#passcode").value=""; $("#passSaved").textContent="Saved passcode cleared."; });
+
+load();
+</script>
+</body>
+</html>

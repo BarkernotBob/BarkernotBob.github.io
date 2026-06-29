@@ -1,8 +1,9 @@
 /* Bank Bonus Tracker — Service Worker
-   Caches the app shell for instant offline load. GitHub API calls always go
-   to the network; only the app HTML is served from cache when offline. */
+   Stale-while-revalidate for the app shell: serve cache instantly, fetch
+   fresh in the background so the next open always has the latest version.
+   GitHub API calls always go to the network. */
 
-const CACHE = 'bb-v1';
+const CACHE = 'bb-v2';
 const SHELL = [
   '/static/bank-bonus/',
   '/static/bank-bonus/index.html',
@@ -29,21 +30,25 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always fetch GitHub API calls from the network — data must be live.
+  // Always fetch GitHub API and Cloudflare Worker calls from the network.
   if (url.hostname === 'api.github.com' || url.hostname.endsWith('.workers.dev')) {
     return;
   }
 
-  // Cache-first for the app shell; network-first with cache fallback for everything else.
+  // Stale-while-revalidate for the app shell: return cached version
+  // immediately (fast), but always fetch fresh and update the cache in the
+  // background so the *next* open gets the latest code.
   if (SHELL.some(s => url.pathname === s || url.pathname === s.replace(/\/$/, '/index.html'))) {
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }))
+      caches.open(CACHE).then(cache =>
+        cache.match(e.request).then(cached => {
+          const fresh = fetch(e.request).then(res => {
+            if (res.ok) cache.put(e.request, res.clone());
+            return res;
+          }).catch(() => cached);
+          return cached || fresh;
+        })
+      )
     );
   }
 });

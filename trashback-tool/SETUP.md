@@ -25,20 +25,14 @@ see or edit the sheet — they can only view stats and add games through the app
 4. Open the file `google-apps-script/Code.gs` from this folder, copy **all** of
    it, and paste it into that editor.
 
-## Step 2 — Set your passcode
+## Step 2 — Save
 
-Near the top of the pasted code, find the `CONFIG` block. Change this line:
+The `CONFIG` block at the top is already filled in for you:
+- `SHEET_ID` points at your Trashback 2025 sheet.
+- `PASSCODE` is set to **`nflife`** (the group passcode for adding games —
+  viewing never needs it). Change this line if you ever want a different one.
 
-```js
-PASSCODE: 'changeme',
-```
-
-…to a passcode your group will use to add games, e.g. `PASSCODE: 'trash2025',`.
-(Viewing the stats never needs the passcode — only adding a game does.)
-
-The `SHEET_ID` is already filled in for your sheet, so leave it alone.
-
-Click the **💾 Save** icon.
+Just click the **💾 Save** icon.
 
 ## Step 3 — Deploy it as a web app
 

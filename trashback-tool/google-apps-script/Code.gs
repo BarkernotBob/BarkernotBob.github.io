@@ -32,7 +32,7 @@ var CONFIG = {
 
   // The group passcode everyone must type to ADD a game. Viewing never needs it.
   // CHANGE THIS to something only your group knows.
-  PASSCODE: 'changeme',
+  PASSCODE: 'nflife',
 };
 // ────────────────────────────────────────────────────────────────────────
 

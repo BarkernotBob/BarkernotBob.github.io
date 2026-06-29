@@ -323,7 +323,9 @@
 
 // Bump this on each deploy so the Settings footer shows which build is live —
 // lets you confirm a phone isn't serving a cached old copy.
-const BUILD = '2026-06-29 · r14';
+const BUILD = '2026-06-29 · r15';
+// Published setup guide for the optional daily-email / RSS notifications.
+const EMAIL_DOCS = 'https://github.com/barkernotbob/barkernotbob.github.io/blob/v5/bank-bonus-tool/automation/README.md';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -805,27 +807,68 @@ async function init(){
 
 // --------- Render functions ---------
 
-function render_today(){
-  const section = $('#section-today');
+// Shared "what's due today" computation — used by the Today screen, the app-icon
+// badge, and the on-open notification nudge so they can never disagree.
+function computeDueToday(){
   const today = todayISO();
-  let html = '';
-
   const toOpen = accounts.filter(a => (a.status === 'planned' && a.dates.plannedOpen === today) || (a.dates.reopenAfter === today));
   const toClose = accounts.filter(a => a.dates.closed === today);
-
-  let reminders = [];
+  const reminders = [];
   accounts.forEach(a => {
-    if(a.reminders) {
-      a.reminders.forEach(r => {
-        if(r.date === today && !r.done) {
-          reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id});
-        }
-      });
-    }
+    if(a.reminders) a.reminders.forEach(r => {
+      if(r.date === today && !r.done) reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id});
+    });
   });
+  const ddCleared = accounts.filter(a => a.dates.firstDD === shiftISO(today, -1) && a.status === 'open');
+  return { toOpen, toClose, reminders, ddCleared,
+    count: toOpen.length + toClose.length + reminders.length + ddCleared.length };
+}
 
-  const yesterdayISO = shiftISO(today, -1);
-  const ddCleared = accounts.filter(a => a.dates.firstDD === yesterdayISO && a.status === 'open');
+// On-open nudge + Home Screen icon badge. Zero infrastructure: the app already
+// knows what's due, so when you open it we (a) paint the count onto the app icon
+// (Badging API) and (b) — if you've allowed notifications and haven't been nudged
+// yet today — fire a single local notification summarizing what's due. No server,
+// no push subscription; works offline. On iPhone, both require the app to be
+// installed to the Home Screen and opened from that icon.
+function nudgeOnOpen(){
+  let due;
+  try { due = computeDueToday(); } catch(e){ return; }
+  // App-icon badge — supported on installed PWAs; silently ignored elsewhere.
+  try {
+    if('setAppBadge' in navigator){
+      if(due.count > 0) navigator.setAppBadge(due.count); else navigator.clearAppBadge();
+    }
+  } catch(e){}
+  // Local notification — only if granted, only once per day, only if something's due.
+  if(due.count === 0) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const today = todayISO();
+  if(localStorage.getItem('bb_last_nudge') === today) return;
+  localStorage.setItem('bb_last_nudge', today);
+  const parts = [];
+  if(due.toOpen.length) parts.push(`${due.toOpen.length} to open`);
+  if(due.toClose.length) parts.push(`${due.toClose.length} to close`);
+  if(due.reminders.length) parts.push(`${due.reminders.length} reminder${due.reminders.length>1?'s':''}`);
+  if(due.ddCleared.length) parts.push(`${due.ddCleared.length} DD cleared`);
+  const title = `🏦 ${due.count} due today`;
+  const opts = { body: parts.join(' · '), tag: 'bb-due-'+today,
+    icon: '/static/bank-bonus/icon-192.png', badge: '/static/bank-bonus/icon-192.png' };
+  try {
+    if(navigator.serviceWorker && navigator.serviceWorker.ready && navigator.serviceWorker.ready.then){
+      navigator.serviceWorker.ready
+        .then(r => r.showNotification(title, opts))
+        .catch(() => { try { new Notification(title, opts); } catch(e){} });
+    } else {
+      new Notification(title, opts);
+    }
+  } catch(e){}
+}
+
+function render_today(){
+  const section = $('#section-today');
+  let html = '';
+
+  const { toOpen, toClose, reminders, ddCleared } = computeDueToday();
 
   if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
     if(accounts.length === 0){
@@ -1628,6 +1671,43 @@ function render_settings(){
   }
   html += `</div>`;
 
+  // Install to the device — the single action that (1) lets the token persist
+  // forever (separate storage, exempt from Safari's 7-day wipe), and (2) unlocks
+  // on-device notifications + the icon badge on iPhone.
+  html += `<div class="card">
+    <div class="card-header">📲 Install on your device</div>
+    <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">Installing makes the app open like a normal app, keeps your data from being cleared, and is <b>required on iPhone</b> for reminders and the icon badge to work.</p>
+    <details><summary style="cursor:pointer;font-weight:600">📱 iPhone / iPad (Safari)</summary>
+      <ol class="small muted" style="margin:8px 0 0 18px;padding:0;line-height:1.6">
+        <li>Open this page in <b>Safari</b> (not Chrome).</li>
+        <li>Tap the <b>Share</b> button (the square with an ↑ arrow).</li>
+        <li>Scroll down → tap <b>Add to Home Screen</b> → <b>Add</b>.</li>
+        <li>Open the app from the <b>new Home Screen icon</b> from now on.</li>
+      </ol>
+      <p style="margin:8px 0 0;color:var(--faint);font-size:12px">Why it matters: a Safari <i>tab</i> can have its saved data (including your sync token) wiped after 7 days of no use. The installed Home Screen app is exempt — your data and token stay put.</p>
+    </details>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">🤖 Android (Chrome)</summary>
+      <ol class="small muted" style="margin:8px 0 0 18px;padding:0;line-height:1.6">
+        <li>Tap the <b>⋮</b> menu (top right).</li>
+        <li>Tap <b>Install app</b> (or <b>Add to Home screen</b>) → <b>Install</b>.</li>
+      </ol>
+    </details>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">💻 Desktop (Chrome / Edge)</summary>
+      <ol class="small muted" style="margin:8px 0 0 18px;padding:0;line-height:1.6">
+        <li>Click the <b>install icon</b> (a monitor with a ↓) at the right of the address bar.</li>
+        <li>Click <b>Install</b>.</li>
+      </ol>
+    </details>
+  </div>`;
+
+  // On-device reminders — local notification + icon badge, no account, no server.
+  html += `<div class="card">
+    <div class="card-header">🔔 Reminders on this device</div>
+    <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">Free and private — no account, no GitHub. When you open the app it puts a count on the app icon and shows a notification for anything due today. Works offline.</p>
+    ${notifButtonHTML()}
+    <p style="margin:12px 0 0;color:var(--faint);font-size:12px"><b>iPhone:</b> install the app first (see <b>📲 Install on your device</b> above) — notifications and the icon badge only work on the installed Home Screen app, never in a Safari tab. These appear <b>when you open the app</b>; for reminders that arrive while the app is closed, use email below.</p>
+  </div>`;
+
   // People — editable list that drives every Person dropdown.
   html += `<div class="card">
     <div class="card-header">People</div>
@@ -1689,8 +1769,17 @@ function render_settings(){
   const rssEnabled = !!(config.rssEnabled);
   const rssUrl = LS.repo ? 'https://raw.githubusercontent.com/'+LS.repo+'/main/db/rss.xml' : '';
   html += `<div class="card">
-    <div class="card-header">Notifications</div>
-    <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">A daily email when there's something to do (open/close an account, a reminder due, a DD cleared). Sent by a free GitHub Action in your data repo.</p>
+    <div class="card-header">📧 Email &amp; RSS (when the app is closed)</div>
+    <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">Unlike the on-device reminders above, these reach you <b>without opening the app</b>: a daily email (and/or an RSS feed) when there's something to do. They're sent by a free GitHub Action in your data repo, so there's a one-time setup.</p>
+    <details style="margin:0 0 14px"><summary style="cursor:pointer;font-weight:600">📖 First time? Turn on the daily email (one-time, ~5 min)</summary>
+      <ol class="small muted" style="margin:8px 0 0 18px;padding:0;line-height:1.6">
+        <li>Make a Gmail <b>app password</b>: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a> (a 16-character code).</li>
+        <li>In your <code>bank-bonus-data</code> repo, add the file <code>.github/workflows/daily-email.yml</code> (copy it from the guide below).</li>
+        <li>In that repo: <b>Settings → Secrets and variables → Actions</b> → add <code>MAIL_USERNAME</code>, <code>MAIL_PASSWORD</code> (the app password), and <code>MAIL_TO</code>.</li>
+        <li>Enter your email below → <b>Save email</b> → <b>Send test email</b> to confirm.</li>
+      </ol>
+      <p style="margin:8px 0 0"><a href="${EMAIL_DOCS}" target="_blank" rel="noopener" style="font-size:13px">Open the full step-by-step guide →</a></p>
+    </details>
     <div class="row"><div class="row-item">
       <div class="label">Notify email</div>
       <input type="email" id="set_email" value="${esc(notifyEmail)}">
@@ -1716,8 +1805,13 @@ function render_settings(){
   </div>`;
   } else {
     html += `<div class="card">
-      <div class="card-header">Notifications</div>
-      <p style="margin:0;color:var(--muted);font-size:13px">📧 Daily email reminders run from a free GitHub Action in your data repo. Turn on <b>GitHub sync</b> above to enable them.</p>
+      <div class="card-header">📧 Email &amp; RSS (when the app is closed)</div>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">Want a reminder that reaches you <b>without opening the app</b>? A free GitHub Action in your data repo can send a daily email (and/or publish an RSS feed) of what's due. It needs two one-time things:</p>
+      <ol class="small muted" style="margin:0 0 10px 18px;padding:0;line-height:1.6">
+        <li>Turn on <b>GitHub sync</b> (in <b>Your data &amp; sync</b> above).</li>
+        <li>Add the daily-email workflow + mail secrets to your repo (~5 min).</li>
+      </ol>
+      <p style="margin:0"><a href="${EMAIL_DOCS}" target="_blank" rel="noopener" style="font-size:13px">See the step-by-step email guide →</a></p>
     </div>`;
   }
 
@@ -1740,6 +1834,27 @@ async function saveSettings(){
 
 // "Your name on this device" — remembered locally, no save round-trip.
 function saveMe(v){ LS.me = v; updateAppbarUser(); toast('Saved'); }
+
+// On-device notification permission: the button shown in Settings reflects the
+// current browser permission state, and the click handler requests it.
+function notifButtonHTML(){
+  if(!('Notification' in window))
+    return `<p style="margin:0;color:var(--muted);font-size:13px">This browser doesn't support notifications. The app-icon badge may still appear on an installed app.</p>`;
+  if(Notification.permission === 'granted')
+    return `<p style="margin:0;color:var(--muted);font-size:13px">✅ Notifications are on. You'll get a nudge for anything due when you open the app.</p>`;
+  if(Notification.permission === 'denied')
+    return `<p style="margin:0;color:var(--muted);font-size:13px">🔕 Notifications are blocked in your browser/site settings. Re-allow them for this site to get nudges.</p>`;
+  return `<button onclick="enableNotifications()">🔔 Turn on notifications</button>`;
+}
+async function enableNotifications(){
+  if(!('Notification' in window)){ toast('Notifications not supported here'); return; }
+  try {
+    const p = await Notification.requestPermission();
+    render_settings();
+    if(p === 'granted'){ toast('Notifications on ✓'); nudgeOnOpen(); }
+    else toast('Notifications not enabled');
+  } catch(e){ toast('Could not enable notifications'); }
+}
 
 // --------- Local backup / restore (works in local or synced mode) ---------
 function exportData(){
@@ -2264,9 +2379,11 @@ async function toggleRSS(enabled){
 }
 
 // Initialize — apply theme, then load (local-first; no sign-in round-trip).
+// Once data is in, fire the on-open badge + notification nudge.
 (async ()=>{
   applyTheme();
-  init();
+  await init();
+  nudgeOnOpen();
 })();
 </script>
 

@@ -37,7 +37,10 @@ var tagFilterCss = `
 `;
 
 var tagFilterAfterDOMLoaded = `
-(function () {
+function quartzBuildTagFilter() {
+  // Idempotent: remove any bar from a previous page before rebuilding.
+  document.querySelectorAll(".tag-filter").forEach(function (el) { el.remove(); });
+
   var pageListing = document.querySelector(".page-listing");
   if (!pageListing) return;
 
@@ -104,7 +107,11 @@ var tagFilterAfterDOMLoaded = `
       }
     });
   });
-})();
+}
+// Rebuild on every SPA navigation as well as the initial load, so the filter
+// bar appears without a manual refresh.
+document.addEventListener("nav", quartzBuildTagFilter);
+quartzBuildTagFilter();
 `;
 
 var TagFilter = function () {

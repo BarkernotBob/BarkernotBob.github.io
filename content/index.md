@@ -34,4 +34,13 @@ publish: true
   </a>
 </div>
 
+<div class="splash-foot">
+  <span class="splash-foot-label">browse by tag</span>
+  <a href="/tags/theology" class="no-popover">#theology</a>
+  <a href="/tags/finance" class="no-popover">#finance</a>
+  <a href="/tags/logic" class="no-popover">#logic</a>
+  <a href="/tags/language" class="no-popover">#language</a>
+  <a href="/tags/science" class="no-popover">#science</a>
+</div>
+
 </div>

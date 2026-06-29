@@ -329,34 +329,9 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   `)
   // --------------------------------------------------------------------------
 
-  // --- Reading Room whimsy (custom): a trailing accent-ring cursor that swells
-  // --- over interactive elements, plus a subtle pointer-tilt on the home cards.
-  // --- The native cursor is left fully responsive; the ring is decorative only.
+  // --- Reading Room whimsy (custom): a subtle pointer-tilt on the home cards.
   componentResources.afterDOMLoaded.push(`
     if (!window.matchMedia("(pointer: coarse)").matches) {
-      var ring = document.querySelector(".rr-cursor")
-      if (!ring) {
-        ring = document.createElement("div")
-        ring.className = "rr-cursor"
-        document.body.appendChild(ring)
-      }
-      var mx = 0, my = 0, rx = 0, ry = 0, seen = false
-      var hot = "a,button,input,textarea,select,summary,.splash-card,.tag-link,[role='button']"
-      document.addEventListener("mousemove", (e) => {
-        mx = e.clientX; my = e.clientY
-        if (!seen) { rx = mx; ry = my; seen = true }
-        ring.classList.add("show")
-      }, { passive: true })
-      document.addEventListener("mouseleave", () => ring.classList.remove("show"))
-      document.addEventListener("mouseover", (e) => { if (e.target.closest && e.target.closest(hot)) ring.classList.add("big") })
-      document.addEventListener("mouseout", (e) => { if (e.target.closest && e.target.closest(hot)) ring.classList.remove("big") })
-      ;(function loop() {
-        rx += (mx - rx) * 0.32; ry += (my - ry) * 0.32
-        ring.style.transform = "translate3d(" + rx + "px," + ry + "px,0)"
-        requestAnimationFrame(loop)
-      })()
-      document.addEventListener("nav", () => { if (!document.querySelector(".rr-cursor")) document.body.appendChild(ring) })
-
       function quartzCardTilt() {
         document.querySelectorAll(".splash-card").forEach((c) => {
           if (c.__rrTilt) return
@@ -411,6 +386,110 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     }
     document.addEventListener("nav", quartzListingDesc)
     quartzListingDesc()
+  `)
+  // --------------------------------------------------------------------------
+
+  // --- Right-rail panels (custom) -------------------------------------------
+  // INDEX/FOLDER/TAG pages: inject "Browse by tag" + "Recently tended" boxes.
+  // NOTE pages: inject an outgoing "Links" box from the article's internal
+  // links (the built-in backlinks plugin already supplies incoming links).
+  componentResources.afterDOMLoaded.push(`
+    function quartzMakeRail(title, bodyClass) {
+      const rail = document.createElement("div")
+      rail.className = "rr-rail"
+      const h = document.createElement("h3")
+      h.textContent = title
+      const body = document.createElement("div")
+      body.className = bodyClass
+      rail.appendChild(h)
+      rail.appendChild(body)
+      return { rail: rail, body: body }
+    }
+    function quartzBuildRails() {
+      const right = document.querySelector(".right.sidebar")
+      if (!right) return
+      // Idempotent: clear anything we injected on a previous page.
+      right.querySelectorAll(".rr-rail").forEach((el) => el.remove())
+
+      const listing = document.querySelector(".page-listing")
+      if (listing) {
+        // --- Browse by tag ---
+        const tagMap = new Map()
+        listing.querySelectorAll(".section-li .tag-link").forEach((a) => {
+          const t = (a.textContent || "").trim()
+          if (t && !tagMap.has(t)) tagMap.set(t, a.getAttribute("href"))
+        })
+        if (tagMap.size) {
+          const made = quartzMakeRail("Browse by tag", "rr-tagcloud")
+          Array.from(tagMap.keys()).sort().forEach((t) => {
+            const a = document.createElement("a")
+            a.className = "internal tag-link"
+            a.setAttribute("href", tagMap.get(t))
+            a.textContent = t
+            made.body.appendChild(a)
+          })
+          right.prepend(made.rail)
+        }
+        // --- Recently tended (listing is date-sorted; take the first few
+        // dated entries, skipping folders / undated rows) ---
+        const rows = Array.from(listing.querySelectorAll(".section-li")).filter((li) => {
+          const m = li.querySelector(".meta")
+          return m && m.textContent.trim()
+        }).slice(0, 5)
+        if (rows.length) {
+          const made = quartzMakeRail("Recently tended", "rr-recent")
+          rows.forEach((li) => {
+            const link = li.querySelector(".desc a, h3 a")
+            if (!link) return
+            const a = document.createElement("a")
+            a.setAttribute("href", link.getAttribute("href"))
+            const name = document.createElement("span")
+            name.textContent = (link.textContent || "").trim()
+            a.appendChild(name)
+            const metaEl = li.querySelector(".meta")
+            if (metaEl && metaEl.textContent.trim()) {
+              const d = document.createElement("span")
+              d.className = "rr-date"
+              d.textContent = metaEl.textContent.trim()
+              a.appendChild(d)
+            }
+            made.body.appendChild(a)
+          })
+          // Place recent after the tag cloud.
+          right.insertBefore(made.rail, right.querySelector(".rr-rail")?.nextSibling || null)
+        }
+        return
+      }
+
+      // --- NOTE pages: outgoing links ---
+      const article = document.querySelector(".center article")
+      if (!article) return
+      const seen = new Set()
+      const links = []
+      article.querySelectorAll("a.internal").forEach((a) => {
+        if (a.closest(".tags") || a.classList.contains("tag-link")) return
+        let key = ""
+        try { key = new URL(a.href).pathname } catch (e) { return }
+        if (!key || seen.has(key)) return
+        seen.add(key)
+        const text = (a.textContent || "").trim()
+        if (!text) return
+        links.push({ href: a.getAttribute("href"), text: text })
+      })
+      if (links.length) {
+        const made = quartzMakeRail("Links", "rr-links")
+        links.slice(0, 12).forEach((l) => {
+          const a = document.createElement("a")
+          a.className = "internal"
+          a.setAttribute("href", l.href)
+          a.textContent = l.text
+          made.body.appendChild(a)
+        })
+        right.appendChild(made.rail)
+      }
+    }
+    document.addEventListener("nav", quartzBuildRails)
+    quartzBuildRails()
   `)
   // --------------------------------------------------------------------------
 

@@ -740,6 +740,7 @@ function buildLayoutForEntries(
       groupOptions?: PluginLayoutDeclaration["groupOptions"]
     }[]
   > = {
+    header: [],
     left: [],
     right: [],
     beforeBody: [],
@@ -821,7 +822,7 @@ function buildLayoutForEntries(
     const resolved = resolveGroups(items, layoutConfig.groups ?? {})
     const key = position as keyof Pick<
       FullPageLayout,
-      "left" | "right" | "beforeBody" | "afterBody"
+      "header" | "left" | "right" | "beforeBody" | "afterBody"
     >
     ;(result as Record<string, QuartzComponent[]>)[key] = resolved
   }

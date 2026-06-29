@@ -9,10 +9,11 @@ body {
 //  the notes site. Scoped to pages containing .home-splash.
 // ============================================================
 
-// HOME PAGE ONLY: full-width splash with a slim top bar. The Explorer button
-// opens the file tree as a slide-over LEFT drawer. (Every other page keeps the
-// standard, always-visible sidebar.)
+// HOME PAGE ONLY: a full-width splash beneath the shared top navigation bar.
+// The three-column chrome (sidebars, page header, footer) is hidden so the
+// bento cards fill the width on their own.
 body:has(.home-splash) {
+  & .left.sidebar,
   & .right.sidebar,
   & .page-header,
   & .breadcrumb-container,
@@ -20,66 +21,15 @@ body:has(.home-splash) {
   & .note-properties,
   & .content-meta,
   & .page-footer,
+  & .center > hr,
   & footer,
   & .splash-top,
   & .page-listing { display: none !important; }
 
-  // Full-width content (the left sidebar becomes a top bar).
+  // Collapse the three-column grid to a single full-width column so the bento
+  // cards fill the page beneath the top bar.
   & #quartz-body { display: block !important; }
-  & .center { max-width: none !important; }
-
-  // Left sidebar -> horizontal top bar. z-index keeps it (and the drawer it
-  // contains) ABOVE the backdrop, so the drawer's links stay clickable.
-  & .left.sidebar {
-    position: relative;
-    z-index: 1000;
-    display: flex !important;
-    flex-flow: row wrap;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    margin: 0 0 0.5rem !important;
-    padding: 1rem 0 0.5rem !important;
-    background: transparent !important;
-  }
-  // Top-bar layout: wordmark alone on the left (margin-right auto pushes
-  // everything else to the right), then the menu (☰) button, search, and theme
-  // grouped together on the right.
-  & .left.sidebar > * { order: 5; }
-  & .left.sidebar .page-title { order: 0; margin: 0 auto 0 0 !important; }
-  & .left.sidebar .explorer { order: 1; margin: 0 !important; }
-  & .left.sidebar .spacer,
-  & .left.sidebar .mobile-only { display: none !important; }
-
-  // Explorer tree -> fixed slide-over drawer from the left.
-  & .explorer { position: static; overflow: visible !important; }
-  & .explorer .desktop-explorer h2 { font-size: 14px; margin: 0; font-weight: 500; }
-  & .explorer .explorer-content {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 300px !important;
-    max-width: 84vw !important;
-    height: 100vh !important;
-    background: var(--light) !important;
-    border-right: 2px solid var(--dark);
-    box-shadow: 6px 0 30px rgba(0, 0, 0, 0.3);
-    padding: 64px 22px 24px !important;
-    overflow-y: auto !important;
-    z-index: 100 !important;
-  }
-  & .explorer.collapsed .explorer-content { display: none !important; }
-
-  // Dim backdrop behind the open drawer.
-  &:has(.explorer:not(.collapsed))::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background: rgba(20, 16, 30, 0.4);
-    z-index: 90;
-  }
+  & .center { max-width: none !important; min-width: 0 !important; width: 100% !important; }
 }
 
 // ------------------------------------------------------------------
@@ -172,6 +122,93 @@ body:has(.home-splash) {
   .home-splash .splash-card::after { content: "›"; font-family: "Fraunces", serif; font-size: 26px; color: var(--muted); }
 }
 
+// ==================================================================
+//  Site-wide top navigation bar (full-width, spans all grid columns)
+//  Contains: wordmark (page-title) · section links · search · theme.
+// ==================================================================
+.topbar {
+  grid-area: grid-topbar;
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  background: color-mix(in srgb, var(--light) 92%, transparent);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--lightgray);
+}
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: var(--topbar-h, 57px);
+}
+// Keep the sticky sidebars below the sticky top bar so their content never
+// slides underneath it. Only applies where the sidebars are actually sticky
+// (tablet/desktop); on mobile they sit in normal flow.
+.page { --topbar-h: 57px; }
+@media all and (min-width: 801px) {
+  #quartz-body > .left.sidebar,
+  #quartz-body > .right.sidebar {
+    top: var(--topbar-h, 57px) !important;
+    height: calc(100vh - var(--topbar-h, 57px)) !important;
+  }
+}
+// Wordmark on the far left.
+.topbar .page-title { order: 0; margin: 0; flex: 0 0 auto; }
+.topbar .page-title h1,
+.topbar .page-title h2 {
+  margin: 0; font-family: "Fraunces", serif; font-weight: 600;
+  font-size: 1.25rem; letter-spacing: -0.2px; white-space: nowrap;
+}
+.topbar .page-title a { color: var(--dark); text-decoration: none; }
+
+// Section links in the middle.
+.rr-nav { order: 1; display: flex; gap: 1.6rem; align-items: center; }
+.rr-nav-link {
+  position: relative; font-family: "Hanken Grotesk", system-ui, sans-serif;
+  font-weight: 500; font-size: 0.98rem; color: var(--dark);
+  text-decoration: none; padding: 2px 0; white-space: nowrap;
+}
+.rr-nav-link::after {
+  content: ""; position: absolute; left: 0; bottom: -3px; height: 2px; width: 0;
+  background: var(--secondary); transition: width 0.25s ease;
+}
+.rr-nav-link:hover::after,
+.rr-nav-link.active::after { width: 100%; }
+.rr-nav-link.active { color: var(--secondary); }
+
+// Search + theme grouped on the far right.
+.topbar .flex-component { order: 2; margin-left: auto; gap: 0.6rem !important; }
+.topbar .search { max-width: 12rem; }
+
+// The brand dot already styled globally via .page-title a::before; keep it tight here.
+.topbar .page-title a::before { margin-right: 8px; }
+
+// Pull the whole grid up: with a top bar present, the original 6rem top spacing
+// leaves a big gap. Tighten it on inner pages.
+#quartz-body > .left.sidebar,
+#quartz-body > .right.sidebar { padding-top: 2rem !important; }
+#quartz-body > .center > .page-header { margin-top: 2rem !important; }
+
+// Tablet/mobile: links can wrap or scroll; keep the bar usable.
+@media all and (max-width: 1200px) {
+  .topbar-inner { gap: 1rem; flex-wrap: wrap; }
+  .rr-nav { gap: 1.1rem; font-size: 0.92rem; }
+}
+@media all and (max-width: 800px) {
+  .topbar-inner { min-height: 48px; column-gap: 0.9rem; }
+  .rr-nav { order: 3; width: 100%; overflow-x: auto; padding-bottom: 6px; gap: 1rem; }
+  .topbar .page-title h1, .topbar .page-title h2 { font-size: 1.1rem; }
+}
+
+// Relabel the explorer heading "Explorer" → "Sections" to match the design.
+.explorer .desktop-explorer h2,
+.explorer .mobile-explorer h2 { font-size: 0; }
+.explorer .desktop-explorer h2::before,
+.explorer .mobile-explorer h2::before {
+  content: "Sections"; font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase;
+  font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--gray);
+}
+
 // ------------------------------------------------------------------
 //  Global Reading Room touches (all pages)
 // ------------------------------------------------------------------
@@ -196,20 +233,6 @@ blockquote {
   border-left: 3px solid var(--secondary) !important;
   font-family: "Fraunces", serif; font-style: italic;
 }
-
-// Trailing accent-ring cursor (desktop pointers only; native cursor stays).
-.rr-cursor {
-  position: fixed; top: 0; left: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px;
-  border: 1.5px solid var(--secondary); border-radius: 50%; pointer-events: none; z-index: 9999;
-  opacity: 0; will-change: transform;
-  transition: opacity 0.2s ease, width 0.15s ease, height 0.15s ease, margin 0.15s ease, background 0.15s ease;
-}
-.rr-cursor.show { opacity: 1; }
-.rr-cursor.big {
-  width: 48px; height: 48px; margin: -24px 0 0 -24px;
-  background: color-mix(in srgb, var(--secondary) 14%, transparent);
-}
-@media (pointer: coarse) { .rr-cursor { display: none !important; } }
 
 // "Random page" button injected at the top of the file tree (all pages).
 .random-page-btn {
@@ -420,3 +443,101 @@ body:has(.page-listing) .content-meta { display: none !important; }
     }
   }
 }
+
+// ============================================================
+//  Search modal — Reading Room polish on the built-in search.
+//  Larger centered panel, serif result titles, warm framing.
+// ============================================================
+.search > .search-button {
+  border-radius: 999px !important;
+  height: 2.1rem !important;
+  border-color: var(--lightgray) !important;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+}
+.search > .search-container > .search-space {
+  width: 620px !important;
+  max-width: 92% !important;
+  margin-top: 10vh !important;
+}
+.search > .search-container > .search-space > * {
+  border: 1px solid var(--lightgray) !important;
+  box-shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.45);
+}
+.search .search-bar input {
+  font-family: "Hanken Grotesk", system-ui, sans-serif !important;
+  font-size: 1.05rem !important;
+}
+.search .result-card .card-title,
+.search .result-card h3 {
+  font-family: "Fraunces", serif !important;
+  font-weight: 500;
+}
+.search .result-card {
+  border-radius: 8px;
+  transition: background 0.12s ease;
+}
+.search .result-card:hover,
+.search .result-card.focus {
+  background: color-mix(in srgb, var(--secondary) 10%, transparent) !important;
+}
+
+// ============================================================
+//  Right-rail panels (table of contents, backlinks, and the
+//  injected "Browse by tag" / "Recently tended" / "Links" boxes).
+// ============================================================
+.right.sidebar {
+  font-size: 0.9rem;
+}
+// Section heading style shared by built-in (toc/backlinks) and injected rails.
+.right.sidebar > * > h3,
+.rr-rail h3 {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gray);
+  font-weight: 500;
+  margin: 0 0 0.6rem;
+}
+.rr-rail { margin-bottom: 1.6rem; }
+.rr-rail .rr-tagcloud { display: flex; flex-wrap: wrap; gap: 7px; }
+.rr-rail .rr-recent { display: flex; flex-direction: column; gap: 0.5rem; }
+.rr-rail .rr-recent a {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  text-decoration: none; color: var(--dark); font-size: 0.92rem;
+}
+.rr-rail .rr-recent a:hover { color: var(--secondary); }
+.rr-rail .rr-recent .rr-date {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--gray); white-space: nowrap;
+}
+.rr-rail .rr-links { display: flex; flex-direction: column; gap: 0.35rem; }
+.rr-rail .rr-links a {
+  text-decoration: none; color: var(--dark); font-size: 0.9rem;
+  border-left: 2px solid transparent; padding-left: 8px; margin-left: -8px;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.rr-rail .rr-links a:hover { color: var(--secondary); border-left-color: var(--secondary); }
+
+// ============================================================
+//  Home splash footer — clickable tag pills under the cards.
+// ============================================================
+.home-splash .splash-foot {
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+}
+.home-splash .splash-foot .splash-foot-label {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted); margin-right: 4px;
+}
+.home-splash .splash-foot a {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 13px; text-decoration: none;
+  transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.home-splash .splash-foot a:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }

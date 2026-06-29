@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Bank Bonus Tracker</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="/static/bank-bonus/manifest.json">
+
+  <!-- iOS / iPhone PWA support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bank Bonus">
+  <link rel="apple-touch-icon" href="/static/bank-bonus/apple-touch-icon.png">
+
+  <!-- Theme color for browser chrome -->
+  <meta name="theme-color" content="#5b5bd6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#7c7cf2" media="(prefers-color-scheme: dark)">
   <style>
     /* =====================================================================
        Design system. Grounded in Stripe (type + number hierarchy), Linear
@@ -23,7 +36,7 @@
       --shadow-sm: 0 1px 2px rgba(20,23,28,.06), 0 1px 1px rgba(20,23,28,.04);
       --shadow-md: 0 8px 24px rgba(20,23,28,.10);
       --radius: 14px; --radius-sm: 9px; --pill: 999px;
-      --bar-h: 56px; --tab-h: 50px;
+      --bar-h: 56px; --tab-h: 50px; --safe-top: env(safe-area-inset-top, 0px);
     }
     html[data-theme="dark"] {
       --bg: #0b0c0f; --surface: #15171c; --surface-2: #1c1f26; --surface-3: #262a33;
@@ -44,14 +57,14 @@
       margin: 0; padding: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
       letter-spacing: -0.006em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
       touch-action: manipulation; overflow-x: hidden; }
-    #main { max-width: 940px; margin: 0 auto; padding: 24px 16px 96px; }
+    #main { max-width: 940px; margin: 0 auto; padding: 24px 16px calc(96px + env(safe-area-inset-bottom, 0px)); }
     :focus-visible { outline: none; }
 
     /* ---- App header bar ---- */
     #appbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
       background: var(--surface);
       background: color-mix(in srgb, var(--surface) 85%, transparent); backdrop-filter: saturate(180%) blur(12px);
-      border-bottom: 1px solid var(--border); padding: 0 16px; height: var(--bar-h);
+      border-bottom: 1px solid var(--border); padding: var(--safe-top) 16px 0; height: calc(var(--bar-h) + var(--safe-top));
       position: sticky; top: 0; z-index: 101; }
     .appbar-title { font-weight: 700; font-size: 16px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
     .appbar-right { display: flex; align-items: center; gap: 8px; }
@@ -62,7 +75,7 @@
     .icon-btn:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); border-color: var(--accent); }
 
     /* ---- Tab bar (horizontally scrollable on small screens) ---- */
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: var(--bar-h); z-index: 100;
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: calc(var(--bar-h) + var(--safe-top)); z-index: 100;
       display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
     nav::-webkit-scrollbar { display: none; }
     nav button { flex: 0 0 auto; background: none; border: none; padding: 0 16px; cursor: pointer; font-size: 14px; font-weight: 500;
@@ -220,7 +233,7 @@
 
     @media (max-width: 600px) {
       body { font-size: 15px; }
-      #main { padding: 18px 14px 96px; }
+      #main { padding: 18px 14px calc(96px + env(safe-area-inset-bottom, 0px)); }
       .card { padding: 16px; }
       button { min-height: 46px; }
       input, select { min-height: 46px; }
@@ -289,7 +302,7 @@ const OAUTH = {
 
 // Bump this on each deploy so the Settings footer shows which build is live —
 // lets you confirm a phone isn't serving a cached old copy.
-const BUILD = '2026-06-28 · r8';
+const BUILD = '2026-06-29 · r9 · PWA';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -1881,6 +1894,13 @@ async function deleteAccountDetail(){
   const came = await handleOAuthRedirect();
   if(!came) init();
 })();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/bank-bonus/sw.js', { scope: '/static/bank-bonus/' })
+    .catch(() => {});
+}
 </script>
 
 </body>

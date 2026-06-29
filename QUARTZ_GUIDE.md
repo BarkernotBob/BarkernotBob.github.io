@@ -7,30 +7,44 @@ You don't need to know any code to use it. This guide explains everything in pla
 
 ---
 
+## The two vaults
+
+You have two Obsidian vaults:
+
+| Vault | Where it lives | What it's for |
+|---|---|---|
+| **Website** | `~/Sites/BarkernotBob.github.io/content` | Everything on your public site |
+| **KnoxLox** | `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox` | Your private notes — never published |
+
+Open the **Website** vault in Obsidian to write, edit, and organize pages for the site.
+Use the `Publish Changes` button to push them live. KnoxLox stays private — nothing
+there reaches the internet automatically.
+
+---
+
 ## The 3 things you'll actually do
 
 ### 1. Write or edit a note
-- Your notes live in the **`content`** folder (inside this folder).
+- Your notes live in the **`content`** folder (inside this folder, i.e. the Website vault).
 - Each note is a `.md` file (a "Markdown" file — just a text file you can type into).
   You can edit them in **Obsidian**, or any text editor.
-- **Important:** A note only appears on your public website if it has this line at the
-  very top:
+- **Everything in the Website vault publishes by default.** You do *not* need a `publish:
+  true` line — just having the note in this vault is enough.
+- To keep a specific page **off** the site, add this at the top of the note:
 
   ```
   ---
-  publish: true
+  publish: false
   ---
   ```
 
-  This is a safety switch so nothing goes public by accident. Only `publish: true` puts a
-  note on the site. `publish: false`, or no `publish` line at all, keeps it private. (To
-  take a page *back down* after it's been live, see **"Removing or hiding a page"** below.)
+  (Or `draft: true` — same effect.)
 
-  > ⚠️ **Don't confuse `publish:` with `published:`.** Some notes (especially saved web
-  > clippings) have a `published:` line — that's just a *date* the original was posted, and
-  > it does **nothing** to your site. The on/off switch is `publish:` (with no "ed"), set to
-  > `true` or `false`. It's often near the **bottom** of the note's settings block, so scroll
-  > the whole block, not just the top.
+> ⚠️ **Don't confuse `publish:` with `published:`.** Some notes (especially saved web
+> clippings) have a `published:` line — that's just a *date* the original was posted, and
+> it does **nothing** to your site. The on/off switch is `publish:` (with no "ed"), set to
+> `false` to hide a page. It's often near the **bottom** of the note's settings block,
+> so scroll the whole block, not just the top.
 
 ### 2. Preview it on your own computer (private)
 - **Double-click `Preview Website.command`** in this folder.
@@ -48,11 +62,31 @@ You don't need to know any code to use it. This guide explains everything in pla
 
 ## How publishing works (the short version)
 
-- [ ] When you double-click **Publish Changes**, your notes are sent to **GitHub** and GitHub then automatically rebuilds your site and puts the new version live. You don't manage any of that — it just happens.
+When you double-click **Publish Changes**, your notes are sent to **GitHub** and GitHub
+then automatically rebuilds your site and puts the new version live. You don't manage
+any of that — it just happens.
 
 You can watch a publish happen here (optional):
 **https://github.com/BarkernotBob/barkernotbob.github.io/actions** — a green
 check ✅ means it published successfully.
+
+---
+
+## Quickest way to publish a KnoxLox note
+
+Because KnoxLox (private) and Website (public) are separate vaults, copy in one drag:
+
+1. Open two Finder windows side by side:
+   - Left: the KnoxLox folder containing your note
+   - Right: `~/Sites/BarkernotBob.github.io/content/<section>` (e.g. `.../content/youtube/recommended`)
+2. Hold **Option (⌥)** and drag the `.md` file from the left window into the right. Option-drag = **copy**, so the original stays private in KnoxLox.
+3. Open the copied note in the **Website** vault (Obsidian) and review it — remove any private details.
+4. Double-click **Publish Changes.command**.
+
+> Tip: pin the section folders you use most (e.g. `youtube/recommended`, `notes`) to
+> Finder's sidebar Favorites so step 1 is instant.
+
+No Quartz Syncer needed — the drag is the sync step.
 
 ---
 
@@ -62,7 +96,7 @@ You do **not** have to delete a note to take it off the website. To hide a page 
 the note in your folder:
 
 1. Open the note in the **`content`** folder (the real note — see the warnings below).
-2. Change its switch to **`publish: false`** (or delete the `publish: true` line entirely).
+2. Add **`publish: false`** to its settings block (the lines between `---` at the top).
 3. **Double-click `Publish Changes.command`.**
 4. Wait **1–2 minutes**, then refresh the page. It's gone from the site; the note is still
    safe in your folder.
@@ -72,13 +106,11 @@ from the `content` folder and Publish.
 
 ### Three traps that make "it won't come down!" happen
 
-These are exactly the things that can make a removed page keep showing:
-
 1. **Edit the note in `content`, never in `public`.** The `public` folder is a throwaway
    copy the site rebuilds from scratch every time. Deleting something from `public` does
    nothing — it comes right back. The real note lives in `content`.
 2. **`publish:` not `published:`.** `published:` is a date and is ignored. The switch is
-   `publish: true` / `publish: false`. It's often the **last line** of the settings block.
+   `publish: false`. It's often the **last line** of the settings block.
 3. **It's not instant.** After you Publish, the site takes ~1–2 minutes to rebuild, and your
    browser may show the old copy for a few more minutes. Force a fresh load with
    **Command + Shift + R**, or open the page in a private/incognito window.
@@ -113,8 +145,8 @@ After editing it: **Preview** to check it looks right, then **Publish**.
 
 ## Editing the wording on your site (in Obsidian)
 
-All your words are plain text you edit in **Obsidian**. Open your vault (the `content`
-folder) in Obsidian, then:
+All your words are plain text you edit in **Obsidian**. Open your Website vault (the
+`content` folder) in Obsidian, then:
 
 **The homepage words** (headline, intro, the card text):
 1. Open the note named **`index`** (top level of `content`).
@@ -155,7 +187,6 @@ settings block of each page you want to place.
    ---
    title: BlockChain 3D
    order: 1
-   publish: true
    ---
    ```
    Then `order: 2` in `Hexchain`, and `order: 3` in `BallChain`.
@@ -175,19 +206,29 @@ settings block of each page you want to place.
 
 ---
 
-## Adding a video to Curated YouTube (in Obsidian)
+## Adding a video to Curated YouTube
 
-1. In Obsidian, open the **`youtube`** folder (inside `content`). The example note
-   **"The first-ever YouTube video"** shows the exact pattern.
+### Option A — Web Clipper (fastest)
+
+If you have the **Obsidian Web Clipper** browser extension set up:
+1. Make sure its vault is set to **Website** and the template path is `youtube/recommended`.
+2. Open the YouTube video in your browser → click the Web Clipper icon → clip it.
+3. The note lands in `content/youtube/recommended` automatically.
+4. Double-click **Publish Changes.command** — done.
+
+### Option B — by hand in Obsidian
+
+1. In Obsidian, open the Website vault and navigate to the **`youtube`** folder (inside
+   `content`). The example note **"The first-ever YouTube video"** shows the exact pattern.
 2. **Make a new note there** — easiest: right-click the example → **Make a copy**, then
-   rename it. (Copying means the embed code is already in place.)
+   rename it.
 3. Change the **`title:`** line at the top.
 4. **Get the video's ID:** on YouTube, open the video → **Share** → copy the link. The ID
    is the code after `watch?v=` (or after `youtu.be/`). In
    `youtube.com/watch?v=abc123XYZ`, the ID is `abc123XYZ`.
 5. In the note, replace the old ID in the embed line with yours (keep the rest):
    `<div class="video-embed"><iframe src="https://www.youtube.com/embed/PASTE_ID_HERE" title="My note" allowfullscreen></iframe></div>`
-6. Write your thoughts underneath in normal text. Make sure the top has `publish: true`.
+6. Write your thoughts underneath in normal text.
 7. Double-click **Publish Changes.command**.
 
 The video plays right on the page, with your note beneath it, and it auto-appears in the
@@ -233,8 +274,9 @@ The homepage has four cards (Games, Tools, Notes, Curated YouTube). To add anoth
   This usually means the same note got edited in two places. Nothing is lost. Ask Claude
   to help untangle it.
 - **The preview window shows red error text:** Copy the message and ask Claude.
-- **You don't see your note on the live site:** Check it has `publish: true` at the top
-  (see step 1), and that you ran **Publish Changes**.
+- **You don't see your note on the live site:** Check it doesn't have `publish: false` at
+  the top, and that you ran **Publish Changes**. Remember: everything in the Website vault
+  publishes automatically — you only need to hide things explicitly.
 
 ---
 
@@ -271,8 +313,6 @@ zero extra setup. (If you ever *don't* want a menu entry for one, delete the mat
 - "Git" / "GitHub" = the system that stores your files online and triggers the rebuild.
   The two `.command` files handle all the Git steps for you.
 - Your computer runs Node version 24 (the engine Quartz needs). It's already installed.
-- The engine files live in a folder named **`node_modules.nosync`**. The `.nosync`
-  ending tells iCloud to leave it completely alone — iCloud had been deleting parts of
-  it to "save space," which is what broke your preview. The `node_modules` you see is
-  just a shortcut pointing to that protected folder. If the shortcut ever breaks,
-  **Preview Website.command** rebuilds it automatically — you don't need to do anything.
+- The engine files live in a folder named **`node_modules.nosync`** with a `node_modules`
+  shortcut pointing to it. If the shortcut ever breaks, **Preview Website.command**
+  rebuilds it automatically — you don't need to do anything.

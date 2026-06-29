@@ -228,9 +228,18 @@
     .cal-partial { background: var(--warn-soft); } .cal-partial .cal-amt { color: var(--warn); }
     .cal-over { background: rgba(210,59,59,.12); } .cal-over .cal-amt { color: var(--danger); }
 
+    /* Today-view list rows — clickable rows highlight on hover/tap. */
+    .list-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); gap: 12px; font-size: 14px; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item.clickable { cursor: pointer; border-radius: var(--radius-sm); margin: 0 -8px; padding: 11px 8px; transition: background .12s; }
+    .list-item.clickable:hover { background: var(--accent-soft); }
+    /* Sticky back bar in the detail view — floats below the appbar+nav so it's always visible. */
+    .detail-back-bar { position: sticky; top: calc(var(--bar-h) + var(--safe-top) + var(--tab-h)); z-index: 99; padding: 8px 0 4px; background: var(--bg); }
     .checkbox { margin: 0; width: 18px; height: 18px; accent-color: var(--accent); flex: 0 0 auto; }
     .reminder-list { margin-top: 12px; }
     .reminder-item { background: var(--surface-2); padding: 11px 12px; border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13.5px; }
+    .reminder-item[data-mval] { cursor: pointer; }
+    .reminder-item[data-mval]:hover { background: var(--surface-3); }
     .reminder-date { color: var(--muted); font-size: 12px; }
     kbd { background: var(--surface-2); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
     .sc-table td { padding: 7px 8px; border: none; }
@@ -251,12 +260,13 @@
       .action-bar > button { width: 100%; }
       .filter-bar .search-input { min-width: 120px; }
       .chip { min-height: 44px; }   /* easy-tap filter segments */
-      /* Calendar: tighter cells; show a status dot instead of the (too-wide) amount. */
+      /* Calendar: tighter cells; show bar + dot, hide the money amount text. */
       .cal-nav { grid-template-columns: 44px 1fr 44px auto; gap: 6px; }
       .cal-grid { gap: 3px; }
-      .cal-cell { min-height: 46px; padding: 3px; border-radius: 6px; }
-      .cal-amt, .cal-bar { display: none; }
-      .cal-dot { display: block; width: 7px; height: 7px; border-radius: 50%; margin-top: 3px; }
+      .cal-cell { min-height: 54px; padding: 3px; border-radius: 6px; }
+      .cal-amt { display: none; }
+      .cal-bar { height: 4px; }
+      .cal-dot { display: block; width: 7px; height: 7px; border-radius: 50%; margin-top: 2px; }
       .cal-pay.cal-full .cal-dot { background: var(--open); }
       .cal-pay.cal-partial .cal-dot { background: var(--warn); }
       .cal-pay.cal-over .cal-dot { background: var(--danger); }
@@ -306,7 +316,7 @@ const OAUTH = {
 
 // Bump this on each deploy so the Settings footer shows which build is live —
 // lets you confirm a phone isn't serving a cached old copy.
-const BUILD = '2026-06-29 · r11';
+const BUILD = '2026-06-29 · r13';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -598,7 +608,7 @@ async function saveJson(path, value, message){
       DB[path] = {value, sha: res.content.sha};
       return;
     } catch(e) {
-      if(retries > 0 && e.message.includes('conflict')) {
+      if(retries > 0 && (e.message.includes('conflict') || e.message.includes('409'))) {
         const c = await ghContents(path);
         sha = c.sha;
       } else throw e;
@@ -760,7 +770,7 @@ function render_today(){
     if(toOpen.length) {
       html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';
       toOpen.forEach(a => {
-        html += `<div class="list-item"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div></div>`;
+        html += `<div class="list-item clickable" onclick="editAccount('${a.id}')"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -768,7 +778,7 @@ function render_today(){
     if(toClose.length) {
       html += '<div class="card"><div class="card-header">🔒 Accounts to Close</div>';
       toClose.forEach(a => {
-        html += `<div class="list-item"><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div>`;
+        html += `<div class="list-item clickable" onclick="editAccount('${a.id}')"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -776,7 +786,7 @@ function render_today(){
     if(reminders.length) {
       html += '<div class="card"><div class="card-header">⏰ Reminders</div>';
       reminders.forEach(r => {
-        html += `<div class="list-item"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><button class="sec" onclick="markReminderDone('${esc(r.accountId)}','${esc(r.id)}')">Done</button></div>`;
+        html += `<div class="list-item clickable" onclick="editAccount('${esc(r.accountId)}')"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" onclick="event.stopPropagation();markReminderDone('${esc(r.accountId)}','${esc(r.id)}')">Done</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
       });
       html += '</div>';
     }
@@ -784,7 +794,7 @@ function render_today(){
     if(ddCleared.length) {
       html += '<div class="card"><div class="card-header">✅ First DD Cleared (Yesterday)</div>';
       ddCleared.forEach(a => {
-        html += `<div class="list-item"><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div>`;
+        html += `<div class="list-item clickable" onclick="editAccount('${a.id}')"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -816,22 +826,28 @@ async function markReminderDone(accountId, reminderId){
 }
 
 // Per-tab browse filters (person + free-text search).
-const acctFilter = { active: {person:'all', q:''}, planned: {person:'all', q:''} };
+const acctFilter = { active: {person:'all', q:'', status:'open'}, planned: {person:'all', q:''} };
 
 function filterBarHTML(tab){
   const f = acctFilter[tab];
-  const chips = ['all', ...(config.people || [])].map(p =>
+  const personChips = ['all', ...(config.people || [])].map(p =>
     `<button class="chip ${f.person===p?'active':''}" onclick="setPersonFilter('${tab}','${esc(p)}')">${p==='all'?'Everyone':esc(p)}</button>`).join('');
   const addLabel = tab==='active' ? '+ Add Account' : '+ Add Planned';
   const addStatus = tab==='active' ? 'open' : 'planned';
+  const statusChips = tab === 'active' ? `<div class="chips">
+      <button class="chip ${(f.status||'open')==='open'?'active':''}" onclick="setStatusFilter('open')">Open</button>
+      <button class="chip ${(f.status||'open')==='closed'?'active':''}" onclick="setStatusFilter('closed')">Closed</button>
+    </div>` : '';
   return `<div class="filter-bar">
-      <div class="chips">${chips}</div>
+      ${statusChips}
+      <div class="chips">${personChips}</div>
       <input class="search-input" type="search" placeholder="Search institution… ( / )" value="${esc(f.q)}"
         oninput="setSearchFilter('${tab}', this.value)">
       <button onclick="addAccount('${addStatus}')">${addLabel}</button>
     </div>`;
 }
 function setPersonFilter(tab, person){ acctFilter[tab].person = person; window['render_'+tab](); }
+function setStatusFilter(status){ acctFilter.active.status = status; render_active(); }
 function setSearchFilter(tab, q){
   acctFilter[tab].q = q;
   const ql = q.trim().toLowerCase();
@@ -843,27 +859,45 @@ function matchPerson(tab, a){ const p = acctFilter[tab].person; return p==='all'
 
 function render_active(){
   const section = $('#section-active');
-  const active = accounts.filter(a => a.status === 'open' && matchPerson('active', a));
+  const sf = acctFilter.active.status || 'open';
+  const visible = accounts.filter(a => a.status === sf && matchPerson('active', a));
 
-  if(accounts.filter(a => a.status === 'open').length === 0){
-    section.innerHTML = `<div class="empty">No active accounts yet.
-      <div class="empty-cta"><button onclick="addAccount('open')">+ Add Account</button></div></div>`;
+  if(accounts.filter(a => a.status === sf).length === 0){
+    const emptyMsg = sf === 'closed' ? 'No closed accounts yet.' : 'No active accounts yet.';
+    const cta = sf === 'closed' ? '' : `<div class="empty-cta"><button onclick="addAccount('open')">+ Add Account</button></div>`;
+    section.innerHTML = `<div class="empty">${emptyMsg}${cta}</div>`;
     return;
   }
 
   let html = filterBarHTML('active');
-  active.forEach(a => {
-    html += `<div class="card clickable st-open" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
-      <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('open')}</div>
-      <div class="row">
-        <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
-        <div class="row-item"><div class="label">DD Total</div><div class="value money">${money(a.directDepositTotal)}</div></div>
-        <div class="row-item"><div class="label">Opened</div><input type="date" class="date-quick" value="${esc(a.dates.opened||'')}" title="Opened date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','opened',this.value)"></div>
-        <div class="row-item"><div class="label">First DD</div><input type="date" class="date-quick" value="${esc(a.dates.firstDD||'')}" title="First DD date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','firstDD',this.value)"></div>
-      </div>
-    </div>`;
-  });
-  if(active.length === 0) html += `<div class="empty">No matches for this filter.</div>`;
+
+  if(sf === 'closed'){
+    visible.forEach(a => {
+      html += `<div class="card clickable st-closed" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
+        <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('closed')}</div>
+        <div class="row">
+          <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
+          <div class="row-item"><div class="label">Opened</div><div class="value">${fmtDate(a.dates.opened)||'—'}</div></div>
+          <div class="row-item"><div class="label">Closed</div><div class="value">${fmtDate(a.dates.closed)||'—'}</div></div>
+          <div class="row-item"><div class="label">Bonus Paid</div><div class="value">${fmtDate(a.dates.bonusPaidOut)||'—'}</div></div>
+        </div>
+      </div>`;
+    });
+  } else {
+    visible.forEach(a => {
+      html += `<div class="card clickable st-open" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
+        <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('open')}</div>
+        <div class="row">
+          <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
+          <div class="row-item"><div class="label">DD Total</div><div class="value money">${money(a.directDepositTotal)}</div></div>
+          <div class="row-item"><div class="label">Opened</div><input type="date" class="date-quick" value="${esc(a.dates.opened||'')}" title="Opened date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','opened',this.value)"></div>
+          <div class="row-item"><div class="label">First DD</div><input type="date" class="date-quick" value="${esc(a.dates.firstDD||'')}" title="First DD date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','firstDD',this.value)"></div>
+        </div>
+      </div>`;
+    });
+  }
+
+  if(visible.length === 0) html += `<div class="empty">No matches for this filter.</div>`;
   section.innerHTML = html;
   setSearchFilter('active', acctFilter.active.q);
 }
@@ -880,16 +914,16 @@ function render_planned(){
 
   let html = filterBarHTML('planned');
   planned.forEach(a => {
-    html += `<div class="card st-planned" data-inst="${esc((a.institution||'').toLowerCase())}">
+    html += `<div class="card st-planned clickable" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
       <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('planned')}</div>
       <div class="row">
         <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
         <div class="row-item"><div class="label">DD Req</div><div class="value money">${money(a.directDepositTotal)}</div></div>
-        <div class="row-item"><div class="label">Planned Open</div><input type="date" class="date-quick" value="${esc(a.dates.plannedOpen||'')}" title="Planned open date" onchange="quickUpdateDate('${a.id}','plannedOpen',this.value)"></div>
+        <div class="row-item"><div class="label">Planned Open</div><input type="date" class="date-quick" value="${esc(a.dates.plannedOpen||'')}" title="Planned open date" onclick="event.stopPropagation()" onchange="event.stopPropagation();quickUpdateDate('${a.id}','plannedOpen',this.value)"></div>
       </div>
       <div class="action-bar" style="margin-top:0">
-        <button onclick="openPlanned('${a.id}')">Mark as opened</button>
-        <button class="sec" onclick="editAccount('${a.id}')">Edit</button>
+        <button onclick="event.stopPropagation();openPlanned('${a.id}')">Mark as opened</button>
+        <button class="sec" onclick="event.stopPropagation();editAccount('${a.id}')">Edit</button>
       </div>
     </div>`;
   });
@@ -1104,6 +1138,8 @@ async function promoteOffer(offerId, toStatus){
 }
 
 async function deleteOffer(offerId){
+  const offer = offers.find(o => o.id === offerId);
+  if(!await confirmModal(`Delete "${offer ? offer.institution : 'this offer'}"? This cannot be undone.`, 'Delete', true)) return;
   offers = offers.filter(o => o.id !== offerId);
   await saveOffers('Delete offer');
   render_offers();
@@ -1204,11 +1240,11 @@ async function calDay(iso){
   } else {
     body += '<div class="reminder-list" style="margin:0 0 14px">';
     items.sort((a,b) => b.amount - a.amount).forEach(x => {
-      body += `<div class="reminder-item">
+      body += `<div class="reminder-item" data-mval="goto_${x.id}">
         <div style="display:flex;align-items:center;gap:8px">${personChip(x.person)} <strong>${esc(x.inst)}</strong></div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="value money">${money(x.amount)}</span>
-          <button class="sec small" data-mval="goto_${x.id}">View →</button>
+          <span style="color:var(--faint);font-size:18px">›</span>
         </div>
       </div>`;
     });
@@ -1745,12 +1781,19 @@ function render_detail(){
   const mon = (id, label, val) =>
     `<div class="row-item"><div class="label">${label}</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="${id}" value="${fmtMoneyInput(val)}" onblur="reformatMoney(this)"></div></div>`;
 
-  const backLabel = (lastTab === 'calendar' || calReturnMonth) ? '← Calendar' : '← Back';
+  let backLabel = '← Back';
+  if(calReturnMonth) backLabel = '← Calendar';
+  else if(lastTab === 'calendar') backLabel = '← Calendar';
+  else if(lastTab === 'today') backLabel = '← Today';
+  else if(lastTab === 'active') backLabel = '← Active';
+  else if(lastTab === 'planned') backLabel = '← Planned';
   const backFn = calReturnMonth ? 'backToCalendar()' : 'backFromDetail()';
 
   let html = `
+    <div class="detail-back-bar">
+      <button class="sec" onclick="${backFn}">${backLabel}</button>
+    </div>
     <div class="card">
-      <button class="sec" onclick="${backFn}" style="margin-bottom:12px">${backLabel}</button>
       <div class="row">${txt('d_institution','Institution', a.institution)}
         <div class="row-item"><div class="label">Person</div><select id="d_person">${peopleOpts}</select></div>
         <div class="row-item"><div class="label">Status</div><select id="d_status" onchange="onStatusSelectChange(this)">${statusOpts}</select></div>

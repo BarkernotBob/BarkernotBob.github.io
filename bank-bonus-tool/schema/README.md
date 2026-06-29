@@ -16,8 +16,8 @@ You normally never edit these by hand. The app keeps them up to date. This folde
 
 ### `config.json` — global settings
 
-- `owner` — your name (e.g., `Isaiah`)
-- `people` — list of valid person names for labeling accounts (e.g., `["Isaiah", "Grace", "Business"]`)
+- `owner` — your name (e.g., `Me`)
+- `people` — list of valid person names for labeling accounts (e.g., `["Me", "Partner", "Business"]`)
 - `paycheck.amount` — your paycheck total in dollars
 - `paycheck.firstDate` — the first paycheck date (ISO format: `YYYY-MM-DD`)
 - `paycheck.intervalDays` — days between paychecks (e.g., `14` for biweekly)

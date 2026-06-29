@@ -1,189 +1,107 @@
-# Setup: Bank Bonus Tracker — Live Data Integration
+# Setup: Bank Bonus Tracker
 
-**You're ~15 minutes away from a live, working app.** I've prepared all the data files. You only need to:
+## The 10-second version
 
-1. Create one private GitHub repo
-2. Generate a token
-3. Paste three JSON files and one workflow file
-4. Tell the app where your data lives
+**Just open the app.** It works immediately — no account, no sign-in, no setup. It opens
+preloaded with a catalog of bank offers so you have something to work from right away.
 
-That's it. **Estimated time: 12 minutes.** Do NOT do these steps until you have the data files ready — I'll prepare them after this guide.
-
----
-
-## ⭐ Easiest sign-in: "Sign in with GitHub" (shared with your Pool app)
-
-The bank app now has a **🔐 Sign in with GitHub** button — the **same** sign-in your
-**Pool** app already uses. With it you can **skip the token step (Step 2)** entirely:
-no key to copy, nothing new to set up in Cloudflare.
-
-There's just **one** small one-time thing so GitHub allows that sign-in to work on the
-bank (and grocery) pages too:
-
-1. Go to **https://github.com/settings/developers** → **OAuth Apps** → open the app
-   you made for Pool (named **Pool Care**).
-2. Find **Authorization callback URL** (currently `https://barkernotbob.github.io/static/pool/`).
-3. Change it to the parent folder: **`https://barkernotbob.github.io/static/`**
-   *(delete `pool/`, keep the trailing slash)* → **Update application.**
-
-Pool keeps working as before; now Grocery and Bank share the same one-tap sign-in.
-(The Client ID and Worker URL are already baked into the app — they're public, not
-secrets.) Then do **Step 1**, skip Step 2, and in **Step 7** tap **Sign in with
-GitHub** instead of pasting a token.
+Everything you do is saved automatically in your browser, on this device. That's it for
+the basics. The rest of this page is optional.
 
 ---
 
-## Step 1️⃣: Create Private Repo
+## Using it day to day
 
-**On GitHub.com:**
+1. **Offers tab** 📋 — the preloaded catalog of bank bonuses. Tap **Move to Planned** (you
+   intend to open it) or **Open now** (you opened it today) on any bank to start tracking it.
+2. **Active tab** 📂 — your open accounts, each on its own screen. Fill in dates, set up DD,
+   tick off requirements.
+3. **Planned tab** 🗒 — accounts you plan to open, with a target open date.
+4. **Calendar tab** 📅 — schedule direct deposits across paydays (use **⚡ Auto-suggest**).
+5. **Reports tab** 📊 — bonuses earned/pending, ROI, effective APY, churn schedule.
+6. **Settings tab** ⚙️ — add the **People** you track, set your **paycheck schedule**, and
+   **back up** your data.
+
+> ⚠️ **Back up your data.** Because the default storage is your browser, clearing your
+> browser history/cache erases it. In **Settings → Your data & sync**, tap **Export
+> backup** now and then to download a `bank-bonus-backup.json` you can re-import anytime
+> (or move to another device). Or turn on sync (below), which keeps a copy in your repo.
+
+---
+
+## Optional: sync across devices with GitHub
+
+Want the same data on your phone *and* laptop? Connect your own private GitHub repository.
+You do this **once per device**, and that device stays connected from then on. Your token
+is stored only in your browser and talks directly to GitHub — there is no shared server
+and no one else can see it.
+
+**Estimated time: ~10 minutes the first time, ~1 minute on each additional device.**
+
+### Step 1️⃣: Create a free GitHub account *(skip if you have one)*
+
+Go to https://github.com/signup and follow the prompts. ("GitHub" is a free site that can
+store your data file privately.)
+
+### Step 2️⃣: Create your private data repo
 
 1. Go to https://github.com/new
 2. **Repository name:** `bank-bonus-data`
-3. **Description:** "Private data for Bank Bonus Tracker" (optional)
-4. **Private:** ✅ Check this (required)
-5. **Initialize with:** Leave unchecked
-6. Click **Create repository**
+3. **Private:** ✅ (required — this keeps your data private)
+4. Leave "Initialize this repository" unchecked.
+5. Click **Create repository**. (A "repo" is just a private folder GitHub stores for you.)
 
-**Done.** You now have an empty private repo.
+### Step 3️⃣: Make a token scoped to *only* that repo
 
----
+1. Go to https://github.com/settings/personal-access-tokens/new (Fine-grained token)
+2. **Token name:** `bank-bonus-app`
+3. **Expiration:** **No expiration** (so you never have to redo this on this device)
+4. **Repository access:** **Only select repositories** → choose **`bank-bonus-data`**
+5. **Permissions → Repository permissions → Contents:** **Read and write**
+6. Click **Generate token**, then **copy it** (you only see it once).
 
-## Step 2️⃣: Generate GitHub Token *(skip if using Sign in with GitHub)*
+This token can touch *only* your `bank-bonus-data` repo and nothing else in your account.
 
-> ⭐ If you did the one-time tweak above and plan to use the **🔐 Sign in with GitHub**
-> button in Step 7, you can **skip this whole step** — there's no token to make. This
-> step is only for the manual fallback.
+### Step 4️⃣: Connect the app
 
-This lets the app read/write your private data without storing your password.
+1. Open the app → **Settings** ⚙️ → **Your data & sync**.
+2. Expand **☁️ Sync across devices with GitHub (optional)**.
+3. **Data repo:** `your-username/bank-bonus-data`
+4. **GitHub token:** paste the token from Step 3.
+5. Tap **Connect & sync**.
 
-**On GitHub.com:**
+The app validates the token, then:
+- If your repo is **empty**, it uploads the data already on this device.
+- If your repo **already has data** (e.g. you synced from another device), it loads that.
 
-1. Go to https://github.com/settings/tokens
-2. Click **Generate new token (classic)**
-3. **Token name:** `bank-bonus-app`
-4. **Expiration:** 90 days (or longer)
-5. **Scopes:** Check only `repo`
-6. Click **Generate token**
-7. **Copy the token** (you can only see it once)
+From now on every change saves to your repo. On a second device, just repeat Step 4 with
+the same repo + a token, and your data appears.
 
-**Save it somewhere safe.** You'll need it in Step 5.
-
----
-
-## Step 3️⃣: Upload `db/config.json`
-
-I've pre-configured this with your paycheck ($1,930), timezone (America/New_York), and email. Don't edit it.
-
-**On GitHub (in bank-bonus-data):**
-
-1. Click **Add file → Create new file**
-2. **Filename:** `db/config.json`
-3. **Content:** I'll provide this below
-4. Click **Commit changes**
+> To stop syncing on a device, use **Disconnect** in Settings. Your repo keeps its data;
+> the device switches back to its own local copy.
 
 ---
 
-## Step 4️⃣: Upload `db/accounts.json`
+## Optional: daily email reminders
 
-Your 48 migrated accounts with all dates, bonuses, reminders, and task flags.
-
-**On GitHub:**
-
-1. Click **Add file → Create new file**
-2. **Filename:** `db/accounts.json`
-3. **Content:** I'll provide this below (file is large, ~50KB)
-4. Click **Commit changes**
-
----
-
-## Step 5️⃣: Upload `db/offers.json`
-
-Empty backlog, ready for future research.
-
-**On GitHub:**
-
-1. Click **Add file → Create new file**
-2. **Filename:** `db/offers.json`
-3. **Content:** `[]`
-4. Click **Commit changes**
-
----
-
-## Step 6️⃣: Upload Daily Email Workflow (Optional for now)
-
-This sends a morning summary only when there's something to do. You can skip this and add it later.
-
-**If you want daily emails:**
-
-1. Click **Add file → Create new file**
-2. **Filename:** `.github/workflows/daily-email.yml`
-3. **Content:** I'll provide this below
-4. Click **Commit changes**
-
-**Then set three secrets** (repo Settings → Secrets and variables → Actions):
-- `MAIL_USERNAME`: `isaiahmail97@gmail.com`
-- `MAIL_PASSWORD`: [your Gmail app password](https://myaccount.google.com/apppasswords)
-- `MAIL_TO`: `isaiahmail97@gmail.com`
-
----
-
-## Step 7️⃣: Connect App to Your Repo
-
-**In a browser:**
-
-1. Open the app: `http://localhost:8080/static/bank-bonus/` (or your live URL)
-2. Click **Settings** ⚙️ (bottom nav)
-3. **Easiest:** under **GitHub Configuration**, tap **🔐 Sign in with GitHub** →
-   approve on GitHub → you come right back, signed in. Pick **Your Name** (Isaiah)
-   and you're done — your accounts load automatically.
-4. *(Fallback only)* Prefer a token? Open **"Advanced: paste a token instead"**, enter:
-   - **Data Repo:** `yourusername/bank-bonus-data`
-   - **GitHub Token:** Paste the token from Step 2
-
-   then click **Save Settings**.
-
-The app will test the connection. If successful, you'll see a message and your 48 accounts will load.
-
----
-
-## Step 8️⃣: Quick Test
-
-Try these flows to make sure everything works:
-
-- **Active tab** 📂 → Click an account (e.g., Upgrade, Truist) → Verify fields load
-- **Planned tab** 🗒 → Click a planned account (e.g., Key Bank) → Verify no opened date
-- **Calendar tab** 📅 → Pick an open account → Click "Auto-suggest" → Should populate DD-plan
-- **Reports tab** 📊 → Scroll down → Verify your 48 accounts are listed with APY values
-
-If everything loads, **you're live.** ✅
-
----
-
-## Data Files
-
-I'll generate these files in a separate message. Copy each one and paste into GitHub as instructed above.
-
-The files are:
-1. `db/config.json` — your settings (paycheck, tax rate, timezone, email)
-2. `db/accounts.json` — your 48 accounts (migrated from the spreadsheet)
-3. `db/offers.json` — empty backlog
-4. `.github/workflows/daily-email.yml` — optional daily summary (do later if you prefer)
+Once GitHub sync is on, you can get a morning email when there's something to do (open or
+close an account, a reminder due, a DD cleared) — sent by a free GitHub Action in your
+data repo. See [`automation/README.md`](./automation/README.md) for the 5-minute install.
 
 ---
 
 ## Troubleshooting
 
-**"Settings saved but no data loaded"**
-- Check repo name spelling: `yourusername/bank-bonus-data`
-- Verify token in browser DevTools (F12 → Application → localStorage) shows the token you pasted
-- Check that files exist in repo: `db/config.json`, `db/accounts.json`, `db/offers.json`
+**"Could not connect" when turning on sync**
+- Repo must be typed as `your-username/bank-bonus-data`.
+- The token must have **Contents: Read and write** on that repo (Step 3).
+- Make sure the repo exists and is spelled exactly.
 
-**"Token error / 401"**
-- Token may have expired or been revoked. Generate a new one (Step 2) and re-enter it in Settings.
+**My data disappeared**
+- If you were local-only and cleared your browser, local data is gone — restore from an
+  **Export backup** file, or going forward turn on sync. If you were synced, reconnect in
+  Settings (your data is safe in your repo).
 
-**"Accounts show as 'Inactive'"**
-- This is normal for old closed accounts. They're archived but still tracked.
-
----
-
-**Ready?** Once you confirm, I'll provide the three JSON files to copy-paste.
+**Accounts show as "Closed"**
+- That's normal for old accounts you've closed. They're archived but still counted in
+  Reports.

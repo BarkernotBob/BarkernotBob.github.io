@@ -1,9 +1,9 @@
 {
-  "owner": "Isaiah",
-  "people": ["Isaiah", "Grace", "Business"],
+  "owner": "Me",
+  "people": ["Me", "Partner", "Business"],
   "paycheck": {
-    "amount": 1930.00,
-    "firstDate": "2024-12-27",
+    "amount": 2000.00,
+    "firstDate": "2025-01-03",
     "intervalDays": 14,
     "ddClearDays": 21
   },
@@ -17,7 +17,7 @@
   },
   "notify": [
     {
-      "email": "isaiahmail97@gmail.com",
+      "email": "you@example.com",
       "enabled": true
     }
   ],

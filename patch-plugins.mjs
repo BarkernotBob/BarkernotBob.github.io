@@ -22,16 +22,17 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
 
 const MARKER = "/* order-frontmatter patch */"
+const PUBLISH_MARKER = "/* publish-by-default patch */"
 let patched = 0
 let skipped = 0
 
-function patchFile(path, transform) {
+function patchFile(path, transform, marker = MARKER) {
   if (!existsSync(path)) {
     console.warn(`  ⚠ not found (skipped): ${path}`)
     return
   }
   const src = readFileSync(path, "utf8")
-  if (src.includes(MARKER)) {
+  if (src.includes(marker)) {
     skipped++
     return
   }
@@ -87,5 +88,28 @@ patchFile(contentIndexFile, (src) => {
       `description: data.description ?? "", ${MARKER} order: typeof ${fm}.order === "number" ? ${fm}.order : void 0\n${indent}});`,
   )
 })
+
+// --- 3. explicit-publish: honor publishByDefault option ---
+// The plugin as shipped ignores the publishByDefault option entirely — it only publishes
+// notes with an explicit publish:true. This patch makes it:
+//   - hide anything with publish:false or draft:true
+//   - publish everything else when publishByDefault is true (set in quartz.config.default.yaml)
+//   - fall back to requiring publish:true when publishByDefault is false/absent
+const explicitPublishFile = ".quartz/plugins/explicit-publish/dist/index.js"
+patchFile(explicitPublishFile, (src) => {
+  // Accept opts so the outer function receives the plugin options from quartz config
+  const withOpts = src.replace("() => ({", "(opts) => ({")
+  if (withOpts === src) return null
+  // Replace the shouldPublish body
+  const oldReturn = "return frontmatter?.publish === true || frontmatter?.publish === \"true\";"
+  const newReturn =
+    `${PUBLISH_MARKER}\n` +
+    `    if (frontmatter?.publish === false || frontmatter?.publish === "false") return false;\n` +
+    `    if (frontmatter?.draft === true || frontmatter?.draft === "true") return false;\n` +
+    `    if (opts?.publishByDefault) return true;\n` +
+    `    return frontmatter?.publish === true || frontmatter?.publish === "true";`
+  if (!withOpts.includes(oldReturn)) return null
+  return withOpts.replace(oldReturn, newReturn)
+}, PUBLISH_MARKER)
 
 console.log(`order-frontmatter patch: ${patched} file(s) patched, ${skipped} already current.`)

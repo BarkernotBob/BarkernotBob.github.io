@@ -60,6 +60,8 @@
   .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
   .muted{color:var(--muted)}
   label.fld{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); min-width:130px}
+  .ewrap{display:block}
+  .ewrap select,.ewrap input{width:100%}
   .btn{background:var(--accent); color:#06231d; border:none; border-radius:8px; padding:11px 16px; font-weight:700; cursor:pointer; min-height:44px}
   .btn.secondary{background:var(--chip); color:var(--txt); border:1px solid var(--line)}
   .btn.small{padding:7px 12px; min-height:auto; font-size:13px}
@@ -221,21 +223,23 @@
   <section id="tab-enter" class="hide">
     <div class="panel">
       <h2>Enter a game</h2>
-      <p class="muted small">2-on-2, first to 7. Pick the four players and the two scores. It’s saved to today’s date.</p>
+      <p class="muted small">2-on-2, first to 7. Pick the four players and the two scores (0–7). It’s saved to today’s date. You can add another game right away — saving happens in the background.</p>
       <div id="enterMsg"></div>
+
+      <datalist id="playerList"></datalist>
 
       <h3>Open side</h3>
       <div class="row">
-        <label class="fld">Player 1<select class="pSel" id="o1"></select></label>
-        <label class="fld">Player 2<select class="pSel" id="o2"></select></label>
-        <label class="fld">Open score<input type="number" id="oScore" min="0" max="30" inputmode="numeric" value="7"/></label>
+        <label class="fld">Player 1<span class="ewrap" id="wrap-o1"></span></label>
+        <label class="fld">Player 2<span class="ewrap" id="wrap-o2"></span></label>
+        <label class="fld">Open score<span class="ewrap" id="wrap-oScore"></span></label>
       </div>
 
       <h3>Wall side</h3>
       <div class="row">
-        <label class="fld">Player 1<select class="pSel" id="w1"></select></label>
-        <label class="fld">Player 2<select class="pSel" id="w2"></select></label>
-        <label class="fld">Wall score<input type="number" id="wScore" min="0" max="30" inputmode="numeric" value="5"/></label>
+        <label class="fld">Player 1<span class="ewrap" id="wrap-w1"></span></label>
+        <label class="fld">Player 2<span class="ewrap" id="wrap-w2"></span></label>
+        <label class="fld">Wall score<span class="ewrap" id="wrap-wScore"></span></label>
       </div>
 
       <div class="row" style="margin-top:14px">
@@ -261,9 +265,15 @@
 const LS_PASS  = "tb_passcode";
 const LS_CACHE = "tb_cache";
 const LS_URL   = "tb_backend_url"; // optional override for testing
+const LS_TAB   = "tb_tab";          // remembers which tab you were on across reloads
 let GAMES = [];
 let PLAYERS = [];
 let CHARTS = {};
+let currentTab = "overview";
+let lastSig = null;       // signature of the games currently rendered (skip redundant re-renders)
+let autoTimer = null;     // 60s auto-refresh timer
+// Phones/tablets get native dropdowns; computers get type-to-autocomplete name fields.
+const COARSE = !!(window.matchMedia && window.matchMedia("(pointer:coarse)").matches);
 
 function backendUrl(){ return localStorage.getItem(LS_URL) || APPS_SCRIPT_URL; }
 function isConfigured(){ const u=backendUrl(); return u && u.indexOf("PASTE_YOUR")===-1 && /^https?:\/\//.test(u); }
@@ -300,10 +310,19 @@ function hideGate(){ $("#gate").classList.add("hide"); $("#appHeader").classList
 
 function startApp(pass){
   hideGate();
+  setTab(localStorage.getItem(LS_TAB)||"overview");
   const cached=readCache();
-  if(cached && cached.length){ applyGames(cached); afterData(); setStale("Refreshing…"); }
+  if(cached && cached.length){ lastSig=gamesSig(cached); applyGames(cached); afterData(); setStale("Refreshing…"); }
   else { $("#loading").classList.remove("hide"); }
   refresh(pass);
+  startAutoRefresh();
+}
+
+function gamesSig(compact){ if(!compact||!compact.length) return "0"; return compact.length+"|"+JSON.stringify(compact[compact.length-1]); }
+
+function startAutoRefresh(){
+  if(autoTimer) return;
+  autoTimer=setInterval(()=>{ const p=localStorage.getItem(LS_PASS); if(p && document.visibilityState!=="hidden") refresh(p); },60000);
 }
 
 async function fetchGames(pass){
@@ -318,8 +337,10 @@ async function refresh(pass){
     if(!data || !data.ok) throw new Error((data&&data.error)||"server error");
     localStorage.setItem(LS_PASS,pass);
     writeCache(data.games);
-    applyGames(data.games);
-    afterData(); clearStale();
+    const sig=gamesSig(data.games);
+    if(sig!==lastSig){ lastSig=sig; applyGames(data.games); afterData(); }
+    else { $("#loading").classList.add("hide"); }
+    clearStale();
   }catch(err){
     if(GAMES.length){ setStale("Saved data — couldn’t reach the sheet"); }
     else { $("#loading").classList.add("hide"); showErr("Couldn’t load data: "+err.message+". Make sure the Apps Script is deployed with access “Anyone”."); }
@@ -327,7 +348,8 @@ async function refresh(pass){
 }
 function afterData(){
   $("#loading").classList.add("hide");
-  $("#scopeBar").classList.remove("hide");
+  buildEntryForm();
+  $("#scopeBar").classList.toggle("hide", currentTab==="enter" || !GAMES.length);
   $("#gameCount").textContent=GAMES.length+" games on record";
   renderAll();
 }
@@ -348,7 +370,7 @@ function applyGames(compact){
   })).filter(g=> g.openTeam.length===2 && g.wallTeam.length===2 && !isNaN(g.openScore) && !isNaN(g.wallScore));
   GAMES.sort((a,b)=> (a.date?+a.date:0) - (b.date?+b.date:0));
   PLAYERS = collectPlayers(GAMES);
-  fillPlayerSelects();
+  updateEntryOptions();
 }
 function collectPlayers(games){
   const s=new Set(); games.forEach(g=>{ g.openTeam.forEach(p=>s.add(p)); g.wallTeam.forEach(p=>s.add(p)); });
@@ -555,45 +577,109 @@ function renderRecent(){
 }
 
 // ───────────────────────── enter game ─────────────────────────
-function fillPlayerSelects(){
-  const opts=`<option value="">—</option>`+PLAYERS.map(p=>`<option>${p}</option>`).join("")+`<option value="__new">➕ Add new player…</option>`;
-  $$(".pSel").forEach(sel=>{const cur=sel.value; sel.innerHTML=opts; sel.value=cur;});
-  $$(".pSel").forEach(sel=>sel.onchange=()=>{ if(sel.value==="__new"){ const name=(prompt("New player name?")||"").trim(); if(name){ if(!PLAYERS.includes(name)){PLAYERS.push(name);PLAYERS.sort((a,b)=>a.localeCompare(b));} fillPlayerSelects(); sel.value=name; } else sel.value=""; } });
+const NAME_FIELDS=["o1","o2","w1","w2"];
+let entryBuilt=false;
+
+// Build the four name fields + two score fields once. On phones/tablets every
+// field is a native dropdown; on computers the name fields are type-to-search
+// inputs (real autocomplete + keyboard nav). Scores are always a 0–7 dropdown.
+function buildEntryForm(){
+  if(entryBuilt){ updateEntryOptions(); return; }
+  NAME_FIELDS.forEach(id=>{
+    const w=$("#wrap-"+id); if(!w) return;
+    w.innerHTML = COARSE
+      ? `<select id="${id}" class="pName"></select>`
+      : `<input id="${id}" class="pName" list="playerList" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="type a name" />`;
+  });
+  [["oScore","7"],["wScore",""]].forEach(([id,def])=>{
+    const w=$("#wrap-"+id); if(!w) return;
+    let o=`<option value="">–</option>`; for(let i=0;i<=7;i++) o+=`<option${String(i)===def?" selected":""}>${i}</option>`;
+    w.innerHTML=`<select id="${id}" class="sSel">${o}</select>`;
+  });
+  if(COARSE) NAME_FIELDS.forEach(id=>{ const s=$("#"+id); if(s) s.addEventListener("change",()=>onNewPlayerSelect(s)); });
+  // keyboard: Enter on the last score submits the game (desktop convenience)
+  $("#wScore").addEventListener("keydown",e=>{ if(e.key==="Enter") submitGame(); });
+  entryBuilt=true;
+  updateEntryOptions();
 }
-async function submitGame(){
-  const msg=$("#enterMsg"); msg.innerHTML="";
-  const open=[$("#o1").value,$("#o2").value].filter(Boolean), wall=[$("#w1").value,$("#w2").value].filter(Boolean);
+
+// Refresh the name option lists without disturbing anything the user has
+// already typed/picked (so a background refresh never wipes an in-progress entry).
+function updateEntryOptions(){
+  if(!entryBuilt) return;
+  const dl=$("#playerList");
+  if(dl) dl.innerHTML=PLAYERS.map(p=>`<option value="${esc(p)}">`).join("");
+  if(COARSE){
+    const opts=`<option value="">–</option>`+PLAYERS.map(p=>`<option>${esc(p)}</option>`).join("")+`<option value="__new">➕ Add new player…</option>`;
+    NAME_FIELDS.forEach(id=>{ const sel=$("#"+id); if(!sel) return; const cur=sel.value; sel.innerHTML=opts; sel.value=cur; });
+  }
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function onNewPlayerSelect(sel){
+  if(sel.value!=="__new") return;
+  const name=(prompt("New player name?")||"").trim();
+  if(name){ if(!PLAYERS.some(p=>p.toLowerCase()===name.toLowerCase())){ PLAYERS.push(name); PLAYERS.sort((a,b)=>a.localeCompare(b)); } updateEntryOptions(); sel.value=canonPlayer(name); }
+  else sel.value="";
+}
+// Match a typed name to an existing player case-insensitively (avoids "logan" vs "Logan").
+function canonPlayer(name){ const t=String(name||"").trim(); return PLAYERS.find(p=>p.toLowerCase()===t.toLowerCase())||t; }
+
+function resetEntryForm(){
+  NAME_FIELDS.forEach(id=>{ const el=$("#"+id); if(el) el.value=""; });
+  const os=$("#oScore"); if(os) os.value="7";
+  const ws=$("#wScore"); if(ws) ws.value="";
+  const first=$("#o1"); if(first) first.focus();
+}
+
+function submitGame(){
+  const msg=$("#enterMsg");
+  const open=[canonPlayer($("#o1").value),canonPlayer($("#o2").value)].filter(Boolean);
+  const wall=[canonPlayer($("#w1").value),canonPlayer($("#w2").value)].filter(Boolean);
   const oS=$("#oScore").value, wS=$("#wScore").value;
   if(open.length!==2||wall.length!==2) return note(msg,"Pick two players on each side.",true);
-  if(new Set([...open,...wall]).size!==4) return note(msg,"A player can’t appear twice.",true);
-  if(oS===""||wS==="") return note(msg,"Enter both scores.",true);
+  if(new Set([...open,...wall].map(x=>x.toLowerCase())).size!==4) return note(msg,"A player can’t appear twice.",true);
+  if(oS===""||wS==="") return note(msg,"Pick both scores.",true);
   if(Number(oS)===Number(wS)) return note(msg,"Scores can’t be tied.",true);
   const pass=localStorage.getItem(LS_PASS);
   if(!pass){ showGate(); return; }
 
-  const btn=$("#submitGame"); btn.disabled=true; btn.textContent="Adding…";
+  const payload={passcode:pass,openTeam:open,openScore:Number(oS),wallTeam:wall,wallScore:Number(wS)};
+  const label=open.join(" & ")+" ("+oS+") vs "+wall.join(" & ")+" ("+wS+")";
+  // Teach the dropdowns/autocomplete about any brand-new names right away.
+  [...open,...wall].forEach(n=>{ if(!PLAYERS.some(p=>p.toLowerCase()===n.toLowerCase())) PLAYERS.push(n); });
+  PLAYERS.sort((a,b)=>a.localeCompare(b)); updateEntryOptions();
+  // Clear the form NOW so the next game can be entered while this one uploads.
+  resetEntryForm();
+  note(msg,"⏳ Saving "+label+" …",false);
+  uploadGame(payload,label,msg);
+}
+async function uploadGame(payload,label,msg){
   try{
-    const res=await fetch(backendUrl(),{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({passcode:pass,openTeam:open,openScore:Number(oS),wallTeam:wall,wallScore:Number(wS)})});
+    const res=await fetch(backendUrl(),{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
     const data=await res.json();
-    if(!data.ok){ if(data.error==="bad_passcode"){ localStorage.removeItem(LS_PASS); showGate("Passcode changed — please re-enter."); return; } return note(msg,"Couldn’t save: "+(data.error||"unknown"),true); }
-    note(msg,"✅ Game added! "+open.join(" & ")+" ("+oS+") vs "+wall.join(" & ")+" ("+wS+").",false);
-    $("#oScore").value=7; $("#wScore").value=5;
-    await refresh(pass);
-  }catch(err){ note(msg,"Network error: "+err.message,true); }
-  finally{ btn.disabled=false; btn.textContent="Add game"; }
+    if(!data.ok){
+      if(data.error==="bad_passcode"){ localStorage.removeItem(LS_PASS); showGate("Passcode changed — please re-enter."); return; }
+      return note(msg,"⚠️ Couldn’t save "+label+": "+(data.error||"unknown")+". Try again.",true);
+    }
+    note(msg,"✅ Saved "+label+".",false);
+    const p=localStorage.getItem(LS_PASS); if(p) refresh(p);
+  }catch(err){ note(msg,"⚠️ Network error saving "+label+": "+err.message,true); }
 }
 function note(el,text,isErr){ el.innerHTML=`<div class="${isErr?'err':'banner'}" style="margin:8px 0">${text}</div>`; }
 
 // ───────────────────────── wiring ─────────────────────────
-$("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(!b)return;
-  $$("#tabs button").forEach(x=>x.classList.toggle("active",x===b));
-  const t=b.dataset.tab;
+function setTab(t){
+  currentTab=t;
+  $$("#tabs button").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
   $("#tab-overview").classList.toggle("hide",t!=="overview");
   $("#tab-reports").classList.toggle("hide",t!=="reports");
   $("#tab-enter").classList.toggle("hide",t!=="enter");
-  $("#scopeBar").classList.toggle("hide",t==="enter"||!GAMES.length);
-});
+  $("#scopeBar").classList.toggle("hide", t==="enter" || !GAMES.length);
+  try{ localStorage.setItem(LS_TAB,t); }catch(e){}
+}
+$("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(!b)return; setTab(b.dataset.tab); });
+// Coming back to the page (tab/app re-focus) pulls fresh data immediately.
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ const p=localStorage.getItem(LS_PASS); if(p) refresh(p); } });
 $("#scope").addEventListener("change",()=>{ const c=$("#scope").value==="custom"; $("#fromWrap").style.display=c?"flex":"none"; $("#toWrap").style.display=c?"flex":"none"; if(!c)$("#scopeInfo").textContent=""; renderOverview(); renderReports(); });
 ["fromDate","toDate","minGames"].forEach(id=>$("#"+id).addEventListener("change",()=>{renderOverview();renderReports();}));
 $("#refreshBtn").addEventListener("click",()=>{ const p=localStorage.getItem(LS_PASS); if(p){setStale("Refreshing…"); refresh(p);} });

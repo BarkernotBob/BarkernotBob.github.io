@@ -84,6 +84,8 @@ change.
 
 - **CORS / "failed to fetch":** make sure "Who has access" is **Anyone** (not
   "Anyone with Google account").
-- The app recomputes every stat (ratios, streaks, chemistry, etc.) in the
-  browser from the raw game list, exactly like the Overview tab did — so the
-  sheet only needs the raw `FInput` rows.
+- The app reads and writes the **Data Entry** tab (two rows per game: Open
+  then Wall). New games fill the next blank slot. It recomputes every stat
+  (ratios, streaks, chemistry, etc.) in the browser from those rows.
+- **One passcode protects the whole app** — viewers and game-adders both enter
+  it once on the login screen, and it's remembered on their device.

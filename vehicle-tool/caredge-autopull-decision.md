@@ -1,7 +1,15 @@
 # CarEdge Auto-Pull — Strategy Decision
 
-**Status:** Decided (Phase 1 direction) — not yet implemented
+**Status:** Phase 1 partially shipped — paste/import box is live; bookmarklet pending a real CarEdge page sample
 **Date:** 2026-06-30
+
+> **Update:** The **import box is now built** (Settings → "Add a car from CarEdge"). It accepts the
+> bookmarklet's JSON bundle *or* a hand-pasted CSV/TSV (`year,price,maint,ins,reg`, header optional)
+> and creates a vehicle. The **bookmarklet itself is not written yet** — the build environment can't
+> reach caredge.com (proxy block + bot-blocking), so the extractor needs the real page structure.
+> **Next step:** open a CarEdge cost page in a normal browser, save its source (or copy the
+> `__NEXT_DATA__` / hydration JSON), and share it so the bookmarklet is written against the real field
+> names. Target bundle: `{name, make, model, pt, mpg, rows:[[year,price,maint,ins,reg],...]}`.
 **App:** Driveline vehicle cost calculator — `quartz/static/vehicle/index.html`, served at `/static/vehicle/`
 
 ---

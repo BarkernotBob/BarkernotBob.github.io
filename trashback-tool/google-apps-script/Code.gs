@@ -155,13 +155,14 @@ function writeGame_(open, os, wall, ws) {
   }
 
   var today = new Date();
+  today.setHours(0, 0, 0, 0); // date-only — strip the time so sheet stores no timestamp
   // Open row
-  sheet.getRange(slot, COL.DATE).setValue(today);
+  sheet.getRange(slot, COL.DATE).setValue(today).setNumberFormat('M/d/yyyy');
   sheet.getRange(slot, COL.P1, 1, 2).setValues([[open[0], open[1]]]);
   sheet.getRange(slot, COL.SCORE).setValue(os);
   sheet.getRange(slot, COL.ENEMY2).setValue(wall[1]); // B = opponent's 2nd player
   // Wall row
-  sheet.getRange(slot + 1, COL.DATE).setValue(today);
+  sheet.getRange(slot + 1, COL.DATE).setValue(today).setNumberFormat('M/d/yyyy');
   sheet.getRange(slot + 1, COL.P1, 1, 2).setValues([[wall[0], wall[1]]]);
   sheet.getRange(slot + 1, COL.SCORE).setValue(ws);
   sheet.getRange(slot + 1, COL.ENEMY2).setValue(open[1]);

@@ -3,10 +3,19 @@
 **Status:** Phase 1 shipped — one-click bookmarklet + paste/import box both live
 **Date:** 2026-06-30
 
-> **Update (shipped):** Both halves are built. Settings → **"One-click CarEdge button"** is a draggable
-> bookmarklet; Settings → **"Add a car from CarEdge"** is the paste box. Readable bookmarklet source:
-> `vehicle-tool/caredge-grab.bookmarklet.js` (the minified copy is inlined as the button's `href` in
-> `index.html`).
+> **Update (shipped):** Both halves are built under one Settings → **"Add a car from CarEdge"** card.
+> Step 1 sends the user to `caredge.com/depreciation`; Step 2 offers **two interchangeable paths into the
+> same paste box**: *Option 1* a draggable one-click bookmarklet (desktop), *Option 2* plain **select-all
+> + copy of the Depreciation page** (works on phones, no setup). The paste box auto-detects which it got.
+> Readable bookmarklet source: `vehicle-tool/caredge-grab.bookmarklet.js` (the minified copy is inlined as
+> the button's `href` in `index.html`).
+>
+> **Paste-the-page parser (`ceParsePage`):** the copied page is plain text, so it locks onto the table
+> whose header has *both* `Current Price` and `Maintenance` (ignoring CarEdge's smaller price-only table),
+> maps columns by header, and reads insurance from the page's "…is about $X per year" sentence (the
+> Depreciation page carries the insurance figure too — so it's **one copy**, no second page). Insurance is
+> scaled by each year's % Paid, same as the bookmarklet. A pasted URL can't work — CORS blocks the static
+> app from fetching `caredge.com`; copying the page sidesteps that with zero setup.
 >
 > **How it works against the real CarEdge (verified on a Toyota Sienna sample):**
 > - CarEdge is Next.js, server-rendered. The car's **Depreciation page** table carries *both* the

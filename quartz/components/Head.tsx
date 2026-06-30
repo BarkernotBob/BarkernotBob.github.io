@@ -107,6 +107,17 @@ export default (() => {
           }}
         />
 
+        {/* Site-wide RSS feed auto-discovery — lets feed readers & browser
+            extensions find the feed (generated at /index.xml by content-index). */}
+        {cfg.baseUrl && (
+          <link
+            rel="alternate"
+            type="application/rss+xml"
+            title={`${cfg.pageTitle} — RSS`}
+            href={`https://${cfg.baseUrl}/index.xml`}
+          />
+        )}
+
         {css.map((resource) => CSSResourceToStyleElement(resource, true))}
         {js
           .filter((resource) => resource.loadTime === "beforeDOMReady")

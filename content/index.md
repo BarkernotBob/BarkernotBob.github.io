@@ -40,4 +40,8 @@ publish: true
   <a href="/tags/science" class="no-popover">#science</a>
 </div>
 
+<div class="splash-sub">
+  <a class="splash-rss no-popover" href="/index.xml" target="_blank" rel="noopener noreferrer"><span class="splash-rss-ic" aria-hidden="true">📡</span> Subscribe via RSS</a>
+</div>
+
 </div>

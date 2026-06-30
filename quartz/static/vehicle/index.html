@@ -343,52 +343,63 @@ const Eng = (() => {
     const insFn=fitTrend(pts,'ins',{floorFrac:0.3,capMul:1.5});
     const regFn=fitTrend(pts,'reg',{floorFrac:0.2,capMul:1.5});
     const maxAge=Math.max(...pts.map(p=>p.age));
-    const newV=valueFn(0),oldV=valueFn(maxAge);
-    const avgDepPerMile=Math.max(newV-oldV,0)/Math.max(maxAge*S.baselineMiles,1);
-    const valuePerMile=S.valuePerMile!=null?S.valuePerMile:avgDepPerMile*S.mileWeight;
+    const base=Math.max(S.baselineMiles,1), w=Math.min(Math.max(S.mileWeight,0),1);
     const fuelPrice=vehicle.fuelPriceOverride!=null&&vehicle.fuelPriceOverride!==''?+vehicle.fuelPriceOverride:S.fuelPrice;
     const mpg=Math.max(+vehicle.mpg||1,1);
-    const marketValue=age=>valueFn(Math.max(age,0));
-    const adjValue=(age,odo)=>Math.max(0,marketValue(age)+(age*S.baselineMiles-odo)*valuePerMile);
-    function ownership(buyAge,H,M){
-      M=M||S.annualMiles;
-      const purchase=marketValue(buyAge),startOdo=buyAge*S.baselineMiles;
-      const resale=adjValue(buyAge+H,startOdo+H*M);
+    // "mileage age" converts an odometer to baseline-equivalent years; when miles are typical it equals calendar age
+    const milesAge=odo=>Math.max(odo,0)/base;
+    const blendAge=(calAge,odo)=>Math.max(0,(1-w)*Math.max(calAge,0)+w*milesAge(odo));
+    const typicalOdo=age=>Math.max(age,0)*base;
+    const marketValue=age=>valueFn(Math.max(age,0));               // typical-mileage curve (for the chart)
+    const valueAt=(calAge,odo)=>valueFn(blendAge(calAge,odo));     // value adjusted for the real odometer
+    const adjValue=valueAt;                                        // back-compat alias
+    const autoPrice=(buyAge,startOdo)=>valueAt(buyAge,startOdo!=null?startOdo:typicalOdo(buyAge));
+    function resolve(buyAge,opts){
+      opts=opts||{};
+      const M=opts.M||S.annualMiles;
+      const startOdo=(opts.startOdo!=null&&opts.startOdo!=='')?+opts.startOdo:typicalOdo(buyAge);
+      const purchase=(opts.price!=null&&opts.price!=='')?+opts.price:valueAt(buyAge,startOdo);
+      return {M,startOdo,purchase};
+    }
+    function ownership(buyAge,H,opts){
+      const {M,startOdo,purchase}=resolve(buyAge,opts);
+      const resale=valueAt(buyAge+H,startOdo+H*M);
       const depreciation=Math.max(purchase-resale,0);
       const salesTax=purchase*S.salesTax;
       const interest=loanInterest(purchase,vehicle.down,vehicle.rate,vehicle.loanYears);
       let maint=0,fuel=0,ins=0,reg=0;
       for(let t=0;t<H;t++){
-        const age=buyAge+t,infl=Math.pow(1+S.inflation,t);
-        maint+=maintFn(age)*(M/S.baselineMiles)*infl;
+        const calAge=buyAge+t,infl=Math.pow(1+S.inflation,t);
+        const odoMid=startOdo+(t+0.5)*M;
+        maint+=maintFn(milesAge(odoMid))*(M/base)*infl;  // wear level from odometer, intensity from miles driven
         fuel+=M*(fuelPrice/mpg)*infl;
-        ins+=insFn(age)*infl; reg+=regFn(age)*infl;
+        ins+=insFn(calAge)*infl; reg+=regFn(calAge)*infl;
       }
       const operating=maint+fuel+ins+reg, total=depreciation+salesTax+interest+operating;
-      return {buyAge,modelYear:refYear-buyAge,H,M,purchase,resale,depreciation,salesTax,interest,
-        maint,fuel,ins,reg,operating,total,perYear:total/H,perMile:total/(H*M)};
+      return {buyAge,modelYear:refYear-buyAge,H,M,startOdo,endOdo:startOdo+H*M,purchase,resale,depreciation,
+        salesTax,interest,maint,fuel,ins,reg,operating,total,perYear:total/H,perMile:total/(H*M)};
     }
     function optimal(M,maxBuyAge){
       M=M||S.annualMiles; const maxBA=maxBuyAge!=null?maxBuyAge:maxAge; let best=null;
       for(let ba=0;ba<=maxBA;ba++)for(let H=1;H<=S.maxHold;H++){
-        const o=ownership(ba,H,M); if(!best||o.perYear<best.perYear) best=o;
+        const o=ownership(ba,H,{M}); if(!best||o.perYear<best.perYear) best=o;  // hypothetical buys assume typical miles
       }
       return best;
     }
-    function cumulative(buyAge,H,M){
-      M=M||S.annualMiles;
-      const purchase=marketValue(buyAge),startOdo=buyAge*S.baselineMiles;
+    function cumulative(buyAge,H,opts){
+      const {M,startOdo,purchase}=resolve(buyAge,opts);
       const salesTax=purchase*S.salesTax,interest=loanInterest(purchase,vehicle.down,vehicle.rate,vehicle.loanYears);
       const arr=[]; let op=0;
       for(let t=1;t<=H;t++){
-        const age=buyAge+t-1,infl=Math.pow(1+S.inflation,t-1);
-        op+=maintFn(age)*(M/S.baselineMiles)*infl+M*(fuelPrice/mpg)*infl+insFn(age)*infl+regFn(age)*infl;
-        const resale=adjValue(buyAge+t,startOdo+t*M);
+        const calAge=buyAge+t-1,infl=Math.pow(1+S.inflation,t-1);
+        const odoMid=startOdo+(t-0.5)*M;
+        op+=maintFn(milesAge(odoMid))*(M/base)*infl+M*(fuelPrice/mpg)*infl+insFn(calAge)*infl+regFn(calAge)*infl;
+        const resale=valueAt(buyAge+t,startOdo+t*M);
         arr.push({t,cum:Math.max(purchase-resale,0)+salesTax+interest+op});
       }
       return arr;
     }
-    return {refYear,maxAge,valuePerMile,marketValue,adjValue,ownership,optimal,cumulative,maintFn,insFn,regFn};
+    return {refYear,maxAge,marketValue,adjValue,valueAt,autoPrice,typicalOdo,ownership,optimal,cumulative,maintFn,insFn,regFn};
   }
   return {DEFAULTS,model,prep,loanInterest};
 })();
@@ -407,13 +418,33 @@ const PALETTE=["#14494B","#C8702D","#2F7D52","#7C5BA6","#B4690E","#3A6EA5","#9E2
 let state=load();
 
 function freshVehicle(seed,i){
-  return {
+  const v={
     id:"v"+Math.random().toString(36).slice(2,9),
     name:seed.name, make:seed.make||"", model:seed.model||"", pt:seed.pt||"gas",
     mpg:seed.mpg, fuelPriceOverride:(seed.pt==="ev"?null:null),
     loanYears:seed.loanYears, rate:seed.rate, down:seed.down,
-    rows:seed.rows.map(r=>r.slice())
+    rows:seed.rows.map(r=>r.slice()),
+    purchase:seed.purchase?Object.assign({},seed.purchase):null
   };
+  ensurePurchase(v);
+  return v;
+}
+/* Each vehicle stores the actual buy point the user is modelling. modelYear+startMiles
+   set where the projection begins; priceOverride (null=auto) lets them force a paid price. */
+function ensurePurchase(v){
+  const years=(v.rows||[]).map(r=>+r[0]).filter(isFinite);
+  const refYear=years.length?Math.max(...years):2025;
+  const minYear=years.length?Math.min(...years):refYear;
+  const p=v.purchase&&typeof v.purchase==="object"?v.purchase:{};
+  let my=+p.modelYear; if(!isFinite(my)) my=refYear;
+  my=Math.min(Math.max(my,minYear),refYear);
+  v.purchase={
+    modelYear:my,
+    startMiles:(p.startMiles!=null&&p.startMiles!=="")?+p.startMiles:0,
+    priceOverride:(p.priceOverride!=null&&p.priceOverride!=="")?+p.priceOverride:null,
+    holdYears:isFinite(+p.holdYears)&&+p.holdYears>=1?+p.holdYears:10
+  };
+  return v;
 }
 function defaultState(){
   return {
@@ -430,6 +461,7 @@ function load(){
     if(!s.settings||!s.vehicles) return defaultState();
     s.settings=Object.assign({},Eng.DEFAULTS,s.settings);
     s.compare=s.compare||[];
+    s.vehicles.forEach(ensurePurchase);
     return s;
   }catch(e){ return defaultState(); }
 }
@@ -544,8 +576,9 @@ function renderGarage(){
   }
   state.vehicles.forEach((v,i)=>{
     const color=PALETTE[i%PALETTE.length];
-    let o;
-    try{ o=Eng.model(v,S).optimal(); }catch(e){ o=null; }
+    let o,P;
+    try{ ensurePurchase(v); P=v.purchase; const M=Eng.model(v,S);
+      o=M.ownership(M.refYear-P.modelYear,P.holdYears,{startOdo:P.startMiles,price:P.priceOverride}); }catch(e){ o=null; }
     h+=`<button class="vcard" data-veh="${v.id}">
       <span class="accentbar" style="background:${color}"></span>
       <div class="vc-top">
@@ -563,7 +596,7 @@ function renderGarage(){
       </div>
       <div class="vc-rec">
         <span class="dot"></span>
-        ${o?`Best value: buy a <b>&nbsp;${o.modelYear}</b>, own <b>&nbsp;${o.H} yr${o.H!==1?"s":""}</b> · <b>&nbsp;${perMile(o.perMile)}/mi</b>`:"Add cost data to model"}
+        ${o?`A <b>&nbsp;${P.modelYear}</b> · <b>&nbsp;${Math.round(o.startOdo).toLocaleString()} mi</b> · own <b>&nbsp;${o.H} yr${o.H!==1?"s":""}</b> · <b>&nbsp;${perMile(o.perMile)}/mi</b>`:"Add cost data to model"}
         <span class="chev">›</span>
       </div>
     </button>`;
@@ -601,15 +634,16 @@ function editAssumption(key){
 /* ============================================================ *
  *  VIEW: VEHICLE DETAIL                                        *
  * ============================================================ */
-let vehTab="overview", heroBuy=null, heroHold=null;
+let vehTab="overview";
 function renderVehicle(id){
   const v=vehicleById(id); if(!v){go("garage");return;}
+  ensurePurchase(v);
   setBar(v.name,ptLabel(v.pt)+" · "+(v.pt==="ev"?v.mpg+" MPGe":v.mpg+" MPG"),true);
   const S=state.settings; const M=Eng.model(v,S);
   const opt=M.optimal();
-  if(heroBuy===null) heroBuy=opt.buyAge;
-  if(heroHold===null) heroHold=opt.H;
-  const view=M.ownership(heroBuy,heroHold);
+  const P=v.purchase, buyAge=M.refYear-P.modelYear, startOdo=Math.max(+P.startMiles||0,0), H=P.holdYears;
+  const auto=M.autoPrice(buyAge,startOdo), price=P.priceOverride!=null?P.priceOverride:auto;
+  const view=M.ownership(buyAge,H,{startOdo,price:P.priceOverride});
   let h=`<div class="view">
     <div class="seg" style="margin:6px 0 14px">
       <button data-vt="overview" class="${vehTab==="overview"?"on":""}">Overview</button>
@@ -617,35 +651,52 @@ function renderVehicle(id){
     </div>`;
   if(vehTab==="overview"){
     h+=`<div class="hero">
-      <div class="eyebrow">Lowest cost to own</div>
-      <div class="line">Buy a <b>${opt.modelYear}</b> and keep it <b>${opt.H} year${opt.H!==1?"s":""}</b></div>
+      <div class="eyebrow">Your cost to own</div>
+      <div class="line">A <b>${P.modelYear}</b> at <b>${Math.round(startOdo).toLocaleString()} mi</b>, kept <b>${H} year${H!==1?"s":""}</b></div>
       <div class="stats">
-        <div class="stat"><div class="v num">${money(opt.perYear)}</div><div class="k">per year</div></div>
-        <div class="stat"><div class="v num">${perMile(opt.perMile)}</div><div class="k">per mile</div></div>
-        <div class="stat"><div class="v num">${money(opt.total)}</div><div class="k">total</div></div>
+        <div class="stat"><div class="v num">${money(view.perYear)}</div><div class="k">per year</div></div>
+        <div class="stat"><div class="v num">${perMile(view.perMile)}</div><div class="k">per mile</div></div>
+        <div class="stat"><div class="v num">${money(view.total)}</div><div class="k">total</div></div>
       </div>
     </div>`;
-    // scenario controls
+    // purchase starting point — model year, mileage, price (auto/override), hold length
+    const yearOpts=[]; for(let a=0;a<=M.maxAge;a++){ const y=M.refYear-a; yearOpts.push(`<option value="${y}"${y===P.modelYear?" selected":""}>${y}</option>`); }
+    const override=P.priceOverride!=null;
     h+=`<div class="card">
-      <h2 class="tight">Explore a scenario</h2>
-      <div class="slider-wrap" style="margin-top:10px">
-        <div class="slider-top"><label class="lbl" style="margin:0">Buy model year</label><span class="v num" id="byVal">${M.refYear-heroBuy}</span></div>
-        <input type="range" id="buyR" min="0" max="${M.maxAge}" step="1" value="${heroBuy}">
+      <h2 class="tight">Your purchase</h2>
+      <p class="note" style="margin-bottom:12px">Set the actual car you're modeling. Price auto-fills from the CarEdge curve at your mileage — edit it to lock in what you'd really pay.</p>
+      <div class="grid2">
+        <div class="field"><label class="lbl">Model year</label>
+          <select class="inp" id="pyMY">${yearOpts.join("")}</select></div>
+        <div class="field"><label class="lbl">Starting mileage</label>
+          <div class="inp-group"><input id="pyMiles" class="num" inputmode="numeric" value="${Math.round(startOdo)}"><span class="suf">mi</span></div></div>
       </div>
-      <div class="slider-wrap" style="margin-top:14px">
-        <div class="slider-top"><label class="lbl" style="margin:0">Years owned</label><span class="v num" id="hyVal">${heroHold}</span></div>
-        <input type="range" id="holdR" min="1" max="20" step="1" value="${heroHold}">
+      <p class="note" style="margin:-4px 0 12px">Typical for a ${P.modelYear}: ~${Math.round(M.typicalOdo(buyAge)).toLocaleString()} mi</p>
+      <div class="field" style="margin-bottom:6px"><label class="lbl">Purchase price</label>
+        <div class="inp-group"><span class="pre">$</span><input id="pyPrice" class="num" inputmode="numeric" value="${Math.round(price)}"><span class="suf">${override?"manual":"auto"}</span></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:20px;margin-bottom:8px">
+        <span class="note">${override?`Auto would be ${money(auto)}`:"Mileage-adjusted from CarEdge data"}</span>
+        <button class="inline-link" id="pyReset" style="visibility:${override?"visible":"hidden"}">Reset to auto</button>
       </div>
-      <div class="metrics" style="margin-top:16px">
-        <div class="metric"><div class="v num">${money(view.perYear)}</div><div class="k">per year</div></div>
-        <div class="metric"><div class="v num">${perMile(view.perMile)}</div><div class="k">per mile</div></div>
-        <div class="metric"><div class="v num">${money(view.total)}</div><div class="k">total cost</div></div>
+      <div class="slider-wrap" style="margin-top:6px">
+        <div class="slider-top"><label class="lbl" style="margin:0">Years you'll own it</label><span class="v num" id="hyVal">${H}</span></div>
+        <input type="range" id="holdR" min="1" max="${S.maxHold}" step="1" value="${H}">
       </div>
+    </div>`;
+    // optimizer — secondary insight
+    const optMiles=Math.round(M.typicalOdo(opt.buyAge)).toLocaleString();
+    const isOpt=opt.modelYear===P.modelYear&&opt.H===H;
+    h+=`<div class="card"><h2 class="tight">Lowest-cost alternative</h2>
+      <div class="bd-row" style="padding:8px 0 10px">
+        <span style="flex:1;font-size:13.5px">Buy a <b>${opt.modelYear}</b> (~${optMiles} mi) and keep it <b>${opt.H}y</b></span>
+        <span class="num" style="font-weight:600;white-space:nowrap">${money(opt.perYear)}/yr</span></div>
+      <button class="btn sec sm" id="useOpt"${isOpt?" disabled style=\"opacity:.5\"":""}>${isOpt?"That's your current pick":"Use this as my purchase"}</button>
+      <p class="note" style="margin-top:8px">Scans every model year &amp; holding length at typical mileage to find the cheapest way to own this car.</p>
     </div>`;
     // breakdown
     const items=[["Depreciation",view.depreciation,"#14494B"],["Fuel",view.fuel,"#C8702D"],["Maintenance",view.maint,"#2F7D52"],["Insurance",view.ins,"#7C5BA6"],["Loan interest",view.interest,"#B4690E"],["Registration",view.reg,"#3A6EA5"],["Sales tax",view.salesTax,"#9E2B25"]];
     const mx=Math.max(...items.map(i=>i[1]),1);
-    h+=`<div class="card"><h2>Cost breakdown · ${heroHold} yr${heroHold!==1?"s":""}</h2>`;
+    h+=`<div class="card"><h2>Cost breakdown · ${H} yr${H!==1?"s":""}</h2>`;
     items.forEach(it=>{ h+=`<div class="bd-row">
       <span class="swatch" style="background:${it[2]}"></span>
       <span class="name">${it[0]}</span>
@@ -701,16 +752,14 @@ function renderVehicle(id){
   // tab switch
   app.querySelectorAll("[data-vt]").forEach(b=>b.onclick=()=>{vehTab=b.dataset.vt;render();});
   if(vehTab==="overview"){
-    const buyR=$("#buyR"),holdR=$("#holdR");
-    const upd=()=>{ styleRange(buyR); styleRange(holdR);
-      heroBuy=+buyR.value; heroHold=+holdR.value;
-      $("#byVal").textContent=M.refYear-heroBuy; $("#hyVal").textContent=heroHold;
-      // re-render only metrics+breakdown by full render (cheap)
-      renderVehicle(id);
-    };
-    buyR.oninput=()=>{styleRange(buyR);$("#byVal").textContent=M.refYear-(+buyR.value);};
-    buyR.onchange=upd; holdR.oninput=()=>{styleRange(holdR);$("#hyVal").textContent=holdR.value;}; holdR.onchange=upd;
-    styleRange(buyR); styleRange(holdR);
+    const myEl=$("#pyMY"),milesEl=$("#pyMiles"),priceEl=$("#pyPrice"),holdR=$("#holdR");
+    myEl.onchange=()=>{ P.modelYear=+myEl.value; P.startMiles=Math.round(M.typicalOdo(M.refYear-P.modelYear)); P.priceOverride=null; save(); renderVehicle(id); };
+    milesEl.onchange=()=>{ const n=parseFloat(milesEl.value); P.startMiles=isFinite(n)&&n>=0?n:0; save(); renderVehicle(id); };
+    priceEl.onchange=()=>{ const n=parseFloat(priceEl.value); P.priceOverride=(isFinite(n)&&n>0)?n:null; save(); renderVehicle(id); };
+    const pr=$("#pyReset"); if(pr) pr.onclick=()=>{ P.priceOverride=null; save(); renderVehicle(id); };
+    const useOpt=$("#useOpt"); if(useOpt&&!useOpt.disabled) useOpt.onclick=()=>{ P.modelYear=opt.modelYear; P.startMiles=Math.round(M.typicalOdo(opt.buyAge)); P.priceOverride=null; P.holdYears=opt.H; save(); renderVehicle(id); };
+    holdR.oninput=()=>{styleRange(holdR);$("#hyVal").textContent=holdR.value;}; holdR.onchange=()=>{ P.holdYears=+holdR.value; save(); renderVehicle(id); };
+    styleRange(holdR);
     drawValueChart(v,S,M);
   } else {
     bindDataTab(v);
@@ -769,7 +818,7 @@ function bindDataTab(v){
     if(confirm("Delete "+v.name+"? This can't be undone.")){
       state.vehicles=state.vehicles.filter(x=>x.id!==v.id);
       state.compare=state.compare.filter(x=>x!==v.id);
-      save(); heroBuy=heroHold=null; go("garage");
+      save(); go("garage");
     }
   };
 }
@@ -780,14 +829,14 @@ function addVehicle(){
     loanYears:5,rate:0.06,down:5000,
     rows:[[2025,28000,250,550,300],[2024,25000,300,540,297],[2023,22000,380,530,294],[2022,20000,480,520,291],[2021,18000,580,510,288],[2020,16500,720,500,285],[2019,15000,820,490,282],[2018,13800,880,480,279],[2017,12800,920,470,277],[2016,12000,960,460,274]]};
   const v=freshVehicle(blank); state.vehicles.push(v); save();
-  heroBuy=heroHold=null; vehTab="data"; route._back="garage"; go("vehicle",v.id);
+  vehTab="data"; route._back="garage"; go("vehicle",v.id);
   toast("Vehicle added — edit its data");
 }
 
 /* ============================================================ *
  *  VIEW: COMPARE                                               *
  * ============================================================ */
-let cmpHorizon=10, cmpBasis="new";
+let cmpHorizon=10, cmpBasis="configured";
 function renderCompare(){
   setBar("Compare","Side-by-side ownership",false);
   const S=state.settings;
@@ -814,7 +863,7 @@ function renderCompare(){
       <input type="range" id="czR" min="3" max="20" step="1" value="${cmpHorizon}">
     </div>
     <div style="margin-top:14px"><label class="lbl">Purchase basis</label>
-      <div class="seg"><button data-basis="new" class="${cmpBasis==="new"?"on":""}">Buy new (same age)</button><button data-basis="optimal" class="${cmpBasis==="optimal"?"on":""}">Each car's best buy</button></div>
+      <div class="seg"><button data-basis="configured" class="${cmpBasis==="configured"?"on":""}">Your purchase</button><button data-basis="new" class="${cmpBasis==="new"?"on":""}">Buy new</button><button data-basis="optimal" class="${cmpBasis==="optimal"?"on":""}">Best buy</button></div>
     </div>
   </div>`;
   // compute
@@ -822,11 +871,12 @@ function renderCompare(){
   const rows=sel.map((v,idx)=>{
     const i=state.vehicles.findIndex(x=>x.id===v.id);
     const color=PALETTE[i%PALETTE.length];
-    const M=Eng.model(v,S);
-    let buyAge=0, label;
-    if(cmpBasis==="optimal"){ const o=M.optimal(); buyAge=o.buyAge; label=o.modelYear+" · "+o.H+"y best"; }
-    const own=M.ownership(buyAge,cmpHorizon);
-    const cum=M.cumulative(buyAge,Math.max(cmpHorizon,20));
+    const M=Eng.model(v,S); const P=v.purchase;
+    let buyAge=0, oOpts={};
+    if(cmpBasis==="optimal"){ const o=M.optimal(); buyAge=o.buyAge; }
+    else if(cmpBasis==="configured"){ buyAge=M.refYear-P.modelYear; oOpts={startOdo:P.startMiles,price:P.priceOverride}; }
+    const own=M.ownership(buyAge,cmpHorizon,oOpts);
+    const cum=M.cumulative(buyAge,Math.max(cmpHorizon,20),oOpts);
     const opt=M.optimal();
     return {v,color,M,buyAge,own,cum,opt};
   });
@@ -899,6 +949,14 @@ function renderSettings(){
         <input type="range" id="s_mw" min="0" max="1" step="0.05" value="${S.mileWeight}"></div>
       <p class="note" style="margin-top:-2px">How strongly lower-than-typical mileage lifts resale value. 0% = ignore odometer, 100% = full effect.</p>
     </div>`;
+  h+=`<div class="card"><h2 class="tight">Add a car from CarEdge</h2>
+      <p class="note" style="margin-bottom:10px">Paste a car's cost data and Driveline builds the vehicle. Accepts the one-click bookmarklet bundle (coming soon) or a table you copy yourself.</p>
+      <textarea id="ceText" rows="5" placeholder="Paste JSON from the bookmarklet, or CSV rows:&#10;year,price,maintenance,insurance,registration&#10;2025,28000,250,550,300&#10;2024,25000,300,540,297" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;line-height:1.5"></textarea>
+      <div class="field" style="margin-top:10px"><label class="lbl">Name this car <span style="font-weight:400;color:var(--faint)">(optional)</span></label>
+        <input class="inp" id="ceName" placeholder="e.g. Honda CR-V"></div>
+      <button class="btn sm" id="ceAdd">Add vehicle from paste</button>
+      <p class="note" style="margin-top:10px">CSV columns: model year, price, annual maintenance, insurance, registration — one row per year, header optional. JSON may also carry name, powertrain (gas/hybrid/ev) and MPG.</p>
+    </div>`;
   h+=`<div class="card"><h2>Your data</h2>
       <div class="btnrow"><button class="btn sec" id="exportBtn">Export JSON</button><button class="btn sec" id="importBtn">Import JSON</button></div>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
@@ -917,10 +975,11 @@ function renderSettings(){
   num("s_tax",n=>S.salesTax=n/100);
   num("s_base",n=>S.baselineMiles=n);
   const mw=$("#s_mw"); styleRange(mw); mw.oninput=()=>styleRange(mw); mw.onchange=()=>{S.mileWeight=+mw.value;save();render();};
+  $("#ceAdd").onclick=()=>importCarEdge($("#ceText").value,$("#ceName").value);
   $("#exportBtn").onclick=exportData;
   $("#importBtn").onclick=()=>$("#importFile").click();
   $("#importFile").onchange=importData;
-  $("#resetBtn").onclick=()=>{ if(confirm("Replace all vehicles with the original samples? Your edits will be lost.")){ state=defaultState(); save(); heroBuy=heroHold=null; toast("Reset to samples"); go("garage"); } };
+  $("#resetBtn").onclick=()=>{ if(confirm("Replace all vehicles with the original samples? Your edits will be lost.")){ state=defaultState(); save(); toast("Reset to samples"); go("garage"); } };
   $("#aboutModel2").onclick=showModelInfo;
 }
 function exportData(){
@@ -936,12 +995,63 @@ function importData(e){
     const s=JSON.parse(r.result);
     if(!s.vehicles||!Array.isArray(s.vehicles)) throw 0;
     s.settings=Object.assign({},Eng.DEFAULTS,s.settings||{}); s.compare=s.compare||[];
-    state=s; save(); heroBuy=heroHold=null; toast("Imported "+s.vehicles.length+" vehicles"); go("garage");
+    s.vehicles.forEach(ensurePurchase);
+    state=s; save(); toast("Imported "+s.vehicles.length+" vehicles"); go("garage");
   }catch(err){ toast("Couldn't read that file"); } };
   r.readAsText(f); e.target.value="";
 }
+/* ---------- CarEdge paste / bookmarklet import ---------- *
+ * Bundle format the (future) bookmarklet should emit:
+ *   {name, make, model, pt:"gas|hybrid|ev", mpg, rows:[[year,price,maint,ins,reg],...]}
+ * Also accepts a bare rows array, or pasted CSV/TSV (header optional).            */
+function ceNum(x){ const n=parseFloat(String(x).replace(/[$,\s]/g,"")); return isFinite(n)?n:0; }
+function ceRow(r){
+  if(Array.isArray(r)){ const y=parseInt(r[0],10); if(!isFinite(y))return null;
+    return [y,ceNum(r[1]),ceNum(r[2]),ceNum(r[3]),ceNum(r[4])]; }
+  if(r&&typeof r==="object"){ const y=parseInt(r.year!=null?r.year:(r.modelYear!=null?r.modelYear:r.y),10); if(!isFinite(y))return null;
+    return [y,ceNum(r.price),ceNum(r.maint!=null?r.maint:r.maintenance),ceNum(r.ins!=null?r.ins:r.insurance),ceNum(r.reg!=null?r.reg:r.registration)]; }
+  return null;
+}
+function ceParseTable(text){
+  const rows=[];
+  text.split(/\r?\n/).forEach(line=>{
+    const cells=line.split(/[,\t]/).map(c=>c.trim());
+    if(cells.length<2) return;
+    const y=parseInt(cells[0],10);
+    if(!isFinite(y)||y<1980||y>2100) return; // skips header rows and stray lines
+    const n=cells.slice(1).map(ceNum);
+    rows.push([y,n[0]||0,n[1]||0,n[2]||0,n[3]||0]);
+  });
+  return rows;
+}
+function importCarEdge(text,name){
+  text=(text||"").trim(); if(!text){ toast("Paste some data first"); return; }
+  const seed={name:(name||"").trim(),make:"",model:"",pt:"gas",mpg:30,rows:[]};
+  let parsed=null; try{ parsed=JSON.parse(text); }catch(e){}
+  if(parsed&&typeof parsed==="object"){
+    if(Array.isArray(parsed)){ seed.rows=parsed.map(ceRow).filter(Boolean); }
+    else{
+      seed.name=seed.name||parsed.name||"";
+      seed.make=parsed.make||""; seed.model=parsed.model||"";
+      const pt=parsed.pt||parsed.powertrain; if(pt) seed.pt=String(pt).toLowerCase();
+      if(parsed.mpge!=null){ seed.mpg=+parsed.mpge; seed.pt="ev"; }
+      else if(parsed.mpg!=null){ seed.mpg=+parsed.mpg; }
+      const rws=parsed.rows||parsed.years||parsed.data;
+      if(Array.isArray(rws)) seed.rows=rws.map(ceRow).filter(Boolean);
+    }
+  } else {
+    seed.rows=ceParseTable(text);
+  }
+  if(!seed.rows.length){ toast("Couldn't find any year rows"); return; }
+  seed.rows.sort((a,b)=>b[0]-a[0]);
+  if(!["gas","hybrid","ev"].includes(seed.pt)) seed.pt="gas";
+  if(!seed.name) seed.name=((seed.make+" "+seed.model).trim())||("Imported "+seed.rows[0][0]);
+  seed.mpg=+seed.mpg||30; seed.loanYears=5; seed.rate=0.06; seed.down=5000;
+  const v=freshVehicle(seed); state.vehicles.push(v); save();
+  toast("Added "+seed.name); vehTab="data"; route._back="settings"; go("vehicle",v.id);
+}
 function showModelInfo(){
-  alert("How Driveline models cost\n\n• Depreciation: an exponential-decay-to-floor curve is fitted to your model-year prices, so it flattens realistically for old cars and never goes negative — better than a straight-line forecast.\n\n• Mileage-adjusted value: resale reflects both age and your actual odometer vs CarEdge's assumed mileage, so driving less keeps the car worth more.\n\n• Operating costs: fuel = miles × price ÷ MPG (works for MPGe too); maintenance scales from CarEdge's ~13,500 mi/yr baseline to your miles; insurance & registration follow their trend. All grow with inflation.\n\n• Financing: loan interest from price − down payment, your rate and term.\n\n• Total cost of ownership = depreciation + fuel + maintenance + insurance + registration + interest + sales tax − resale. The optimizer scans every buy-year and holding length to find the lowest cost per year.");
+  alert("How Driveline models cost\n\n• Your purchase: pick the model year and starting mileage you'd actually buy. The price auto-fills from the depreciation curve at that mileage (a low-mile car costs more), and you can override it with the real price.\n\n• Depreciation: an exponential-decay-to-floor curve is fitted to your model-year prices, so it flattens realistically for old cars and never goes negative — better than a straight-line forecast.\n\n• Odometer-driven projection: after you buy, every following year's wear is set by the accumulated odometer (starting miles + your annual miles), not just the calendar age. Drive more and maintenance rises and resale falls faster; drive less and the car holds value.\n\n• Operating costs: fuel = miles × price ÷ MPG (works for MPGe too); maintenance scales from CarEdge's ~13,500 mi/yr baseline to your miles; insurance & registration follow their age trend. All grow with inflation.\n\n• Financing: loan interest from price − down payment, your rate and term.\n\n• Total cost of ownership = depreciation + fuel + maintenance + insurance + registration + interest + sales tax − resale. The 'lowest-cost alternative' scans every buy-year and holding length at typical mileage to find the cheapest way to own the car.");
 }
 
 /* boot */

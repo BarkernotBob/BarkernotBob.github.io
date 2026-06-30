@@ -125,7 +125,7 @@
         even before OAuth is set. ---- */
 const OAUTH = {
   clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
-  workerUrl: 'https://pool-auth.isaiahmail97.workers.dev'  // Cloudflare Worker base URL
+  workerUrl: 'https://pool-auth.barkernotbob.workers.dev'  // Cloudflare Worker base URL
 };
 
 const LS = {
@@ -133,9 +133,9 @@ const LS = {
   set repo(v){ localStorage.setItem('gt_repo', v) },
   get token(){ return localStorage.getItem('gt_token') || '' },
   set token(v){ localStorage.setItem('gt_token', v) },
-  get me(){ return localStorage.getItem('gt_me') || '' },            // "Isaiah" / "Wife"
+  get me(){ return localStorage.getItem('gt_me') || '' },            // "Me" / "Wife"
   set me(v){ localStorage.setItem('gt_me', v) },
-  get device(){ return localStorage.getItem('gt_device') || '' },    // "Isaiah's iPhone" — names THIS device's sign-in
+  get device(){ return localStorage.getItem('gt_device') || '' },    // "My iPhone" — names THIS device's sign-in
   set device(v){ localStorage.setItem('gt_device', v) },
   get login(){ return localStorage.getItem('gt_login') || '' },      // GitHub username (from OAuth)
   set login(v){ localStorage.setItem('gt_login', v) },
@@ -342,9 +342,9 @@ function renderSetup(){
     Your receipts live in your own <b>private</b> GitHub repo — see the <b>SETUP guide</b>
     (grocery-tool/SETUP.md) if you haven't made it yet.</p>
     <label>Your name (so we know who snapped each receipt)</label>
-    <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Isaiah'?'selected':''}>Isaiah</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
+    <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Me'?'selected':''}>Me</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
     <label>This device's name (so your phone and computer can both stay signed in)</label>
-    <input id="su_device" placeholder="e.g. Isaiah's iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
+    <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
     <button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
     <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until OAuth is configured.'}</p>
     <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
@@ -379,7 +379,7 @@ async function ensureInitialized(){
     'db/items.json':[], 'db/receipts.json':[], 'db/waste.json':[], 'db/reminders.json':[],
     'db/needs_attention.json':[], 'db/item_groups.json':{}, 'db/stores.json':{},
     'db/config.json':{household:'Our Household',currency:'USD',timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',
-      members:[{name:'Isaiah',email:'',notify:true},{name:'Wife',email:'',notify:true}],
+      members:[{name:'Me',email:'',notify:true},{name:'Wife',email:'',notify:true}],
       reminders:{useByLeadDays:0,sendReviewEmails:true,sendUseByEmails:true}}
   };
   for(const path in seed){
@@ -842,9 +842,9 @@ function renderSettings(){
   <div class="card">
     <h2>This device</h2>
     <label>Your name</label>
-    <select id="set_me">${['Isaiah','Wife'].map(n=>`<option ${LS.me===n?'selected':''}>${n}</option>`).join('')}</select>
+    <select id="set_me">${['Me','Wife'].map(n=>`<option ${LS.me===n?'selected':''}>${n}</option>`).join('')}</select>
     <label>Device name</label>
-    <input id="set_device" value="${esc(LS.device)}" placeholder="e.g. Isaiah's iPhone" autocapitalize="words" autocorrect="off" spellcheck="false"/>
+    <input id="set_device" value="${esc(LS.device)}" placeholder="e.g. My iPhone" autocapitalize="words" autocorrect="off" spellcheck="false"/>
     <label>Data repository</label>
     <input id="set_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <label>Access key (token)</label>

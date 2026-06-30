@@ -40,6 +40,7 @@ Your data saves automatically in this browser. Done.
 - [ ] **Expiration:** No expiration
 - [ ] **Repository access:** Only select repositories → `bank-bonus-data`
 - [ ] **Permissions → Contents:** Read and write
+- [ ] **Permissions → Actions:** Read and write *(only if you want the in-app "Send test email" button)*
 - [ ] **Generate token** → copy it (shown once)
 
 **Time: 1 min** — Connect the app

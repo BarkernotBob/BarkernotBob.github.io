@@ -1,6 +1,7 @@
 name: Daily Bank Bonus Report
 
 # Runs automatically every day at 11:00 UTC, or manually via "Run workflow"
+# (or the in-app "Send test email" button, which triggers this with test=true).
 on:
   schedule:
     # Cron: run at 11:00 UTC daily
@@ -8,6 +9,11 @@ on:
     # This runs at 11:00 UTC, which is 6:00 AM EST or 7:00 AM EDT
     - cron: '0 11 * * *'
   workflow_dispatch:
+    inputs:
+      test:
+        description: 'Send a test/confirmation email even if nothing is due today'
+        required: false
+        default: 'false'
 
 permissions:
   contents: read
@@ -20,10 +26,17 @@ jobs:
 
       - name: Read account data and send email (if needed)
         id: check_actions
+        env:
+          # The in-app "Send test" button dispatches this workflow with test=true.
+          TEST_FLAG: ${{ github.event.inputs.test }}
+          # Fallback recipient if the app config has no notify email set.
+          MAIL_TO_SECRET: ${{ secrets.MAIL_TO }}
         run: |
           node << 'SCRIPT'
           const fs = require('fs');
           const os = require('os');
+
+          const isTest = String(process.env.TEST_FLAG || '').toLowerCase() === 'true';
 
           // Read config and accounts
           let config = {};
@@ -34,6 +47,25 @@ jobs:
           } catch (e) {
             console.log('Error reading data files:', e.message);
             process.exit(1);
+          }
+
+          // Helper: set a step output via the modern $GITHUB_OUTPUT file
+          // (the old ::set-output command was disabled by GitHub in 2023).
+          function setOutput(name, value) {
+            if (process.env.GITHUB_OUTPUT) {
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+            }
+          }
+
+          // Resolve the recipient: the email saved in the app (db/config.json ->
+          // notify[0].email) wins; otherwise fall back to the MAIL_TO secret.
+          const notify = Array.isArray(config.notify) ? config.notify : [];
+          const recipient = (notify[0] && notify[0].email) || process.env.MAIL_TO_SECRET || '';
+          setOutput('mail_to', recipient);
+          if (!recipient) {
+            console.log('No recipient: set an email in the app (Settings) or a MAIL_TO secret.');
+            setOutput('send_email', 'false');
+            process.exit(0);
           }
 
           // Compute today's date in the user's configured timezone (so the
@@ -104,16 +136,9 @@ jobs:
 
           console.log(`Found ${actions.length} actions for ${todayISO}`);
 
-          // Helper: set a step output via the modern $GITHUB_OUTPUT file
-          // (the old ::set-output command was disabled by GitHub in 2023).
-          function setOutput(name, value) {
-            if (process.env.GITHUB_OUTPUT) {
-              fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
-            }
-          }
-
-          // If no actions, exit
-          if (actions.length === 0) {
+          // If there's nothing due and this isn't a test run, skip the email
+          // (no "nothing today" spam). A test run always sends a confirmation.
+          if (actions.length === 0 && !isTest) {
             console.log('No actions for today. Skipping email.');
             setOutput('send_email', 'false');
             process.exit(0);
@@ -121,6 +146,14 @@ jobs:
 
           // Build email HTML
           let html = `<p><strong>Bank Bonus Report</strong> — ${todayISO}</p>`;
+
+          if (isTest) {
+            html = `<p>✅ <strong>Your daily email is set up correctly.</strong> This is a test message.</p>` +
+                   (actions.length === 0
+                      ? `<p>Nothing is due today, so a normal day would send no email. On days with something to do you'll get a report like the one below.</p>`
+                      : `<p>Here's what's actually due today:</p>`) +
+                   html;
+          }
 
           const opens = actions.filter(a => a.type === 'open');
           if (opens.length > 0) {
@@ -172,7 +205,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "Daily Bank Bonus Report"
-          to: ${{ secrets.MAIL_TO }}
+          subject: ${{ github.event.inputs.test == 'true' && 'Bank Bonus — test email ✅' || 'Daily Bank Bonus Report' }}
+          to: ${{ steps.check_actions.outputs.mail_to }}
           html_body: file:///tmp/email_body.html
           from: ${{ secrets.MAIL_USERNAME }}

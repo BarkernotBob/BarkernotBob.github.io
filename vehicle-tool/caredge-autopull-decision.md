@@ -10,12 +10,16 @@
 > Readable bookmarklet source: `vehicle-tool/caredge-grab.bookmarklet.js` (the minified copy is inlined as
 > the button's `href` in `index.html`).
 >
-> **Paste-the-page parser (`ceParsePage`):** the copied page is plain text, so it locks onto the table
-> whose header has *both* `Current Price` and `Maintenance` (ignoring CarEdge's smaller price-only table),
-> maps columns by header, and reads insurance from the page's "…is about $X per year" sentence (the
-> Depreciation page carries the insurance figure too — so it's **one copy**, no second page). Insurance is
-> scaled by each year's % Paid, same as the bookmarklet. A pasted URL can't work — CORS blocks the static
-> app from fetching `caredge.com`; copying the page sidesteps that with zero setup.
+> **Paste-the-page parser (`ceParsePage`):** the copied page is plain text. The **primary** parser
+> (`ceParseAgeTable`) reads the **"Years Old / Depreciation / Residual Value / Resale Value / Est. Mileage /
+> Resale Year"** table — CarEdge's real 12-year depreciation schedule. That drives the value curve (resale
+> value by age, plus a derived age-0 new price) and insurance (the page's "…is about $X per year" base,
+> scaled by each year's **Residual %** so insurance depreciates with the car). Maintenance isn't in that
+> table, so it's merged in by model year from the `Current Price / Maintenance` table on the same page
+> (ages past its range get 0 and the engine extrapolates). A `ceParseYearTable` fallback handles pages
+> without the Years-Old table. The import flow now lives on the **Add vehicle** screen (not Settings), with
+> the bookmarklet and copy/paste as two options. A pasted URL still can't work — CORS blocks the static app
+> from fetching `caredge.com`; copying the page sidesteps that with zero setup.
 >
 > **How it works against the real CarEdge (verified on a Toyota Sienna sample):**
 > - CarEdge is Next.js, server-rendered. The car's **Depreciation page** table carries *both* the

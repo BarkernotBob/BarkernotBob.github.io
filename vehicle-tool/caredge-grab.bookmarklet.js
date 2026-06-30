@@ -28,6 +28,6 @@ const title=(make+' '+model).replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase(
 const bundle={name:title,make:make,model:model,rows:rows.map(r=>[r.year,Math.round(r.price||0),Math.round(r.maint||0),(insBase!=null&&r.paid!=null)?Math.round(insBase*r.paid/100):(insBase?Math.round(insBase):0),0])};
 if(pt)bundle.pt=pt;if(mpg)bundle.mpg=mpg;
 const json=JSON.stringify(bundle);
-const msg='✓ '+title+' — '+rows.length+' years\nInsurance base '+(insBase!=null?'$'+insBase:'not found')+(mpg?' · '+mpg+' MPG':'')+'\n\nOpen Driveline → Settings → Add a car from CarEdge → paste.';
+const msg='✓ '+title+' — '+rows.length+' years\nInsurance base '+(insBase!=null?'$'+insBase:'not found')+(mpg?' · '+mpg+' MPG':'')+'\n\nOpen Driveline → Add vehicle → paste.';
 try{await navigator.clipboard.writeText(json);A('Copied to clipboard.\n'+msg);}catch(e){prompt('Copy this, then paste into Driveline:',json);}
 }catch(e){A('grab failed: '+e.message);}})();

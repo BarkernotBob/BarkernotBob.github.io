@@ -92,10 +92,18 @@ To change it:
 
 ## Troubleshooting
 
-### Workflow fails with authentication error
-- Double-check `MAIL_PASSWORD` was pasted exactly (including spaces).
-- Confirm 2-factor authentication is enabled on your Gmail account.
-- Try generating a new app password and updating the secret.
+### Workflow fails with authentication error (`535-5.7.8 ... BadCredentials`)
+Gmail is rejecting the login — a credentials problem, not a code bug. Most common cause:
+`MAIL_PASSWORD` is your normal Google password instead of a **16-character App
+Password**. To fix:
+- Confirm 2-factor authentication is on (App Passwords require it):
+  <https://myaccount.google.com/signinoptions/twosv>.
+- Generate a fresh App Password at <https://myaccount.google.com/apppasswords> (signed in
+  as the same address as `MAIL_USERNAME`), then update the `MAIL_PASSWORD` secret with the
+  16 characters (spaces don't matter to Gmail; pasting without them avoids typos).
+- Confirm `MAIL_USERNAME` is your full Gmail address.
+- Each data repo keeps its own secrets — the same App Password works for the Pool and
+  Grocery robots too, but you must set it in each repo.
 
 ### The in-app "Send test email" button fails
 The app triggers this workflow through the GitHub API, which needs two things your

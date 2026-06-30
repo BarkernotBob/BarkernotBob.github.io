@@ -1,15 +1,30 @@
 # CarEdge Auto-Pull — Strategy Decision
 
-**Status:** Phase 1 partially shipped — paste/import box is live; bookmarklet pending a real CarEdge page sample
+**Status:** Phase 1 shipped — one-click bookmarklet + paste/import box both live
 **Date:** 2026-06-30
 
-> **Update:** The **import box is now built** (Settings → "Add a car from CarEdge"). It accepts the
-> bookmarklet's JSON bundle *or* a hand-pasted CSV/TSV (`year,price,maint,ins,reg`, header optional)
-> and creates a vehicle. The **bookmarklet itself is not written yet** — the build environment can't
-> reach caredge.com (proxy block + bot-blocking), so the extractor needs the real page structure.
-> **Next step:** open a CarEdge cost page in a normal browser, save its source (or copy the
-> `__NEXT_DATA__` / hydration JSON), and share it so the bookmarklet is written against the real field
-> names. Target bundle: `{name, make, model, pt, mpg, rows:[[year,price,maint,ins,reg],...]}`.
+> **Update (shipped):** Both halves are built. Settings → **"One-click CarEdge button"** is a draggable
+> bookmarklet; Settings → **"Add a car from CarEdge"** is the paste box. Readable bookmarklet source:
+> `vehicle-tool/caredge-grab.bookmarklet.js` (the minified copy is inlined as the button's `href` in
+> `index.html`).
+>
+> **How it works against the real CarEdge (verified on a Toyota Sienna sample):**
+> - CarEdge is Next.js, server-rendered. The car's **Depreciation page** table carries *both* the
+>   per-model-year **Current Price** *and* **Maintenance** (and a **% Paid** value column), so it alone
+>   yields a usable car — the separate maintenance page is **not needed**.
+> - The bookmarklet runs on that page, reads its table, then **same-origin `fetch()`es** the sibling
+>   `…/insurance` page (for the base annual premium) and the hub page (for MPG + powertrain) — one click,
+>   no extra navigation. Same-origin means no CORS wall and the user's own logged-in session is used.
+> - **Insurance** on CarEdge is a single driver-based base rate (not per-model-year), so per the owner's
+>   call it's **scaled down by each year's % Paid** (value) → insurance depreciates with the vehicle.
+> - **Registration** isn't on CarEdge → left blank for the user to fill.
+> - Emits `{name, make, model, pt, mpg, rows:[[year,price,maint,ins,reg],...]}`, copies to clipboard;
+>   the paste box parses it (also accepts hand-pasted CSV/TSV).
+>
+> **Known limits:** the depreciation table renders ~6 model-years (the engine extrapolates the rest);
+> bookmarklets are desktop-only (phones use the paste box); brittle to a CarEdge redesign — update the
+> source file and re-drag. If CarEdge ever sets a strict CSP that blocks the inline bookmarklet, switch
+> to a hosted-loader variant.
 **App:** Driveline vehicle cost calculator — `quartz/static/vehicle/index.html`, served at `/static/vehicle/`
 
 ---

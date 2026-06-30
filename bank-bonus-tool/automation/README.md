@@ -92,10 +92,30 @@ To change it:
 
 ## Troubleshooting
 
-### Workflow fails with authentication error
-- Double-check `MAIL_PASSWORD` was pasted exactly (including spaces).
-- Confirm 2-factor authentication is enabled on your Gmail account.
-- Try generating a new app password and updating the secret.
+### Workflow fails with authentication error (`535-5.7.8 ... BadCredentials`)
+Gmail is rejecting the login — a credentials problem, not a code bug. Most common cause:
+`MAIL_PASSWORD` is your normal Google password instead of a **16-character App
+Password**. To fix:
+- Confirm 2-factor authentication is on (App Passwords require it):
+  <https://myaccount.google.com/signinoptions/twosv>.
+- Generate a fresh App Password at <https://myaccount.google.com/apppasswords> (signed in
+  as the same address as `MAIL_USERNAME`), then update the `MAIL_PASSWORD` secret with the
+  16 characters (spaces don't matter to Gmail; pasting without them avoids typos).
+- Confirm `MAIL_USERNAME` is your full Gmail address.
+- Each data repo keeps its own secrets — the same App Password works for the Pool and
+  Grocery robots too, but you must set it in each repo.
+
+### The in-app "Send test email" button fails
+The app triggers this workflow through the GitHub API, which needs two things your
+sync token may not have:
+- **`HTTP 403` / "Resource not accessible by personal access token":** your token is
+  missing the **Actions: Read and write** permission. Edit the token at
+  https://github.com/settings/personal-access-tokens (or make a new one) and add it —
+  see SETUP.md Step 3 — then reconnect in the app.
+- **`HTTP 404`:** the `daily-email.yml` workflow isn't in your `bank-bonus-data` repo
+  yet (or isn't on the `main` branch). Add it first (Step 1 above).
+- The scheduled 11:00 UTC run does **not** need the token — it runs on its own. Only
+  the in-app test button does.
 
 ### Email doesn't arrive
 - Check the **Actions** tab in your data repo. Click the failed job and expand the
@@ -116,12 +136,17 @@ To change it:
 ## What the robot does (for the curious)
 
 1. Reads `db/config.json` and `db/accounts.json` from your private repo.
-2. Compares today's date against each account's:
-   - `dates.opened` — accounts to open today
+2. Picks the recipient: the email you saved in the app (**Settings →
+   notifications**, stored as `config.notify[0].email`) wins; otherwise it falls back
+   to the `MAIL_TO` secret.
+3. Compares today's date against each account's:
+   - `dates.plannedOpen` (status `planned`) or `dates.reopenAfter` — accounts to open today
    - `dates.closed` — accounts to close today
    - `reminders[].date` — reminders due today (that aren't already `done`)
    - `dates.firstDD` — first DD that cleared yesterday
-3. If there are any actions, builds an email and sends it via Gmail SMTP.
-4. If there are no actions, exits silently (no email sent).
+4. If there are any actions, builds an email and sends it via Gmail SMTP.
+5. If there are no actions, exits silently (no email sent) — **unless** it was run as a
+   test (the in-app button, or **Run workflow** with `test = true`), which always sends
+   a short confirmation so you know the setup works.
 
 The whole thing runs in about 10 seconds.

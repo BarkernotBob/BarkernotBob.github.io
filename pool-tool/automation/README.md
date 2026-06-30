@@ -149,3 +149,38 @@ the **pencil ✏️**, select-all, paste the new contents, **Commit changes**.
 ## Changing the time it runs
 In `pool-reminders.yml`, the `cron: '0 11 * * *'` line is the time in **UTC**.
 `11` = 7am Eastern in summer. Lower the number to make it earlier, raise it for later.
+
+---
+
+## Troubleshooting
+
+### The job log shows `535-5.7.8 Username and Password not accepted ... BadCredentials`
+Gmail is rejecting your login. This is **always** a credentials problem, not a bug in
+the workflow — fix it by replacing the `MAIL_PASSWORD` secret. In order of likelihood:
+
+1. **`MAIL_PASSWORD` is your normal Google password, not an App Password.** Gmail SMTP
+   rejects your regular password. You must use a **16-character App Password**
+   (Step 1 above). This is the #1 cause.
+2. **2-Step Verification is off.** App Passwords only exist when 2-Step Verification is
+   on. Turn it on at <https://myaccount.google.com/signinoptions/twosv>, then create
+   the App Password at <https://myaccount.google.com/apppasswords>.
+3. **The App Password was made under a different Google account** than the one in
+   `MAIL_USERNAME`. Sign in as the *exact* address in `MAIL_USERNAME`, then create it.
+4. **It was revoked.** Changing your Google password (or removing the App Password)
+   invalidates it. Just make a fresh one and update the secret.
+5. **Typo / `MAIL_USERNAME` isn't the full address.** `MAIL_USERNAME` must be the whole
+   `you@gmail.com`. For `MAIL_PASSWORD`, the spaces in the 16-char code don't matter to
+   Gmail, but pasting it **without spaces** avoids any stray-character mistakes.
+
+**The fix, start to finish:**
+1. Confirm 2-Step Verification is on (link above).
+2. Make a fresh App Password at <https://myaccount.google.com/apppasswords> → copy the
+   16 characters.
+3. Go to <https://github.com/barkernotbob/pool-data/settings/secrets/actions>, click
+   **MAIL_PASSWORD → Update**, paste the new code (no spaces), **Update secret**. While
+   there, confirm **MAIL_USERNAME** is your full Gmail address.
+4. **Actions** tab → **Pool reminders** → **Run workflow** to re-test.
+
+> Same Gmail account is used by the Bank Bonus and Grocery robots too. They each keep
+> their **own** secrets in their own data repo, so update `MAIL_PASSWORD` in each repo
+> you use — the *same* App Password works for all of them.

@@ -86,7 +86,10 @@ store your data file privately.)
 2. **Token name:** `bank-bonus-app`
 3. **Expiration:** **No expiration** (so you never have to redo this on this device)
 4. **Repository access:** **Only select repositories** → choose **`bank-bonus-data`**
-5. **Permissions → Repository permissions → Contents:** **Read and write**
+5. **Permissions → Repository permissions:**
+   - **Contents:** **Read and write** (lets the app sync your data)
+   - **Actions:** **Read and write** (only needed if you want the in-app **Send test
+     email** button to work — it triggers the email robot for you)
 6. Click **Generate token**, then **copy it** (you only see it once).
 
 This token can touch *only* your `bank-bonus-data` repo and nothing else in your account.

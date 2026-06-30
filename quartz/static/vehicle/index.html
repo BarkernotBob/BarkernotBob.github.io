@@ -126,6 +126,13 @@ main{max-width:880px;margin:0 auto;padding:16px 16px 8px}
 .steps{margin:0;padding-left:20px;line-height:1.75;font-size:12.5px;color:var(--muted)}
 .steps li{margin:2px 0}
 .steps b{color:var(--ink)}
+.opt{border:1px solid var(--line);border-radius:12px;padding:11px 14px 12px;margin:10px 0;background:var(--surface2)}
+.opt-h{font-weight:600;font-size:13px;color:var(--ink);margin-bottom:6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tag{font-weight:600;font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);
+  background:var(--accent-t);padding:2px 8px;border-radius:999px}
+.step1{font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:10px}
+.step1 b{color:var(--ink)}
+.step1 a{color:var(--accent);font-weight:600}
 .btnrow{display:flex;gap:10px}
 .btnrow>*{flex:1}
 
@@ -956,24 +963,30 @@ function renderSettings(){
         <input type="range" id="s_mw" min="0" max="1" step="0.05" value="${S.mileWeight}"></div>
       <p class="note" style="margin-top:-2px">How strongly lower-than-typical mileage lifts resale value. 0% = ignore odometer, 100% = full effect.</p>
     </div>`;
-  h+=`<div class="card"><h2 class="tight">One-click CarEdge button</h2>
-      <p class="note" style="margin-bottom:12px">Drag this button to your bookmarks bar. Then, on any car's CarEdge <b>Depreciation</b> page, click it — Driveline grabs the prices, maintenance and insurance and copies them. Come back and paste below.</p>
+  h+=`<div class="card"><h2 class="tight">Add a car from CarEdge</h2>
+      <p class="step1"><b>Step 1.</b> Open <a href="https://caredge.com/depreciation" target="_blank" rel="noopener">caredge.com/depreciation</a> and pick your car — that lands on its <b>Depreciation</b> page. One copy of that page carries the prices, maintenance <b>and</b> insurance.</p>
+      <p class="step1" style="margin-bottom:4px"><b>Step 2.</b> Bring the numbers over either way:</p>
+      <div class="opt">
+      <div class="opt-h">Option 1 &middot; One-click button <span class="tag">set up once &middot; desktop</span></div>
       <p style="text-align:center;margin:4px 0 14px"><a class="bm-btn" id="bmBtn" href="javascript:(async()%3D%3E%7Bconst%20A%3Dm%3D%3Ealert('Driveline%20%C2%B7%20'%2Bm)%3Btry%7Bconst%20can%3D(document.querySelector('link%5Brel%3Dcanonical%5D')%7C%7C%7B%7D).href%7C%7Clocation.href%3Bconst%20m%3Dcan.match(%2Fcaredge%5C.com%5C%2F(%5B%5E%5C%2F%3F%23%5D%2B)%5C%2F(%5B%5E%5C%2F%3F%23%5D%2B)%2Fi)%3Bif(!m)%7BA(%22Open%20a%20car's%20CarEdge%20page%20first%20(its%20Depreciation%20page%20works%20best).%22)%3Breturn%3B%7Dconst%20make%3Dm%5B1%5D%2Cmodel%3Dm%5B2%5D%2Cbase%3D'https%3A%2F%2Fcaredge.com%2F'%2Bmake%2B'%2F'%2Bmodel%3Bconst%20money%3Ds%3D%3E%7Bconst%20n%3DparseFloat(String(s).replace(%2F%5B%5E0-9.%5D%2Fg%2C''))%3Breturn%20isFinite(n)%3Fn%3Anull%3B%7D%3Bfunction%20priceRows(doc)%7Bconst%20tabs%3D%5B...doc.querySelectorAll('table')%5D%3Bconst%20t%3Dtabs.find(t%3D%3E%7Bconst%20h%3D(t.querySelector('tr')%7C%7C%7B%7D).textContent%7C%7C''%3Breturn%20%2Fcurrent%20price%2Fi.test(h)%26%26%2Fmaintenance%2Fi.test(h)%3B%7D)%3Bif(!t)return%5B%5D%3Bconst%20trs%3D%5B...t.querySelectorAll('tr')%5D%3Bconst%20head%3D%5B...trs%5B0%5D.querySelectorAll('th%2Ctd')%5D.map(c%3D%3Ec.textContent.trim().toLowerCase())%3Bconst%20ci%3Dn%3D%3Ehead.findIndex(h%3D%3Eh.includes(n))%3Bconst%20iy%3Dci('year')%2Cip%3Dci('current%20price')%2Cim%3Dci('maintenance')%2Cipp%3Dci('%25%20paid')%3Bconst%20out%3D%5B%5D%3Btrs.slice(1).forEach(tr%3D%3E%7Bconst%20c%3D%5B...tr.querySelectorAll('th%2Ctd')%5D.map(x%3D%3Ex.textContent.trim())%3Bconst%20y%3DparseInt(c%5Biy%5D%2C10)%3Bif(y%3E1990%26%26y%3C2100)out.push(%7Byear%3Ay%2Cprice%3Amoney(c%5Bip%5D)%2Cmaint%3Amoney(c%5Bim%5D)%2Cpaid%3Aipp%3E%3D0%3Fmoney(c%5Bipp%5D)%3Anull%7D)%3B%7D)%3Breturn%20out%3B%7Dlet%20rows%3DpriceRows(document)%3Bif(!rows.length)%7BA(%22Couldn't%20find%20the%20price%20table%20%E2%80%94%20open%20this%20car's%20Depreciation%20page%2C%20then%20click%20again.%22)%3Breturn%3B%7Dasync%20function%20fetchDoc(u)%7Bconst%20r%3Dawait%20fetch(u%2C%7Bcredentials%3A'include'%7D)%3Breturn%20new%20DOMParser().parseFromString(await%20r.text()%2C'text%2Fhtml')%3B%7Dlet%20insBase%3Dnull%3Btry%7Bconst%20d%3Dawait%20fetchDoc(base%2B'%2Finsurance')%3Bconst%20mm%3Dd.body.textContent.match(%2FAvg%5Cs*%5C%24%3F(%5B%5Cd%2C%5D%2B)%5Cs*%5C%2F%5Cs*year%2Fi)%3Bif(mm)insBase%3Dmoney(mm%5B1%5D)%3Bif(insBase%3D%3Dnull)%7Bconst%20t%3D%5B...d.querySelectorAll('table')%5D.find(t%3D%3E%2Fgood%20driver%2Fi.test(t.textContent))%3Bconst%20br%3Dt%26%26%5B...t.querySelectorAll('tr')%5D.find(tr%3D%3E%2F%5Cbbase%5Cb%2Fi.test(tr.textContent))%3Bif(br)insBase%3Dmoney(%5B...br.querySelectorAll('td')%5D.map(x%3D%3Ex.textContent).find(x%3D%3E%2F%5C%24%2F.test(x)))%3B%7D%7Dcatch(e)%7B%7Dlet%20mpg%3Dnull%2Cpt%3Dnull%3Btry%7Bconst%20t%3Dawait(await%20fetch(base%2C%7Bcredentials%3A'include'%7D)).text()%3Bif(%2Fhybrid%2Fi.test(t))pt%3D'hybrid'%3Belse%20if(%2F%5CbMPGe%5Cb%2F.test(t)%7C%7C%2F%5Cbelectric%5Cb%2Fi.test(t))pt%3D'ev'%3Bconst%20mg%3Dt.match(%2F(%5Cd%7B2%2C3%7D)%5Cs*MPGe%2Fi)%7C%7Ct.match(%2Fcombined%5B%5E0-9%5D%7B0%2C24%7D(%5Cd%7B2%2C3%7D)%5Cs*mpg%2Fi)%7C%7Ct.match(%2F(%5Cd%7B2%2C3%7D)%5Cs*mpg%5Cb%2Fi)%3Bif(mg)mpg%3DparseInt(mg%5B1%5D%2C10)%3B%7Dcatch(e)%7B%7Dconst%20title%3D(make%2B'%20'%2Bmodel).replace(%2F-%2Fg%2C'%20').replace(%2F%5Cb%5Cw%2Fg%2Cc%3D%3Ec.toUpperCase())%3Bconst%20bundle%3D%7Bname%3Atitle%2Cmake%3Amake%2Cmodel%3Amodel%2Crows%3Arows.map(r%3D%3E%5Br.year%2CMath.round(r.price%7C%7C0)%2CMath.round(r.maint%7C%7C0)%2C(insBase!%3Dnull%26%26r.paid!%3Dnull)%3FMath.round(insBase*r.paid%2F100)%3A(insBase%3FMath.round(insBase)%3A0)%2C0%5D)%7D%3Bif(pt)bundle.pt%3Dpt%3Bif(mpg)bundle.mpg%3Dmpg%3Bconst%20json%3DJSON.stringify(bundle)%3Bconst%20msg%3D'%E2%9C%93%20'%2Btitle%2B'%20%E2%80%94%20'%2Brows.length%2B'%20years%5CnInsurance%20base%20'%2B(insBase!%3Dnull%3F'%24'%2BinsBase%3A'not%20found')%2B(mpg%3F'%20%C2%B7%20'%2Bmpg%2B'%20MPG'%3A'')%2B'%5Cn%5CnOpen%20Driveline%20%E2%86%92%20Settings%20%E2%86%92%20Add%20a%20car%20from%20CarEdge%20%E2%86%92%20paste.'%3Btry%7Bawait%20navigator.clipboard.writeText(json)%3BA('Copied%20to%20clipboard.%5Cn'%2Bmsg)%3B%7Dcatch(e)%7Bprompt('Copy%20this%2C%20then%20paste%20into%20Driveline%3A'%2Cjson)%3B%7D%7Dcatch(e)%7BA('grab%20failed%3A%20'%2Be.message)%3B%7D%7D)()%3B" onclick="return false">&#8615; Send to Driveline</a></p>
       <ol class="steps">
         <li>Show your bookmarks bar (<b>Ctrl/&#8984;-Shift-B</b>), then <b>drag</b> the button up onto it.</li>
-        <li>Open a car on CarEdge and go to its <b>Depreciation</b> page.</li>
-        <li>Click <b>Send to Driveline</b> in your bookmarks bar.</li>
-        <li>Come back here and paste into the box below.</li>
+        <li>On your car's <b>Depreciation</b> page, click <b>Send to Driveline</b>.</li>
+        <li>Come back and paste into the box below.</li>
       </ol>
-      <p class="note" style="margin-top:10px">Insurance uses CarEdge's base rate, scaled down as the car ages. Registration isn't on CarEdge — add it per car if you want it. Desktop only; on phones use the paste box.</p>
-    </div>`;
-  h+=`<div class="card"><h2 class="tight">Add a car from CarEdge</h2>
-      <p class="note" style="margin-bottom:10px">Paste a car's cost data and Driveline builds the vehicle. Accepts the one-click button's bundle, or a table you copy yourself.</p>
-      <textarea id="ceText" rows="5" placeholder="Paste JSON from the bookmarklet, or CSV rows:&#10;year,price,maintenance,insurance,registration&#10;2025,28000,250,550,300&#10;2024,25000,300,540,297" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;line-height:1.5"></textarea>
+      </div>
+      <div class="opt">
+      <div class="opt-h">Option 2 &middot; Copy &amp; paste <span class="tag">easiest &middot; works on phones</span></div>
+      <ol class="steps">
+        <li>On the <b>Depreciation</b> page select all (<b>Ctrl/&#8984;-A</b>), then copy (<b>Ctrl/&#8984;-C</b>). On a phone: tap-hold &#8594; <b>Select all</b> &#8594; <b>Copy</b>.</li>
+        <li>Come back, tap the box below and <b>paste</b>.</li>
+      </ol>
+      </div>
+      <textarea id="ceText" rows="4" placeholder="Paste the copied CarEdge page here — or the one-click button's data, or plain CSV rows:&#10;year,price,maintenance,insurance,registration" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;line-height:1.5"></textarea>
       <div class="field" style="margin-top:10px"><label class="lbl">Name this car <span style="font-weight:400;color:var(--faint)">(optional)</span></label>
         <input class="inp" id="ceName" placeholder="e.g. Honda CR-V"></div>
-      <button class="btn sm" id="ceAdd">Add vehicle from paste</button>
-      <p class="note" style="margin-top:10px">CSV columns: model year, price, annual maintenance, insurance, registration — one row per year, header optional. JSON may also carry name, powertrain (gas/hybrid/ev) and MPG.</p>
+      <button class="btn sm" id="ceAdd">Add vehicle</button>
+      <p class="note" style="margin-top:10px">Insurance scales down as the car ages; registration isn't on CarEdge — add it per car. Pasting the page reads the depreciation table automatically; you can also paste plain CSV: model year, price, maintenance, insurance, registration.</p>
     </div>`;
   h+=`<div class="card"><h2>Your data</h2>
       <div class="btnrow"><button class="btn sec" id="exportBtn">Export JSON</button><button class="btn sec" id="importBtn">Import JSON</button></div>
@@ -1042,6 +1055,60 @@ function ceParseTable(text){
   });
   return rows;
 }
+// Split a copied line into cells: tabs first (how tables copy), else runs of 2+ spaces.
+function ceCells(line){
+  let c=line.split("\t");
+  if(c.length<2) c=line.split(/ {2,}/);
+  return c.map(s=>s.trim());
+}
+/* Parse a whole CarEdge Depreciation page that the user selected-all + copied.
+   Locks onto the table whose header has BOTH "current price" and "maintenance"
+   (ignoring the smaller price-only table), then maps columns by header, and
+   reads the "...is about $X per year" insurance line. Returns null if no such
+   table is present (caller falls back to plain CSV).                          */
+function ceParsePage(text){
+  const lines=text.split(/\r?\n/);
+  let idx=null,start=-1;
+  for(let i=0;i<lines.length;i++){
+    const low=ceCells(lines[i]).map(c=>c.toLowerCase());
+    const iy=low.findIndex(c=>c==="year");
+    const ip=low.findIndex(c=>c.includes("current price"));
+    const im=low.findIndex(c=>c.includes("maintenance"));
+    if(iy>=0&&ip>=0&&im>=0){
+      idx={iy,ip,im,ipp:low.findIndex(c=>c.includes("% paid")||c==="paid")};
+      start=i+1; break;
+    }
+  }
+  if(!idx) return null;
+  const rows=[],paids=[];
+  for(let i=start;i<lines.length;i++){
+    if(!lines[i].trim()) continue;                 // skip blank gaps
+    const c=ceCells(lines[i]);
+    const y=parseInt(c[idx.iy],10);
+    if(!isFinite(y)||y<1980||y>2100) break;        // table ended
+    rows.push([y,ceNum(c[idx.ip]),ceNum(c[idx.im]),0,0]);
+    paids.push(idx.ipp>=0?ceNum(c[idx.ipp]):0);
+  }
+  if(!rows.length) return null;
+  // Insurance: prefer the "...is about $X per year" sentence; avoid the depreciation "$/yr" figure.
+  let ins=0;
+  let m=text.match(/insure[^$]{0,40}\$\s*([\d,]+)\s*(?:per year|\/\s*year|a year)/i)
+      ||text.match(/\$\s*([\d,]+)\s*per year/i);
+  if(m) ins=ceNum(m[1]);
+  if(ins>0) rows.forEach((r,i)=>{ r[3]=paids[i]>0?Math.round(ins*paids[i]/100):Math.round(ins); });
+  // Powertrain / MPG, if the copied text mentions them.
+  let pt=null,mpg=null;
+  if(/\bplug-?in hybrid\b|\bhybrid\b/i.test(text)) pt="hybrid";
+  else if(/\belectric\b|\bMPGe\b/i.test(text)) pt="ev";
+  const mg=text.match(/(\d{2,3})\s*MPGe/i)||text.match(/combined[^0-9]{0,24}(\d{2,3})\s*mpg/i)||text.match(/(\d{2,3})\s*mpg\b/i);
+  if(mg) mpg=parseInt(mg[1],10);
+  // Name from "...to insure a <Make Model> is about" or a "<Make Model> Depreciation" heading.
+  let nm="";
+  const nmm=text.match(/insure (?:an? )?([A-Z][\w.-]+(?: [\w.\-]+){0,3}?) is\b/)
+         ||text.match(/^([A-Z][\w.-]+(?: [\w.\-]+){0,3}?) Depreciation\b/m);
+  if(nmm) nm=nmm[1].trim();
+  return {rows,pt,mpg,name:nm};
+}
 function importCarEdge(text,name){
   text=(text||"").trim(); if(!text){ toast("Paste some data first"); return; }
   const seed={name:(name||"").trim(),make:"",model:"",pt:"gas",mpg:30,rows:[]};
@@ -1058,7 +1125,15 @@ function importCarEdge(text,name){
       if(Array.isArray(rws)) seed.rows=rws.map(ceRow).filter(Boolean);
     }
   } else {
-    seed.rows=ceParseTable(text);
+    const page=ceParsePage(text);
+    if(page){
+      seed.rows=page.rows;
+      if(page.name) seed.name=seed.name||page.name;
+      if(page.pt) seed.pt=page.pt;
+      if(page.mpg) seed.mpg=page.mpg;
+    } else {
+      seed.rows=ceParseTable(text);
+    }
   }
   if(!seed.rows.length){ toast("Couldn't find any year rows"); return; }
   seed.rows.sort((a,b)=>b[0]-a[0]);

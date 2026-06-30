@@ -1,5 +1,3 @@
-# Open questions (to address later)
-
 # Response style
 - Be terse. No narration, reasoning summaries, or "I'll now…" preambles. Execute first, then report only the result (a short "what I did" summary).
 - Lead with the outcome; no preamble, no recap of the process.

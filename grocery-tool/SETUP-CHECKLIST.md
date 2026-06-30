@@ -79,7 +79,7 @@ This is the fiddly one. Go slowly — it's just clicking.
 1. ☐ On your phone, open **https://barkernotbob.github.io/static/grocery/**
 2. ☐ Tap your browser's **Share / menu** → **Add to Home Screen** (makes it feel like a real app).
 3. ☐ On the welcome screen:
-   - **Your name:** choose **Isaiah**
+   - **Your name:** choose **Me**
    - **Private data repository:** type  `BarkernotBob/grocery-data`
    - **Access key:** paste your token from Step 3
 4. ☐ Tap **Connect.** (It sets up your data files automatically the first time.)

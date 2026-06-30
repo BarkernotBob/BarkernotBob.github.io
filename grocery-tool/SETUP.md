@@ -100,8 +100,8 @@ This is the fiddliest step. Go slowly.
    "Publishing" at the bottom.)
 2. Tap the browser menu → **Add to Home Screen** so it feels like a real app.
 3. In the setup screen:
-   - **Your name:** choose Isaiah.
-   - **Device name:** type a label like "Isaiah's iPhone" (just so you can tell your
+   - **Your name:** choose Me.
+   - **Device name:** type a label like "My iPhone" (just so you can tell your
      devices apart).
    - Tap **🔐 Sign in with GitHub** → approve on GitHub → you land back in the app,
      signed in. The first time, it automatically creates the data files inside your

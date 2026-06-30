@@ -185,7 +185,7 @@
         Until both are set, the app uses the token-paste fallback. ---- */
 const OAUTH = {
   clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
-  workerUrl: 'https://pool-auth.isaiahmail97.workers.dev'  // Cloudflare Worker base URL
+  workerUrl: 'https://pool-auth.barkernotbob.workers.dev'  // Cloudflare Worker base URL
 };
 
 const LS = {
@@ -865,7 +865,7 @@ function renderSetup(){
       <label>Access token (<code>github_pat_…</code>)</label>
       <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
       <label>This device's name (optional)</label>
-      <input id="su_device" placeholder="e.g. Isaiah's iPhone" value="${esc(LS.device)}" autocapitalize="words"/>
+      <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words"/>
       <p class="small muted">The token is saved only in this browser, sent only to GitHub.</p>
       <button class="sec" onclick="saveTokenSetup()">Connect with token</button>
     </details>
@@ -1359,7 +1359,7 @@ function renderSettings(){
     <h2>This device</h2>
     <div class="kv"><span>Signed in as</span><b>${esc(LS.login||'—')}</b></div>
     <div class="kv"><span>Method</span><b>${esc(LS.method||'—')}</b></div>
-    <label>Device name</label><input id="s_device" value="${esc(LS.device)}" placeholder="e.g. Isaiah's iPhone"/>
+    <label>Device name</label><input id="s_device" value="${esc(LS.device)}" placeholder="e.g. My iPhone"/>
     <label>Data repository</label><input id="s_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <div class="row" style="margin-top:10px"><button class="sec" onclick="saveDevice()">Save</button>
       <button class="danger" onclick="signOut()">Sign out</button></div>

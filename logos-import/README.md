@@ -69,16 +69,12 @@ every note has:
 ## Jumping back to the original note in Logos
 
 Every note carries a `logos_link:` property, e.g.
-`https://app.logos.com/notes/120fd062-a33b-42eb-9d80-b8ee840d3378`. In Obsidian
-this shows up as a clickable link in the note's Properties — click it to open the
-very same note in Logos (in the desktop app if it's installed, otherwise at
-app.logos.com). This is the round-trip companion to the `passages:` links, which
-go the other way (into your Obsidian Bible).
-
-Verify it once: open any note in Logos, copy its link (Notes panel → the note's
-⋮ menu → *Copy note link*), and confirm it matches the `logos_link:` value. If
-Logos ever changes the format, it's a one-line change in `logos_to_md.py` — the
-`logos_link:` line in the frontmatter section.
+`https://ref.ly/logos4/NotesTool?EditNoteId=7e83d783ba304433992a7a4287ea67cf`. In
+Obsidian this shows up as a clickable link in the note's Properties — click it to
+open the very same note in the **Logos desktop app** (this is the same link Logos
+itself produces when you copy a note link, minus the trailing view-state
+parameters, which aren't needed to open the note). It's the round-trip companion
+to the `passages:` links, which go the other way (into your Obsidian Bible).
 
 To get one sortable table of everything:
 

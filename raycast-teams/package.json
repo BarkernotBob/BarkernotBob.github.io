@@ -1,0 +1,59 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "ms-teams-quick-chat",
+  "title": "MS Teams Quick Chat",
+  "description": "Search your saved Microsoft Teams chats and start new ones from Raycast. Uses Teams deep links, so there is no sign-in, OAuth, or API key to set up.",
+  "icon": "command-icon.png",
+  "author": "barkernotbob",
+  "categories": ["Communication", "Productivity"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "search-chats",
+      "title": "Search Teams Chats",
+      "subtitle": "Microsoft Teams",
+      "description": "Search your saved chats and open them in Microsoft Teams.",
+      "mode": "view"
+    },
+    {
+      "name": "new-chat",
+      "title": "New Teams Chat",
+      "subtitle": "Microsoft Teams",
+      "description": "Start a new one-on-one or group chat in Microsoft Teams.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "defaultClient",
+      "title": "Open chats in",
+      "description": "Where the default 'Open' action sends you. Web always works; Desktop app opens the installed Teams app directly.",
+      "type": "dropdown",
+      "required": false,
+      "default": "web",
+      "data": [
+        { "title": "Web (teams.microsoft.com)", "value": "web" },
+        { "title": "Desktop app", "value": "desktop" }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.83.0",
+    "@raycast/utils": "^1.17.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "20.8.10",
+    "@types/react": "19.0.10",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.4.5"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "lint": "ray lint",
+    "fix-lint": "ray lint --fix",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "logos-obsidian-sync",
+  "title": "Logos → Obsidian Sync",
+  "description": "Import and continuously re-sync your Logos Bible Software notes into an Obsidian vault.",
+  "icon": "command-icon.png",
+  "author": "barkernotbob",
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "sync",
+      "title": "Sync Logos Notes",
+      "subtitle": "Logos → Obsidian",
+      "description": "Read the Logos notes database and update your Obsidian vault. Runs on demand and hourly in the background.",
+      "mode": "no-view",
+      "interval": "1h"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "vaultPath",
+      "title": "Obsidian Vault",
+      "description": "Full path to the folder that contains your Obsidian notes (e.g. ~/ObsidianVault).",
+      "type": "textfield",
+      "required": true
+    },
+    {
+      "name": "toolkitPath",
+      "title": "Toolkit Folder",
+      "description": "Folder that contains logos_to_md.py (the unzipped LogosImport-Toolkit).",
+      "type": "textfield",
+      "required": true
+    },
+    {
+      "name": "downloadImages",
+      "title": "Images",
+      "label": "Download note images into the vault",
+      "description": "Turn off to skip image downloads (faster, no network).",
+      "type": "checkbox",
+      "default": true,
+      "required": false
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.79.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.4.0"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "lint": "ray lint"
+  }
+}

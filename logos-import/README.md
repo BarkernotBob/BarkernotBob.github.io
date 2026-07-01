@@ -15,6 +15,7 @@ Obsidian.
 | `logos_to_md.py` | The converter (Python 3, no extra libraries needed). |
 | `Import Logos Notes.command` | Double-click launcher for macOS — finds your database and runs the converter. |
 | `Notes by Passage.base` | An Obsidian **Bases** view that lists every imported note sorted in Bible order. Copy it into your vault. |
+| `resource-titles.md` | Starter list of names for notes anchored to a book/commentary. A live copy is made in your vault on first import — edit that one (see below). |
 
 ---
 
@@ -90,15 +91,30 @@ Most notes are filed under their Bible passage. A note anchored in Logos to a
 filed and named by that resource's title.
 
 Logos's database stores only opaque resource IDs (e.g. `LLS:WORKSOWEN06`), not
-titles. So edit **`resource-titles.txt`** (next to the launcher) and put a
-readable name after the `=` for each ID you care about:
+titles. So there's a small editable list mapping each ID to a readable name.
+
+**Where to edit it:** after your first import, open the note
+**`Logos/resource-titles.md`** right inside Obsidian. Put a readable name after
+the equals sign for each ID, e.g.
 
 ```
 LLS:WORKSOWEN06 = The Works of John Owen, Vol. 6
 ```
 
-Re-run the launcher and those notes move into a folder with that name. Any ID you
-leave blank falls back to the raw code as the folder name.
+Re-run the launcher and those notes automatically move into a folder with that
+name (and any old, now-empty folder is cleaned up). Any ID you leave blank falls
+back to the raw code as the folder name.
+
+**You never have to hunt for the IDs.** Each import automatically adds any new
+resource IDs it finds to that list (blank), so the next time you open it the new
+ones are already waiting for you to name. The copy of `resource-titles.md` next
+to the launcher is just a starter seed used to create the in-vault one; once the
+vault copy exists, that's the only one you edit.
+
+*(Why did Owen's come pre-named but not the others? Its ID, `WORKSOWEN06`, is
+readable enough to guess — "Works of Owen, vol. 6". The rest are cryptic codes
+or random hashes with no reliable way to recover the title from the ID alone,
+so those are left for you to fill in.)*
 
 ---
 

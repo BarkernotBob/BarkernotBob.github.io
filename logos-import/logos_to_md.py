@@ -211,23 +211,37 @@ def main():
     if a and a[0]=="--sample": sample=int(a[1])
     if a and a[0]=="--ids": ids=[int(x) for x in a[1].split(",")]
     os.makedirs(outdir,exist_ok=True)
-    # optional resource-id -> title map (for notes anchored to a non-Bible book)
-    RES_TITLES={}
-    try:
-        mp=os.path.join(os.path.dirname(os.path.abspath(__file__)),"resource-titles.txt")
-        for ln in open(mp,encoding="utf-8"):
-            ln=ln.strip()
-            if not ln or ln.startswith("#") or "=" not in ln: continue
-            k,v=ln.split("=",1)
-            if v.strip(): RES_TITLES[k.strip()]=v.strip()
-    except Exception: pass
+    os.makedirs(os.path.join(outdir,"Logos"),exist_ok=True)
+    # Resource-id -> title map for notes anchored to a non-Bible book/commentary.
+    # Lives INSIDE the vault so you can edit it in Obsidian; auto-created and
+    # auto-extended (new IDs appended blank) so you never have to hunt them down.
+    RES_TITLES={}; listed_ids=[]; seen_rids=[]
+    map_path=os.path.join(outdir,"Logos","resource-titles.md")
+    def _parse_map(path):
+        try: f=open(path,encoding="utf-8")
+        except Exception: return
+        for ln in f:
+            s=ln.strip()
+            if not s or s.startswith("#") or "=" not in s: continue
+            s=re.sub(r'^[-*\s]+','',s)          # tolerate "- " / "* " list markers
+            k,v=s.split("=",1); k=k.strip().strip("`").strip()
+            if not k: continue
+            if k not in listed_ids: listed_ids.append(k)
+            if v.strip(): RES_TITLES[k]=v.strip()
+    # vault copy is authoritative; if absent, seed from the toolkit copy (.md or .txt)
+    for sp in (map_path,
+               os.path.join(os.path.dirname(os.path.abspath(__file__)),"resource-titles.md"),
+               os.path.join(os.path.dirname(os.path.abspath(__file__)),"resource-titles.txt")):
+        if os.path.exists(sp): _parse_map(sp); break
     def res_title_for(aj):
         if not aj: return None
         try:
             for a0 in json.loads(aj):
                 if isinstance(a0,dict) and "textRange" in a0:
                     rid=a0["textRange"].get("resourceId")
-                    if rid: return RES_TITLES.get(rid) or re.sub(r'^(LLS|PBB):','',rid)
+                    if rid:
+                        if rid not in seen_rids: seen_rids.append(rid)
+                        return RES_TITLES.get(rid) or re.sub(r'^(LLS|PBB):','',rid)
         except Exception: pass
         return None
     # index existing output by logos_id -> path (for incremental, no-duplicate writes)
@@ -404,6 +418,31 @@ def main():
         os.makedirs(folder,exist_ok=True)
         open(newpath,"w",encoding="utf-8").write(content)
         made+=1
+    # Remove now-empty book folders left behind when notes were renamed/refoldered.
+    logdir=os.path.join(outdir,"Logos")
+    for d in os.listdir(logdir) if os.path.isdir(logdir) else []:
+        p=os.path.join(logdir,d)
+        if d=="_attachments": continue
+        try:
+            if os.path.isdir(p) and not os.listdir(p): os.rmdir(p)
+        except Exception: pass
+    # Update the editable resource-titles map: append any newly-seen IDs (blank),
+    # keep existing order + any titles you've filled in. Only rewrite when needed.
+    new_ids=[r for r in seen_rids if r not in listed_ids]
+    if new_ids or not os.path.exists(map_path):
+        out=["# Resource titles","",
+             "Some Logos notes are anchored to a book or commentary instead of a Bible",
+             "passage. Those get named and foldered by the resource. Logos only stores",
+             "an opaque ID, so type a readable name after the equals sign for each ID you",
+             "care about, then re-run the importer — the matching notes move into a folder",
+             "with that name. Leave one blank and it just uses the raw code. New IDs are",
+             "added here automatically as you make more such notes.","",
+             "```"]
+        for k in listed_ids+new_ids: out.append(f"{k} = {RES_TITLES.get(k,'')}")
+        out.append("```"); out.append("")
+        try: open(map_path,"w",encoding="utf-8").write("\n".join(out))
+        except Exception: pass
     print(f"wrote {made} new/changed, skipped {skipped} unchanged -> {outdir}")
+    if new_ids: print(f"  added {len(new_ids)} new resource id(s) to {map_path} — fill in titles there")
 
 if __name__=="__main__": main()

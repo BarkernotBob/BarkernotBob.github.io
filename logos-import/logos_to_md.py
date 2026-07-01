@@ -389,7 +389,9 @@ def main():
         fm=["---"]
         fm.append(f'title: "{fnbase}"')
         fm.append(f'logos_id: {r["ExternalId"]}')
-        fm.append(f'logos_link: "https://ref.ly/logos4/NotesTool?EditNoteId={r["ExternalId"]}"')
+        # native logos4: scheme -> hands off to the Logos desktop app (not the browser)
+        logos_link=f'logos4:NotesTool?EditNoteId={r["ExternalId"]}'
+        fm.append(f'logos_link: "{logos_link}"')
         fm.append(f'created: {r["CreatedDate"]}')
         if r["ModifiedDate"]: fm.append(f'updated: {r["ModifiedDate"]}')
         if pinfo:
@@ -427,7 +429,10 @@ def main():
         fm.append("source: logos")
         fm.append("---")
         folder=os.path.join(outdir, "Logos", sanitize(book_folder,40) or "Unsorted")
-        content="\n".join(fm)+"\n\n"+body+"\n"
+        # clickable "open in Logos" at the top of the body (properties don't make
+        # custom-scheme links clickable, but body links do)
+        openlink=f'[↗ Open in Logos]({logos_link})'
+        content="\n".join(fm)+"\n\n"+openlink+"\n\n"+body+"\n"
         newpath=os.path.join(folder,fn+".md")
         oldpath=existing.get(r["ExternalId"])
         if oldpath and os.path.exists(oldpath):

@@ -63,6 +63,22 @@ every note has:
   `[[Joel 2#12|Joel 2:12]]`. Verse ranges link to the first verse of the range.
 - `passage_sort:` — a number (`book·chapter·verse`) that sorts in true Bible
   order (needed because a passage list sorts alphabetically otherwise).
+- `logos_link:` — a clickable link straight back to the same note in Logos, for
+  jumping between the two systems (see below).
+
+## Jumping back to the original note in Logos
+
+Every note carries a `logos_link:` property, e.g.
+`https://app.logos.com/notes/120fd062-a33b-42eb-9d80-b8ee840d3378`. In Obsidian
+this shows up as a clickable link in the note's Properties — click it to open the
+very same note in Logos (in the desktop app if it's installed, otherwise at
+app.logos.com). This is the round-trip companion to the `passages:` links, which
+go the other way (into your Obsidian Bible).
+
+Verify it once: open any note in Logos, copy its link (Notes panel → the note's
+⋮ menu → *Copy note link*), and confirm it matches the `logos_link:` value. If
+Logos ever changes the format, it's a one-line change in `logos_to_md.py` — the
+`logos_link:` line in the frontmatter section.
 
 To get one sortable table of everything:
 

@@ -198,6 +198,13 @@ class Conv:
         except Exception as e:
             return None
 
+def guid_dash(g):
+    """Logos stores the note id undashed; the web/app note link wants a dashed GUID."""
+    g=(g or "").strip()
+    if len(g)==32 and re.fullmatch(r'[0-9a-fA-F]{32}', g):
+        return f"{g[0:8]}-{g[8:12]}-{g[12:16]}-{g[16:20]}-{g[20:32]}"
+    return g
+
 def sanitize(s, maxlen=60):
     s=re.sub(r'[\\/:*?"<>|#\^\[\]]',' ',s)
     s=re.sub(r'\s+',' ',s).strip()
@@ -389,6 +396,7 @@ def main():
         fm=["---"]
         fm.append(f'title: "{fnbase}"')
         fm.append(f'logos_id: {r["ExternalId"]}')
+        fm.append(f'logos_link: "https://app.logos.com/notes/{guid_dash(r["ExternalId"])}"')
         fm.append(f'created: {r["CreatedDate"]}')
         if r["ModifiedDate"]: fm.append(f'updated: {r["ModifiedDate"]}')
         if pinfo:

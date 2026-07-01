@@ -12,6 +12,8 @@ properties:
     displayName: Chapters
   note.verses:
     displayName: Verses
+  note.resources:
+    displayName: Source resource
   note.notebook:
     displayName: Notebook
   note.passage_sort:

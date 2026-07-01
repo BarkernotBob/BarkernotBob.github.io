@@ -233,17 +233,8 @@ def main():
                os.path.join(os.path.dirname(os.path.abspath(__file__)),"resource-titles.md"),
                os.path.join(os.path.dirname(os.path.abspath(__file__)),"resource-titles.txt")):
         if os.path.exists(sp): _parse_map(sp); break
-    def res_title_for(aj):
-        if not aj: return None
-        try:
-            for a0 in json.loads(aj):
-                if isinstance(a0,dict) and "textRange" in a0:
-                    rid=a0["textRange"].get("resourceId")
-                    if rid:
-                        if rid not in seen_rids: seen_rids.append(rid)
-                        return RES_TITLES.get(rid) or re.sub(r'^(LLS|PBB):','',rid)
-        except Exception: pass
-        return None
+    def title_for(rid):
+        return RES_TITLES.get(rid) or re.sub(r'^(LLS|PBB):','',rid)
     # index existing output by logos_id -> path (for incremental, no-duplicate writes)
     existing={}
     for root,_,files in os.walk(os.path.join(outdir,"Logos")):
@@ -266,6 +257,25 @@ def main():
     facet={}
     for r in cur.execute("select NoteId,DataTypeId,BibleBook,Reference from NoteAnchorFacetReferences"):
         facet.setdefault(r["NoteId"],[]).append(r)
+    # Text-range anchors: which resource each note is anchored INTO (a book/commentary,
+    # or a Bible). We record the non-Bible ones on each note so its source is always
+    # visible/searchable. Bibles are told apart structurally: a resource that carries
+    # original-language word data on ANY anchor is a Bible/interlinear text, so we skip
+    # those (the passage already captures them) to avoid tagging ~every note "ESV".
+    resid={r["ResourceIdId"]:r["ResourceId"] for r in cur.execute("select ResourceIdId,ResourceId from ResourceIds")}
+    bible_res=set(); tr_res={}
+    for r in cur.execute("select NoteId,AnchorIndex,ResourceIdId,WordNumberCount from NoteAnchorTextRanges"):
+        rid=resid.get(r["ResourceIdId"])
+        if not rid: continue
+        tr_res.setdefault(r["NoteId"],{})[r["AnchorIndex"]]=rid
+        if r["WordNumberCount"] is not None and r["WordNumberCount"]>=0: bible_res.add(rid)
+    def resource_anchors(nid):
+        out=[]
+        for ai in sorted(tr_res.get(nid,{})):
+            rid=tr_res[nid][ai]
+            if rid in bible_res: continue          # a Bible text -> already covered by passages
+            if rid not in out: out.append(rid)
+        return out
     picked=rows
     if sample:
         # variety: ensure some lists, images, bible-anchored, resource-anchored, urilink
@@ -326,8 +336,13 @@ def main():
                 bn=next((n for n,(nm,ab) in BOOKS.items() if nm==name),99)
                 return (bn, ch, vs)
             return sorted(items, key=k)
+        # non-Bible resource(s) this note is anchored to (records provenance always,
+        # and names the folder when there's no Bible passage)
+        res_anchors = resource_anchors(r["NoteId"])
+        for rid in res_anchors:
+            if rid not in seen_rids: seen_rids.append(rid)
         # primary passage = the note's Logos anchor (first entry), not lowest verse
-        res_title = None if pinfo else res_title_for(aj)   # non-Bible resource name
+        res_title = title_for(res_anchors[0]) if (not pinfo and res_anchors) else None
         if sortkeys:
             primary_sort = sortkeys[0]; primary_display = passages[0]
             book_folder = primary_display.rsplit(" ",1)[0]
@@ -395,6 +410,14 @@ def main():
         if verses:
             fm.append("verses:")
             for v in bysort(verses): fm.append(f'  - "{v}"')
+        if res_anchors:
+            # Where the note came from in Logos. Raw ID is always shown (so you can
+            # search it); the readable title is prepended once you name it in
+            # resource-titles.md.
+            fm.append("resources:")
+            for rid in res_anchors:
+                t=RES_TITLES.get(rid)
+                fm.append(f'  - "{t} ({rid})"' if t else f'  - "{rid}"')
         if r["NotebookExternalId"] and nb.get(r["NotebookExternalId"]):
             fm.append(f'notebook: "{nb[r["NotebookExternalId"]]}"')
         if tags:

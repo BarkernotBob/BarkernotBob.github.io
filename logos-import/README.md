@@ -111,6 +111,19 @@ ones are already waiting for you to name. The copy of `resource-titles.md` next
 to the launcher is just a starter seed used to create the in-vault one; once the
 vault copy exists, that's the only one you edit.
 
+**Every note records where it came from.** Any note anchored to a resource gets
+a `resources:` property listing that resource — as the raw Logos ID (e.g.
+`LLS:TOTC19PSBUS`) until you name it, then as `Title (ID)`. So you can always
+open a note and see its source, and you can find every note from a given
+resource by searching its ID. This works even when the note is *also* filed
+under a Bible passage: e.g. a note on a Kidner-*Psalms* comment about Psalm 127
+is filed under **Psalms** but still carries `resources: ["LLS:TOTC19PSBUS"]`.
+
+Bible translations are deliberately left off (they'd otherwise tag hundreds of
+notes with "ESV"): a note anchored to a Bible verse is already described by its
+`passages`, so only *non-Bible* resources are recorded. They're told apart
+automatically — no configuration.
+
 *(Why did Owen's come pre-named but not the others? Its ID, `WORKSOWEN06`, is
 readable enough to guess — "Works of Owen, vol. 6". The rest are cryptic codes
 or random hashes with no reliable way to recover the title from the ID alone,

@@ -16,6 +16,12 @@
 set -e
 DIR="${0:A:h}"   # the folder this script lives in
 
+# Quit Logos/Verbum first so the notes database is a complete, consistent snapshot.
+echo "Quitting Logos (if open) so its notes are fully saved..."
+osascript -e 'quit app "Logos"'  >/dev/null 2>&1 || true
+osascript -e 'quit app "Verbum"' >/dev/null 2>&1 || true
+sleep 2
+
 echo "Looking for your Logos notes database..."
 # Pick the LARGEST notestool.db (that's your main account)
 DB=$(find "$HOME/Library/Application Support/Logos4/Documents/"*/NotesToolManager/notestool.db 2>/dev/null \

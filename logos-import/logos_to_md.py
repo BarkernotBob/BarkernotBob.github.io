@@ -187,11 +187,14 @@ class Conv:
         try:
             h=hashlib.md5(uri.encode()).hexdigest()[:8]
             ext=".png"
+            adir=os.path.join(self.outdir,"Logos","_attachments")
+            fn=f"{slug}-{h}{ext}"; fp=os.path.join(adir,fn)
+            if os.path.exists(fp): return fn          # already downloaded -> skip network
             req=urllib.request.Request(uri, headers={"User-Agent":"Mozilla/5.0"})
             data=urllib.request.urlopen(req, timeout=30).read()
-            adir=os.path.join(self.outdir,"_attachments"); os.makedirs(adir,exist_ok=True)
-            fn=f"{slug}-{h}{ext}"; open(os.path.join(adir,fn),"wb").write(data)
-            return f"_attachments/{fn}"
+            os.makedirs(adir,exist_ok=True)
+            open(fp,"wb").write(data)
+            return fn
         except Exception as e:
             return None
 
@@ -208,6 +211,35 @@ def main():
     if a and a[0]=="--sample": sample=int(a[1])
     if a and a[0]=="--ids": ids=[int(x) for x in a[1].split(",")]
     os.makedirs(outdir,exist_ok=True)
+    # optional resource-id -> title map (for notes anchored to a non-Bible book)
+    RES_TITLES={}
+    try:
+        mp=os.path.join(os.path.dirname(os.path.abspath(__file__)),"resource-titles.txt")
+        for ln in open(mp,encoding="utf-8"):
+            ln=ln.strip()
+            if not ln or ln.startswith("#") or "=" not in ln: continue
+            k,v=ln.split("=",1)
+            if v.strip(): RES_TITLES[k.strip()]=v.strip()
+    except Exception: pass
+    def res_title_for(aj):
+        if not aj: return None
+        try:
+            for a0 in json.loads(aj):
+                if isinstance(a0,dict) and "textRange" in a0:
+                    rid=a0["textRange"].get("resourceId")
+                    if rid: return RES_TITLES.get(rid) or re.sub(r'^(LLS|PBB):','',rid)
+        except Exception: pass
+        return None
+    # index existing output by logos_id -> path (for incremental, no-duplicate writes)
+    existing={}
+    for root,_,files in os.walk(os.path.join(outdir,"Logos")):
+        for f in files:
+            if not f.endswith(".md"): continue
+            p=os.path.join(root,f)
+            try: head=open(p,encoding="utf-8").read(4000)
+            except Exception: continue
+            m=re.search(r'^logos_id:\s*(\S+)', head, re.M)
+            if m: existing[m.group(1)]=p
     c=sqlite3.connect(db); c.row_factory=sqlite3.Row; cur=c.cursor()
     nb={r["ExternalId"]:r["Title"] for r in cur.execute("select ExternalId,Title from Notebooks")}
     imp="ContentRichText is not null and trim(ContentRichText)<>'' and IsTrashed=0 and IsDeleted=0"
@@ -215,7 +247,7 @@ def main():
     rows=cur.execute(q).fetchall()
     if ids: rows=[r for r in rows if r["NoteId"] in ids]
     conv=Conv(outdir,images)
-    used=set(); made=0
+    used=set(); made=0; skipped=0
     # facet refs per note (for anchor passages)
     facet={}
     for r in cur.execute("select NoteId,DataTypeId,BibleBook,Reference from NoteAnchorFacetReferences"):
@@ -281,11 +313,16 @@ def main():
                 return (bn, ch, vs)
             return sorted(items, key=k)
         # primary passage = the note's Logos anchor (first entry), not lowest verse
+        res_title = None if pinfo else res_title_for(aj)   # non-Bible resource name
         if sortkeys:
             primary_sort = sortkeys[0]; primary_display = passages[0]
+            book_folder = primary_display.rsplit(" ",1)[0]
+        elif res_title:
+            primary_sort = 999999999; primary_display = None
+            book_folder = res_title
         else:
             primary_sort = 999999999; primary_display = None
-        book_folder = primary_display.rsplit(" ",1)[0] if primary_display else "Unsorted"
+            book_folder = "Unsorted"
         # ---- title / snippet: first line of real prose (not a bare link/reference) ----
         snippet="note"
         for l in body.splitlines():
@@ -297,6 +334,8 @@ def main():
         # filename
         if primary_display:
             fnbase = f"{primary_display.replace(':','.')} — {snippet}"
+        elif res_title:
+            fnbase = f"{sanitize(res_title,40)} — {snippet}"
         else:
             fnbase = snippet
         fnbase=sanitize(fnbase,80) or "note"
@@ -307,8 +346,8 @@ def main():
         slug=sanitize(fnbase,30).replace(" ","-").lower() or "img"
         for uri in conv.imgnote:
             local=conv.fetch_image(uri,slug)
-            if local: body=body.replace(f"__IMG__{uri}__IMG__", f"![]({local})")
-            else: body=body.replace(f"__IMG__{uri}__IMG__", f"![]({uri})")
+            if local: body=body.replace(f"__IMG__{uri}__IMG__", f"![[{local}]]")  # vault embed
+            else: body=body.replace(f"__IMG__{uri}__IMG__", f"![]({uri})")        # hotlink fallback
         # tags
         tags=[]
         tj=r["TagsJson"]
@@ -350,9 +389,21 @@ def main():
         fm.append("source: logos")
         fm.append("---")
         folder=os.path.join(outdir, "Logos", sanitize(book_folder,40) or "Unsorted")
+        content="\n".join(fm)+"\n\n"+body+"\n"
+        newpath=os.path.join(folder,fn+".md")
+        oldpath=existing.get(r["ExternalId"])
+        if oldpath and os.path.exists(oldpath):
+            try: cur_txt=open(oldpath,encoding="utf-8").read()
+            except Exception: cur_txt=None
+            same_path = os.path.abspath(oldpath)==os.path.abspath(newpath)
+            if cur_txt==content and same_path:
+                skipped+=1; continue                 # unchanged -> leave it alone
+            if not same_path:
+                try: os.remove(oldpath)              # note renamed -> drop stale file
+                except Exception: pass
         os.makedirs(folder,exist_ok=True)
-        open(os.path.join(folder,fn+".md"),"w").write("\n".join(fm)+"\n\n"+body+"\n")
+        open(newpath,"w",encoding="utf-8").write(content)
         made+=1
-    print(f"wrote {made} notes to {outdir}")
+    print(f"wrote {made} new/changed, skipped {skipped} unchanged -> {outdir}")
 
 if __name__=="__main__": main()

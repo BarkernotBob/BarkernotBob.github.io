@@ -28,26 +28,27 @@ Obsidian.
      once (it downloads them into the vault).
 
 ### Option B — run the converter yourself (also downloads images)
-1. Make sure **Logos is quit** (⌘Q) so the database isn't mid-write.
-2. Double-click **`Import Logos Notes.command`**.
+1. Double-click **`Import Logos Notes.command`**. (It quits Logos for you first,
+   so the database is a complete snapshot — you don't need to quit it manually.)
    - First time only: if macOS blocks it, open
      <https://support.apple.com/guide/mac-help/mh40616/mac> — System Settings →
      Privacy & Security → "Open Anyway".
-3. When it asks for your vault path, press **Return** to accept `~/KnoxLox`, or
+2. When it asks for your vault path, press **Return** to accept `~/KnoxLox`, or
    paste the folder that holds your Obsidian notes.
-4. It writes everything into `<your vault>/Logos`, organized by book.
+3. It writes everything into `<your vault>/Logos`, organized by book.
 
 ---
 
 ## Long-term re-sync (Logos is the source of truth)
 
-Whenever you add or edit notes **in Logos** and want them in Obsidian:
+Whenever you add or edit notes **in Logos** and want them in Obsidian, just
+double-click **`Import Logos Notes.command`**. It quits Logos, then syncs.
 
-1. Quit Logos (⌘Q).
-2. Double-click **`Import Logos Notes.command`**.
-
-That's it. Changed notes update in place; new notes appear; your Obsidian-only
-notes are left alone.
+The sync is **incremental**: notes whose content hasn't changed are left
+untouched (not rewritten), already-downloaded images are not re-fetched, and
+only new or edited notes are written. New notes appear, edited notes update in
+place (matched by `logos_id`), and notes you created directly in Obsidian are
+never touched.
 
 ---
 
@@ -79,6 +80,25 @@ WHERE source = "logos"
 SORT passage_sort ASC
 ```
 ````
+
+---
+
+## Notes anchored to a book/commentary (not the Bible)
+
+Most notes are filed under their Bible passage. A note anchored in Logos to a
+*non-Bible* resource (a commentary, a book like Owen's *Works*) instead gets
+filed and named by that resource's title.
+
+Logos's database stores only opaque resource IDs (e.g. `LLS:WORKSOWEN06`), not
+titles. So edit **`resource-titles.txt`** (next to the launcher) and put a
+readable name after the `=` for each ID you care about:
+
+```
+LLS:WORKSOWEN06 = The Works of John Owen, Vol. 6
+```
+
+Re-run the launcher and those notes move into a folder with that name. Any ID you
+leave blank falls back to the raw code as the folder name.
 
 ---
 

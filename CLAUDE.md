@@ -1,5 +1,5 @@
 # Response style
-- Be terse. No narration, reasoning summaries, or "I'll now…" preambles. Execute first, then report only the result (a short "what I did" summary).
+- Be extremely concise. Sacrifice grammar for the sake of concision.
 - Lead with the outcome; no preamble, no recap of the process.
 
 # Links & navigation

@@ -58,7 +58,7 @@ def _parse_ref(raw):
         display=f"{name} {disp(ch,vs)}"
         url=f"https://ref.ly/{abbr}{ch}.{vs}" if vs else f"https://ref.ly/{abbr}{ch}"
     sortkey = b*10**6 + (ch or 0)*10**3 + (vs or 0)
-    return display,url,sortkey,name
+    return display,url,sortkey,name,(ch or 0),(vs or 0)
 
 def clean(t):
     return t if t else ""
@@ -224,11 +224,12 @@ def main():
         if not raws:
             for m in re.findall(r'Reference="(bible[^"]+)"', r["ContentRichText"] or ""):
                 raws.append(m)
-        seen=set()
+        seen=set(); pinfo=[]
         for raw in raws:
             pr=parse_ref(raw)
             if pr and pr[0] not in seen:
-                seen.add(pr[0]); passages.append(pr[0]); sortkeys.append(pr[2])
+                seen.add(pr[0]); pinfo.append(pr)
+        passages=[p[0] for p in pinfo]; sortkeys=[p[2] for p in pinfo]
         # primary passage = the note's Logos anchor (first entry), not lowest verse
         if sortkeys:
             primary_sort = sortkeys[0]; primary_display = passages[0]
@@ -272,9 +273,13 @@ def main():
         fm.append(f'logos_id: {r["ExternalId"]}')
         fm.append(f'created: {r["CreatedDate"]}')
         if r["ModifiedDate"]: fm.append(f'updated: {r["ModifiedDate"]}')
-        if passages:
+        if pinfo:
             fm.append("passages:")
-            for p in passages: fm.append(f'  - "{p}"')
+            for disp,url,sk,name,ch,vs in pinfo:
+                tgt=f"{name} {ch}"                       # local Bible chapter note
+                if vs: tgt=f"{tgt}#{vs}"                 # heading anchor = exact verse
+                link=f"[[{tgt}]]" if disp==tgt else f"[[{tgt}|{disp}]]"
+                fm.append(f'  - "{link}"')
         else:
             fm.append("passages: []")
         fm.append(f'passage_sort: {primary_sort}')
@@ -284,7 +289,6 @@ def main():
             fm.append("tags:")
             for t in tags: fm.append(f'  - {t}')
         fm.append("source: logos")
-        fm.append("publish: false")
         fm.append("---")
         folder=os.path.join(outdir, "Logos", sanitize(book_folder,40) or "Unsorted")
         os.makedirs(folder,exist_ok=True)

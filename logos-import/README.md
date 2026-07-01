@@ -56,9 +56,11 @@ notes are left alone.
 The notes are already grouped into folders by book (`Logos/Genesis`, etc.), and
 every note has:
 
-- `passages:` — the Bible passage(s) it's anchored to.
+- `passages:` — the Bible passage(s) it's anchored to, written as wikilinks to
+  your local Bible chapter note with a heading anchor to the exact verse, e.g.
+  `[[Joel 2#12|Joel 2:12]]`. Verse ranges link to the first verse of the range.
 - `passage_sort:` — a number (`book·chapter·verse`) that sorts in true Bible
-  order.
+  order (needed because a passage list sorts alphabetically otherwise).
 
 To get one sortable table of everything:
 

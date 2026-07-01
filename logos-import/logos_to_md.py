@@ -264,9 +264,13 @@ def main():
             if pr and pr[0] not in seen:
                 seen.add(pr[0]); pinfo.append(pr)
         passages=[p[0] for p in pinfo]; sortkeys=[p[2] for p in pinfo]
-        # pre-split fields for easy Bases filtering (book / chapter / verse)
+        # Filter fields (book/chapter/verse) = anchor(s) UNION every inline reference
+        # link in the body, so search finds a note by anything it references.
+        filter_raws=list(raws)
+        for m in re.findall(r'Reference="(bible[^"]+)"', r["ContentRichText"] or ""):
+            filter_raws.append(m)
         books=set(); chapters=set(); verses=set()
-        for raw in raws:
+        for raw in filter_raws:
             e=expand_ref(raw)
             if e: books.add(e[0]); chapters|=e[1]; verses|=e[2]
         def bysort(items):  # order by canonical book, then chapter, then verse

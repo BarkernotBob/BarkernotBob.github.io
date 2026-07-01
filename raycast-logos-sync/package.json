@@ -14,20 +14,27 @@
       "description": "Read the Logos notes database and update your Obsidian vault. Runs on demand and hourly in the background.",
       "mode": "no-view",
       "interval": "1h"
+    },
+    {
+      "name": "search-notes",
+      "title": "Search Notes",
+      "subtitle": "Logos",
+      "description": "Search your Logos Bible notes (text, notebook, tags, reference) and open them in Logos.",
+      "mode": "view"
     }
   ],
   "preferences": [
     {
       "name": "vaultPath",
       "title": "Obsidian Vault",
-      "description": "Full path to the folder that contains your Obsidian notes (e.g. ~/ObsidianVault).",
+      "description": "Full path to the folder that contains your Obsidian notes (e.g. ~/ObsidianVault). Used by Sync Logos Notes.",
       "type": "textfield",
       "required": true
     },
     {
       "name": "toolkitPath",
       "title": "Toolkit Folder",
-      "description": "Folder that contains logos_to_md.py (the unzipped LogosImport-Toolkit).",
+      "description": "Folder that contains logos_to_md.py and logos_notes_json.py (the unzipped LogosImport-Toolkit).",
       "type": "textfield",
       "required": true
     },
@@ -35,14 +42,23 @@
       "name": "downloadImages",
       "title": "Images",
       "label": "Download note images into the vault",
-      "description": "Turn off to skip image downloads (faster, no network).",
+      "description": "Turn off to skip image downloads (faster, no network). Used by Sync Logos Notes.",
       "type": "checkbox",
       "default": true,
       "required": false
+    },
+    {
+      "name": "logosDataDir",
+      "title": "Logos Data Directory",
+      "description": "Optional. Path to your Logos4/Documents folder if the notes database isn't auto-detected. Leave blank to auto-detect.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "~/Library/Application Support/Logos4/Documents"
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.79.0"
+    "@raycast/api": "^1.79.0",
+    "@raycast/utils": "^1.17.0"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^1.0.11",

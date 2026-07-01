@@ -6,11 +6,11 @@ import {
   getPreferenceValues,
   updateCommandMetadata,
 } from "@raycast/api";
+import { existsSync } from "fs";
+import { join } from "path";
+import { expand, findDb, pythonBin } from "./lib/logos";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { existsSync, statSync, readdirSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
 
 const pexec = promisify(execFile);
 
@@ -18,37 +18,6 @@ interface Prefs {
   vaultPath: string;
   toolkitPath: string;
   downloadImages: boolean;
-}
-
-/** Expand a leading ~ to the user's home directory. */
-function expand(p: string): string {
-  const t = (p || "").trim();
-  return t.startsWith("~") ? join(homedir(), t.slice(1)) : t;
-}
-
-/** Raycast runs with a minimal PATH, so resolve python3 explicitly. */
-function pythonBin(): string {
-  for (const p of ["/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"]) {
-    if (existsSync(p)) return p;
-  }
-  return "python3";
-}
-
-/** Find the largest notestool.db (the active account) for Logos or Verbum. */
-function findDb(): string | null {
-  let best: { size: number; path: string } | null = null;
-  for (const app of ["Logos4", "Verbum"]) {
-    const docs = join(homedir(), "Library", "Application Support", app, "Documents");
-    if (!existsSync(docs)) continue;
-    for (const dir of readdirSync(docs)) {
-      const db = join(docs, dir, "NotesToolManager", "notestool.db");
-      if (existsSync(db)) {
-        const size = statSync(db).size;
-        if (!best || size > best.size) best = { size, path: db };
-      }
-    }
-  }
-  return best?.path ?? null;
 }
 
 export default async function main(): Promise<void> {

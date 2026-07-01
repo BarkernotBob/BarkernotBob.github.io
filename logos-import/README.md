@@ -82,6 +82,49 @@ SORT passage_sort ASC
 
 ---
 
+## Searching & filtering by book / chapter / verse
+
+Each note carries three plain, filterable lists (separate from the pretty
+`passages` links):
+
+- `books:` — e.g. `Romans`
+- `chapters:` — e.g. `Romans 8`
+- `verses:` — e.g. `Romans 8:6` (verse ranges are expanded, so a note on
+  `Romans 8:5–9` matches a search for `Romans 8:7`)
+
+These exist because Bases's **contains** operator matches whole list items, not
+substrings — so filtering `passages` for "Romans 8" only finds the exact chapter,
+never `Romans 8:6`. Filter these fields instead:
+
+| To see… | In the Bases **Filters** panel, add |
+|---|---|
+| Everything in a book | `books` **contains** `Romans` |
+| Everything in a chapter | `chapters` **contains** `Romans 8` |
+| A specific verse | `verses` **contains** `Romans 8:6` |
+
+The `Notes by Passage.base` file ships with three worked example views
+(`Example — book/chapter/verse`) you can duplicate and edit.
+
+**Zero-setup alternative — backlinks.** Because passages are wikilinks to your
+Bible, open any Bible chapter note (e.g. `Romans 8`) and its **Backlinks** pane
+lists every Logos note that references that chapter.
+
+Dataview equivalents:
+
+````markdown
+```dataview
+LIST FROM "Logos" WHERE contains(books, "Romans")
+```
+```dataview
+LIST FROM "Logos" WHERE contains(chapters, "Romans 8")
+```
+```dataview
+LIST FROM "Logos" WHERE contains(verses, "Romans 8:6")
+```
+````
+
+---
+
 ## The occasional Obsidian → Logos note (manual)
 
 Logos has no way to import notes from a file, so the automated direction is only

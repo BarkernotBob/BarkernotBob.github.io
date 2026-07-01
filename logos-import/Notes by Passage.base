@@ -6,6 +6,12 @@ formulas:
 properties:
   note.passages:
     displayName: Passages
+  note.books:
+    displayName: Books
+  note.chapters:
+    displayName: Chapters
+  note.verses:
+    displayName: Verses
   note.notebook:
     displayName: Notebook
   note.passage_sort:
@@ -13,8 +19,9 @@ properties:
   note.updated:
     displayName: Updated
 views:
+  # ---- Everything, in Bible order. Add your own filter with the Filters button. ----
   - type: table
-    name: Notes by Passage
+    name: All Notes by Passage
     order:
       - file.name
       - note.passages
@@ -35,12 +42,40 @@ views:
     sort:
       - property: note.passage_sort
         direction: ASC
-  - type: list
-    name: Recently Updated
+  # ---- Worked examples. Duplicate one and change the value to your reference. ----
+  # Book-level: everything anywhere in Romans (any chapter, any verse).
+  - type: table
+    name: "Example — book: Romans"
+    filters:
+      and:
+        - note.books.contains("Romans")
     order:
       - file.name
-      - note.updated
+      - note.passages
     sort:
-      - property: note.updated
-        direction: DESC
-    limit: 25
+      - property: note.passage_sort
+        direction: ASC
+  # Chapter-level: everything touching Romans 8 (incl. Romans 8:6, ranges over it).
+  - type: table
+    name: "Example — chapter: Romans 8"
+    filters:
+      and:
+        - note.chapters.contains("Romans 8")
+    order:
+      - file.name
+      - note.passages
+    sort:
+      - property: note.passage_sort
+        direction: ASC
+  # Verse-level: only notes on Romans 8:6 exactly (ranges covering it included).
+  - type: table
+    name: "Example — verse: Romans 8:6"
+    filters:
+      and:
+        - note.verses.contains("Romans 8:6")
+    order:
+      - file.name
+      - note.passages
+    sort:
+      - property: note.passage_sort
+        direction: ASC

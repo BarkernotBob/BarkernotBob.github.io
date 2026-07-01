@@ -60,6 +60,40 @@ def _parse_ref(raw):
     sortkey = b*10**6 + (ch or 0)*10**3 + (vs or 0)
     return display,url,sortkey,name,(ch or 0),(vs or 0)
 
+def expand_ref(raw):
+    """raw -> (book_name, {chapters}, {verses}) for filtering. Ranges expanded."""
+    try:
+        m = re.match(r'^bible[^.]*\.(\d.*)$', raw)
+        if not m: return None
+        parts = m.group(1).split('-')
+        def triple(p):
+            xs=p.split('.')
+            return int(xs[0]), (int(xs[1]) if len(xs)>1 else None), (int(xs[2]) if len(xs)>2 else None)
+        b,ch,vs = triple(parts[0])
+        if b not in BOOKS: return None
+        name = BOOKS[b][0]
+        chapters=set(); verses=set()
+        if len(parts)==2:
+            b2,ch2,vs2 = triple(parts[1])
+            if b2==b and ch2==ch:
+                chapters.add(f"{name} {ch}")
+                if vs and vs2:
+                    for v in range(vs, min(vs2, vs+60)+1): verses.add(f"{name} {ch}:{v}")
+                elif vs: verses.add(f"{name} {ch}:{vs}")
+            elif b2==b:
+                for c in range(ch, ch2+1): chapters.add(f"{name} {c}")
+                if vs: verses.add(f"{name} {ch}:{vs}")
+                if vs2: verses.add(f"{name} {ch2}:{vs2}")
+            else:
+                chapters.add(f"{name} {ch}")
+                if vs: verses.add(f"{name} {ch}:{vs}")
+        else:
+            chapters.add(f"{name} {ch}")
+            if vs: verses.add(f"{name} {ch}:{vs}")
+        return name, chapters, verses
+    except Exception:
+        return None
+
 def clean(t):
     return t if t else ""
 
@@ -230,6 +264,18 @@ def main():
             if pr and pr[0] not in seen:
                 seen.add(pr[0]); pinfo.append(pr)
         passages=[p[0] for p in pinfo]; sortkeys=[p[2] for p in pinfo]
+        # pre-split fields for easy Bases filtering (book / chapter / verse)
+        books=set(); chapters=set(); verses=set()
+        for raw in raws:
+            e=expand_ref(raw)
+            if e: books.add(e[0]); chapters|=e[1]; verses|=e[2]
+        def bysort(items):  # order by canonical book, then chapter, then verse
+            def k(s):
+                mm=re.match(r'^(.*?)(?: (\d+)(?::(\d+))?)?$', s)
+                name=mm.group(1); ch=int(mm.group(2) or 0); vs=int(mm.group(3) or 0)
+                bn=next((n for n,(nm,ab) in BOOKS.items() if nm==name),99)
+                return (bn, ch, vs)
+            return sorted(items, key=k)
         # primary passage = the note's Logos anchor (first entry), not lowest verse
         if sortkeys:
             primary_sort = sortkeys[0]; primary_display = passages[0]
@@ -283,6 +329,15 @@ def main():
         else:
             fm.append("passages: []")
         fm.append(f'passage_sort: {primary_sort}')
+        if books:
+            fm.append("books:")
+            for b in bysort(books): fm.append(f'  - "{b}"')
+        if chapters:
+            fm.append("chapters:")
+            for ch in bysort(chapters): fm.append(f'  - "{ch}"')
+        if verses:
+            fm.append("verses:")
+            for v in bysort(verses): fm.append(f'  - "{v}"')
         if r["NotebookExternalId"] and nb.get(r["NotebookExternalId"]):
             fm.append(f'notebook: "{nb[r["NotebookExternalId"]]}"')
         if tags:

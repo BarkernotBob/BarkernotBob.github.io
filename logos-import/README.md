@@ -34,8 +34,10 @@ Obsidian.
    - First time only: if macOS blocks it, open
      <https://support.apple.com/guide/mac-help/mh40616/mac> — System Settings →
      Privacy & Security → "Open Anyway".
-2. When it asks for your vault path, press **Return** to accept `~/KnoxLox`, or
-   paste the folder that holds your Obsidian notes.
+2. When it asks for your vault path, paste the folder that holds your Obsidian
+   notes (e.g. `~/ObsidianVault`), or press **Return** to accept the default.
+   (You can set your own vault as the default by editing one line near the top of
+   `Import Logos Notes.command` — the `DEFAULT_VAULT=` line.)
 3. It writes everything into `<your vault>/Logos`, organized by book.
 
 ---
@@ -70,7 +72,7 @@ every note has:
 
 Every note has a clickable **↗ Open in Logos** link at the top of its body, plus
 a matching `logos_link:` property. Both use Logos's native `logos4:` URL scheme,
-e.g. `logos4:NotesTool?EditNoteId=7e83d783ba304433992a7a4287ea67cf`, which hands
+e.g. `logos4:NotesTool?EditNoteId=00000000000000000000000000000000`, which hands
 off straight to the **Logos desktop app** (not the browser). It's the round-trip
 companion to the `passages:` links, which go the other way (into your Obsidian
 Bible).

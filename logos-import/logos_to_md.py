@@ -5,6 +5,8 @@ Usage: logos_to_md.py <notestool.db> <out_dir> [--sample N | --ids a,b,c] [--no-
 import sqlite3, json, re, sys, os, html, hashlib, urllib.request
 import xml.etree.ElementTree as ET
 
+MAX_IMG_BYTES = 15 * 1024 * 1024   # skip any single "image" larger than 15 MB
+
 # ---- Logos Bible book number -> (full name, ref.ly abbreviation) ----
 BOOKS = {
  1:("Genesis","Ge"),2:("Exodus","Ex"),3:("Leviticus","Lv"),4:("Numbers","Nu"),
@@ -183,25 +185,44 @@ class Conv:
         return "\n".join(md).strip()
 
     def fetch_image(self, uri, slug):
+        # Only download real http(s) images. Reject file:/data:/ftp: (which could
+        # copy local files into the vault), cap the size, and pick the extension
+        # from the server's content-type rather than assuming .png.
         if not self.images: return None
+        if not re.match(r'^https?://', uri or '', re.I): return None
         try:
             h=hashlib.md5(uri.encode()).hexdigest()[:8]
-            ext=".png"
             adir=os.path.join(self.outdir,"Logos","_attachments")
-            fn=f"{slug}-{h}{ext}"; fp=os.path.join(adir,fn)
-            if os.path.exists(fp): return fn          # already downloaded -> skip network
+            if os.path.isdir(adir):
+                for f in os.listdir(adir):
+                    if f.startswith(f"{slug}-{h}."): return f   # already downloaded (any ext)
             req=urllib.request.Request(uri, headers={"User-Agent":"Mozilla/5.0"})
-            data=urllib.request.urlopen(req, timeout=30).read()
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                ctype=(resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                if ctype and not ctype.startswith("image/"): return None   # not an image
+                ext={"image/png":".png","image/jpeg":".jpg","image/gif":".gif",
+                     "image/webp":".webp","image/svg+xml":".svg","image/bmp":".bmp",
+                     "image/tiff":".tif","image/x-icon":".ico"}.get(ctype, ".png")
+                data=resp.read(MAX_IMG_BYTES+1)
+            if len(data)>MAX_IMG_BYTES: return None                        # too large -> skip
             os.makedirs(adir,exist_ok=True)
-            open(fp,"wb").write(data)
+            fn=f"{slug}-{h}{ext}"
+            with open(os.path.join(adir,fn),"wb") as f: f.write(data)
             return fn
-        except Exception as e:
+        except Exception:
             return None
+
+def yesc(s):
+    """Escape a string so it's safe inside a double-quoted YAML scalar."""
+    return (str(s).replace("\\","\\\\").replace('"','\\"')
+            .replace("\r"," ").replace("\n"," ").replace("\t"," "))
 
 def sanitize(s, maxlen=60):
     s=re.sub(r'[\\/:*?"<>|#\^\[\]]',' ',s)
     s=re.sub(r'\s+',' ',s).strip()
-    return s[:maxlen].strip()
+    s=s[:maxlen].strip()
+    s=re.sub(r'^\.+|\.+$','',s).strip()   # no leading/trailing dots: blocks ".", "..", hidden/traversal names
+    return s or "_"
 
 def main():
     db=sys.argv[1]; outdir=sys.argv[2]
@@ -245,14 +266,26 @@ def main():
             except Exception: continue
             m=re.search(r'^logos_id:\s*(\S+)', head, re.M)
             if m: existing[m.group(1)]=p
-    c=sqlite3.connect(db); c.row_factory=sqlite3.Row; cur=c.cursor()
-    nb={r["ExternalId"]:r["Title"] for r in cur.execute("select ExternalId,Title from Notebooks")}
+    # Open the Logos database READ-ONLY so we can never modify it.
+    try:
+        dburi="file:"+urllib.request.pathname2url(os.path.abspath(db))+"?mode=ro"
+        c=sqlite3.connect(dburi, uri=True)
+    except sqlite3.OperationalError:
+        c=sqlite3.connect(db)   # fallback for older sqlite without URI support
+    c.row_factory=sqlite3.Row
+    try:
+        cur=c.cursor()
+        nb={r["ExternalId"]:r["Title"] for r in cur.execute("select ExternalId,Title from Notebooks")}
+    except sqlite3.OperationalError as e:
+        print(f"ERROR: could not read the Logos database ({e}).")
+        print("Make sure Logos is fully quit, then run this again.")
+        sys.exit(1)
     imp="ContentRichText is not null and trim(ContentRichText)<>'' and IsTrashed=0 and IsDeleted=0"
     q=f"select * from Notes where {imp}"
     rows=cur.execute(q).fetchall()
     if ids: rows=[r for r in rows if r["NoteId"] in ids]
     conv=Conv(outdir,images)
-    used=set(); made=0; skipped=0
+    used=set(); made=0; skipped=0; anchors_fail=0; tags_fail=0
     # facet refs per note (for anchor passages)
     facet={}
     for r in cur.execute("select NoteId,DataTypeId,BibleBook,Reference from NoteAnchorFacetReferences"):
@@ -305,7 +338,7 @@ def main():
                 for a0 in json.loads(aj):
                     if isinstance(a0,dict) and "reference" in a0 and "raw" in a0["reference"]:
                         raws.append(a0["reference"]["raw"])
-            except: pass
+            except Exception: anchors_fail+=1
         # 2 facet bible refs
         if not raws:
             for f in facet.get(r["NoteId"],[]):
@@ -384,10 +417,10 @@ def main():
             try:
                 for t in json.loads(tj):
                     if isinstance(t,dict) and "plain" in t: tags.append(t["plain"]["text"])
-            except: pass
+            except Exception: tags_fail+=1
         # frontmatter
         fm=["---"]
-        fm.append(f'title: "{fnbase}"')
+        fm.append(f'title: "{yesc(fnbase)}"')
         fm.append(f'logos_id: {r["ExternalId"]}')
         # native logos4: scheme -> hands off to the Logos desktop app (not the browser)
         logos_link=f'logos4:NotesTool?EditNoteId={r["ExternalId"]}'
@@ -420,12 +453,12 @@ def main():
             fm.append("resources:")
             for rid in res_anchors:
                 t=RES_TITLES.get(rid)
-                fm.append(f'  - "{t} ({rid})"' if t else f'  - "{rid}"')
+                fm.append(f'  - "{yesc(t)} ({rid})"' if t else f'  - "{rid}"')
         if r["NotebookExternalId"] and nb.get(r["NotebookExternalId"]):
-            fm.append(f'notebook: "{nb[r["NotebookExternalId"]]}"')
+            fm.append(f'notebook: "{yesc(nb[r["NotebookExternalId"]])}"')
         if tags:
             fm.append("tags:")
-            for t in tags: fm.append(f'  - {t}')
+            for t in tags: fm.append(f'  - "{yesc(t)}"')
         fm.append("source: logos")
         fm.append("---")
         folder=os.path.join(outdir, "Logos", sanitize(book_folder,40) or "Unsorted")
@@ -469,9 +502,12 @@ def main():
              "```"]
         for k in listed_ids+new_ids: out.append(f"{k} = {RES_TITLES.get(k,'')}")
         out.append("```"); out.append("")
-        try: open(map_path,"w",encoding="utf-8").write("\n".join(out))
+        try:
+            with open(map_path,"w",encoding="utf-8") as f: f.write("\n".join(out))
         except Exception: pass
     print(f"wrote {made} new/changed, skipped {skipped} unchanged -> {outdir}")
     if new_ids: print(f"  added {len(new_ids)} new resource id(s) to {map_path} — fill in titles there")
+    if anchors_fail or tags_fail:
+        print(f"  note: {anchors_fail} note(s) had unreadable anchors, {tags_fail} had unreadable tags (imported without them)")
 
 if __name__=="__main__": main()

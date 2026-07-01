@@ -13,8 +13,15 @@
 #      Notes you created directly in Obsidian are never touched.
 # ============================================================
 
-set -e
 DIR="${0:A:h}"   # the folder this script lives in
+
+# Need Python 3 (preinstalled on most Macs; if missing, macOS offers to install it).
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "ERROR: python3 was not found on this Mac."
+  echo "Open Terminal, run 'python3 --version', and macOS will offer to install the"
+  echo "Command Line Tools. Accept it, wait for it to finish, then run this again."
+  echo; echo "Press Return to close."; read _; exit 1
+fi
 
 # Quit Logos/Verbum first so the notes database is a complete, consistent snapshot.
 echo "Quitting Logos (if open) so its notes are fully saved..."
@@ -37,8 +44,9 @@ fi
 echo "  Using: $DB"
 echo
 
-# Ask where your Obsidian vault is (press Return to accept the default)
-DEFAULT_VAULT="$HOME/KnoxLox"
+# Ask where your Obsidian vault is (press Return to accept the default).
+# Tip: change the folder name below to your own vault so you can just press Return.
+DEFAULT_VAULT="$HOME/ObsidianVault"
 echo "Where is your Obsidian vault? (the folder that contains your notes)"
 read "VAULT?Vault path [$DEFAULT_VAULT]: "
 VAULT=${VAULT:-$DEFAULT_VAULT}
@@ -50,7 +58,12 @@ fi
 
 echo
 echo "Converting notes into: $VAULT/Logos"
-python3 "$DIR/logos_to_md.py" "$DB" "$VAULT"
+if ! python3 "$DIR/logos_to_md.py" "$DB" "$VAULT"; then
+  echo
+  echo "ERROR: the import did not finish. Make sure Logos is fully quit, then try again."
+  echo "If it keeps failing, copy the message above and send it for help."
+  echo; echo "Press Return to close."; read _; exit 1
+fi
 
 echo
 echo "Done. Open Obsidian and look in the 'Logos' folder."

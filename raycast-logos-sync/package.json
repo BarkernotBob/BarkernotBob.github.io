@@ -13,47 +13,51 @@
       "subtitle": "Logos → Obsidian",
       "description": "Read the Logos notes database and update your Obsidian vault. Runs on demand and hourly in the background.",
       "mode": "no-view",
-      "interval": "1h"
+      "interval": "1h",
+      "preferences": [
+        {
+          "name": "vaultPath",
+          "title": "Obsidian Vault",
+          "description": "Full path to the folder that contains your Obsidian notes (e.g. ~/ObsidianVault).",
+          "type": "textfield",
+          "required": true
+        },
+        {
+          "name": "downloadImages",
+          "title": "Images",
+          "label": "Download note images into the vault",
+          "description": "Turn off to skip image downloads (faster, no network).",
+          "type": "checkbox",
+          "default": true,
+          "required": false
+        }
+      ]
     },
     {
       "name": "search-notes",
       "title": "Search Notes",
       "subtitle": "Logos",
-      "description": "Search your Logos Bible notes (text, notebook, tags, reference) and open them in Logos.",
-      "mode": "view"
+      "description": "Search your Logos Bible notes (text, notebook, tags, reference) and open them in Logos. Reads Logos directly — no Obsidian required.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "logosDataDir",
+          "title": "Logos Data Directory",
+          "description": "Optional. Path to your Logos4/Documents folder if the notes database isn't auto-detected. Leave blank to auto-detect.",
+          "type": "textfield",
+          "required": false,
+          "placeholder": "~/Library/Application Support/Logos4/Documents"
+        }
+      ]
     }
   ],
   "preferences": [
-    {
-      "name": "vaultPath",
-      "title": "Obsidian Vault",
-      "description": "Full path to the folder that contains your Obsidian notes (e.g. ~/ObsidianVault). Used by Sync Logos Notes.",
-      "type": "textfield",
-      "required": true
-    },
     {
       "name": "toolkitPath",
       "title": "Toolkit Folder",
       "description": "Folder that contains logos_to_md.py and logos_notes_json.py (the unzipped LogosImport-Toolkit).",
       "type": "textfield",
       "required": true
-    },
-    {
-      "name": "downloadImages",
-      "title": "Images",
-      "label": "Download note images into the vault",
-      "description": "Turn off to skip image downloads (faster, no network). Used by Sync Logos Notes.",
-      "type": "checkbox",
-      "default": true,
-      "required": false
-    },
-    {
-      "name": "logosDataDir",
-      "title": "Logos Data Directory",
-      "description": "Optional. Path to your Logos4/Documents folder if the notes database isn't auto-detected. Leave blank to auto-detect.",
-      "type": "textfield",
-      "required": false,
-      "placeholder": "~/Library/Application Support/Logos4/Documents"
     }
   ],
   "dependencies": {

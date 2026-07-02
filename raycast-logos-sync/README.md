@@ -16,9 +16,10 @@ saved shows up on the next run.)
 
 ## Search Notes
 
-Type to filter across everything at once — note text, notebook name, tags, and
-the note's Bible reference (e.g. searching `Romans 8` finds notes anchored there
-even if the body doesn't say it). Actions:
+Reads your Logos notes **directly and read-only** — no Obsidian vault required,
+so this command is useful on its own. Type to filter across everything at once —
+note text, notebook name, tags, and the note's Bible reference (e.g. searching
+`Romans 8` finds notes anchored there even if the body doesn't say it). Actions:
 
 - **Enter** — preview the note (converted text + metadata) inside Raycast.
 - **⌘↵** — open that exact note in the Logos desktop app.

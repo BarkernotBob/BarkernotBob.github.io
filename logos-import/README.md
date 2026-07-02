@@ -13,6 +13,7 @@ Obsidian.
 | File | What it is |
 |------|-----------|
 | `logos_to_md.py` | The converter (Python 3, no extra libraries needed). |
+| `logos_notes_json.py` | Emits your notes as JSON (read-only) for the Raycast "Search Notes" command; reuses the converter above. |
 | `Import Logos Notes.command` | Double-click launcher for macOS — finds your database and runs the converter. |
 | `Notes by Passage.base` | An Obsidian **Bases** view that lists every imported note sorted in Bible order. Copy it into your vault. |
 | `resource-titles.md` | Starter list of names for notes anchored to a book/commentary. A live copy is made in your vault on first import — edit that one (see below). |

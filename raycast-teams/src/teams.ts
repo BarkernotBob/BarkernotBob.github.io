@@ -127,3 +127,100 @@ export function newId(): string {
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random()}`
 }
+
+/* ------------------------- bulk import ------------------------- */
+
+export type ParsedPerson = { name: string; email: string }
+
+const EMAIL_G = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
+
+/** Turn an email local-part into a readable name, e.g. "john.smith" -> "John Smith". */
+function prettifyLocalPart(email: string): string {
+  const local = email.split("@")[0] ?? email
+  const words = local
+    .split(/[._-]+/)
+    .map((w) => w.trim())
+    .filter(Boolean)
+  // If it's just a blob like "jsmith", leave it as-is rather than fake-capitalising.
+  if (words.length <= 1) return words[0] ?? local
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+}
+
+/**
+ * Parse a free-form paste (from a GAL, a spreadsheet column, an email header,
+ * a comma list, etc.) into one person per email. Handles:
+ *   - bare emails, one per line or comma/semicolon/space separated
+ *   - "Display Name <email@x.com>" and "Display Name (email@x.com)"
+ *   - spreadsheet rows like "Display Name<TAB>email@x.com"
+ * Names are used if present, otherwise derived from the email. De-duplicates
+ * by email (case-insensitive), keeping the first/best name seen.
+ */
+export function parseContacts(text: string): ParsedPerson[] {
+  const byEmail = new Map<string, ParsedPerson>()
+
+  // Split into chunks on newlines, commas and semicolons (the common separators).
+  for (const chunk of text.split(/[\n,;]+/)) {
+    const trimmed = chunk.trim()
+    if (!trimmed) continue
+
+    const emails = trimmed.match(EMAIL_G)
+    if (!emails) continue
+
+    if (emails.length === 1) {
+      const email = emails[0]
+      // Whatever else is on this chunk is the display name (strip brackets/quotes).
+      const leftover = trimmed
+        .replace(email, "")
+        .replace(/[<>()"':]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+      addPerson(byEmail, leftover || prettifyLocalPart(email), email)
+    } else {
+      // Multiple emails jammed together (e.g. space-separated) — treat each as bare.
+      for (const email of emails) {
+        addPerson(byEmail, prettifyLocalPart(email), email)
+      }
+    }
+  }
+
+  return Array.from(byEmail.values())
+}
+
+function addPerson(map: Map<string, ParsedPerson>, name: string, email: string) {
+  const key = email.toLowerCase()
+  const existing = map.get(key)
+  // Keep a real name over a derived one if we see the same person twice.
+  if (!existing || (looksDerived(existing.name, email) && !looksDerived(name, email))) {
+    map.set(key, { name: name.trim(), email: email.trim() })
+  }
+}
+
+function looksDerived(name: string, email: string): boolean {
+  return name.toLowerCase() === prettifyLocalPart(email).toLowerCase()
+}
+
+/**
+ * Add many people as 1:1 chats in a single write. Skips anyone whose email is
+ * already saved (case-insensitive). Returns how many were added vs skipped.
+ */
+export async function bulkAddContacts(
+  people: ParsedPerson[],
+): Promise<{ added: number; skipped: number }> {
+  const contacts = await loadContacts()
+  const existing = new Set(contacts.flatMap((c) => c.emails.map((e) => e.toLowerCase())))
+
+  let added = 0
+  let skipped = 0
+  for (const person of people) {
+    if (existing.has(person.email.toLowerCase())) {
+      skipped++
+      continue
+    }
+    existing.add(person.email.toLowerCase())
+    contacts.push({ id: newId(), name: person.name || person.email, emails: [person.email] })
+    added++
+  }
+
+  if (added > 0) await LocalStorage.setItem(STORAGE_KEY, JSON.stringify(contacts))
+  return { added, skipped }
+}

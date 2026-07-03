@@ -21,6 +21,13 @@
       "subtitle": "Microsoft Teams",
       "description": "Start a new one-on-one or group chat in Microsoft Teams.",
       "mode": "view"
+    },
+    {
+      "name": "import-people",
+      "title": "Import People",
+      "subtitle": "Microsoft Teams",
+      "description": "Bulk-add people by pasting a list of email addresses.",
+      "mode": "view"
     }
   ],
   "preferences": [

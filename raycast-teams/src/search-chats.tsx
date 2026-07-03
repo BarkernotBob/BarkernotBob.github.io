@@ -15,6 +15,7 @@ import {
 } from "@raycast/api"
 import { usePromise } from "@raycast/utils"
 import { useState } from "react"
+import ImportPeople from "./import-people"
 import NewChat from "./new-chat"
 import {
   Contact,
@@ -99,6 +100,12 @@ export default function SearchChats() {
               icon={Icon.Plus}
               title="New Chat"
               target={<NewChat onSaved={revalidate} />}
+            />
+            <Action.Push
+              icon={Icon.AddPerson}
+              title="Import People"
+              shortcut={{ modifiers: ["cmd"], key: "i" }}
+              target={<ImportPeople onImported={revalidate} />}
             />
           </ActionPanel>
         }
@@ -220,6 +227,12 @@ function ChatItem(props: {
               title="New Chat"
               shortcut={{ modifiers: ["cmd"], key: "n" }}
               target={<NewChat onSaved={revalidate} />}
+            />
+            <Action.Push
+              icon={Icon.AddPerson}
+              title="Import People"
+              shortcut={{ modifiers: ["cmd"], key: "i" }}
+              target={<ImportPeople onImported={revalidate} />}
             />
             <Action
               icon={Icon.Clipboard}

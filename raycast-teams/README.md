@@ -12,6 +12,7 @@ Two Raycast commands:
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Search Teams Chats** | A searchable list of chats you've saved. Pick one and it opens in Teams. Type a full email that isn't saved yet and it offers to start a chat with that person on the spot. |
 | **New Teams Chat**     | A form to start a one-on-one or group chat. Add one email for a direct chat, or several for a group. Optionally saves it to your list for next time.                        |
+| **Import People**      | Bulk-add your whole org at once — paste a big list of email addresses and each person becomes a saved one-on-one chat. See [Bulk import](#bulk-import).                     |
 
 ## Limitations (read this first)
 
@@ -68,6 +69,20 @@ That's it. Open Raycast (default: **⌥ Space**) and type **Search Teams Chats**
 - **Start a group chat:** run **New Teams Chat**, put several emails in Recipients separated by commas, give it a Group Name, press **Return**.
 - **Pre-fill a message:** in New Teams Chat, type into "First Message". Teams drops it into the box for you — you still press Send.
 
+### Bulk import
+
+Run **Import People** (or press **⌘I** from the search list) to add lots of people at once.
+
+Paste a list of email addresses into the box — the format is forgiving, so most copy-pastes just work:
+
+- plain emails, comma- or newline-separated: `alex@contoso.com, sam@contoso.com`
+- address-book style: `Jordan Lee <jordan@contoso.com>`
+- a column copied straight out of Excel/Sheets (name in one column, email in the next)
+
+As you paste, the form shows a live **Detected** count and a preview so you can check it looks right, then press **Return** to import. Each person becomes a one-on-one chat. Names are used when present, otherwise made from the email (so `jordan.lee@…` shows as "Jordan Lee"). Anyone already in your list is skipped, so re-pasting is safe.
+
+> **Where to get the list:** in Outlook you can open a distribution list / team and copy the members, or paste the "To" line of an email that went to the group. Any text with emails in it works — the importer picks out the addresses and ignores the rest.
+
 ### Handy keys (inside a chat's ⌘K actions)
 
 | Key        | Action                                           |
@@ -78,6 +93,7 @@ That's it. Open Raycast (default: **⌥ Space**) and type **Search Teams Chats**
 | **⌘E**     | Edit a saved chat                                |
 | **⌘⇧P**    | Pin / unpin (pinned float to the top)            |
 | **⌘C**     | Copy the Teams link                              |
+| **⌘I**     | Import People (bulk add from a pasted list)      |
 | **⌃X**     | Delete from your list (doesn't touch Teams)      |
 
 ## Settings

@@ -62,7 +62,29 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy1.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment
+      # GitHub Pages' deploy API intermittently returns "Deployment failed, try
+      # again later." — a transient server-side error that a plain rerun clears.
+      # Retry up to 3 times so publishing doesn't need a manual rerun each time.
+      - name: Deploy to GitHub Pages
+        id: deploy1
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait, then retry deploy (attempt 2)
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 15
+      - name: Deploy to GitHub Pages (attempt 2)
+        id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait, then retry deploy (attempt 3)
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 30
+      - name: Deploy to GitHub Pages (attempt 3)
+        id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        uses: actions/deploy-pages@v4

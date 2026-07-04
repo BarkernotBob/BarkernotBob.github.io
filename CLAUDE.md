@@ -28,6 +28,10 @@ Beginner with Git, GitHub, and CLI. For any action I must take:
 - The file-tree explorer is deliberately patched into "drawer at all widths" so the home page's click-to-open drawer works; custom.scss then restores the always-visible sidebar on non-home pages (`body:not(:has(.home-splash))`, min-width 801). **This patch is load-bearing — removing it breaks the home page.**
 - Sidebar/section order is set via a custom `sortFn` (a JS function passed as a string) in the explorer options in the config.
 
+# Test and build tests
+- Never report a UI fix as done until you've rendered/screenshotted it yourself and confirmed the fix visually.
+- As we build, create ongoing regression suites that will run automatically as we deploy new changes to applications.
+
 - # App requirements (every app I create or update)
 - Always develop a mobile first UI separate from a desktop UI, not simply a shrunk down version of the desktop app. Specifically, all mobile versions should be turned into a PWA, with double tap zoom disabled, zoom on data entry fields disabled, numeric keyboard on numeric only fields enabled, and pop up calendar for all date fields. 
 - **Clicking must never reflow the UI:** clicking/tapping a button (or any control) must never resize a menu or shift other elements up/over/around. Reserve stable space so state changes don't move neighbors — e.g. fixed/min dimensions on containers, `visibility:hidden` instead of `display:none` when toggling, and avoid layout-affecting changes (added borders, font-size/weight swaps, inserted nodes) on click. The clicked element and everything around it must stay put.

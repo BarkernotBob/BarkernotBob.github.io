@@ -1,0 +1,30 @@
+{
+  "name": "esv-tooltip",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    },
+    "./components": {
+      "import": "./dist/components/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "quartz": {
+    "name": "esv-tooltip",
+    "displayName": "ESV Tooltip",
+    "description": "Auto-detects Bible references and shows the ESV text on hover/tap",
+    "version": "1.0.0",
+    "category": "component",
+    "components": {
+      "EsvTooltip": {
+        "name": "EsvTooltip",
+        "displayName": "ESV Tooltip",
+        "description": "Detects Bible verse references in article text and shows ESV text in a popover",
+        "version": "1.0.0"
+      }
+    }
+  }
+}

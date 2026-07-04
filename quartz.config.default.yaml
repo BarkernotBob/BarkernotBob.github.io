@@ -132,6 +132,8 @@ plugins:
     enabled: true
   - source: ./quartz/plugins/custom/pwa
     enabled: true
+  - source: ./quartz/plugins/custom/esv-tooltip
+    enabled: true
   - source: github:quartz-community/explorer
     enabled: true
     options:

@@ -28,9 +28,25 @@ Beginner with Git, GitHub, and CLI. For any action I must take:
 - The file-tree explorer is deliberately patched into "drawer at all widths" so the home page's click-to-open drawer works; custom.scss then restores the always-visible sidebar on non-home pages (`body:not(:has(.home-splash))`, min-width 801). **This patch is load-bearing — removing it breaks the home page.**
 - Sidebar/section order is set via a custom `sortFn` (a JS function passed as a string) in the explorer options in the config.
 
-# Test and build tests
+  # Test and build tests
 - Never report a UI fix as done until you've rendered/screenshotted it yourself and confirmed the fix visually.
 - As we build, create ongoing regression suites that will run automatically as we deploy new changes to applications.
+
+# Git workflow (every project)
+- At session start, if the project folder is not a git repo, run `sh ~/.claude/scripts/git-armor.sh .` (safe/idempotent; puts the git database in `.git.nosync` so iCloud can't corrupt it, writes a starter .gitignore, makes an initial commit).
+- Commit at every working checkpoint: after a feature/fix lands and is verified, and BEFORE any risky refactor. Small, descriptive commits — don't batch a whole session into one.
+- Never end a session with a working state uncommitted.
+- If a repo's folder lives in iCloud, never store the git database in a plain `.git` directory — always the `.git.nosync` layout.
+- When a repo has no remote, create one: `gh repo create <name> --private` then `git remote add origin https://github.com/BarkernotBob/<name>.git && git push -u origin main`. (Don't use `gh repo create --source=.` — gh doesn't recognize the `.git` pointer-file layout.) Push after checkpoint commits.
+
+# Backlog & prototyping
+- Every issue file must contain acceptance criteria AND a "Manual test (for Isaiah)" section: numbered plain-English steps a non-developer can follow. Write it when the issue is completed, not before.
+- Autonomous backlog runs go through /ralph — never improvise an unattended loop outside it.
+- Prototype code (prototype/* branches, prototypes/ folders) never merges to main. Promoting a prototype = re-implementing through the normal pipeline (/grill-me → /to-prd → /to-issues). If feature requests start piling onto a prototype, flag it and offer promotion.
+
+# Code review & debugging discipline
+- Before declaring an issue/feature complete, run /code-review (medium) on the diff, fix confirmed findings, then commit.
+- If a fix for the same symptom fails twice, stop patching. Reproduce the issue yourself, add logging/instrumentation, and identify root cause before proposing another fix.
 
 - # App requirements (every app I create or update)
 - Always develop a mobile first UI separate from a desktop UI, not simply a shrunk down version of the desktop app. Specifically, all mobile versions should be turned into a PWA, with double tap zoom disabled, zoom on data entry fields disabled, numeric keyboard on numeric only fields enabled, and pop up calendar for all date fields. 

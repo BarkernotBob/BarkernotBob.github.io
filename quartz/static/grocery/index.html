@@ -3,110 +3,40 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#2f7d4f" />
+<meta name="theme-color" content="#F7F2E9" />
+<!-- Apply the saved theme BEFORE first paint so there is no light/dark flash.
+     Plain script (no on* handler) — reads localStorage only. System preference is
+     the default (no attribute); a manual toggle stamps data-theme on <html>. -->
+<script>(function(){try{var t=localStorage.getItem('gt_theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Grocery Tracker</title>
-<style>
-  :root{
-    --green:#2f7d4f; --green-d:#256340; --bg:#f5f6f4; --card:#fff;
-    --ink:#1f2421; --muted:#6b736d; --line:#e4e7e3; --warn:#b4690e; --danger:#b3261e;
-    --shadow:0 1px 3px rgba(0,0,0,.08);
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%;
-    padding-bottom:72px; line-height:1.45;
-  }
-  header{
-    position:sticky; top:0; z-index:20; background:var(--green); color:#fff;
-    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px; box-shadow:var(--shadow);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
-  header .who{font-size:12px;opacity:.9}
-  main{padding:16px;max-width:760px;margin:0 auto}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
-  .card h2{font-size:16px;margin:0 0 10px}
-  .muted{color:var(--muted)}
-  .small{font-size:13px}
-  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
-  input,select,textarea{
-    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-    font-size:16px;background:#fff;color:var(--ink)
-  }
-  button{
-    font-size:15px;font-weight:600;border:0;border-radius:10px;padding:12px 14px;
-    background:var(--green);color:#fff;cursor:pointer;width:100%
-  }
-  button.sec{background:#eef1ee;color:var(--ink);border:1px solid var(--line)}
-  button.warn{background:var(--warn)} button.danger{background:var(--danger)}
-  button.link{background:none;color:var(--green);width:auto;padding:6px 0;font-weight:600}
-  button:disabled{opacity:.5}
-  .row{display:flex;gap:10px} .row>*{flex:1}
-  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
-  .pill.warn{background:#fbecd6;color:#7a4708}
-  .pill.ok{background:#dcefe2;color:#1d5e39}
-  .pill.gray{background:#eceee9;color:#5a615b}
-  .pill.hsa{background:#e2e8fb;color:#2a3a83}
-  .item{border-top:1px solid var(--line);padding:10px 0}
-  .item:first-child{border-top:0}
-  .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .grp{cursor:pointer}
-  .grp .body{display:none;margin-top:8px}
-  .grp.open .body{display:block}
-  nav{
-    position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
-    display:flex;padding-bottom:env(safe-area-inset-bottom)
-  }
-  nav button{background:none;color:var(--muted);border-radius:0;font-size:11px;font-weight:600;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
-  nav button .ic{font-size:20px;line-height:1}
-  nav button.active{color:var(--green)}
-  .badge{position:absolute;top:4px;margin-left:18px;background:var(--danger);color:#fff;font-size:10px;border-radius:999px;padding:0 5px;font-weight:700}
-  .preview{width:100%;border-radius:10px;border:1px solid var(--line);margin-top:10px;max-height:360px;object-fit:contain;background:#fafafa}
-  .hidden{display:none!important}
-  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:center;justify-content:center;padding:18px}
-  .modal-card{background:var(--card);border-radius:14px;padding:18px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-  .modal-card h2{margin:0 0 4px;font-size:17px}
-  .modal-card button{width:100%;margin-bottom:8px}
-  .modal-card .row{margin-bottom:0}
-  .modal-card .row button{margin-bottom:0}
-  .tablewrap{overflow-x:hidden;overflow-y:auto;margin-top:8px;border:1px solid var(--line);border-radius:10px}
-  .tablewrap table{width:100%;table-layout:fixed;border-collapse:collapse}
-  .tablewrap th,.tablewrap td{padding:6px 5px;font-size:11px;word-break:break-word;overflow-wrap:anywhere;vertical-align:top}
-  .tablewrap thead th{background:#f3f5f2}
-  .tablewrap th.sortable{cursor:pointer;user-select:none;line-height:1.2}
-  .tablewrap th input{width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px;font-weight:400;text-transform:none;letter-spacing:0}
-  .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
-  .toast.show{opacity:.97}
-  .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
-  .kv b{font-weight:650}
-  .big{font-size:28px;font-weight:750}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  td,th{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line)}
-  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-  td.n,th.n{text-align:right}
-  a{color:var(--green)}
-  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r .7s linear infinite;vertical-align:-3px}
-  @keyframes r{to{transform:rotate(360deg)}}
-  details summary{cursor:pointer;font-weight:600;font-size:14px}
-</style>
+<!-- PWA (S2): installable, standalone, iOS home-screen. No maximum-scale /
+     user-scalable in the viewport above — pinch-zoom stays available; double-tap
+     zoom is killed via touch-action below (FR-18). -->
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Grocery Tracker" />
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="app.css" />
 </head>
 <body>
 <header>
   <div><h1>🛒 Grocery Tracker</h1><div class="who" id="whoami"></div></div>
-  <button class="link" style="color:#fff" onclick="show('settings')">⚙︎ Settings</button>
+  <button class="link" style="color:#fff" data-action="show" data-arg="settings">⚙︎ Settings</button>
 </header>
 
 <main id="main"></main>
 
 <nav id="nav">
-  <button data-tab="capture" onclick="show('capture')"><span class="ic">📷</span>Capture</button>
-  <button data-tab="search" onclick="show('search')"><span class="ic">🔎</span>Search</button>
-  <button data-tab="reports" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
-  <button data-tab="review" onclick="show('review')"><span class="ic">📋</span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
-  <button data-tab="table" onclick="show('table')"><span class="ic">📑</span>Table</button>
-  <button data-tab="settings" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+  <button data-tab="capture" data-action="show" data-arg="capture"><span class="ic">📷</span>Capture</button>
+  <button data-tab="search" data-action="show" data-arg="search"><span class="ic">🔎</span>Search</button>
+  <button data-tab="reports" data-action="show" data-arg="reports"><span class="ic">📊</span>Reports</button>
+  <button data-tab="review" data-action="show" data-arg="review"><span class="ic">📋</span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
+  <button data-tab="table" data-action="show" data-arg="table"><span class="ic">📑</span>Table</button>
+  <button data-tab="settings" data-action="show" data-arg="settings"><span class="ic">⚙︎</span>Settings</button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -141,16 +71,32 @@ const LS = {
   set login(v){ localStorage.setItem('gt_login', v) },
   get method(){ return localStorage.getItem('gt_method') || '' },    // 'oauth' | 'token'
   set method(v){ localStorage.setItem('gt_method', v) },
+  get theme(){ return localStorage.getItem('gt_theme') || 'system' }, // 'system' | 'light' | 'dark'
+  set theme(v){ if(v==='system') localStorage.removeItem('gt_theme'); else localStorage.setItem('gt_theme', v) },
 };
 
+/* Apply the chosen theme (§9.2). 'system' clears data-theme so the OS preference
+   (prefers-color-scheme) drives tokens.css; 'light'/'dark' stamp <html data-theme>
+   which WINS both directions. Keep <meta theme-color> in step with the ground. */
+function applyTheme(){
+  const t = LS.theme;
+  const root = document.documentElement;
+  if(t==='light' || t==='dark') root.setAttribute('data-theme', t);
+  else root.removeAttribute('data-theme');
+  const mc = getComputedStyle(root).getPropertyValue('--theme-color').trim();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta && mc) meta.setAttribute('content', mc);
+}
+function setTheme(v){ LS.theme = v; applyTheme(); if(CUR==='settings') renderSettings(); }
+
 const API = 'https://api.github.com';
-const DB = {}; // in-memory cache: { 'db/items.json': {value, sha} , ... }
+const DB = {}; // in-memory read cache: { 'db/items.json': {value, sha:<blobSha>}, ... }
 
 /* ---------- tiny helpers ---------- */
 const $ = sel => document.querySelector(sel);
 const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
 const money = n => (n==null||isNaN(n)) ? '—' : '$'+Number(n).toFixed(2);
-const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const todayISO = () => new Date().toISOString().slice(0,10);
 function toast(msg, ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
 /* In-app modal — replaces window.prompt/confirm, which are blocked in installed
@@ -177,7 +123,75 @@ function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
 function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
 function norm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
 
-/* ---------- GitHub API ---------- */
+/* ---------- event delegation (zero inline handlers) --------------------------
+   Every interactive element carries data-action / data-input / data-change plus
+   any data-* args it needs, instead of an inline on* handler. A single delegated
+   listener per event type dispatches to the handler map. This removes the audited
+   HTML-injection class (no data ever lands in an executable attribute) — see the
+   esc() single-quote fix above — and keeps one click handler per gesture, so a
+   nested action (e.g. Waste inside a group card) resolves to the nearest
+   [data-action] only; the outer card toggle never fires for the same click. */
+const CLICK_ACTIONS = {
+  show:            t => show(t.dataset.arg),
+  pickFile:        () => document.getElementById('cap_file').click(),
+  saveReceipt,
+  resetCapture,
+  signIn:          () => signInWithGitHub(),
+  saveSetup,
+  toggleOpen:      t => t.classList.toggle('open'),
+  viewReceipt:     t => viewReceipt(t.dataset.id),
+  markWaste:       t => markWaste(t.dataset.id),
+  clearTableFilters,
+  sortTable:       t => sortTable(t.dataset.col),
+  setRange:        t => setRange(t.dataset.range),
+  viewPhoto:       t => viewPhoto(t.dataset.path),
+  resolveFlag:     t => resolveFlag(t.dataset.id, t.dataset.dismiss==='1'),
+  remAction:       t => remAction(t.dataset.id, t.dataset.remaction),
+  testConn,
+  saveSettings,
+  saveConfig,
+  setTheme:        t => setTheme(t.dataset.theme),
+  signOut,
+};
+const INPUT_ACTIONS = {
+  search:      () => runSearch(),
+  tableFilter: t  => setTableFilter(t.dataset.col, t.value),
+};
+const CHANGE_ACTIONS = {
+  pick:    (t,e) => onPick(e),
+  reports: () => runReports(),
+};
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const fn = CLICK_ACTIONS[t.dataset.action];
+  if(fn) fn(t, e);
+});
+document.addEventListener('input', e=>{
+  const t = e.target.closest('[data-input]');
+  if(!t) return;
+  const fn = INPUT_ACTIONS[t.dataset.input];
+  if(fn) fn(t, e);
+});
+document.addEventListener('change', e=>{
+  const t = e.target.closest('[data-change]');
+  if(!t) return;
+  const fn = CHANGE_ACTIONS[t.dataset.change];
+  if(fn) fn(t, e);
+});
+
+/* ---------- GitHub API (Git Data layer — S1) ------------------------------
+   Reads go through the Git Data API (ref → commit → tree → blob). A default
+   Contents GET errors on files >1 MB; the blobs API is good to 100 MB, so the
+   old crash-ceiling is gone. Writes are ATOMIC BATCHED COMMITS: one primitive
+   `commitFiles(deltas, message)` (blobs → tree(on base_tree) → commit → PATCH
+   ref). Each mutation is a pure DELTA applied to freshly-fetched content, so a
+   ref-update race (another writer moved `main`) is handled by refetching HEAD,
+   replaying the deltas onto the fresh content, and retrying (×3) — this kills
+   the lost-update bug and makes mark-waste/snooze/resolve single commits.
+   Contents API is kept only for repo-existence checks, first-run seeding, and
+   an image fallback for paths not in the cached tree. -------------------------*/
+const BRANCH = 'main';
 function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
 async function ghContents(path){
   const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
@@ -185,6 +199,10 @@ async function ghContents(path){
   if(!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
+/* Contents PUT — only used to bootstrap missing db files into a fresh/empty repo
+   (ensureInitialized). The Git Data API needs an existing commit to build on, so
+   seeding the very first files still goes through Contents. Never a write path
+   for user data (those go through commitFiles). */
 async function ghPut(path, contentB64, sha, message){
   const body = { message, content:contentB64 };
   if(sha) body.sha = sha;
@@ -192,34 +210,79 @@ async function ghPut(path, contentB64, sha, message){
   if(!r.ok) throw new Error(`Save failed ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
-async function ghDelete(path, sha, message){
-  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {method:'DELETE', headers:ghHeaders(), body:JSON.stringify({message,sha})});
-  if(!r.ok) throw new Error(`Delete failed ${r.status}`);
+
+/* HEAD mirrors main's tip: the commit sha, its tree sha, the ref ETag (for
+   cheap conditional polling), and a path→blobSha map so we refetch only files
+   whose blob actually changed. */
+let HEAD = null;
+async function ghGetRef(conditional){
+  const h = ghHeaders();
+  if(conditional && HEAD && HEAD.etag) h['If-None-Match'] = HEAD.etag;
+  const r = await fetch(`${API}/repos/${LS.repo}/git/ref/heads/${BRANCH}`, {headers:h});
+  if(r.status===304) return { notModified:true };
+  if(!r.ok) throw new Error(`ref ${r.status}: ${(await r.text()).slice(0,180)}`);
+  const j = await r.json();          // { ref, object:{ sha, type:'commit' } }
+  return { commitSha:j.object.sha, etag:r.headers.get('etag') };
+}
+async function ghGetCommit(sha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/commits/${sha}`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error(`commit ${r.status}`);
+  return r.json();                   // { sha, tree:{ sha }, ... }
+}
+async function ghTreeRaw(sha, recursive){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/trees/${sha}${recursive?'?recursive=1':''}`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error(`tree ${r.status}`);
+  return r.json();                   // { sha, tree:[{path,type,sha,mode}], truncated }
+}
+async function ghGetTree(sha){
+  const j = await ghTreeRaw(sha, true);
+  const map = {};
+  (j.tree||[]).forEach(e=>{ if(e.type==='blob') map[e.path]=e.sha; });
+  if(j.truncated){
+    // Real GitHub caps a recursive listing (~100k entries / 7 MB) and returns an
+    // INCOMPLETE array. Resolve the critical db/*.json from the db subtree so data
+    // never silently reads as empty. (Images fall back to the Contents API in
+    // getImageDataUrl.) Only fires at a repo scale we're years from.
+    try{
+      const root = await ghTreeRaw(sha, false);
+      const dbEntry = (root.tree||[]).find(e=>e.path==='db' && e.type==='tree');
+      if(dbEntry){ (await ghTreeRaw(dbEntry.sha, true)).tree.forEach(e=>{ if(e.type==='blob') map['db/'+e.path]=e.sha; }); }
+    }catch(e){ /* best-effort; loadJson's fallback covers any still-missing path */ }
+  }
+  return { treeSha:j.sha, map, truncated:!!j.truncated };
+}
+async function ghGetBlobB64(sha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/blobs/${sha}`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error(`blob ${r.status}`);
+  const j = await r.json();          // { sha, encoding:'base64', content }
+  return (j.content||'').replace(/\n/g,'');
+}
+async function ghGetBlobText(sha){ return b64decode(await ghGetBlobB64(sha)); }
+async function ghCreateBlobB64(contentB64){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/blobs`, {method:'POST', headers:ghHeaders(), body:JSON.stringify({content:contentB64, encoding:'base64'})});
+  if(!r.ok) throw new Error(`create blob ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return (await r.json()).sha;
+}
+async function ghCreateTree(baseTreeSha, entries){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/trees`, {method:'POST', headers:ghHeaders(), body:JSON.stringify({base_tree:baseTreeSha, tree:entries})});
+  if(!r.ok) throw new Error(`create tree ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return (await r.json()).sha;
+}
+async function ghCreateCommit(message, treeSha, parentSha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/commits`, {method:'POST', headers:ghHeaders(), body:JSON.stringify({message, tree:treeSha, parents:[parentSha]})});
+  if(!r.ok) throw new Error(`create commit ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return (await r.json()).sha;
+}
+async function ghUpdateRef(commitSha){
+  // force:false → GitHub returns 422 (non-fast-forward) when main moved under us.
+  const r = await fetch(`${API}/repos/${LS.repo}/git/refs/heads/${BRANCH}`, {method:'PATCH', headers:ghHeaders(), body:JSON.stringify({sha:commitSha, force:false})});
+  if(!r.ok) throw new Error(`update ref ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
-/* Read a JSON file (cached). fallback used if file missing. */
-async function loadJson(path, fallback){
-  const c = await ghContents(path);
-  if(c===null){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
-  const value = JSON.parse(b64decode(c.content));
-  DB[path] = {value, sha:c.sha};
-  return value;
-}
-/* Write a JSON file with one auto-retry on sha conflict. */
-async function saveJson(path, value, message){
-  let sha = DB[path] ? DB[path].sha : null;
-  try{
-    const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
-    DB[path] = {value, sha:res.content.sha};
-  }catch(e){
-    if(String(e).includes('409')||String(e).includes('422')){ // stale sha: re-read and retry once
-      const c = await ghContents(path); sha = c? c.sha : null;
-      const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
-      DB[path] = {value, sha:res.content.sha};
-    } else throw e;
-  }
-}
 async function getImageDataUrl(path){
+  const blobSha = (HEAD && HEAD.tree) ? HEAD.tree[path] : null;
+  if(blobSha){ return 'data:image/jpeg;base64,'+(await ghGetBlobB64(blobSha)); }
+  // Fallback for a freshly-added photo not yet in the cached tree.
   const c = await ghContents(path);
   if(!c) return null;
   if(c.content) return 'data:image/jpeg;base64,'+c.content.replace(/\n/g,'');
@@ -233,8 +296,98 @@ const FILES = {
   stores:'db/stores.json', waste:'db/waste.json', reminders:'db/reminders.json',
   needs:'db/needs_attention.json', config:'db/config.json'
 };
+const KEY_BY_PATH = Object.fromEntries(Object.entries(FILES).map(([k,v])=>[v,k]));
+function pathToKey(p){ return KEY_BY_PATH[p]||null; }
 let D = {}; // loaded data
+
+/* ---------- atomic batched commits (deltas) ------------------------------
+   A delta is a pure description of a change to ONE file, applied to freshly-
+   fetched content at commit time (never a stale local snapshot):
+     {path, op:'append', record}                    – push one record
+     {path, op:'appendMany', records:[...]}          – push several
+     {path, op:'setField', id, fields}               – Object.assign onto record #id
+     {path, op:'setFields', updates:[{id,fields}]}   – several set-field on one file
+     {path, op:'replace', value}                     – blind overwrite (seed only; NOT race-safe)
+     {path, op:'mutate', fn}                          – fn(freshParsed)→newValue, race-safe object edit
+     {path, op:'putBinaryB64', contentB64}           – raw binary blob (receipt photo)  */
+function applyDelta(currentText, delta){
+  if(delta.op==='putBinaryB64') return { b64:delta.contentB64 };
+  if(delta.op==='replace') return { value:delta.value };
+  // mutate applies the caller's pure fn to the FRESH parsed content (an object
+  // file like config.json), so a ref-race replay never clobbers a concurrent
+  // writer — unlike replace, which would re-write a stale snapshot.
+  if(delta.op==='mutate'){
+    const cur = currentText!=null ? JSON.parse(currentText) : (delta.base!==undefined ? delta.base : {});
+    return { value: delta.fn(cur) };
+  }
+  const arr = currentText!=null ? JSON.parse(currentText) : (delta.base || []);
+  if(delta.op==='append') arr.push(delta.record);
+  else if(delta.op==='appendMany') (delta.records||[]).forEach(r=>arr.push(r));
+  else if(delta.op==='setField'){ const o=arr.find(x=>x&&x.id===delta.id); if(o) Object.assign(o, delta.fields); }
+  else if(delta.op==='setFields'){ (delta.updates||[]).forEach(u=>{ const o=arr.find(x=>x&&x.id===u.id); if(o) Object.assign(o,u.fields); }); }
+  else throw new Error('unknown delta op '+delta.op);
+  return { value:arr };
+}
+/* One atomic commit across all files a mutation touches. On a ref race (422/409)
+   we refetch HEAD, replay the deltas onto the now-fresh content, and retry ×3 —
+   so a concurrent writer's changes are never clobbered. */
+async function commitFiles(deltas, message){
+  if(!deltas || !deltas.length) return {};
+  let lastErr;
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const ref = await ghGetRef(false);
+      const commit = await ghGetCommit(ref.commitSha);
+      const baseTreeSha = commit.tree.sha;
+      const tree = await ghGetTree(baseTreeSha);
+      const entries = [], newValues = {};
+      for(const d of deltas){
+        const blobSha = tree.map[d.path];
+        let currentText = null;
+        if(blobSha && d.op!=='putBinaryB64' && d.op!=='replace') currentText = await ghGetBlobText(blobSha);
+        const applied = applyDelta(currentText, d);
+        let newBlobSha;
+        if(applied.b64!=null){ newBlobSha = await ghCreateBlobB64(applied.b64); }
+        else { newBlobSha = await ghCreateBlobB64(b64encode(JSON.stringify(applied.value,null,2))); newValues[d.path]=applied.value; }
+        entries.push({ path:d.path, mode:'100644', type:'blob', sha:newBlobSha });
+      }
+      const newTreeSha = await ghCreateTree(baseTreeSha, entries);
+      const newCommitSha = await ghCreateCommit(message, newTreeSha, ref.commitSha);
+      await ghUpdateRef(newCommitSha);                 // 422 here on a race → caught below
+      // Success — advance our HEAD view and refresh the in-memory + cached data.
+      const newTreeMap = Object.assign({}, tree.map);
+      entries.forEach(e=> newTreeMap[e.path]=e.sha);
+      HEAD = { commitSha:newCommitSha, treeSha:newTreeSha, etag:(HEAD?HEAD.etag:null), tree:newTreeMap };
+      for(const p in newValues){ DB[p]={value:newValues[p], sha:newTreeMap[p]}; const k=pathToKey(p); if(k) D[k]=newValues[p]; }
+      saveSnapshot();
+      return newValues;
+    }catch(e){
+      lastErr = e; const s = String(e);
+      if((s.includes('422')||s.includes('409')) && attempt<2) continue;  // ref moved: replay
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
+/* ---------- reads (blob-based, no 1 MB ceiling) ---------- */
+async function loadHead(){
+  const ref = await ghGetRef(false);
+  const commit = await ghGetCommit(ref.commitSha);
+  const tree = await ghGetTree(commit.tree.sha);
+  HEAD = { commitSha:ref.commitSha, treeSha:tree.treeSha, etag:ref.etag, tree:tree.map };
+  return HEAD;
+}
+async function loadJson(path, fallback){
+  const blobSha = (HEAD && HEAD.tree) ? HEAD.tree[path] : null;
+  if(!blobSha){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
+  if(DB[path] && DB[path].sha===blobSha) return DB[path].value;   // unchanged since last fetch
+  const value = JSON.parse(await ghGetBlobText(blobSha));
+  DB[path] = {value, sha:blobSha};
+  return value;
+}
 async function loadAll(){
+  await loadHead();
   D.items   = await loadJson(FILES.items, []);
   D.receipts= await loadJson(FILES.receipts, []);
   D.groups  = await loadJson(FILES.groups, {});
@@ -244,7 +397,10 @@ async function loadAll(){
   D.needs   = await loadJson(FILES.needs, []);
   D.config  = await loadJson(FILES.config, {members:[],currency:'USD'});
   // self-heal: clear any leftover "_unclear" flags whose field is now filled & resolved
-  if(purgeStaleFlags()){ try{ await saveJson(FILES.items, D.items, 'Clear stale review flags'); }catch(e){} }
+  const healed = purgeStaleFlags();
+  if(healed.length){ try{ await commitFiles([{path:FILES.items, op:'setFields',
+    updates:healed.map(it=>({id:it.id, fields:{flags:it.flags}}))}], 'Clear stale review flags'); }catch(e){} }
+  saveSnapshot();
   updateBadges();
 }
 function updateBadges(){
@@ -252,6 +408,75 @@ function updateBadges(){
              + (D.reminders||[]).filter(r=>r.status==='pending' && r.dueDate<=todayISO()).length;
   const b=$('#reviewBadge');
   if(open>0){ b.textContent=open; b.classList.remove('hidden'); } else b.classList.add('hidden');
+}
+
+/* ---------- IndexedDB boot snapshot -------------------------------------
+   Persist per-file {value, sha} plus HEAD so boot renders instantly, then
+   revalidate with conditional GETs. IndexedDB (not localStorage) because a
+   backfilled items.json would blow localStorage's ~5 MB origin-shared quota. */
+const IDB_NAME='gt_cache', IDB_STORE='files';
+function idbOpen(){ return new Promise((res,rej)=>{ let req; try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ return rej(e); }
+  req.onupgradeneeded=()=>{ req.result.createObjectStore(IDB_STORE); };
+  req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }); }
+async function idbSet(entries){
+  try{ const db=await idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction(IDB_STORE,'readwrite');
+    const os=tx.objectStore(IDB_STORE); entries.forEach(([k,v])=>os.put(v,k));
+    tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); db.close(); }catch(e){}
+}
+async function idbGetAll(){
+  try{ const db=await idbOpen(); const out=await new Promise((res,rej)=>{ const tx=db.transaction(IDB_STORE,'readonly');
+    const os=tx.objectStore(IDB_STORE); const kReq=os.getAllKeys(), vReq=os.getAll(); let keys,vals;
+    kReq.onsuccess=()=>{keys=kReq.result;}; vReq.onsuccess=()=>{vals=vReq.result;};
+    tx.oncomplete=()=>{ const o={}; (keys||[]).forEach((k,i)=>o[k]=vals[i]); res(o); }; tx.onerror=()=>rej(tx.error); });
+    db.close(); return out; }catch(e){ return {}; }
+}
+function saveSnapshot(){
+  if(!HEAD) return;
+  const entries=[['__head__', HEAD]];
+  for(const p in DB){ entries.push(['file:'+p, {value:DB[p].value, sha:DB[p].sha}]); }
+  idbSet(entries);                    // fire-and-forget
+}
+async function loadSnapshot(){
+  const all = await idbGetAll();
+  const head = all['__head__'];
+  if(!head || !head.tree) return false;
+  HEAD = head;
+  for(const key in all){ if(key.indexOf('file:')!==0) continue; const p=key.slice(5);
+    DB[p]={value:all[key].value, sha:all[key].sha}; const k=pathToKey(p); if(k) D[k]=all[key].value; }
+  return D.items!=null;
+}
+
+/* ---------- freshness: poll main, refetch only changed paths ------------- */
+let _polling=false;
+async function checkFreshness(){
+  if(!isConfigured() || !HEAD || _polling) return;
+  _polling=true;
+  try{
+    const ref = await ghGetRef(true);            // conditional (ETag)
+    if(ref.notModified) return;
+    if(ref.commitSha===HEAD.commitSha){ HEAD.etag=ref.etag; return; }
+    const commit = await ghGetCommit(ref.commitSha);
+    const tree = await ghGetTree(commit.tree.sha);
+    const beforeProcessed = new Set((D.receipts||[]).filter(r=>r.status==='processed').map(r=>r.id));
+    const changedPaths=[];
+    for(const key in FILES){ const path=FILES[key];
+      const oldSha=HEAD.tree[path], newSha=tree.map[path];
+      if(newSha && newSha!==oldSha){ const value=JSON.parse(await ghGetBlobText(newSha)); DB[path]={value, sha:newSha}; D[key]=value; changedPaths.push(path); } }
+    HEAD = { commitSha:ref.commitSha, treeSha:tree.treeSha, etag:ref.etag, tree:tree.map };
+    saveSnapshot();
+    if(changedPaths.length){
+      const nowProcessed=(D.receipts||[]).filter(r=>r.status==='processed' && !beforeProcessed.has(r.id)).length;
+      updateBadges();
+      if(CUR) show(CUR);                          // self-resolves "reading…" without a reload
+      toast(nowProcessed>0 ? `Synced — ${nowProcessed} receipt${nowProcessed>1?'s':''} processed.` : 'Synced — data updated.');
+    }
+  }catch(e){ /* transient — the next tick retries */ }
+  finally{ _polling=false; }
+}
+function startFreshnessPolling(){
+  if(startFreshnessPolling._on) return; startFreshnessPolling._on=true;
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkFreshness(); });
+  setInterval(()=>{ if(document.visibilityState!=='hidden') checkFreshness(); }, 60000);
 }
 
 /* =========================================================================
@@ -262,7 +487,7 @@ async function show(tab){
   CUR=tab;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   if(!isConfigured() && tab!=='settings'){ return renderSetup(); }
-  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:#2f7d4f;border-top-color:transparent"></span> Loading…</div>';
+  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:var(--pine);border-top-color:transparent"></span> Loading…</div>';
   try{
     if(!isConfigured()){ renderSetup(); return; }
     if(!D.items) await loadAll(); // first load
@@ -275,7 +500,7 @@ async function show(tab){
   }catch(e){
     m.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted small">${esc(String(e))}</p>
       <p class="small">If this mentions 401/403, your access key (token) may be wrong or expired. Open Settings to re-enter it.</p>
-      <button class="sec" onclick="show('settings')">Open Settings</button></div>`;
+      <button class="sec" data-action="show" data-arg="settings">Open Settings</button></div>`;
   }
   $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me + (LS.device?(' · '+LS.device):'')) : '';
 }
@@ -345,7 +570,7 @@ function renderSetup(){
     <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Me'?'selected':''}>Me</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
     <label>This device's name (so your phone and computer can both stay signed in)</label>
     <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
-    <button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
+    <button data-action="signIn">🔐 Sign in with GitHub</button>
     <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until OAuth is configured.'}</p>
     <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
       <label>Private data repository (<code>owner/name</code>)</label>
@@ -353,7 +578,7 @@ function renderSetup(){
       <label>Access key (your private token — like a house key)</label>
       <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
       <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
-      <button class="sec" onclick="saveSetup()">Connect with token</button>
+      <button class="sec" data-action="saveSetup">Connect with token</button>
     </details>
   </div>`;
 }
@@ -398,15 +623,15 @@ function renderCapture(){
   <div class="card">
     <h2>Snap a receipt</h2>
     <p class="small muted">Take a clear photo of the whole receipt. It saves to your private folder and is read automatically a minute or two later.</p>
-    <input id="cap_file" type="file" accept="image/*" capture="environment" class="hidden" onchange="onPick(event)"/>
-    <button onclick="document.getElementById('cap_file').click()">📷 Open camera / choose photo</button>
+    <input id="cap_file" type="file" accept="image/*" capture="environment" class="hidden" data-change="pick"/>
+    <button data-action="pickFile">📷 Open camera / choose photo</button>
     <img id="cap_prev" class="preview hidden"/>
     <div id="cap_actions" class="hidden" style="margin-top:10px">
       <label>Store (optional — it's read from the photo, but you can hint)</label>
       <input id="cap_store" placeholder="e.g. Costco"/>
       <div class="row" style="margin-top:10px">
-        <button class="sec" onclick="resetCapture()">Retake</button>
-        <button id="cap_save" onclick="saveReceipt()">Save receipt</button>
+        <button class="sec" data-action="resetCapture">Retake</button>
+        <button id="cap_save" data-action="saveReceipt">Save receipt</button>
       </div>
     </div>
   </div>
@@ -441,12 +666,14 @@ async function saveReceipt(){
   try{
     const id=uid('r'); const path='inbox/'+id+'.jpg';
     const b64=pendingImg.split(',')[1];
-    await ghPut(path, b64, null, 'Add receipt photo '+id);
     const rec={ id, status:'unprocessed', photo:path, capturedAt:new Date().toISOString(), capturedBy:LS.me,
       store:($('#cap_store').value.trim()||null), storeId:null, purchasedAt:null, subtotal:null, tax:null, total:null,
       currency:(D.config.currency||'USD'), itemIds:[], notes:'' };
-    D.receipts.push(rec);
-    await saveJson(FILES.receipts, D.receipts, 'Add unprocessed receipt '+id);
+    // One atomic commit: the photo blob + the receipt stub land together.
+    await commitFiles([
+      { path, op:'putBinaryB64', contentB64:b64 },
+      { path:FILES.receipts, op:'append', record:rec }
+    ], 'Add unprocessed receipt '+id);
     toast('Saved! It will be read automatically in a minute or two. 📷');
     resetCapture(); renderCapture();
   }catch(e){ toast(String(e.message||e)); }
@@ -472,7 +699,7 @@ function renderSearch(){
   $('#main').innerHTML = `
   <div class="card">
     <h2>Search items</h2>
-    <input id="sq" placeholder="Type an item, e.g. milk, chicken, bananas" oninput="runSearch()"/>
+    <input id="sq" placeholder="Type an item, e.g. milk, chicken, bananas" data-input="search"/>
     <p class="small muted" style="margin-top:6px">Similar names are grouped together. Tap a group to see each purchase and mark waste.</p>
   </div>
   <div id="sresults"></div>`;
@@ -492,20 +719,20 @@ function runSearch(){
     const qty=arr.reduce((s,i)=>s+(+i.qty||0),0);
     const last=arr[0]?(arr[0].purchasedAt||''):'';
     const g=D.groups[k];
-    return `<div class="card grp" onclick="this.classList.toggle('open')">
+    return `<div class="card grp" data-action="toggleOpen">
       <div class="flex">
         <div><b>${esc(groupLabel(k))}</b> ${g&&g.hsaEligible?'<span class="pill hsa">HSA</span>':''} ${g&&g.perishable?'<span class="pill gray">perishable</span>':''}
           <div class="small muted">${arr.length} purchase(s) · ${qty} bought · last ${esc(last||'—')}</div></div>
         <div style="text-align:right"><div class="big" style="font-size:18px">${money(spent)}</div><div class="small muted">total spent</div></div>
       </div>
       <div class="body">
-        ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" onclick="event.stopPropagation();viewReceipt('${esc(i.receiptId)}')"`:''}>
+        ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" data-action="viewReceipt" data-id="${esc(i.receiptId)}"`:''}>
           <div><div>${esc(i.name||i.rawName)} <span class="small muted">${esc(i.rawName&&i.rawName!==i.name?'('+i.rawName+')':'')}</span></div>
             <div class="small muted">${esc(i.purchasedAt||'')} · ${esc(i.store||'')} · ${money(i.price)} ${i.qty?('· qty '+i.qty):''}
-            ${i.status==='thrown_away'?'· <span style="color:var(--danger)">thrown away</span>':i.status==='consumed'?'· used up':''}
+            ${i.status==='thrown_away'?'· <span style="color:var(--tomato-ink)">thrown away</span>':i.status==='consumed'?'· used up':''}
             ${i.useByDate?('· use by '+i.useByDate):''}</div></div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-            ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" onclick="event.stopPropagation();markWaste('${i.id}')">🗑 Waste</button>`:''}
+            ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" data-action="markWaste" data-id="${esc(i.id)}">🗑 Waste</button>`:''}
             ${i.receiptId?'<span class="muted" aria-hidden="true">🧾›</span>':''}
           </div>
         </div>`).join('')}
@@ -524,16 +751,17 @@ async function markWaste(itemId){
   const it=D.items.find(i=>i.id===itemId); if(!it) return;
   const reason=await chooseWasteReason(it);   // in-app picker (works in installed PWAs, unlike prompt())
   if(reason===null) return;
-  it.status='thrown_away';
   const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
     thrownAt:todayISO(), reason:(reason.trim()||'other'), estCost:(+it.price||0), by:LS.me };
-  D.waste.push(w);
-  // resolve any pending reminder for this item
-  D.reminders.forEach(r=>{ if(r.itemId===it.id && r.status==='pending'){ r.status='done'; }});
+  const pend=(D.reminders||[]).filter(r=>r.itemId===it.id && r.status==='pending').map(r=>r.id);
+  // items + waste + reminders in ONE atomic commit (no 3-write partial-failure window).
+  const deltas=[
+    { path:FILES.items, op:'setField', id:it.id, fields:{status:'thrown_away'} },
+    { path:FILES.waste, op:'append', record:w }
+  ];
+  if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
   try{
-    await saveJson(FILES.items, D.items, 'Mark item thrown away');
-    await saveJson(FILES.waste, D.waste, 'Add waste record');
-    await saveJson(FILES.reminders, D.reminders, 'Close reminder (wasted)');
+    await commitFiles(deltas, 'Mark item thrown away (waste)');
     toast('Logged as waste 🗑'); updateBadges(); runSearch();
   }catch(e){ toast(String(e.message||e)); }
 }
@@ -546,7 +774,7 @@ function viewReceipt(receiptId){
   const head = r ? `${esc(r.store||'Receipt')} · ${esc((r.purchasedAt||r.capturedAt||'').slice(0,10))}` : 'Receipt';
   const rows = items.length ? items.map(i=>`<div class="item">
       <div class="flex"><div>${esc(i.name||i.rawName||'Item')} ${i.qty?`<span class="small muted">×${esc(i.qty)}</span>`:''}</div><div><b>${money(i.price)}</b></div></div>
-      <div class="small muted">${esc(i.rawName||'')}${i.category?(' · '+esc(i.category)):''}${i.status==='thrown_away'?' · <span style="color:var(--danger)">thrown away</span>':''}${i.useByDate?(' · use by '+esc(i.useByDate)):''}</div>
+      <div class="small muted">${esc(i.rawName||'')}${i.category?(' · '+esc(i.category)):''}${i.status==='thrown_away'?' · <span style="color:var(--tomato-ink)">thrown away</span>':''}${i.useByDate?(' · use by '+esc(i.useByDate)):''}</div>
     </div>`).join('') : '<p class="muted small">No line items recorded for this receipt.</p>';
   const totals = r ? `${r.subtotal!=null?`<div class="kv"><span>Subtotal</span><b>${money(r.subtotal)}</b></div>`:''}${r.tax!=null?`<div class="kv"><span>Tax</span><b>${money(r.tax)}</b></div>`:''}${r.total!=null?`<div class="kv"><span>Total</span><b>${money(r.total)}</b></div>`:''}` : '';
   modal(`<h2 style="margin:0 0 2px">🧾 ${head}</h2>
@@ -607,12 +835,12 @@ function renderTable(){
   <div class="card">
     <div class="flex"><h2 style="margin:0">📑 All items</h2><div class="small muted" id="tcount"></div></div>
     <p class="small muted" style="margin:6px 0 0">Every stored field. Tap a column title to sort (tap again to reverse); type in the box under any column to filter.</p>
-    <button class="link" onclick="clearTableFilters()" style="margin-top:6px">Clear all filters</button>
+    <button class="link" data-action="clearTableFilters" style="margin-top:6px">Clear all filters</button>
     <div class="tablewrap">
       <table id="ttable">
         <thead>
-          <tr>${TABLE_COLS.map(c=>`<th class="sortable ${c.type==='num'?'n':''}" onclick="sortTable('${c.key}')">${esc(c.label)}<span class="sortarrow" data-col="${c.key}"></span></th>`).join('')}</tr>
-          <tr>${TABLE_COLS.map(c=>`<th><input data-f="${c.key}" placeholder="filter" oninput="setTableFilter('${c.key}',this.value)" autocapitalize="off" autocorrect="off" spellcheck="false"/></th>`).join('')}</tr>
+          <tr>${TABLE_COLS.map(c=>`<th class="sortable ${c.type==='num'?'n':''}" data-action="sortTable" data-col="${esc(c.key)}">${esc(c.label)}<span class="sortarrow" data-col="${esc(c.key)}"></span></th>`).join('')}</tr>
+          <tr>${TABLE_COLS.map(c=>`<th><input data-f="${esc(c.key)}" placeholder="filter" data-input="tableFilter" data-col="${esc(c.key)}" autocapitalize="off" autocorrect="off" spellcheck="false"/></th>`).join('')}</tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -633,7 +861,7 @@ function drawTableBody(){
 }
 function updateSortArrows(){
   document.querySelectorAll('#ttable .sortarrow').forEach(s=>{
-    s.textContent = TS.field===s.getAttribute('data-col') ? (TS.dir==='asc'?' ▲':' ▼') : '';
+    s.textContent = TS.field===s.getAttribute('data-col') ? (TS.dir==='asc'?'▲':'▼') : '';
   });
 }
 function sortTable(field){
@@ -655,13 +883,13 @@ function renderReports(){
   <div class="card">
     <h2>Reports</h2>
     <div class="row">
-      <div><label>From</label><input id="rf" type="date" value="${from}" onchange="runReports()"/></div>
-      <div><label>To</label><input id="rt" type="date" value="${to}" onchange="runReports()"/></div>
+      <div><label>From</label><input id="rf" type="date" value="${from}" data-change="reports"/></div>
+      <div><label>To</label><input id="rt" type="date" value="${to}" data-change="reports"/></div>
     </div>
     <div class="row" style="margin-top:8px">
-      <button class="sec" onclick="setRange('month')">This month</button>
-      <button class="sec" onclick="setRange('30')">Last 30 days</button>
-      <button class="sec" onclick="setRange('year')">This year</button>
+      <button class="sec" data-action="setRange" data-range="month">This month</button>
+      <button class="sec" data-action="setRange" data-range="30">Last 30 days</button>
+      <button class="sec" data-action="setRange" data-range="year">This year</button>
     </div>
   </div>
   <div id="rout"></div>`;
@@ -690,7 +918,7 @@ function runReports(){
   const waste=D.waste.filter(w=>inRange(w.thrownAt,from,to)); const wasteCost=waste.reduce((s,w)=>s+(+w.estCost||0),0);
 
   $('#rout').innerHTML = `
-  <div class="card"><div class="small muted">Total spend ${esc(from)} → ${esc(to)}</div><div class="big">${money(total)}</div>
+  <div class="card"><div class="small muted">Total spend ${esc(from)} → ${esc(to)}</div><div class="big hero-figure">${money(total)}</div>
     <div class="small muted">${items.length} items across ${storeRows.length} store(s)</div></div>
 
   <div class="card"><h2>Spend per store</h2>
@@ -733,16 +961,24 @@ function renderReview(){
     ${dueRem.length? dueRem.map(renderRem).join('') : '<p class="muted small">No active reminders.</p>'}
   </div>`;
 }
+/* Field-aware input attrs (FR-18): numeric flags get a decimal keypad, date
+   flags a native date picker, so the owner isn't typing digits on a QWERTY. */
+function fixInputAttrs(field){
+  const f=String(field||'').toLowerCase();
+  if(['price','qty','quantity','unitprice','unit price','total','subtotal','tax'].some(k=>f.includes(k.replace(' ','')))) return 'inputmode="decimal"';
+  if(['date','useby','use_by','usebydate','purchased'].some(k=>f.includes(k))) return 'type="date"';
+  return '';
+}
 function renderFlag(n){
   return `<div class="item" id="flag_${n.id}">
     <div class="flex"><b>${esc(n.field||n.kind||'Review')}</b><span class="pill gray">${esc(n.kind||'')}</span></div>
     <div class="small">${esc(n.message||'')}</div>
-    ${n.photo?`<button class="link" onclick="viewPhoto('${esc(n.photo)}')">View receipt photo</button>`:''}
+    ${n.photo?`<button class="link" data-action="viewPhoto" data-path="${esc(n.photo)}">View receipt photo</button>`:''}
     <div class="row" style="margin-top:6px">
-      <input id="fix_${n.id}" placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
-      <button style="flex:0 0 auto;width:auto" onclick="resolveFlag('${n.id}')">Save</button>
+      <input id="fix_${esc(n.id)}" ${fixInputAttrs(n.field)} placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
+      <button style="flex:0 0 auto;width:auto" data-action="resolveFlag" data-id="${esc(n.id)}">Save</button>
     </div>
-    <button class="link" onclick="resolveFlag('${n.id}', true)">Dismiss (no change)</button>
+    <button class="link" data-action="resolveFlag" data-id="${esc(n.id)}" data-dismiss="1">Dismiss (no change)</button>
   </div>`;
 }
 async function viewPhoto(path){
@@ -773,9 +1009,10 @@ function hasOpenNeed(itemId, prop){
   return (D.needs||[]).some(n=>n.status==='open' && n.itemId===itemId && itemFieldFor(n.field)===prop);
 }
 /* Drop any field-uncertainty flag whose field now has a value and no open review.
-   Returns true if it changed anything. */
+   Mutates each affected item's flags in place and returns the array of items that
+   changed (empty = nothing changed), so callers can build precise commit deltas. */
 function purgeStaleFlags(){
-  let changed=false;
+  const changed=[];
   (D.items||[]).forEach(it=>{
     if(!Array.isArray(it.flags) || !it.flags.length) return;
     const kept=it.flags.filter(fl=>{
@@ -784,53 +1021,66 @@ function purgeStaleFlags(){
       if(valueFilled(it,prop) && !hasOpenNeed(it.id,prop)) return false; // resolved → purge
       return true;
     });
-    if(kept.length!==it.flags.length){ it.flags=kept; changed=true; }
+    if(kept.length!==it.flags.length){ it.flags=kept; changed.push(it); }
   });
   return changed;
 }
 async function resolveFlag(id, dismiss){
   const n=D.needs.find(x=>x.id===id); if(!n) return;
   const val=dismiss?null:($('#fix_'+id)?$('#fix_'+id).value.trim():'');
-  let itemsChanged=false;
+  const itemUpdates=[];   // {id, fields} accumulated into ONE items.json delta
   if(!dismiss && val && n.itemId && n.field){
     const it=D.items.find(i=>i.id===n.itemId);
     if(it){ const prop=itemFieldFor(n.field); let v=val;
       if(['price','qty','unitPrice','tax','subtotal','total'].includes(prop)) v=parseFloat(val)||0;
-      it[prop]=v; itemsChanged=true; }
+      it[prop]=v;                                              // local apply so purge sees the filled field
+      itemUpdates.push({id:it.id, fields:{[prop]:v}}); }
   }
   n.status='resolved'; n.resolvedAt=new Date().toISOString(); n.resolvedBy=LS.me;
-  if(purgeStaleFlags()) itemsChanged=true;                    // clear the now-resolved "_unclear" flag(s)
-  if(itemsChanged) await saveJson(FILES.items, D.items, 'Apply review fix / clear resolved flags');
-  await saveJson(FILES.needs, D.needs, 'Resolve review flag');
-  toast(dismiss?'Dismissed':'Saved'); updateBadges(); renderReview();
+  purgeStaleFlags().forEach(it=>{                              // fold cleared "_unclear" flags into the same delta
+    const u=itemUpdates.find(x=>x.id===it.id);
+    if(u) u.fields=Object.assign({}, u.fields, {flags:it.flags});
+    else itemUpdates.push({id:it.id, fields:{flags:it.flags}});
+  });
+  const deltas=[{ path:FILES.needs, op:'setField', id:n.id, fields:{status:'resolved', resolvedAt:n.resolvedAt, resolvedBy:n.resolvedBy} }];
+  if(itemUpdates.length) deltas.push({ path:FILES.items, op:'setFields', updates:itemUpdates });
+  try{
+    await commitFiles(deltas, 'Resolve review flag');
+    toast(dismiss?'Dismissed':'Saved'); updateBadges(); renderReview();
+  }catch(e){ toast(String(e.message||e)); }
 }
 function renderRem(r){
   const due=r.dueDate||''; const overdue=due && due<=todayISO();
   return `<div class="item">
     <div class="flex"><div><b>${esc(r.name||'Item')}</b>
-      <div class="small ${overdue?'':'muted'}" style="${overdue?'color:var(--warn);font-weight:600':''}">use by ${esc(due)}${overdue?' — check now':''}</div></div></div>
+      <div class="small ${overdue?'':'muted'}" style="${overdue?'color:var(--marigold-ink);font-weight:600':''}">use by ${esc(due)}${overdue?' — check now':''}</div></div></div>
     <div class="row" style="margin-top:6px">
-      <button class="sec" onclick="remAction('${r.id}','kept')">Still good</button>
-      <button class="sec" onclick="remAction('${r.id}','consumed')">Used it</button>
-      <button class="warn" onclick="remAction('${r.id}','wasted')">Threw away</button>
+      <button class="sec" data-action="remAction" data-id="${esc(r.id)}" data-remaction="kept">Still good</button>
+      <button class="sec" data-action="remAction" data-id="${esc(r.id)}" data-remaction="consumed">Used it</button>
+      <button class="warn" data-action="remAction" data-id="${esc(r.id)}" data-remaction="wasted">Threw away</button>
     </div>
   </div>`;
 }
 async function remAction(id, action){
   const r=D.reminders.find(x=>x.id===id); if(!r) return;
   const it=r.itemId?D.items.find(i=>i.id===r.itemId):null;
-  if(action==='kept'){ r.status='done'; r.note='kept '+todayISO(); }
-  else if(action==='consumed'){ r.status='done'; if(it) it.status='consumed'; }
-  else if(action==='wasted'){
-    r.status='done';
-    if(it){ it.status='thrown_away';
-      D.waste.push({id:uid('w'),itemId:it.id,groupId:it.groupId||null,name:it.name||it.rawName,qty:it.qty||1,thrownAt:todayISO(),reason:'spoiled',estCost:(+it.price||0),by:LS.me});
-      await saveJson(FILES.waste, D.waste, 'Add waste from reminder');
+  const deltas=[];   // all touched files land in ONE atomic commit
+  if(action==='kept'){
+    deltas.push({ path:FILES.reminders, op:'setField', id:r.id, fields:{status:'done', note:'kept '+todayISO()} });
+  } else if(action==='consumed'){
+    deltas.push({ path:FILES.reminders, op:'setField', id:r.id, fields:{status:'done'} });
+    if(it) deltas.push({ path:FILES.items, op:'setField', id:it.id, fields:{status:'consumed'} });
+  } else if(action==='wasted'){
+    deltas.push({ path:FILES.reminders, op:'setField', id:r.id, fields:{status:'done'} });
+    if(it){
+      deltas.push({ path:FILES.items, op:'setField', id:it.id, fields:{status:'thrown_away'} });
+      deltas.push({ path:FILES.waste, op:'append', record:{id:uid('w'),itemId:it.id,groupId:it.groupId||null,name:it.name||it.rawName,qty:it.qty||1,thrownAt:todayISO(),reason:'spoiled',estCost:(+it.price||0),by:LS.me} });
     }
   }
-  if(it) await saveJson(FILES.items, D.items, 'Update item status from reminder');
-  await saveJson(FILES.reminders, D.reminders, 'Update reminder');
-  toast('Updated'); updateBadges(); renderReview();
+  try{
+    await commitFiles(deltas, 'Update reminder ('+action+')');
+    toast('Updated'); updateBadges(); renderReview();
+  }catch(e){ toast(String(e.message||e)); }
 }
 
 /* =========================================================================
@@ -849,8 +1099,16 @@ function renderSettings(){
     <input id="set_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <label>Access key (token)</label>
     <input id="set_token" type="password" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <div class="row" style="margin-top:10px"><button class="sec" onclick="testConn()">Test connection</button><button onclick="saveSettings()">Save</button></div>
-    <button class="link danger" style="color:var(--danger)" onclick="signOut()">Sign out / forget key on this device</button>
+    <div class="row" style="margin-top:10px"><button class="sec" data-action="testConn">Test connection</button><button data-action="saveSettings">Save</button></div>
+    <button class="link" style="color:var(--tomato-ink)" data-action="signOut">Sign out / forget key on this device</button>
+  </div>
+  <div class="card">
+    <h2>Appearance</h2>
+    <label>Theme</label>
+    <div class="row" role="group" aria-label="Theme">
+      ${['system','light','dark'].map(t=>`<button class="${LS.theme===t?'':'sec'}" aria-pressed="${LS.theme===t}" data-action="setTheme" data-theme="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
+    </div>
+    <p class="small muted" style="margin:8px 0 0">System follows your phone's light/dark setting. Your choice is remembered on this device.</p>
   </div>
   <div class="card">
     <h2>📱💻 Using more than one device</h2>
@@ -864,9 +1122,9 @@ function renderSettings(){
     <p class="small muted">Claude emails these people for reviews and freshness reminders. Saved in your shared config.</p>
     ${(cfg.members||[]).map((m,idx)=>`
       <label>${esc(m.name)} email</label>
-      <input id="mem_${idx}" value="${esc(m.email||'')}" placeholder="name@example.com" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <input id="mem_${idx}" type="email" inputmode="email" value="${esc(m.email||'')}" placeholder="name@example.com" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     `).join('')}
-    <button style="margin-top:10px" onclick="saveConfig()">Save emails</button>
+    <button style="margin-top:10px" data-action="saveConfig">Save emails</button>
   </div>`:''}
   <div class="card">
     <h2>How this works</h2>
@@ -879,19 +1137,46 @@ function testConn(){
   fetch(`${API}/repos/${$('#set_repo').value.trim()}`, {headers:{...ghHeaders(),'Authorization':'Bearer '+$('#set_token').value.trim()}})
     .then(r=>toast(r.ok?'Connection works ✓':'Failed: '+r.status));
 }
-function saveSettings(){ LS.me=$('#set_me').value; LS.device=$('#set_device').value.trim(); LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
+function saveSettings(){ LS.me=$('#set_me').value; LS.device=$('#set_device').value.trim(); LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; HEAD=null; for(const k in DB) delete DB[k]; show('settings'); }
 async function saveConfig(){
-  (D.config.members||[]).forEach((m,idx)=>{ const v=$('#mem_'+idx); if(v) m.email=v.value.trim(); });
-  await saveJson(FILES.config, D.config, 'Update notification emails'); toast('Emails saved');
+  // Only the member emails this device actually CHANGED (input differs from the
+  // value we loaded), applied onto FRESH config at commit time — so a concurrent
+  // writer editing a different member isn't clobbered, and untouched fields keep
+  // the fresh remote value rather than this device's stale snapshot.
+  const changes = (D.config.members||[]).map((m,idx)=>{ const v=$('#mem_'+idx); if(!v) return null; const val=v.value.trim(); return val!==(m.email||'') ? val : null; });
+  if(!changes.some(c=>c!==null)){ toast('No changes'); return; }
+  await commitFiles([{path:FILES.config, op:'mutate', base:(D.config||{}), fn:(cfg)=>{
+    cfg = cfg || {};
+    if(Array.isArray(cfg.members)) changes.forEach((val,idx)=>{ if(val!==null && cfg.members[idx]) cfg.members[idx].email = val; });
+    return cfg;
+  }}], 'Update notification emails');
+  toast('Emails saved');
 }
 async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); localStorage.removeItem('gt_login'); localStorage.removeItem('gt_method'); toast('Signed out'); show('settings'); } }
 
 /* ---------- boot ---------- */
+/* Register the service worker (S2): offline read-only app shell. Best-effort —
+   a failure (unsupported / blocked) must never break the app. */
+function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 window.addEventListener('load', async ()=>{
+  applyTheme();   // sync <meta theme-color> to the resolved theme (data-theme was set pre-paint)
+  registerSW();
   // Handle the "back from GitHub sign-in" return first; otherwise show the app.
   const came = await handleOAuthRedirect();
   if(came) return;
-  show(isConfigured()?'capture':'settings');
+  if(isConfigured()){
+    // Render instantly from the IndexedDB snapshot if we have one, then revalidate.
+    let hadSnap=false;
+    try{ hadSnap = await loadSnapshot(); }catch(e){}
+    await show('capture');
+    if(hadSnap){ try{ await loadAll(); await show(CUR); }catch(e){} }  // conditional refetch of changed paths
+    startFreshnessPolling();
+  } else {
+    await show('settings');
+  }
 });
 </script>
 </body>

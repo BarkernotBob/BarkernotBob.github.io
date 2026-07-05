@@ -75,3 +75,41 @@ A map keyed by `groupId`:
 - `id`, `itemId`, `groupId`, `name`, `qty`
 - `thrownAt` (`YYYY-MM-DD`), `reason` (`spoiled`, `expired`, `leftover`, …)
 - `estCost` (estimated money wasted), `by`
+
+---
+
+## v2 additions — structured (photo-less) orders
+
+Version 2 adds online-order support (browser extension + email) alongside photo
+receipts. **All new fields are additive** — old records without them are still
+valid; readers tolerate their absence. `config.schemaVersion` is `2`.
+
+> The **canonical** field definitions and the machine-readable staging schema
+> live in the data repo: `grocery-data/schema/README.md` and
+> `grocery-data/schema/staging-order.schema.json`. This page is the human-facing
+> mirror; when they differ, the data-repo copy wins.
+
+**`items.json` gains:** `upc` (GTIN or `null`) · `source`
+(`photo`/`extension`/`email`; existing rows are `photo`) · `regularUnitPrice`
+(shelf price) · `discount` · `promoDescription` (e.g. `"BOGO"`) ·
+`retailerCategory` (the retailer's own category, kept as a hint).
+**Price semantics (fixed in v2):** `price` = net line total; `unitPrice` = net
+effective = `round(price/qty, 2)`; `regularUnitPrice` = shelf price. (Promos used
+to hide the shelf price in `unitPrice`; that ambiguity is gone.)
+
+**`receipts.json` gains:** `retailer`, `orderId`, `orderKey` (`retailer:orderId`),
+`channel` (`in_store`/`pickup`/`delivery`/`online`; photo receipts default
+`in_store`), `source`, `storeNumber`, `orderedAt`, `fulfilledAt`, `fees`,
+`rawPayload` (path to the archived payload), `photos[]`. **`photo` and
+`capturedBy` are now nullable** (online orders have no photo).
+
+**New db files:** `db/order_index.json` (`{orderKey: receiptId}`, processor-owned,
+the dedup index) · `db/processor_state.json` (last-run summary) ·
+`sync/<retailer>.json` (extension-owned sync status).
+
+**Staging order** — the handoff file the extension/email writes to
+`inbox/orders/<retailer>_<orderIdSafe>.json` (raw payload archived beside it as
+`.raw.json`). One order, its lines, totals, channel, and store. `source ∈
+{extension, email}`; `channel ∈ {in_store, pickup, delivery, online}`; `qty` may
+be decimal (weight lines) or negative (refunds). Validated by
+`dbtool validate-order`; see `PROCESSOR.md` §6b for how it's processed.

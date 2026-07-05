@@ -1,0 +1,62 @@
+/* Grocery Tracker service worker (PRD S2 / §11.2).
+   Offline is READ-ONLY: this SW precaches the app shell (HTML + icons + manifest)
+   so the app launches without a network; the data itself comes from the app's
+   IndexedDB snapshot (data layer v2, S1). It deliberately does NOT touch
+   api.github.com — those requests pass straight through, and when offline the app
+   falls back to its IDB snapshot on its own. */
+const VERSION = 'gt-shell-v2'
+const SHELL = [
+  'index.html',
+  'manifest.webmanifest',
+  'tokens.css',
+  'app.css',
+  'fonts/archivo-400-700.woff2',
+  'fonts/fraunces-600.woff2',
+  'fonts/ibm-plex-mono-400.woff2',
+  'fonts/ibm-plex-mono-500.woff2',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/apple-touch-icon.png',
+]
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+  )
+})
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener('fetch', (e) => {
+  const req = e.request
+  const url = new URL(req.url)
+  // Never intercept the GitHub API or any cross-origin request — data freshness
+  // and auth must go to the network; offline is handled by the app's IDB cache.
+  if (url.origin !== self.location.origin) return
+  if (req.method !== 'GET') return
+  // Stale-while-revalidate for the same-origin shell: serve cache immediately,
+  // refresh in the background so the next launch has the latest. For a navigation
+  // that misses cache (e.g. the bare /grocery/ URL), fall back to the cached
+  // index.html so the app still launches offline.
+  e.respondWith(
+    caches.match(req).then((cached) => {
+      const network = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone()
+            caches.open(VERSION).then((c) => c.put(req, copy))
+          }
+          return res
+        })
+        .catch(() => cached || (req.mode === 'navigate' ? caches.match('index.html') : undefined))
+      return cached || network
+    })
+  )
+})

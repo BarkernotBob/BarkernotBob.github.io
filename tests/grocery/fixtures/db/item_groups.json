@@ -1,0 +1,26 @@
+{
+  "milk": {
+    "canonical": "Whole milk",
+    "aliases": ["gv whole milk gal", "whole milk", "milk"],
+    "category": "dairy",
+    "perishable": true,
+    "defaultShelfLifeDays": 10,
+    "hsaEligible": false
+  },
+  "tylenol": {
+    "canonical": "Tylenol Extra Strength",
+    "aliases": ["tylenol xstr 24ct", "tylenol", "acetaminophen"],
+    "category": "pharmacy",
+    "perishable": false,
+    "defaultShelfLifeDays": null,
+    "hsaEligible": true
+  },
+  "bananas": {
+    "canonical": "Bananas",
+    "aliases": ["bananas lb", "banana"],
+    "category": "produce",
+    "perishable": true,
+    "defaultShelfLifeDays": 5,
+    "hsaEligible": false
+  }
+}

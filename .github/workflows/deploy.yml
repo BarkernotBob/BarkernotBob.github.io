@@ -57,8 +57,82 @@ jobs:
         with:
           path: public
 
+  # ---- Grocery Tracker regression gate (PRD S0) --------------------------------
+  # GitHub Actions has no per-job `paths` filter, so a change-detection job decides
+  # whether the Playwright suite must run. Only commits touching the grocery app,
+  # its tests, this workflow, or the Quartz config trigger it — so ordinary content
+  # publishes are never blocked by (or made to wait on) the browser tests.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      grocery: ${{ steps.filter.outputs.grocery }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: filter
+        name: Detect grocery-related changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "grocery=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            # Base commit unreachable (force-push, rebase, or new branch): we
+            # can't reliably scope the diff, so fail CLOSED and run the suite.
+            echo "Base commit unavailable — running grocery suite to be safe."
+            echo "grocery=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE" HEAD || true)
+          echo "Changed files:"; echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE '^(quartz/static/grocery/|tests/grocery/|\.github/workflows/deploy\.yml|quartz\.config\.default\.yaml)'; then
+            echo "grocery=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "grocery=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    needs: changes
+    if: ${{ needs.changes.outputs.grocery == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/grocery
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install test dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run grocery regression suite
+        run: npm test
+      - name: Upload screenshot gallery (visual-verification record)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: grocery-screenshots
+          path: tests/grocery/screenshots/
+          if-no-files-found: warn
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: grocery-playwright-report
+          path: tests/grocery/playwright-report/
+          if-no-files-found: ignore
+
   deploy:
-    needs: build
+    # A skipped `test` (non-grocery commit) counts as pass; a failed `test` blocks
+    # the deploy so red never ships. `!cancelled()` lets this run even when `test`
+    # was skipped — a skipped `needs` would otherwise skip `deploy` too. Requiring
+    # `changes` to have succeeded keeps the gate fail-CLOSED: if change-detection
+    # itself errors, `test` is skipped but the deploy is blocked rather than
+    # shipping untested.
+    needs: [build, changes, test]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.result == 'success' && needs.test.result != 'failure' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

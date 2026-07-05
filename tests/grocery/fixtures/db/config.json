@@ -1,0 +1,10 @@
+{
+  "household": "Test Household",
+  "currency": "USD",
+  "timezone": "America/New_York",
+  "members": [
+    { "name": "Me", "email": "", "notify": true },
+    { "name": "Wife", "email": "", "notify": true }
+  ],
+  "reminders": { "useByLeadDays": 0, "sendReviewEmails": false, "sendUseByEmails": false }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "rem_milk_0001",
+    "type": "use_by",
+    "itemId": "i_milk_0001",
+    "groupId": "milk",
+    "name": "Whole milk",
+    "dueDate": "2020-01-01",
+    "status": "pending",
+    "note": "",
+    "createdAt": "2026-06-30T14:05:00Z",
+    "notifiedAt": null
+  },
+  {
+    "id": "rem_ban_0002",
+    "type": "use_by",
+    "itemId": "i_ban_0003",
+    "groupId": "bananas",
+    "name": "Bananas",
+    "dueDate": "2999-12-31",
+    "status": "pending",
+    "note": "",
+    "createdAt": "2026-06-20T10:00:00Z",
+    "notifiedAt": null
+  }
+]

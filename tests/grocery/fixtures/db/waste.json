@@ -1,0 +1,13 @@
+[
+  {
+    "id": "w_ban_0001",
+    "itemId": "i_ban_0003",
+    "groupId": "bananas",
+    "name": "Bananas",
+    "qty": 3,
+    "thrownAt": "2026-06-26",
+    "reason": "spoiled",
+    "estCost": 1.77,
+    "by": "Me"
+  }
+]

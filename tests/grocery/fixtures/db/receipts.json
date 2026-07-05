@@ -1,0 +1,34 @@
+[
+  {
+    "id": "r_pub_0001",
+    "photo": "receipts/r_pub_0001.jpg",
+    "capturedAt": "2026-06-30T14:02:00Z",
+    "capturedBy": "Me",
+    "status": "processed",
+    "store": "Publix",
+    "storeId": "publix",
+    "purchasedAt": "2026-06-30",
+    "subtotal": 14.55,
+    "tax": 0.66,
+    "total": 15.21,
+    "currency": "USD",
+    "itemIds": ["i_milk_0001", "i_tyl_0002", "i_ban_0003", "i_e'\"vil_0004"],
+    "notes": ""
+  },
+  {
+    "id": "r_pub_0002",
+    "photo": "inbox/r_pub_0002.jpg",
+    "capturedAt": "2026-07-04T09:10:00Z",
+    "capturedBy": "Wife",
+    "status": "unprocessed",
+    "store": null,
+    "storeId": null,
+    "purchasedAt": null,
+    "subtotal": null,
+    "tax": null,
+    "total": null,
+    "currency": "USD",
+    "itemIds": [],
+    "notes": ""
+  }
+]

@@ -76,6 +76,10 @@
   .tablewrap th,.tablewrap td{padding:6px 5px;font-size:11px;word-break:break-word;overflow-wrap:anywhere;vertical-align:top}
   .tablewrap thead th{background:#f3f5f2}
   .tablewrap th.sortable{cursor:pointer;user-select:none;line-height:1.2}
+  /* Reserve a fixed slot for the sort arrow so sorting (arrow appears / moves
+     between columns) never rewraps a header and shifts the filter row — the
+     owner's no-reflow rule. */
+  .sortarrow{display:inline-block;width:11px;text-align:left}
   .tablewrap th input{width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px;font-weight:400;text-transform:none;letter-spacing:0}
   .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
   .toast.show{opacity:.97}
@@ -95,18 +99,18 @@
 <body>
 <header>
   <div><h1>🛒 Grocery Tracker</h1><div class="who" id="whoami"></div></div>
-  <button class="link" style="color:#fff" onclick="show('settings')">⚙︎ Settings</button>
+  <button class="link" style="color:#fff" data-action="show" data-arg="settings">⚙︎ Settings</button>
 </header>
 
 <main id="main"></main>
 
 <nav id="nav">
-  <button data-tab="capture" onclick="show('capture')"><span class="ic">📷</span>Capture</button>
-  <button data-tab="search" onclick="show('search')"><span class="ic">🔎</span>Search</button>
-  <button data-tab="reports" onclick="show('reports')"><span class="ic">📊</span>Reports</button>
-  <button data-tab="review" onclick="show('review')"><span class="ic">📋</span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
-  <button data-tab="table" onclick="show('table')"><span class="ic">📑</span>Table</button>
-  <button data-tab="settings" onclick="show('settings')"><span class="ic">⚙︎</span>Settings</button>
+  <button data-tab="capture" data-action="show" data-arg="capture"><span class="ic">📷</span>Capture</button>
+  <button data-tab="search" data-action="show" data-arg="search"><span class="ic">🔎</span>Search</button>
+  <button data-tab="reports" data-action="show" data-arg="reports"><span class="ic">📊</span>Reports</button>
+  <button data-tab="review" data-action="show" data-arg="review"><span class="ic">📋</span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
+  <button data-tab="table" data-action="show" data-arg="table"><span class="ic">📑</span>Table</button>
+  <button data-tab="settings" data-action="show" data-arg="settings"><span class="ic">⚙︎</span>Settings</button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -150,7 +154,7 @@ const DB = {}; // in-memory cache: { 'db/items.json': {value, sha} , ... }
 const $ = sel => document.querySelector(sel);
 const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
 const money = n => (n==null||isNaN(n)) ? '—' : '$'+Number(n).toFixed(2);
-const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const todayISO = () => new Date().toISOString().slice(0,10);
 function toast(msg, ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
 /* In-app modal — replaces window.prompt/confirm, which are blocked in installed
@@ -176,6 +180,62 @@ function uid(p){ return p+'_'+Math.floor(Date.now()/1000)+'_'+Math.random().toSt
 function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
 function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
 function norm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+
+/* ---------- event delegation (zero inline handlers) --------------------------
+   Every interactive element carries data-action / data-input / data-change plus
+   any data-* args it needs, instead of an inline on* handler. A single delegated
+   listener per event type dispatches to the handler map. This removes the audited
+   HTML-injection class (no data ever lands in an executable attribute) — see the
+   esc() single-quote fix above — and keeps one click handler per gesture, so a
+   nested action (e.g. Waste inside a group card) resolves to the nearest
+   [data-action] only; the outer card toggle never fires for the same click. */
+const CLICK_ACTIONS = {
+  show:            t => show(t.dataset.arg),
+  pickFile:        () => document.getElementById('cap_file').click(),
+  saveReceipt,
+  resetCapture,
+  signIn:          () => signInWithGitHub(),
+  saveSetup,
+  toggleOpen:      t => t.classList.toggle('open'),
+  viewReceipt:     t => viewReceipt(t.dataset.id),
+  markWaste:       t => markWaste(t.dataset.id),
+  clearTableFilters,
+  sortTable:       t => sortTable(t.dataset.col),
+  setRange:        t => setRange(t.dataset.range),
+  viewPhoto:       t => viewPhoto(t.dataset.path),
+  resolveFlag:     t => resolveFlag(t.dataset.id, t.dataset.dismiss==='1'),
+  remAction:       t => remAction(t.dataset.id, t.dataset.remaction),
+  testConn,
+  saveSettings,
+  saveConfig,
+  signOut,
+};
+const INPUT_ACTIONS = {
+  search:      () => runSearch(),
+  tableFilter: t  => setTableFilter(t.dataset.col, t.value),
+};
+const CHANGE_ACTIONS = {
+  pick:    (t,e) => onPick(e),
+  reports: () => runReports(),
+};
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const fn = CLICK_ACTIONS[t.dataset.action];
+  if(fn) fn(t, e);
+});
+document.addEventListener('input', e=>{
+  const t = e.target.closest('[data-input]');
+  if(!t) return;
+  const fn = INPUT_ACTIONS[t.dataset.input];
+  if(fn) fn(t, e);
+});
+document.addEventListener('change', e=>{
+  const t = e.target.closest('[data-change]');
+  if(!t) return;
+  const fn = CHANGE_ACTIONS[t.dataset.change];
+  if(fn) fn(t, e);
+});
 
 /* ---------- GitHub API ---------- */
 function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
@@ -275,7 +335,7 @@ async function show(tab){
   }catch(e){
     m.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted small">${esc(String(e))}</p>
       <p class="small">If this mentions 401/403, your access key (token) may be wrong or expired. Open Settings to re-enter it.</p>
-      <button class="sec" onclick="show('settings')">Open Settings</button></div>`;
+      <button class="sec" data-action="show" data-arg="settings">Open Settings</button></div>`;
   }
   $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me + (LS.device?(' · '+LS.device):'')) : '';
 }
@@ -345,7 +405,7 @@ function renderSetup(){
     <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Me'?'selected':''}>Me</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
     <label>This device's name (so your phone and computer can both stay signed in)</label>
     <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
-    <button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
+    <button data-action="signIn">🔐 Sign in with GitHub</button>
     <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until OAuth is configured.'}</p>
     <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
       <label>Private data repository (<code>owner/name</code>)</label>
@@ -353,7 +413,7 @@ function renderSetup(){
       <label>Access key (your private token — like a house key)</label>
       <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
       <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
-      <button class="sec" onclick="saveSetup()">Connect with token</button>
+      <button class="sec" data-action="saveSetup">Connect with token</button>
     </details>
   </div>`;
 }
@@ -398,15 +458,15 @@ function renderCapture(){
   <div class="card">
     <h2>Snap a receipt</h2>
     <p class="small muted">Take a clear photo of the whole receipt. It saves to your private folder and is read automatically a minute or two later.</p>
-    <input id="cap_file" type="file" accept="image/*" capture="environment" class="hidden" onchange="onPick(event)"/>
-    <button onclick="document.getElementById('cap_file').click()">📷 Open camera / choose photo</button>
+    <input id="cap_file" type="file" accept="image/*" capture="environment" class="hidden" data-change="pick"/>
+    <button data-action="pickFile">📷 Open camera / choose photo</button>
     <img id="cap_prev" class="preview hidden"/>
     <div id="cap_actions" class="hidden" style="margin-top:10px">
       <label>Store (optional — it's read from the photo, but you can hint)</label>
       <input id="cap_store" placeholder="e.g. Costco"/>
       <div class="row" style="margin-top:10px">
-        <button class="sec" onclick="resetCapture()">Retake</button>
-        <button id="cap_save" onclick="saveReceipt()">Save receipt</button>
+        <button class="sec" data-action="resetCapture">Retake</button>
+        <button id="cap_save" data-action="saveReceipt">Save receipt</button>
       </div>
     </div>
   </div>
@@ -472,7 +532,7 @@ function renderSearch(){
   $('#main').innerHTML = `
   <div class="card">
     <h2>Search items</h2>
-    <input id="sq" placeholder="Type an item, e.g. milk, chicken, bananas" oninput="runSearch()"/>
+    <input id="sq" placeholder="Type an item, e.g. milk, chicken, bananas" data-input="search"/>
     <p class="small muted" style="margin-top:6px">Similar names are grouped together. Tap a group to see each purchase and mark waste.</p>
   </div>
   <div id="sresults"></div>`;
@@ -492,20 +552,20 @@ function runSearch(){
     const qty=arr.reduce((s,i)=>s+(+i.qty||0),0);
     const last=arr[0]?(arr[0].purchasedAt||''):'';
     const g=D.groups[k];
-    return `<div class="card grp" onclick="this.classList.toggle('open')">
+    return `<div class="card grp" data-action="toggleOpen">
       <div class="flex">
         <div><b>${esc(groupLabel(k))}</b> ${g&&g.hsaEligible?'<span class="pill hsa">HSA</span>':''} ${g&&g.perishable?'<span class="pill gray">perishable</span>':''}
           <div class="small muted">${arr.length} purchase(s) · ${qty} bought · last ${esc(last||'—')}</div></div>
         <div style="text-align:right"><div class="big" style="font-size:18px">${money(spent)}</div><div class="small muted">total spent</div></div>
       </div>
       <div class="body">
-        ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" onclick="event.stopPropagation();viewReceipt('${esc(i.receiptId)}')"`:''}>
+        ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" data-action="viewReceipt" data-id="${esc(i.receiptId)}"`:''}>
           <div><div>${esc(i.name||i.rawName)} <span class="small muted">${esc(i.rawName&&i.rawName!==i.name?'('+i.rawName+')':'')}</span></div>
             <div class="small muted">${esc(i.purchasedAt||'')} · ${esc(i.store||'')} · ${money(i.price)} ${i.qty?('· qty '+i.qty):''}
             ${i.status==='thrown_away'?'· <span style="color:var(--danger)">thrown away</span>':i.status==='consumed'?'· used up':''}
             ${i.useByDate?('· use by '+i.useByDate):''}</div></div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-            ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" onclick="event.stopPropagation();markWaste('${i.id}')">🗑 Waste</button>`:''}
+            ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" data-action="markWaste" data-id="${esc(i.id)}">🗑 Waste</button>`:''}
             ${i.receiptId?'<span class="muted" aria-hidden="true">🧾›</span>':''}
           </div>
         </div>`).join('')}
@@ -607,12 +667,12 @@ function renderTable(){
   <div class="card">
     <div class="flex"><h2 style="margin:0">📑 All items</h2><div class="small muted" id="tcount"></div></div>
     <p class="small muted" style="margin:6px 0 0">Every stored field. Tap a column title to sort (tap again to reverse); type in the box under any column to filter.</p>
-    <button class="link" onclick="clearTableFilters()" style="margin-top:6px">Clear all filters</button>
+    <button class="link" data-action="clearTableFilters" style="margin-top:6px">Clear all filters</button>
     <div class="tablewrap">
       <table id="ttable">
         <thead>
-          <tr>${TABLE_COLS.map(c=>`<th class="sortable ${c.type==='num'?'n':''}" onclick="sortTable('${c.key}')">${esc(c.label)}<span class="sortarrow" data-col="${c.key}"></span></th>`).join('')}</tr>
-          <tr>${TABLE_COLS.map(c=>`<th><input data-f="${c.key}" placeholder="filter" oninput="setTableFilter('${c.key}',this.value)" autocapitalize="off" autocorrect="off" spellcheck="false"/></th>`).join('')}</tr>
+          <tr>${TABLE_COLS.map(c=>`<th class="sortable ${c.type==='num'?'n':''}" data-action="sortTable" data-col="${esc(c.key)}">${esc(c.label)}<span class="sortarrow" data-col="${esc(c.key)}"></span></th>`).join('')}</tr>
+          <tr>${TABLE_COLS.map(c=>`<th><input data-f="${esc(c.key)}" placeholder="filter" data-input="tableFilter" data-col="${esc(c.key)}" autocapitalize="off" autocorrect="off" spellcheck="false"/></th>`).join('')}</tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -633,7 +693,7 @@ function drawTableBody(){
 }
 function updateSortArrows(){
   document.querySelectorAll('#ttable .sortarrow').forEach(s=>{
-    s.textContent = TS.field===s.getAttribute('data-col') ? (TS.dir==='asc'?' ▲':' ▼') : '';
+    s.textContent = TS.field===s.getAttribute('data-col') ? (TS.dir==='asc'?'▲':'▼') : '';
   });
 }
 function sortTable(field){
@@ -655,13 +715,13 @@ function renderReports(){
   <div class="card">
     <h2>Reports</h2>
     <div class="row">
-      <div><label>From</label><input id="rf" type="date" value="${from}" onchange="runReports()"/></div>
-      <div><label>To</label><input id="rt" type="date" value="${to}" onchange="runReports()"/></div>
+      <div><label>From</label><input id="rf" type="date" value="${from}" data-change="reports"/></div>
+      <div><label>To</label><input id="rt" type="date" value="${to}" data-change="reports"/></div>
     </div>
     <div class="row" style="margin-top:8px">
-      <button class="sec" onclick="setRange('month')">This month</button>
-      <button class="sec" onclick="setRange('30')">Last 30 days</button>
-      <button class="sec" onclick="setRange('year')">This year</button>
+      <button class="sec" data-action="setRange" data-range="month">This month</button>
+      <button class="sec" data-action="setRange" data-range="30">Last 30 days</button>
+      <button class="sec" data-action="setRange" data-range="year">This year</button>
     </div>
   </div>
   <div id="rout"></div>`;
@@ -737,12 +797,12 @@ function renderFlag(n){
   return `<div class="item" id="flag_${n.id}">
     <div class="flex"><b>${esc(n.field||n.kind||'Review')}</b><span class="pill gray">${esc(n.kind||'')}</span></div>
     <div class="small">${esc(n.message||'')}</div>
-    ${n.photo?`<button class="link" onclick="viewPhoto('${esc(n.photo)}')">View receipt photo</button>`:''}
+    ${n.photo?`<button class="link" data-action="viewPhoto" data-path="${esc(n.photo)}">View receipt photo</button>`:''}
     <div class="row" style="margin-top:6px">
-      <input id="fix_${n.id}" placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
-      <button style="flex:0 0 auto;width:auto" onclick="resolveFlag('${n.id}')">Save</button>
+      <input id="fix_${esc(n.id)}" placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
+      <button style="flex:0 0 auto;width:auto" data-action="resolveFlag" data-id="${esc(n.id)}">Save</button>
     </div>
-    <button class="link" onclick="resolveFlag('${n.id}', true)">Dismiss (no change)</button>
+    <button class="link" data-action="resolveFlag" data-id="${esc(n.id)}" data-dismiss="1">Dismiss (no change)</button>
   </div>`;
 }
 async function viewPhoto(path){
@@ -810,9 +870,9 @@ function renderRem(r){
     <div class="flex"><div><b>${esc(r.name||'Item')}</b>
       <div class="small ${overdue?'':'muted'}" style="${overdue?'color:var(--warn);font-weight:600':''}">use by ${esc(due)}${overdue?' — check now':''}</div></div></div>
     <div class="row" style="margin-top:6px">
-      <button class="sec" onclick="remAction('${r.id}','kept')">Still good</button>
-      <button class="sec" onclick="remAction('${r.id}','consumed')">Used it</button>
-      <button class="warn" onclick="remAction('${r.id}','wasted')">Threw away</button>
+      <button class="sec" data-action="remAction" data-id="${esc(r.id)}" data-remaction="kept">Still good</button>
+      <button class="sec" data-action="remAction" data-id="${esc(r.id)}" data-remaction="consumed">Used it</button>
+      <button class="warn" data-action="remAction" data-id="${esc(r.id)}" data-remaction="wasted">Threw away</button>
     </div>
   </div>`;
 }
@@ -849,8 +909,8 @@ function renderSettings(){
     <input id="set_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <label>Access key (token)</label>
     <input id="set_token" type="password" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <div class="row" style="margin-top:10px"><button class="sec" onclick="testConn()">Test connection</button><button onclick="saveSettings()">Save</button></div>
-    <button class="link danger" style="color:var(--danger)" onclick="signOut()">Sign out / forget key on this device</button>
+    <div class="row" style="margin-top:10px"><button class="sec" data-action="testConn">Test connection</button><button data-action="saveSettings">Save</button></div>
+    <button class="link danger" style="color:var(--danger)" data-action="signOut">Sign out / forget key on this device</button>
   </div>
   <div class="card">
     <h2>📱💻 Using more than one device</h2>
@@ -866,7 +926,7 @@ function renderSettings(){
       <label>${esc(m.name)} email</label>
       <input id="mem_${idx}" value="${esc(m.email||'')}" placeholder="name@example.com" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     `).join('')}
-    <button style="margin-top:10px" onclick="saveConfig()">Save emails</button>
+    <button style="margin-top:10px" data-action="saveConfig">Save emails</button>
   </div>`:''}
   <div class="card">
     <h2>How this works</h2>

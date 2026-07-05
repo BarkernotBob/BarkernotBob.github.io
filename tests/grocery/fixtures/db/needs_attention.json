@@ -1,0 +1,14 @@
+[
+  {
+    "id": "na_0001",
+    "receiptId": "r_pub_0001",
+    "itemId": "i_milk_0001",
+    "kind": "unreadable_field",
+    "field": "price",
+    "message": "Couldn't read the price for whole milk — best guess $3.29.",
+    "photo": "receipts/r_pub_0001.jpg",
+    "suggested": { "price": 3.29 },
+    "status": "open",
+    "createdAt": "2026-06-30T14:06:00Z"
+  }
+]

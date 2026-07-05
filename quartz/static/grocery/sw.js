@@ -4,12 +4,18 @@
    IndexedDB snapshot (data layer v2, S1). It deliberately does NOT touch
    api.github.com — those requests pass straight through, and when offline the app
    falls back to its IDB snapshot on its own. */
-const VERSION = 'gt-shell-v2'
+const VERSION = 'gt-shell-v3'
 const SHELL = [
   'index.html',
   'manifest.webmanifest',
   'tokens.css',
   'app.css',
+  // JS is ES modules now (§11.1 split) — precache the whole graph so the app
+  // launches offline even if the network drops mid-first-load.
+  'app.js',
+  'core/domain.js',
+  'ui/components.js',
+  'views/today.js',
   'fonts/archivo-400-700.woff2',
   'fonts/fraunces-600.woff2',
   'fonts/ibm-plex-mono-400.woff2',

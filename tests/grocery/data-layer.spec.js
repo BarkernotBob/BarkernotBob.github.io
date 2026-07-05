@@ -81,6 +81,8 @@ test('a >1 MB items.json loads and renders (blobs API, ceiling gone)', async ({ 
 
 test('"reading…" self-resolves when the processor commits (freshness poll)', async ({ page }) => {
   const { mock, errors } = await bootApp(page)
+  // Observe the reading→processed transition on Capture (Today lands first in S4).
+  await page.click('nav [data-tab="capture"]')
   // Fixtures: r_pub_0002 is still unprocessed → Capture shows "1 still being read".
   await expect(page.locator('#main')).toContainText('1 still being read')
 

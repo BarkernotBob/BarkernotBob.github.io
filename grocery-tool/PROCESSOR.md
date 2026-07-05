@@ -17,13 +17,19 @@
   it from the environment; never hardcode.
 
 ## 1. Find work
-1. Read `db/receipts.json`. Collect every receipt with `status: "unprocessed"`.
+1. Get unprocessed receipts with `python3 scripts/dbtool.py pending-receipts`
+   (prints only the `unprocessed` subset — do **not** read all of
+   `db/receipts.json`).
 2. Also list image files under `inbox/` in case any photo lacks a receipt stub
    (the app normally creates the stub, but be resilient). For an orphan photo,
    create a receipt stub first (`status: "unprocessed"`, `photo: "inbox/<file>"`,
    `capturedAt` = file commit time, `capturedBy: "unknown"`).
-3. If there is no unprocessed receipt **and** no use-by reminder due today
-   (see step 7), there is nothing to do — say so and stop.
+3. **Structured orders (photo-less):** get the staged-order worklist with
+   `python3 scripts/dbtool.py pending-orders` and list `inbox/orders/*.json`
+   (ignore `*.raw.json`). These come from the browser extension / email adapter,
+   not a photo. Process them per **§6b** below.
+4. If there is no unprocessed receipt, **no staged order**, and no use-by
+   reminder due today (see step 7), there is nothing to do — say so and stop.
 
 ## 2. Read each receipt photo
 For each unprocessed receipt, open its `photo` (download the image from the data
@@ -94,8 +100,50 @@ Preserve existing entries. For each processed receipt:
 - Add any review flags to `db/needs_attention.json`.
 Commit with a clear message, e.g. `Process 2 receipts (14 items, 3 flags)`.
 
+## 6b. Structured orders (photo-less, from the extension / email)
+A staged order is a JSON file at `inbox/orders/<retailer>_<orderIdSafe>.json`
+matching the **staging-order** contract (canonical schema:
+`grocery-data/schema/staging-order.schema.json`; human summary:
+`schema/README.md` → "Structured orders"). No receipt photo — the archived
+staging + raw payload **is** the audit record (kept forever in
+`receipts/orders/`). For each staged order:
+1. **Validate:** `python3 scripts/dbtool.py validate-order <path>`. On failure,
+   leave the file in place and raise a `needs_attention` entry rather than
+   guessing.
+2. **Dedup guard:** `python3 scripts/dbtool.py has-order "<retailer>:<orderId>"`.
+   If it already exists (in `db/order_index.json`), this is a re-sync —
+   **no-op**, skip. (Cross-source dedup with photo receipts is the safety net.)
+3. **Enrich each line into an item** the same way as photo items (group, category,
+   perishable, HSA), plus: `unitPrice` = net effective (`price/qty`),
+   `regularUnitPrice` = shelf price, `discount`/`promoDescription` on promos,
+   `upc` (UPC exact-match short-circuits fuzzy grouping), `retailerCategory`
+   verbatim as a hint, `source` = `"extension"`/`"email"`. `useByDate` counts
+   shelf-life from the **fulfillment** date when present, else the order date.
+   A non-null `substitutedFor` that doesn't alias-match a group → `confirm_group`
+   flag. Negative `qty`/`lineTotal` = refund line (flag `refund`; suggest the
+   matching original item to mark `consumed`).
+4. **Backfill policy (historic orders, > `config.reminders.backfillGraceDays`
+   old):** items already past their use-by (or non-perishable) are minted
+   `status: "consumed"` (never waste) with **no** reminder; still-edible
+   perishables are minted `active` with a normal reminder. Recent orders get the
+   full pass. (Prevents a day-one reminder flood on first backfill.)
+5. **Write:** `dbtool append items …`, create/update the receipt stub
+   (`update-receipt`) with `source`, `retailer`, `orderId`, `orderKey`,
+   `channel`, `storeNumber`, `orderedAt`, `fulfilledAt`, `fees`, `rawPayload`
+   path, `photo: null`. Move the staging JSON **and** its `.raw.json` from
+   `inbox/orders/` to `receipts/orders/`.
+6. **Index + state:** `dbtool add-order-index "<orderKey>" <receiptId>`, then
+   record the run in `db/processor_state.json`.
+
 ## 7. Reminder sweep + emails (requirements #3 and #4 pings)
-Do this every run, even if no new receipts:
+Do this every run, even if no new receipts. Run the sweep with
+`python3 scripts/dbtool.py sweep <today> --mark-notified` — it closes reminders
+whose item is already consumed/thrown-away, prints the ones actually due, and
+`--mark-notified` stamps `notifiedAt` on those so they aren't reprinted every
+run. (Email is currently **disabled** — `sendUseByEmails`/`sendReviewEmails` are
+`false`; reminders and review flags live in `db/reminders.json` /
+`db/needs_attention.json`, which power the in-app lists. The email steps below
+apply only if the owner re-enables them.)
 1. **Use-by reminders due:** in `db/reminders.json`, find entries with
    `status: "pending"`, `notifiedAt: null`, and `dueDate <= today` (respect
    `config.reminders.useByLeadDays`). If the item's `status` is already

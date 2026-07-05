@@ -43,6 +43,18 @@ async function installGitHubMock(page) {
       return route.fulfill({ json: { login: 'testuser' } })
     }
 
+    // Repo existence check (saveSetup / testConn / afterSignIn probe this).
+    const repoOnly = url.pathname.match(/^\/repos\/([^/]+)\/([^/]+)$/)
+    if (method === 'GET' && repoOnly) {
+      return route.fulfill({
+        json: {
+          full_name: `${repoOnly[1]}/${repoOnly[2]}`,
+          default_branch: 'main',
+          private: true,
+        },
+      })
+    }
+
     if (m) {
       const filePath = decodeURIComponent(m[1])
 

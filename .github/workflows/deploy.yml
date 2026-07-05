@@ -78,7 +78,10 @@ jobs:
           fi
           BASE="${{ github.event.before }}"
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
+            # Base commit unreachable (force-push, rebase, or new branch): we
+            # can't reliably scope the diff, so fail CLOSED and run the suite.
+            echo "Base commit unavailable — running grocery suite to be safe."
+            echo "grocery=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           CHANGED=$(git diff --name-only "$BASE" HEAD || true)
           echo "Changed files:"; echo "$CHANGED"
@@ -124,9 +127,12 @@ jobs:
   deploy:
     # A skipped `test` (non-grocery commit) counts as pass; a failed `test` blocks
     # the deploy so red never ships. `!cancelled()` lets this run even when `test`
-    # was skipped — a skipped `needs` would otherwise skip `deploy` too.
-    needs: [build, test]
-    if: ${{ !cancelled() && needs.build.result == 'success' && needs.test.result != 'failure' }}
+    # was skipped — a skipped `needs` would otherwise skip `deploy` too. Requiring
+    # `changes` to have succeeded keeps the gate fail-CLOSED: if change-detection
+    # itself errors, `test` is skipped but the deploy is blocked rather than
+    # shipping untested.
+    needs: [build, changes, test]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.result == 'success' && needs.test.result != 'failure' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

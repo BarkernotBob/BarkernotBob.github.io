@@ -53,6 +53,14 @@ test('resolving a review flag removes it from the list', async ({ page }) => {
   await expect(page.locator('#flag_na_0001')).toHaveCount(0)
 })
 
+test('settings "Test connection" hits the repo endpoint and confirms', async ({ page }) => {
+  await bootApp(page)
+  await page.click('nav [data-tab="settings"]')
+  await expect(page.locator('#set_repo')).toBeVisible()
+  await page.locator('[data-action="testConn"]').click()
+  await expect(page.locator('.toast')).toContainText('Connection works')
+})
+
 test('reminder "still good" closes the reminder', async ({ page }) => {
   await bootApp(page)
   await page.click('nav [data-tab="review"]')

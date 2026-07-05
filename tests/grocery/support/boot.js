@@ -13,7 +13,7 @@ const VIEWPORTS = {
   desktop: { width: 1400, height: 900 },
 }
 
-async function bootApp(page, { viewport = VIEWPORTS.mobile } = {}) {
+async function bootApp(page, { viewport = VIEWPORTS.mobile, mock: mockOpts = {} } = {}) {
   const errors = []
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text())
@@ -31,7 +31,7 @@ async function bootApp(page, { viewport = VIEWPORTS.mobile } = {}) {
     localStorage.setItem('gt_method', 'token')
   })
 
-  const mock = await installGitHubMock(page)
+  const mock = await installGitHubMock(page, mockOpts)
   await page.goto(APP_URL)
   // Boot lands on Capture and runs loadAll(); wait for that first render to
   // settle before navigating, so a test's nav click doesn't race the boot's

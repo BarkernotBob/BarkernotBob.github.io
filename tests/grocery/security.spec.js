@@ -45,7 +45,7 @@ test('waste action on a quote-laden id resolves to the right item', async ({ pag
   // Waste reason modal appears (data-action delegation reached markWaste).
   await expect(page.locator('.modal-card', { hasText: 'Throw away' })).toBeVisible()
   await page.locator('.modal-card [data-mval="spoiled"]').click()
-  // A write happened (item + waste + reminders); UI updated without a console throw.
+  // A write happened (item + waste + reminders in ONE commit); UI updated cleanly.
   await expect(page.locator('.toast')).toContainText('waste')
-  expect(mock.puts.length).toBeGreaterThan(0)
+  expect(mock.commits.length).toBeGreaterThan(0)
 })

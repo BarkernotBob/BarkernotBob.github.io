@@ -148,7 +148,7 @@ const LS = {
 };
 
 const API = 'https://api.github.com';
-const DB = {}; // in-memory cache: { 'db/items.json': {value, sha} , ... }
+const DB = {}; // in-memory read cache: { 'db/items.json': {value, sha:<blobSha>}, ... }
 
 /* ---------- tiny helpers ---------- */
 const $ = sel => document.querySelector(sel);
@@ -237,7 +237,18 @@ document.addEventListener('change', e=>{
   if(fn) fn(t, e);
 });
 
-/* ---------- GitHub API ---------- */
+/* ---------- GitHub API (Git Data layer — S1) ------------------------------
+   Reads go through the Git Data API (ref → commit → tree → blob). A default
+   Contents GET errors on files >1 MB; the blobs API is good to 100 MB, so the
+   old crash-ceiling is gone. Writes are ATOMIC BATCHED COMMITS: one primitive
+   `commitFiles(deltas, message)` (blobs → tree(on base_tree) → commit → PATCH
+   ref). Each mutation is a pure DELTA applied to freshly-fetched content, so a
+   ref-update race (another writer moved `main`) is handled by refetching HEAD,
+   replaying the deltas onto the fresh content, and retrying (×3) — this kills
+   the lost-update bug and makes mark-waste/snooze/resolve single commits.
+   Contents API is kept only for repo-existence checks, first-run seeding, and
+   an image fallback for paths not in the cached tree. -------------------------*/
+const BRANCH = 'main';
 function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
 async function ghContents(path){
   const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
@@ -245,6 +256,10 @@ async function ghContents(path){
   if(!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
+/* Contents PUT — only used to bootstrap missing db files into a fresh/empty repo
+   (ensureInitialized). The Git Data API needs an existing commit to build on, so
+   seeding the very first files still goes through Contents. Never a write path
+   for user data (those go through commitFiles). */
 async function ghPut(path, contentB64, sha, message){
   const body = { message, content:contentB64 };
   if(sha) body.sha = sha;
@@ -252,34 +267,65 @@ async function ghPut(path, contentB64, sha, message){
   if(!r.ok) throw new Error(`Save failed ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
-async function ghDelete(path, sha, message){
-  const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {method:'DELETE', headers:ghHeaders(), body:JSON.stringify({message,sha})});
-  if(!r.ok) throw new Error(`Delete failed ${r.status}`);
+
+/* HEAD mirrors main's tip: the commit sha, its tree sha, the ref ETag (for
+   cheap conditional polling), and a path→blobSha map so we refetch only files
+   whose blob actually changed. */
+let HEAD = null;
+async function ghGetRef(conditional){
+  const h = ghHeaders();
+  if(conditional && HEAD && HEAD.etag) h['If-None-Match'] = HEAD.etag;
+  const r = await fetch(`${API}/repos/${LS.repo}/git/ref/heads/${BRANCH}`, {headers:h});
+  if(r.status===304) return { notModified:true };
+  if(!r.ok) throw new Error(`ref ${r.status}: ${(await r.text()).slice(0,180)}`);
+  const j = await r.json();          // { ref, object:{ sha, type:'commit' } }
+  return { commitSha:j.object.sha, etag:r.headers.get('etag') };
+}
+async function ghGetCommit(sha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/commits/${sha}`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error(`commit ${r.status}`);
+  return r.json();                   // { sha, tree:{ sha }, ... }
+}
+async function ghGetTree(sha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/trees/${sha}?recursive=1`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error(`tree ${r.status}`);
+  const j = await r.json();          // { sha, tree:[{path,type,sha,mode}], truncated }
+  const map = {};
+  (j.tree||[]).forEach(e=>{ if(e.type==='blob') map[e.path]=e.sha; });
+  return { treeSha:j.sha, map, truncated:!!j.truncated };
+}
+async function ghGetBlobB64(sha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/blobs/${sha}`, {headers:ghHeaders()});
+  if(!r.ok) throw new Error(`blob ${r.status}`);
+  const j = await r.json();          // { sha, encoding:'base64', content }
+  return (j.content||'').replace(/\n/g,'');
+}
+async function ghGetBlobText(sha){ return b64decode(await ghGetBlobB64(sha)); }
+async function ghCreateBlobB64(contentB64){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/blobs`, {method:'POST', headers:ghHeaders(), body:JSON.stringify({content:contentB64, encoding:'base64'})});
+  if(!r.ok) throw new Error(`create blob ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return (await r.json()).sha;
+}
+async function ghCreateTree(baseTreeSha, entries){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/trees`, {method:'POST', headers:ghHeaders(), body:JSON.stringify({base_tree:baseTreeSha, tree:entries})});
+  if(!r.ok) throw new Error(`create tree ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return (await r.json()).sha;
+}
+async function ghCreateCommit(message, treeSha, parentSha){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/commits`, {method:'POST', headers:ghHeaders(), body:JSON.stringify({message, tree:treeSha, parents:[parentSha]})});
+  if(!r.ok) throw new Error(`create commit ${r.status}: ${(await r.text()).slice(0,180)}`);
+  return (await r.json()).sha;
+}
+async function ghUpdateRef(commitSha){
+  // force:false → GitHub returns 422 (non-fast-forward) when main moved under us.
+  const r = await fetch(`${API}/repos/${LS.repo}/git/refs/heads/${BRANCH}`, {method:'PATCH', headers:ghHeaders(), body:JSON.stringify({sha:commitSha, force:false})});
+  if(!r.ok) throw new Error(`update ref ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
-/* Read a JSON file (cached). fallback used if file missing. */
-async function loadJson(path, fallback){
-  const c = await ghContents(path);
-  if(c===null){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
-  const value = JSON.parse(b64decode(c.content));
-  DB[path] = {value, sha:c.sha};
-  return value;
-}
-/* Write a JSON file with one auto-retry on sha conflict. */
-async function saveJson(path, value, message){
-  let sha = DB[path] ? DB[path].sha : null;
-  try{
-    const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
-    DB[path] = {value, sha:res.content.sha};
-  }catch(e){
-    if(String(e).includes('409')||String(e).includes('422')){ // stale sha: re-read and retry once
-      const c = await ghContents(path); sha = c? c.sha : null;
-      const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
-      DB[path] = {value, sha:res.content.sha};
-    } else throw e;
-  }
-}
 async function getImageDataUrl(path){
+  const blobSha = (HEAD && HEAD.tree) ? HEAD.tree[path] : null;
+  if(blobSha){ return 'data:image/jpeg;base64,'+(await ghGetBlobB64(blobSha)); }
+  // Fallback for a freshly-added photo not yet in the cached tree.
   const c = await ghContents(path);
   if(!c) return null;
   if(c.content) return 'data:image/jpeg;base64,'+c.content.replace(/\n/g,'');
@@ -293,8 +339,90 @@ const FILES = {
   stores:'db/stores.json', waste:'db/waste.json', reminders:'db/reminders.json',
   needs:'db/needs_attention.json', config:'db/config.json'
 };
+const KEY_BY_PATH = Object.fromEntries(Object.entries(FILES).map(([k,v])=>[v,k]));
+function pathToKey(p){ return KEY_BY_PATH[p]||null; }
 let D = {}; // loaded data
+
+/* ---------- atomic batched commits (deltas) ------------------------------
+   A delta is a pure description of a change to ONE file, applied to freshly-
+   fetched content at commit time (never a stale local snapshot):
+     {path, op:'append', record}                    – push one record
+     {path, op:'appendMany', records:[...]}          – push several
+     {path, op:'setField', id, fields}               – Object.assign onto record #id
+     {path, op:'setFields', updates:[{id,fields}]}   – several set-field on one file
+     {path, op:'replace', value}                     – overwrite whole file (seed/heal)
+     {path, op:'putBinaryB64', contentB64}           – raw binary blob (receipt photo)  */
+function applyDelta(currentText, delta){
+  if(delta.op==='putBinaryB64') return { b64:delta.contentB64 };
+  if(delta.op==='replace') return { value:delta.value };
+  const arr = currentText!=null ? JSON.parse(currentText) : (delta.base || []);
+  if(delta.op==='append') arr.push(delta.record);
+  else if(delta.op==='appendMany') (delta.records||[]).forEach(r=>arr.push(r));
+  else if(delta.op==='setField'){ const o=arr.find(x=>x&&x.id===delta.id); if(o) Object.assign(o, delta.fields); }
+  else if(delta.op==='setFields'){ (delta.updates||[]).forEach(u=>{ const o=arr.find(x=>x&&x.id===u.id); if(o) Object.assign(o,u.fields); }); }
+  else throw new Error('unknown delta op '+delta.op);
+  return { value:arr };
+}
+/* One atomic commit across all files a mutation touches. On a ref race (422/409)
+   we refetch HEAD, replay the deltas onto the now-fresh content, and retry ×3 —
+   so a concurrent writer's changes are never clobbered. */
+async function commitFiles(deltas, message){
+  if(!deltas || !deltas.length) return {};
+  let lastErr;
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const ref = await ghGetRef(false);
+      const commit = await ghGetCommit(ref.commitSha);
+      const baseTreeSha = commit.tree.sha;
+      const tree = await ghGetTree(baseTreeSha);
+      const entries = [], newValues = {};
+      for(const d of deltas){
+        const blobSha = tree.map[d.path];
+        let currentText = null;
+        if(blobSha && d.op!=='putBinaryB64' && d.op!=='replace') currentText = await ghGetBlobText(blobSha);
+        const applied = applyDelta(currentText, d);
+        let newBlobSha;
+        if(applied.b64!=null){ newBlobSha = await ghCreateBlobB64(applied.b64); }
+        else { newBlobSha = await ghCreateBlobB64(b64encode(JSON.stringify(applied.value,null,2))); newValues[d.path]=applied.value; }
+        entries.push({ path:d.path, mode:'100644', type:'blob', sha:newBlobSha });
+      }
+      const newTreeSha = await ghCreateTree(baseTreeSha, entries);
+      const newCommitSha = await ghCreateCommit(message, newTreeSha, ref.commitSha);
+      await ghUpdateRef(newCommitSha);                 // 422 here on a race → caught below
+      // Success — advance our HEAD view and refresh the in-memory + cached data.
+      const newTreeMap = Object.assign({}, tree.map);
+      entries.forEach(e=> newTreeMap[e.path]=e.sha);
+      HEAD = { commitSha:newCommitSha, treeSha:newTreeSha, etag:(HEAD?HEAD.etag:null), tree:newTreeMap };
+      for(const p in newValues){ DB[p]={value:newValues[p], sha:newTreeMap[p]}; const k=pathToKey(p); if(k) D[k]=newValues[p]; }
+      saveSnapshot();
+      return newValues;
+    }catch(e){
+      lastErr = e; const s = String(e);
+      if((s.includes('422')||s.includes('409')) && attempt<2) continue;  // ref moved: replay
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
+/* ---------- reads (blob-based, no 1 MB ceiling) ---------- */
+async function loadHead(){
+  const ref = await ghGetRef(false);
+  const commit = await ghGetCommit(ref.commitSha);
+  const tree = await ghGetTree(commit.tree.sha);
+  HEAD = { commitSha:ref.commitSha, treeSha:tree.treeSha, etag:ref.etag, tree:tree.map };
+  return HEAD;
+}
+async function loadJson(path, fallback){
+  const blobSha = (HEAD && HEAD.tree) ? HEAD.tree[path] : null;
+  if(!blobSha){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
+  if(DB[path] && DB[path].sha===blobSha) return DB[path].value;   // unchanged since last fetch
+  const value = JSON.parse(await ghGetBlobText(blobSha));
+  DB[path] = {value, sha:blobSha};
+  return value;
+}
 async function loadAll(){
+  await loadHead();
   D.items   = await loadJson(FILES.items, []);
   D.receipts= await loadJson(FILES.receipts, []);
   D.groups  = await loadJson(FILES.groups, {});
@@ -304,7 +432,10 @@ async function loadAll(){
   D.needs   = await loadJson(FILES.needs, []);
   D.config  = await loadJson(FILES.config, {members:[],currency:'USD'});
   // self-heal: clear any leftover "_unclear" flags whose field is now filled & resolved
-  if(purgeStaleFlags()){ try{ await saveJson(FILES.items, D.items, 'Clear stale review flags'); }catch(e){} }
+  const healed = purgeStaleFlags();
+  if(healed.length){ try{ await commitFiles([{path:FILES.items, op:'setFields',
+    updates:healed.map(it=>({id:it.id, fields:{flags:it.flags}}))}], 'Clear stale review flags'); }catch(e){} }
+  saveSnapshot();
   updateBadges();
 }
 function updateBadges(){
@@ -312,6 +443,75 @@ function updateBadges(){
              + (D.reminders||[]).filter(r=>r.status==='pending' && r.dueDate<=todayISO()).length;
   const b=$('#reviewBadge');
   if(open>0){ b.textContent=open; b.classList.remove('hidden'); } else b.classList.add('hidden');
+}
+
+/* ---------- IndexedDB boot snapshot -------------------------------------
+   Persist per-file {value, sha} plus HEAD so boot renders instantly, then
+   revalidate with conditional GETs. IndexedDB (not localStorage) because a
+   backfilled items.json would blow localStorage's ~5 MB origin-shared quota. */
+const IDB_NAME='gt_cache', IDB_STORE='files';
+function idbOpen(){ return new Promise((res,rej)=>{ let req; try{ req=indexedDB.open(IDB_NAME,1); }catch(e){ return rej(e); }
+  req.onupgradeneeded=()=>{ req.result.createObjectStore(IDB_STORE); };
+  req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }); }
+async function idbSet(entries){
+  try{ const db=await idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction(IDB_STORE,'readwrite');
+    const os=tx.objectStore(IDB_STORE); entries.forEach(([k,v])=>os.put(v,k));
+    tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); db.close(); }catch(e){}
+}
+async function idbGetAll(){
+  try{ const db=await idbOpen(); const out=await new Promise((res,rej)=>{ const tx=db.transaction(IDB_STORE,'readonly');
+    const os=tx.objectStore(IDB_STORE); const kReq=os.getAllKeys(), vReq=os.getAll(); let keys,vals;
+    kReq.onsuccess=()=>{keys=kReq.result;}; vReq.onsuccess=()=>{vals=vReq.result;};
+    tx.oncomplete=()=>{ const o={}; (keys||[]).forEach((k,i)=>o[k]=vals[i]); res(o); }; tx.onerror=()=>rej(tx.error); });
+    db.close(); return out; }catch(e){ return {}; }
+}
+function saveSnapshot(){
+  if(!HEAD) return;
+  const entries=[['__head__', HEAD]];
+  for(const p in DB){ entries.push(['file:'+p, {value:DB[p].value, sha:DB[p].sha}]); }
+  idbSet(entries);                    // fire-and-forget
+}
+async function loadSnapshot(){
+  const all = await idbGetAll();
+  const head = all['__head__'];
+  if(!head || !head.tree) return false;
+  HEAD = head;
+  for(const key in all){ if(key.indexOf('file:')!==0) continue; const p=key.slice(5);
+    DB[p]={value:all[key].value, sha:all[key].sha}; const k=pathToKey(p); if(k) D[k]=all[key].value; }
+  return D.items!=null;
+}
+
+/* ---------- freshness: poll main, refetch only changed paths ------------- */
+let _polling=false;
+async function checkFreshness(){
+  if(!isConfigured() || !HEAD || _polling) return;
+  _polling=true;
+  try{
+    const ref = await ghGetRef(true);            // conditional (ETag)
+    if(ref.notModified) return;
+    if(ref.commitSha===HEAD.commitSha){ HEAD.etag=ref.etag; return; }
+    const commit = await ghGetCommit(ref.commitSha);
+    const tree = await ghGetTree(commit.tree.sha);
+    const beforeProcessed = new Set((D.receipts||[]).filter(r=>r.status==='processed').map(r=>r.id));
+    const changedPaths=[];
+    for(const key in FILES){ const path=FILES[key];
+      const oldSha=HEAD.tree[path], newSha=tree.map[path];
+      if(newSha && newSha!==oldSha){ const value=JSON.parse(await ghGetBlobText(newSha)); DB[path]={value, sha:newSha}; D[key]=value; changedPaths.push(path); } }
+    HEAD = { commitSha:ref.commitSha, treeSha:tree.treeSha, etag:ref.etag, tree:tree.map };
+    saveSnapshot();
+    if(changedPaths.length){
+      const nowProcessed=(D.receipts||[]).filter(r=>r.status==='processed' && !beforeProcessed.has(r.id)).length;
+      updateBadges();
+      if(CUR) show(CUR);                          // self-resolves "reading…" without a reload
+      toast(nowProcessed>0 ? `Synced — ${nowProcessed} receipt${nowProcessed>1?'s':''} processed.` : 'Synced — data updated.');
+    }
+  }catch(e){ /* transient — the next tick retries */ }
+  finally{ _polling=false; }
+}
+function startFreshnessPolling(){
+  if(startFreshnessPolling._on) return; startFreshnessPolling._on=true;
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkFreshness(); });
+  setInterval(()=>{ if(document.visibilityState!=='hidden') checkFreshness(); }, 60000);
 }
 
 /* =========================================================================
@@ -501,12 +701,14 @@ async function saveReceipt(){
   try{
     const id=uid('r'); const path='inbox/'+id+'.jpg';
     const b64=pendingImg.split(',')[1];
-    await ghPut(path, b64, null, 'Add receipt photo '+id);
     const rec={ id, status:'unprocessed', photo:path, capturedAt:new Date().toISOString(), capturedBy:LS.me,
       store:($('#cap_store').value.trim()||null), storeId:null, purchasedAt:null, subtotal:null, tax:null, total:null,
       currency:(D.config.currency||'USD'), itemIds:[], notes:'' };
-    D.receipts.push(rec);
-    await saveJson(FILES.receipts, D.receipts, 'Add unprocessed receipt '+id);
+    // One atomic commit: the photo blob + the receipt stub land together.
+    await commitFiles([
+      { path, op:'putBinaryB64', contentB64:b64 },
+      { path:FILES.receipts, op:'append', record:rec }
+    ], 'Add unprocessed receipt '+id);
     toast('Saved! It will be read automatically in a minute or two. 📷');
     resetCapture(); renderCapture();
   }catch(e){ toast(String(e.message||e)); }
@@ -584,16 +786,17 @@ async function markWaste(itemId){
   const it=D.items.find(i=>i.id===itemId); if(!it) return;
   const reason=await chooseWasteReason(it);   // in-app picker (works in installed PWAs, unlike prompt())
   if(reason===null) return;
-  it.status='thrown_away';
   const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
     thrownAt:todayISO(), reason:(reason.trim()||'other'), estCost:(+it.price||0), by:LS.me };
-  D.waste.push(w);
-  // resolve any pending reminder for this item
-  D.reminders.forEach(r=>{ if(r.itemId===it.id && r.status==='pending'){ r.status='done'; }});
+  const pend=(D.reminders||[]).filter(r=>r.itemId===it.id && r.status==='pending').map(r=>r.id);
+  // items + waste + reminders in ONE atomic commit (no 3-write partial-failure window).
+  const deltas=[
+    { path:FILES.items, op:'setField', id:it.id, fields:{status:'thrown_away'} },
+    { path:FILES.waste, op:'append', record:w }
+  ];
+  if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
   try{
-    await saveJson(FILES.items, D.items, 'Mark item thrown away');
-    await saveJson(FILES.waste, D.waste, 'Add waste record');
-    await saveJson(FILES.reminders, D.reminders, 'Close reminder (wasted)');
+    await commitFiles(deltas, 'Mark item thrown away (waste)');
     toast('Logged as waste 🗑'); updateBadges(); runSearch();
   }catch(e){ toast(String(e.message||e)); }
 }
@@ -833,9 +1036,10 @@ function hasOpenNeed(itemId, prop){
   return (D.needs||[]).some(n=>n.status==='open' && n.itemId===itemId && itemFieldFor(n.field)===prop);
 }
 /* Drop any field-uncertainty flag whose field now has a value and no open review.
-   Returns true if it changed anything. */
+   Mutates each affected item's flags in place and returns the array of items that
+   changed (empty = nothing changed), so callers can build precise commit deltas. */
 function purgeStaleFlags(){
-  let changed=false;
+  const changed=[];
   (D.items||[]).forEach(it=>{
     if(!Array.isArray(it.flags) || !it.flags.length) return;
     const kept=it.flags.filter(fl=>{
@@ -844,25 +1048,33 @@ function purgeStaleFlags(){
       if(valueFilled(it,prop) && !hasOpenNeed(it.id,prop)) return false; // resolved → purge
       return true;
     });
-    if(kept.length!==it.flags.length){ it.flags=kept; changed=true; }
+    if(kept.length!==it.flags.length){ it.flags=kept; changed.push(it); }
   });
   return changed;
 }
 async function resolveFlag(id, dismiss){
   const n=D.needs.find(x=>x.id===id); if(!n) return;
   const val=dismiss?null:($('#fix_'+id)?$('#fix_'+id).value.trim():'');
-  let itemsChanged=false;
+  const itemUpdates=[];   // {id, fields} accumulated into ONE items.json delta
   if(!dismiss && val && n.itemId && n.field){
     const it=D.items.find(i=>i.id===n.itemId);
     if(it){ const prop=itemFieldFor(n.field); let v=val;
       if(['price','qty','unitPrice','tax','subtotal','total'].includes(prop)) v=parseFloat(val)||0;
-      it[prop]=v; itemsChanged=true; }
+      it[prop]=v;                                              // local apply so purge sees the filled field
+      itemUpdates.push({id:it.id, fields:{[prop]:v}}); }
   }
   n.status='resolved'; n.resolvedAt=new Date().toISOString(); n.resolvedBy=LS.me;
-  if(purgeStaleFlags()) itemsChanged=true;                    // clear the now-resolved "_unclear" flag(s)
-  if(itemsChanged) await saveJson(FILES.items, D.items, 'Apply review fix / clear resolved flags');
-  await saveJson(FILES.needs, D.needs, 'Resolve review flag');
-  toast(dismiss?'Dismissed':'Saved'); updateBadges(); renderReview();
+  purgeStaleFlags().forEach(it=>{                              // fold cleared "_unclear" flags into the same delta
+    const u=itemUpdates.find(x=>x.id===it.id);
+    if(u) u.fields=Object.assign({}, u.fields, {flags:it.flags});
+    else itemUpdates.push({id:it.id, fields:{flags:it.flags}});
+  });
+  const deltas=[{ path:FILES.needs, op:'setField', id:n.id, fields:{status:'resolved', resolvedAt:n.resolvedAt, resolvedBy:n.resolvedBy} }];
+  if(itemUpdates.length) deltas.push({ path:FILES.items, op:'setFields', updates:itemUpdates });
+  try{
+    await commitFiles(deltas, 'Resolve review flag');
+    toast(dismiss?'Dismissed':'Saved'); updateBadges(); renderReview();
+  }catch(e){ toast(String(e.message||e)); }
 }
 function renderRem(r){
   const due=r.dueDate||''; const overdue=due && due<=todayISO();
@@ -879,18 +1091,23 @@ function renderRem(r){
 async function remAction(id, action){
   const r=D.reminders.find(x=>x.id===id); if(!r) return;
   const it=r.itemId?D.items.find(i=>i.id===r.itemId):null;
-  if(action==='kept'){ r.status='done'; r.note='kept '+todayISO(); }
-  else if(action==='consumed'){ r.status='done'; if(it) it.status='consumed'; }
-  else if(action==='wasted'){
-    r.status='done';
-    if(it){ it.status='thrown_away';
-      D.waste.push({id:uid('w'),itemId:it.id,groupId:it.groupId||null,name:it.name||it.rawName,qty:it.qty||1,thrownAt:todayISO(),reason:'spoiled',estCost:(+it.price||0),by:LS.me});
-      await saveJson(FILES.waste, D.waste, 'Add waste from reminder');
+  const deltas=[];   // all touched files land in ONE atomic commit
+  if(action==='kept'){
+    deltas.push({ path:FILES.reminders, op:'setField', id:r.id, fields:{status:'done', note:'kept '+todayISO()} });
+  } else if(action==='consumed'){
+    deltas.push({ path:FILES.reminders, op:'setField', id:r.id, fields:{status:'done'} });
+    if(it) deltas.push({ path:FILES.items, op:'setField', id:it.id, fields:{status:'consumed'} });
+  } else if(action==='wasted'){
+    deltas.push({ path:FILES.reminders, op:'setField', id:r.id, fields:{status:'done'} });
+    if(it){
+      deltas.push({ path:FILES.items, op:'setField', id:it.id, fields:{status:'thrown_away'} });
+      deltas.push({ path:FILES.waste, op:'append', record:{id:uid('w'),itemId:it.id,groupId:it.groupId||null,name:it.name||it.rawName,qty:it.qty||1,thrownAt:todayISO(),reason:'spoiled',estCost:(+it.price||0),by:LS.me} });
     }
   }
-  if(it) await saveJson(FILES.items, D.items, 'Update item status from reminder');
-  await saveJson(FILES.reminders, D.reminders, 'Update reminder');
-  toast('Updated'); updateBadges(); renderReview();
+  try{
+    await commitFiles(deltas, 'Update reminder ('+action+')');
+    toast('Updated'); updateBadges(); renderReview();
+  }catch(e){ toast(String(e.message||e)); }
 }
 
 /* =========================================================================
@@ -939,10 +1156,10 @@ function testConn(){
   fetch(`${API}/repos/${$('#set_repo').value.trim()}`, {headers:{...ghHeaders(),'Authorization':'Bearer '+$('#set_token').value.trim()}})
     .then(r=>toast(r.ok?'Connection works ✓':'Failed: '+r.status));
 }
-function saveSettings(){ LS.me=$('#set_me').value; LS.device=$('#set_device').value.trim(); LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
+function saveSettings(){ LS.me=$('#set_me').value; LS.device=$('#set_device').value.trim(); LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; HEAD=null; for(const k in DB) delete DB[k]; show('settings'); }
 async function saveConfig(){
   (D.config.members||[]).forEach((m,idx)=>{ const v=$('#mem_'+idx); if(v) m.email=v.value.trim(); });
-  await saveJson(FILES.config, D.config, 'Update notification emails'); toast('Emails saved');
+  await commitFiles([{path:FILES.config, op:'replace', value:D.config}], 'Update notification emails'); toast('Emails saved');
 }
 async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); localStorage.removeItem('gt_login'); localStorage.removeItem('gt_method'); toast('Signed out'); show('settings'); } }
 
@@ -951,7 +1168,16 @@ window.addEventListener('load', async ()=>{
   // Handle the "back from GitHub sign-in" return first; otherwise show the app.
   const came = await handleOAuthRedirect();
   if(came) return;
-  show(isConfigured()?'capture':'settings');
+  if(isConfigured()){
+    // Render instantly from the IndexedDB snapshot if we have one, then revalidate.
+    let hadSnap=false;
+    try{ hadSnap = await loadSnapshot(); }catch(e){}
+    await show('capture');
+    if(hadSnap){ try{ await loadAll(); await show(CUR); }catch(e){} }  // conditional refetch of changed paths
+    startFreshnessPolling();
+  } else {
+    await show('settings');
+  }
 });
 </script>
 </body>

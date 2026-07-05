@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#2f7d4f" />
 <title>Grocery Tracker</title>
+<!-- PWA (S2): installable, standalone, iOS home-screen. No maximum-scale /
+     user-scalable in the viewport above — pinch-zoom stays available; double-tap
+     zoom is killed via touch-action below (FR-18). -->
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Grocery Tracker" />
 <style>
   :root{
     --green:#2f7d4f; --green-d:#256340; --bg:#f5f6f4; --card:#fff;
@@ -17,15 +27,18 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%;
     padding-bottom:72px; line-height:1.45;
+    /* Kill double-tap-to-zoom (FR-18) while keeping pinch-zoom & panning. */
+    touch-action:manipulation;
   }
   header{
     position:sticky; top:0; z-index:20; background:var(--green); color:#fff;
-    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px; box-shadow:var(--shadow);
+    padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px) 12px calc(env(safe-area-inset-left) + 16px);
+    box-shadow:var(--shadow);
     display:flex; align-items:center; justify-content:space-between;
   }
   header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
   header .who{font-size:12px;opacity:.9}
-  main{padding:16px;max-width:760px;margin:0 auto}
+  main{padding:16px calc(env(safe-area-inset-right) + 16px) 16px calc(env(safe-area-inset-left) + 16px);max-width:760px;margin:0 auto}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
   .card h2{font-size:16px;margin:0 0 10px}
   .muted{color:var(--muted)}
@@ -57,7 +70,8 @@
   .grp.open .body{display:block}
   nav{
     position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
-    display:flex;padding-bottom:env(safe-area-inset-bottom)
+    display:flex;padding-bottom:env(safe-area-inset-bottom);
+    padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)
   }
   nav button{background:none;color:var(--muted);border-radius:0;font-size:11px;font-weight:600;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
   nav button .ic{font-size:20px;line-height:1}
@@ -80,7 +94,9 @@
      between columns) never rewraps a header and shifts the filter row — the
      owner's no-reflow rule. */
   .sortarrow{display:inline-block;width:11px;text-align:left}
-  .tablewrap th input{width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px;font-weight:400;text-transform:none;letter-spacing:0}
+  /* 16px keeps iOS from zooming on focus (FR-18); tight padding keeps the dense
+     filter row compact despite the larger text. */
+  .tablewrap th input{width:100%;min-width:0;box-sizing:border-box;font-size:16px;padding:2px 4px;font-weight:400;text-transform:none;letter-spacing:0}
   .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
   .toast.show{opacity:.97}
   .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
@@ -1018,13 +1034,21 @@ function renderReview(){
     ${dueRem.length? dueRem.map(renderRem).join('') : '<p class="muted small">No active reminders.</p>'}
   </div>`;
 }
+/* Field-aware input attrs (FR-18): numeric flags get a decimal keypad, date
+   flags a native date picker, so the owner isn't typing digits on a QWERTY. */
+function fixInputAttrs(field){
+  const f=String(field||'').toLowerCase();
+  if(['price','qty','quantity','unitprice','unit price','total','subtotal','tax'].some(k=>f.includes(k.replace(' ','')))) return 'inputmode="decimal"';
+  if(['date','useby','use_by','usebydate','purchased'].some(k=>f.includes(k))) return 'type="date"';
+  return '';
+}
 function renderFlag(n){
   return `<div class="item" id="flag_${n.id}">
     <div class="flex"><b>${esc(n.field||n.kind||'Review')}</b><span class="pill gray">${esc(n.kind||'')}</span></div>
     <div class="small">${esc(n.message||'')}</div>
     ${n.photo?`<button class="link" data-action="viewPhoto" data-path="${esc(n.photo)}">View receipt photo</button>`:''}
     <div class="row" style="margin-top:6px">
-      <input id="fix_${esc(n.id)}" placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
+      <input id="fix_${esc(n.id)}" ${fixInputAttrs(n.field)} placeholder="Correct value${n.suggested?(' (suggested: '+esc(JSON.stringify(Object.values(n.suggested)[0]))+')'):''}"/>
       <button style="flex:0 0 auto;width:auto" data-action="resolveFlag" data-id="${esc(n.id)}">Save</button>
     </div>
     <button class="link" data-action="resolveFlag" data-id="${esc(n.id)}" data-dismiss="1">Dismiss (no change)</button>
@@ -1163,7 +1187,7 @@ function renderSettings(){
     <p class="small muted">Claude emails these people for reviews and freshness reminders. Saved in your shared config.</p>
     ${(cfg.members||[]).map((m,idx)=>`
       <label>${esc(m.name)} email</label>
-      <input id="mem_${idx}" value="${esc(m.email||'')}" placeholder="name@example.com" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+      <input id="mem_${idx}" type="email" inputmode="email" value="${esc(m.email||'')}" placeholder="name@example.com" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     `).join('')}
     <button style="margin-top:10px" data-action="saveConfig">Save emails</button>
   </div>`:''}
@@ -1196,7 +1220,14 @@ async function saveConfig(){
 async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); localStorage.removeItem('gt_login'); localStorage.removeItem('gt_method'); toast('Signed out'); show('settings'); } }
 
 /* ---------- boot ---------- */
+/* Register the service worker (S2): offline read-only app shell. Best-effort —
+   a failure (unsupported / blocked) must never break the app. */
+function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 window.addEventListener('load', async ()=>{
+  registerSW();
   // Handle the "back from GitHub sign-in" return first; otherwise show the app.
   const came = await handleOAuthRedirect();
   if(came) return;

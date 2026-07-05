@@ -119,12 +119,19 @@ async function installGitHubMock(page, opts = {}) {
     commits: [], // one entry per POST /git/commits (app-originated commits)
     refUpdates: 0, // successful PATCH ref
     _raceAppendItem: null,
+    _raceMods: null,
     // Arm a one-shot ref race: the NEXT PATCH ref will first append `record` to
     // items.json as a concurrent remote commit, then reject 422. The app must
     // refetch, replay its deltas onto the fresh content, and retry — proving no
     // lost update.
     armRaceAppendItem(record) {
       this._raceAppendItem = record
+    },
+    // General one-shot race: the NEXT PATCH ref first lands `mods` ({path:text})
+    // as a concurrent remote commit, then rejects 422 — used to prove a mutate
+    // (config edit) replay preserves the other writer's change.
+    armRaceInject(mods) {
+      this._raceMods = mods
     },
     // Directly advance main (models the processor committing between polls).
     injectRemote(mods) {
@@ -182,6 +189,12 @@ async function installGitHubMock(page, opts = {}) {
         injectRemote({ 'db/items.json': JSON.stringify(arr, null, 2) })
         return route.fulfill({ status: 422, json: { message: 'Update is not a fast forward' } })
       }
+      if (state._raceMods) {
+        const mods = state._raceMods
+        state._raceMods = null
+        injectRemote(mods)
+        return route.fulfill({ status: 422, json: { message: 'Update is not a fast forward' } })
+      }
       const parent = (git.commits[newCommit] && git.commits[newCommit].parents[0]) || null
       if (parent !== git.head.commitSha)
         return route.fulfill({ status: 422, json: { message: 'Update is not a fast forward' } })
@@ -205,11 +218,47 @@ async function installGitHubMock(page, opts = {}) {
     }
 
     // --- Git Data: trees ---
-    if (method === 'GET' && (mm = p.match(new RegExp(`^${repoRe}/git/trees/([^/]+)$`)))) {
-      const map = git.trees[mm[1]]
+    // Faithful-ish: honours ?recursive=1, models directories as type:'tree'
+    // entries on a non-recursive listing, and can simulate GitHub's truncation
+    // cap. `DB~<sha>` is a synthetic alias for the db/ subtree of <sha> (what the
+    // app fetches when a recursive listing comes back truncated).
+    if (method === 'GET' && (mm = p.match(new RegExp(`^${repoRe}/git/trees/(.+?)(?:\\?.*)?$`)) )) {
+      let rawSha = decodeURIComponent(mm[1])
+      const recursive = url.searchParams.has('recursive')
+      let dbOnly = false
+      if (rawSha.startsWith('DB~')) { dbOnly = true; rawSha = rawSha.slice(3) }
+      const map = git.trees[rawSha]
       if (!map) return route.fulfill({ status: 404, json: { message: 'Not Found' } })
-      const tree = Object.keys(map).map((pp) => ({ path: pp, mode: '100644', type: 'blob', sha: map[pp] }))
-      return json(route, { sha: mm[1], tree, truncated: false })
+
+      if (dbOnly) {
+        const tree = Object.keys(map)
+          .filter((k) => k.startsWith('db/'))
+          .map((k) => ({ path: k.slice(3), mode: '100644', type: 'blob', sha: map[k] }))
+        return json(route, { sha: mm[1], tree, truncated: false })
+      }
+      if (recursive) {
+        let entries = Object.keys(map).map((k) => ({ path: k, mode: '100644', type: 'blob', sha: map[k] }))
+        let truncated = false
+        if (opts.truncateTree) {
+          // Simulate the cap: db/ blobs are dropped from the recursive listing,
+          // forcing the app onto its db-subtree fallback.
+          entries = entries.filter((e) => !e.path.startsWith('db/'))
+          truncated = true
+        }
+        return json(route, { sha: mm[1], tree: entries, truncated })
+      }
+      // Non-recursive: top-level dirs as type:'tree', root files as blobs.
+      const dirs = {}
+      const entries = []
+      Object.keys(map).forEach((k) => {
+        const i = k.indexOf('/')
+        if (i < 0) entries.push({ path: k, mode: '100644', type: 'blob', sha: map[k] })
+        else dirs[k.slice(0, i)] = true
+      })
+      Object.keys(dirs).forEach((d) =>
+        entries.push({ path: d, mode: '040000', type: 'tree', sha: 'DB~' + rawSha })
+      )
+      return json(route, { sha: mm[1], tree: entries, truncated: false })
     }
     if (method === 'POST' && new RegExp(`^${repoRe}/git/trees$`).test(p)) {
       const body = JSON.parse(req.postData() || '{}')

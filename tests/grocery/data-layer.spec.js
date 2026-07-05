@@ -97,6 +97,44 @@ test('"reading…" self-resolves when the processor commits (freshness poll)', a
   expect(errors).toEqual([])
 })
 
+test('no lost update on a config edit: mutate replays onto fresh content', async ({ page }) => {
+  // Same race as above but for an OBJECT file (config.json) written via op:'mutate'.
+  // A blind op:'replace' would re-write this device's stale snapshot and clobber
+  // the concurrent writer's change; mutate re-reads fresh content and re-applies
+  // only the field this device changed. (A handled 422 logs to the console — the
+  // point of the test — so we assert on committed state, not a clean console.)
+  const { mock } = await bootApp(page)
+  await page.click('nav [data-tab="settings"]')
+  await expect(page.locator('#mem_1')).toBeVisible()
+
+  // Concurrent writer sets member 0's email; our PATCH will 422 once, then replay.
+  const cfg = JSON.parse(mock.readFile('db/config.json'))
+  cfg.members[0].email = 'remote@example.com'
+  await mock.armRaceInject({ 'db/config.json': JSON.stringify(cfg, null, 2) })
+
+  // This device changes ONLY member 1's email and leaves member 0 untouched.
+  await page.fill('#mem_1', 'wife@example.com')
+  await page.locator('[data-action="saveConfig"]').click()
+  await expect(page.locator('.toast')).toContainText('Emails saved')
+
+  const saved = JSON.parse(mock.readFile('db/config.json'))
+  expect(saved.members[0].email).toBe('remote@example.com') // concurrent write preserved
+  expect(saved.members[1].email).toBe('wife@example.com') // our change landed
+  expect(mock.commits.length).toBe(2) // one raced attempt + the replay
+  expect(mock.refUpdates).toBe(1)
+})
+
+test('a truncated recursive tree still loads db/ via the subtree fallback', async ({ page }) => {
+  // At GitHub's recursive-listing cap the tree comes back truncated with db/
+  // blobs missing; the app must resolve them from the db subtree rather than
+  // silently render empty data.
+  const { errors } = await bootApp(page, { mock: { truncateTree: true } })
+  await page.click('nav [data-tab="table"]')
+  await expect(page.locator('#ttable')).toBeVisible()
+  await expect(page.locator('#tcount')).toContainText('of 4') // all fixture items resolved
+  expect(errors).toEqual([])
+})
+
 test('boot persists a snapshot to IndexedDB for instant re-render', async ({ page }) => {
   await bootApp(page)
   // After the first load, the per-file snapshot + HEAD are cached in IndexedDB.

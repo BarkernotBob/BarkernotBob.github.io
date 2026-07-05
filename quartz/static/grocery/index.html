@@ -286,12 +286,26 @@ async function ghGetCommit(sha){
   if(!r.ok) throw new Error(`commit ${r.status}`);
   return r.json();                   // { sha, tree:{ sha }, ... }
 }
-async function ghGetTree(sha){
-  const r = await fetch(`${API}/repos/${LS.repo}/git/trees/${sha}?recursive=1`, {headers:ghHeaders()});
+async function ghTreeRaw(sha, recursive){
+  const r = await fetch(`${API}/repos/${LS.repo}/git/trees/${sha}${recursive?'?recursive=1':''}`, {headers:ghHeaders()});
   if(!r.ok) throw new Error(`tree ${r.status}`);
-  const j = await r.json();          // { sha, tree:[{path,type,sha,mode}], truncated }
+  return r.json();                   // { sha, tree:[{path,type,sha,mode}], truncated }
+}
+async function ghGetTree(sha){
+  const j = await ghTreeRaw(sha, true);
   const map = {};
   (j.tree||[]).forEach(e=>{ if(e.type==='blob') map[e.path]=e.sha; });
+  if(j.truncated){
+    // Real GitHub caps a recursive listing (~100k entries / 7 MB) and returns an
+    // INCOMPLETE array. Resolve the critical db/*.json from the db subtree so data
+    // never silently reads as empty. (Images fall back to the Contents API in
+    // getImageDataUrl.) Only fires at a repo scale we're years from.
+    try{
+      const root = await ghTreeRaw(sha, false);
+      const dbEntry = (root.tree||[]).find(e=>e.path==='db' && e.type==='tree');
+      if(dbEntry){ (await ghTreeRaw(dbEntry.sha, true)).tree.forEach(e=>{ if(e.type==='blob') map['db/'+e.path]=e.sha; }); }
+    }catch(e){ /* best-effort; loadJson's fallback covers any still-missing path */ }
+  }
   return { treeSha:j.sha, map, truncated:!!j.truncated };
 }
 async function ghGetBlobB64(sha){
@@ -350,11 +364,19 @@ let D = {}; // loaded data
      {path, op:'appendMany', records:[...]}          – push several
      {path, op:'setField', id, fields}               – Object.assign onto record #id
      {path, op:'setFields', updates:[{id,fields}]}   – several set-field on one file
-     {path, op:'replace', value}                     – overwrite whole file (seed/heal)
+     {path, op:'replace', value}                     – blind overwrite (seed only; NOT race-safe)
+     {path, op:'mutate', fn}                          – fn(freshParsed)→newValue, race-safe object edit
      {path, op:'putBinaryB64', contentB64}           – raw binary blob (receipt photo)  */
 function applyDelta(currentText, delta){
   if(delta.op==='putBinaryB64') return { b64:delta.contentB64 };
   if(delta.op==='replace') return { value:delta.value };
+  // mutate applies the caller's pure fn to the FRESH parsed content (an object
+  // file like config.json), so a ref-race replay never clobbers a concurrent
+  // writer — unlike replace, which would re-write a stale snapshot.
+  if(delta.op==='mutate'){
+    const cur = currentText!=null ? JSON.parse(currentText) : (delta.base!==undefined ? delta.base : {});
+    return { value: delta.fn(cur) };
+  }
   const arr = currentText!=null ? JSON.parse(currentText) : (delta.base || []);
   if(delta.op==='append') arr.push(delta.record);
   else if(delta.op==='appendMany') (delta.records||[]).forEach(r=>arr.push(r));
@@ -1158,8 +1180,18 @@ function testConn(){
 }
 function saveSettings(){ LS.me=$('#set_me').value; LS.device=$('#set_device').value.trim(); LS.repo=$('#set_repo').value.trim(); LS.token=$('#set_token').value.trim(); toast('Saved'); D={}; HEAD=null; for(const k in DB) delete DB[k]; show('settings'); }
 async function saveConfig(){
-  (D.config.members||[]).forEach((m,idx)=>{ const v=$('#mem_'+idx); if(v) m.email=v.value.trim(); });
-  await commitFiles([{path:FILES.config, op:'replace', value:D.config}], 'Update notification emails'); toast('Emails saved');
+  // Only the member emails this device actually CHANGED (input differs from the
+  // value we loaded), applied onto FRESH config at commit time — so a concurrent
+  // writer editing a different member isn't clobbered, and untouched fields keep
+  // the fresh remote value rather than this device's stale snapshot.
+  const changes = (D.config.members||[]).map((m,idx)=>{ const v=$('#mem_'+idx); if(!v) return null; const val=v.value.trim(); return val!==(m.email||'') ? val : null; });
+  if(!changes.some(c=>c!==null)){ toast('No changes'); return; }
+  await commitFiles([{path:FILES.config, op:'mutate', base:(D.config||{}), fn:(cfg)=>{
+    cfg = cfg || {};
+    if(Array.isArray(cfg.members)) changes.forEach((val,idx)=>{ if(val!==null && cfg.members[idx]) cfg.members[idx].email = val; });
+    return cfg;
+  }}], 'Update notification emails');
+  toast('Emails saved');
 }
 async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('gt_token'); localStorage.removeItem('gt_login'); localStorage.removeItem('gt_method'); toast('Signed out'); show('settings'); } }
 

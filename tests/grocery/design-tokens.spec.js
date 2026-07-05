@@ -69,3 +69,23 @@ for (const theme of ['light', 'dark']) {
     }
   })
 }
+
+// App chrome uses the "Grocer's Ledger" line-icon sprite, never emoji (§9: "Zero
+// emoji as icons"). Guards the S3 nav/header icon slice against a regression to
+// emoji glyphs and proves each nav tab + the wordmark resolve a <use href="#ic-*">.
+test('nav + header render SVG icons, zero emoji as icons', async ({ page }) => {
+  await bootApp(page)
+  const tabs = ['capture', 'search', 'reports', 'review', 'table', 'settings']
+  for (const tab of tabs) {
+    const use = page.locator(`nav [data-tab="${tab}"] .ic svg use`)
+    await expect(use, `${tab} nav icon`).toHaveCount(1)
+    expect(await use.getAttribute('href')).toMatch(/^#ic-/)
+  }
+  // Header wordmark + Settings both carry a sprite icon.
+  await expect(page.locator('header h1 svg use')).toHaveCount(1)
+  await expect(page.locator('.hd-settings svg use')).toHaveCount(1)
+  // No emoji pictographs anywhere in the persistent chrome.
+  const chrome = await page.$$eval('header, nav', (els) => els.map((e) => e.textContent).join(''))
+  const emoji = chrome.match(/\p{Extended_Pictographic}/gu) || []
+  expect(emoji, `emoji in chrome: ${emoji.join(' ')}`).toEqual([])
+})

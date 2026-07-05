@@ -25,8 +25,13 @@ header{
   border-bottom:1px solid var(--rule);
   display:flex; align-items:center; justify-content:space-between;
 }
-header h1{font-family:var(--font-display); font-size:21px; margin:0; font-weight:600; letter-spacing:-.01em}
+header h1{font-family:var(--font-display); font-size:21px; margin:0; font-weight:600; letter-spacing:-.01em; display:inline-flex; align-items:center; gap:8px}
+header h1 .mk-ic{width:23px; height:23px; color:var(--pine); flex:none}
 header .who{font-family:var(--font-mono); font-size:11px; color:var(--ink-2)}
+.hd-settings{display:inline-flex; align-items:center; gap:6px}
+.hd-settings .hd-ic{width:17px; height:17px; flex:none}
+/* off-screen sprite host: holds the <symbol> defs, paints nothing itself */
+.hidden-sprite{position:absolute; width:0; height:0; overflow:hidden}
 
 main{padding:16px calc(env(safe-area-inset-right) + 16px) 16px calc(env(safe-area-inset-left) + 16px); max-width:760px; margin:0 auto}
 
@@ -94,7 +99,8 @@ nav button{
   letter-spacing:.03em; padding:8px 2px; display:flex; flex-direction:column; align-items:center;
   gap:3px; min-height:0;
 }
-nav button .ic{font-size:20px; line-height:1}
+nav button .ic{line-height:1; display:inline-flex}
+nav button .ic svg{width:23px; height:23px; display:block}
 nav button.active{color:var(--pine)}
 
 /* absolutely-positioned count badge — never reflows its neighbours (§8.4) */

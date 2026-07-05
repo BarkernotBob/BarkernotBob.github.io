@@ -158,3 +158,69 @@ details summary{cursor:pointer; font-weight:600; font-size:14px}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important; transition-duration:.001ms!important}
 }
+
+/* ========================================================================
+   S4 — Today screen composition (ported from the signed-off mockup, mapped
+   to tokens.css). Fixed row heights + reserved gutters = no reflow on action.
+   ======================================================================== */
+nav button{flex:1 1 0; min-width:0; white-space:nowrap}   /* fit the 7th (Today) tab evenly */
+
+.eyebrow{font-family:var(--font-ui); font-weight:700; font-size:11px; line-height:1;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--ink-2); margin:18px 4px 10px}
+
+/* use-it-up list */
+.uplist{background:var(--card); border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.urow{display:grid; grid-template-columns:1fr auto; gap:8px; padding:13px 14px; min-height:92px;
+  align-items:center; border-bottom:1px solid var(--rule)}
+.urow:last-child{border-bottom:0}
+.urow .nm{font-family:var(--font-ui); font-weight:500; font-size:15px; line-height:1.2; color:var(--ink)}
+.urow .meta{font-family:var(--font-mono); font-size:12px; line-height:1; color:var(--ink-2); margin:4px 0 9px}
+.urow .gutter{display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:96px}
+.mini{font-family:var(--font-ui); font-weight:700; font-size:10px; line-height:1; letter-spacing:.06em;
+  text-transform:uppercase; border:1.4px solid var(--rule); color:var(--ink-2); border-radius:6px;
+  padding:5px 8px; background:none}
+.mini.use{border-color:var(--leaf-ink); color:var(--leaf-ink)}
+
+/* ink stamps (not pills) */
+.stamp{font-family:var(--font-ui); font-weight:700; font-size:12px; line-height:1; letter-spacing:.09em;
+  text-transform:uppercase; border:1.5px solid; border-radius:6px; padding:5px 8px; display:inline-block}
+.stamp.useby{color:var(--marigold-ink); border-color:var(--marigold-ink)}
+.stamp.today{color:var(--tomato-ink); border-color:var(--tomato-ink); transform:rotate(-1.5deg)}
+
+/* shelf-life bar */
+.slbar{display:flex; gap:3px; width:120px}
+.slbar i{height:12px; flex:1; border-radius:2px; background:var(--rule)}
+.slbar.s-fresh i:nth-child(-n+1){background:var(--leaf)}
+.slbar.s-mid i:nth-child(-n+3){background:var(--marigold)}
+.slbar.s-hot i{background:var(--tomato)}
+
+/* sync strip chips */
+.chips{display:flex; gap:8px; flex-wrap:wrap}
+.chip{font-family:var(--font-mono); font-size:12px; line-height:1; border:1px solid var(--rule);
+  border-radius:20px; padding:8px 12px; display:flex; align-items:center; gap:7px; white-space:nowrap; background:var(--card)}
+.chip .d{width:8px; height:8px; border-radius:50%; flex:0 0 auto}
+.d.pine{background:var(--pine)} .d.mar{background:var(--marigold)} .d.tom{background:var(--tomato)}
+.chip.wait{color:var(--ink-2)}
+
+/* tiles: review / week / trips */
+.tile-card{background:var(--card); border:1px solid var(--rule); border-radius:12px; padding:14px 15px; margin-bottom:2px}
+.tile-card.rev{display:flex; align-items:center; gap:12px}
+.rev .cnt{font-family:var(--font-display); font-weight:600; font-size:28px; line-height:1; color:var(--tomato-ink); flex:0 0 auto}
+.rev .txt{flex:1 1 auto}
+.rev .txt b{font-family:var(--font-ui); font-weight:500; font-size:14px; line-height:1.2; display:block}
+.rev .txt span{font-family:var(--font-mono); font-size:12px; line-height:1.3; color:var(--ink-2)}
+.week .figure{font-family:var(--font-display); font-weight:600; font-size:44px; line-height:1; letter-spacing:-.01em; margin:2px 0 4px}
+.week .cap{font-family:var(--font-mono); font-size:12px; line-height:1; color:var(--ink-2)}
+.spark{margin-top:10px; display:block; width:100%}
+.trow{display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--rule)}
+.trow:last-child{border-bottom:0}
+.trow .store{font-family:var(--font-ui); font-weight:500; font-size:14px; line-height:1.1; flex:1 1 auto}
+.trow .when{font-family:var(--font-mono); font-size:11px; line-height:1; color:var(--ink-2); margin-top:3px}
+.trow .amt{font-family:var(--font-mono); font-size:14px; line-height:1; font-variant-numeric:tabular-nums; flex:0 0 auto}
+
+/* Snap / Sync / Email provenance stamps */
+.prov{font-family:var(--font-ui); font-weight:700; font-size:11px; line-height:1; letter-spacing:.11em;
+  text-transform:uppercase; padding:4px 7px; border-radius:6px; display:inline-block; flex:0 0 auto}
+.prov.sync{color:var(--pine); border:1.5px solid var(--pine)}
+.prov.snap{color:var(--ink); border:1.5px solid var(--ink)}
+.prov.mail{color:var(--ink); border:1.5px dashed var(--ink)}

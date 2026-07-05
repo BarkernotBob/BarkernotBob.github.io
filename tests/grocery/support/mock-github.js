@@ -89,6 +89,15 @@ async function installGitHubMock(page, opts = {}) {
   for (const name of fs.readdirSync(FIXturesDir)) {
     if (!name.endsWith('.json')) continue
     let text = fs.readFileSync(path.join(FIXturesDir, name), 'utf8')
+    // Date-stable Today tests inject items whose useByDate is computed at test
+    // time (today±N) so classification is deterministic regardless of the wall
+    // clock the suite runs on. `opts.itemsOverride` replaces items.json wholesale.
+    if (name === 'items.json' && opts.itemsOverride) {
+      text = JSON.stringify(opts.itemsOverride, null, 2)
+    }
+    if (name === 'receipts.json' && opts.receiptsOverride) {
+      text = JSON.stringify(opts.receiptsOverride, null, 2)
+    }
     if (name === 'items.json' && opts.oversizeItems) {
       const arr = JSON.parse(text)
       const base = arr[0]

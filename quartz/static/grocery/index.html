@@ -31,6 +31,7 @@
 <main id="main"></main>
 
 <nav id="nav">
+  <button data-tab="today" data-action="show" data-arg="today"><span class="ic ic-svg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6M6 10v9h12v-9"/></svg></span>Today</button>
   <button data-tab="capture" data-action="show" data-arg="capture"><span class="ic">📷</span>Capture</button>
   <button data-tab="search" data-action="show" data-arg="search"><span class="ic">🔎</span>Search</button>
   <button data-tab="reports" data-action="show" data-arg="reports"><span class="ic">📊</span>Reports</button>
@@ -141,6 +142,9 @@ const CLICK_ACTIONS = {
   toggleOpen:      t => t.classList.toggle('open'),
   viewReceipt:     t => viewReceipt(t.dataset.id),
   markWaste:       t => markWaste(t.dataset.id),
+  todayUsed:       t => todayRowAction(t.dataset.id, 'used'),
+  todayTossed:     t => todayRowAction(t.dataset.id, 'tossed'),
+  todaySnooze:     t => todayRowAction(t.dataset.id, 'snooze'),
   clearTableFilters,
   sortTable:       t => sortTable(t.dataset.col),
   setRange:        t => setRange(t.dataset.range),
@@ -482,16 +486,22 @@ function startFreshnessPolling(){
 /* =========================================================================
    ROUTER
    ========================================================================= */
-let CUR='capture';
+let CUR='today';
 async function show(tab){
   CUR=tab;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   if(!isConfigured() && tab!=='settings'){ return renderSetup(); }
-  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:var(--pine);border-top-color:transparent"></span> Loading…</div>';
+  const m=$('#main');
+  // Loading state (§8.5): Today shows skeleton rows at the SAME fixed heights as
+  // real Use-it-up rows so the swap to real content never reflows; other views
+  // get the simple spinner card.
+  m.innerHTML = (tab==='today') ? todaySkeletonHTML()
+    : '<div class="card"><span class="spin" style="border-color:var(--pine);border-top-color:transparent"></span> Loading…</div>';
   try{
     if(!isConfigured()){ renderSetup(); return; }
     if(!D.items) await loadAll(); // first load
-    if(tab==='capture') renderCapture();
+    if(tab==='today') renderToday();
+    else if(tab==='capture') renderCapture();
     else if(tab==='search') renderSearch();
     else if(tab==='reports') renderReports();
     else if(tab==='review') renderReview();
@@ -553,7 +563,7 @@ async function afterSignIn(){
   if(isConfigured()){
     try{ await ensureInitialized(); D={}; for(const k in DB) delete DB[k]; await loadAll(); }catch(e){}
   }
-  show('capture');
+  show('today');
 }
 
 /* =========================================================================
@@ -595,7 +605,7 @@ async function saveSetup(){
     D={}; for(const k in DB) delete DB[k];
     await loadAll();
     toast('Connected! 🎉');
-    show('capture');
+    show('today');
   }catch(e){ toast(String(e.message||e)); }
 }
 async function ensureInitialized(){
@@ -611,6 +621,242 @@ async function ensureInitialized(){
     const c = await ghContents(path);
     if(c===null){ await ghPut(path, b64encode(JSON.stringify(seed[path],null,2)), null, 'Initialize '+path); }
   }
+}
+
+/* =========================================================================
+   TODAY  (S4 — the designed landing: use-it-up, sync strip, review, week, trips)
+   -------------------------------------------------------------------------
+   Data source for Use-it-up is ITEMS directly (not reminders), per §8.2:
+   status:"active" · perishable:true · useByDate ≤ today+3, in config.timezone.
+   Every section carries a designed empty state (§9.5) — never a blank card.
+   Row actions (Used it / Tossed / Snooze) write a SINGLE atomic commit via the
+   S1 commitFiles delta path and mutate ONLY the affected row IN PLACE at its
+   fixed height (§8.4 pattern 5) — sibling rows never move.
+   ========================================================================= */
+
+/* ---- date helpers in config.timezone (C-17: never derive a day via UTC) ---- */
+function configTz(){ return (D.config && D.config.timezone) || 'UTC'; }
+function todayLocal(){
+  try{ return new Date().toLocaleDateString('en-CA', {timeZone:configTz()}); } // YYYY-MM-DD
+  catch(e){ return todayISO(); }
+}
+function ymdNum(s){ if(!s) return null; const p=String(s).slice(0,10).split('-').map(Number); return Math.floor(Date.UTC(p[0],p[1]-1,p[2])/86400000); }
+function numYmd(n){ return new Date(n*86400000).toISOString().slice(0,10); }
+function addDaysYmd(s,n){ const b=ymdNum(s); return b==null?s:numYmd(b+n); }
+const MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+function stampDate(s){ const n=ymdNum(s); if(n==null) return ''; const d=new Date(n*86400000); return MON[d.getUTCMonth()]+' '+d.getUTCDate(); }
+function shortDate(s){ const n=ymdNum(s); if(n==null) return ''; const d=new Date(n*86400000); return MON[d.getUTCMonth()][0]+MON[d.getUTCMonth()].slice(1).toLowerCase()+' '+d.getUTCDate(); }
+
+/* ---- shelf-life model: 4 quartile segments of purchase→useBy, filled &
+   colored leaf→marigold→tomato as the span is consumed (§9.5). ------------- */
+function shelfLife(item, today){
+  const p=ymdNum(item.purchasedAt), u=ymdNum(item.useByDate), t=ymdNum(today);
+  const daysLeft = (u!=null && t!=null) ? (u-t) : null;
+  const overdue = daysLeft!=null && daysLeft<=0;
+  let f=0;
+  if(p!=null && u!=null && t!=null){ const span=Math.max(1,u-p); f=(t-p)/span; }
+  if(f<0) f=0; if(f>1) f=1;
+  let filled = Math.min(4, Math.max(1, Math.ceil(f*4)));
+  let level;
+  if(overdue){ level='hot'; filled=4; }
+  else if(f>=0.66) level='hot';
+  else if(f>=0.33) level='mid';
+  else level='fresh';
+  return { filled, level, overdue, daysLeft };
+}
+function shelfBarHTML(sl){
+  const segs=[0,1,2,3].map(i=>`<i class="${i<sl.filled?'on':''}"></i>`).join('');
+  return `<span class="sl-bar lvl-${sl.level}" aria-hidden="true">${segs}</span>`;
+}
+
+/* ---- provenance components (reusable; also used by Trips in S5) ----------- */
+function provStamp(source){
+  const s=(source||'photo');
+  if(s==='extension'||s==='email') return '<span class="prov sync">Sync</span>';
+  return '<span class="prov snap">Snap</span>';
+}
+const CHANNEL_LABEL={ in_store:'in-store', pickup:'pickup', delivery:'delivery', online:'online' };
+function channelChip(ch){ return ch&&CHANNEL_LABEL[ch] ? `<span class="chan">${CHANNEL_LABEL[ch]}</span>` : ''; }
+
+/* ---- Use-it-up source: items directly (§8.2) ----------------------------- */
+function useItUpItems(today){
+  const t=ymdNum(today);
+  return (D.items||[]).filter(i=> i.status==='active' && i.perishable===true && i.useByDate
+      && ymdNum(i.useByDate)!=null && ymdNum(i.useByDate) <= t+3)
+    .sort((a,b)=> (a.useByDate||'').localeCompare(b.useByDate||''));
+}
+
+/* ---- 8-week spend buckets for the sparkline (oldest→newest) --------------- */
+function weeklySpend(today){
+  const t=ymdNum(today); const buckets=new Array(8).fill(0);
+  (D.items||[]).forEach(i=>{ const d=ymdNum(i.purchasedAt); if(d==null) return;
+    const wk=Math.floor((t-d)/7); if(wk>=0 && wk<8) buckets[7-wk]+=(+i.price||0); });
+  return buckets;
+}
+function sparklineSVG(vals){
+  const w=300, h=44, pad=4, max=Math.max(1,...vals);
+  const step=(w-pad*2)/(vals.length-1);
+  const pts=vals.map((v,i)=>{ const x=pad+i*step; const y=h-pad-(v/max)*(h-pad*2); return x.toFixed(1)+','+y.toFixed(1); });
+  const last=pts[pts.length-1].split(',');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" fill="none" aria-hidden="true">
+    <line x1="0" y1="${h-1}" x2="${w}" y2="${h-1}" stroke="var(--rule)" stroke-width="1"/>
+    <polyline points="${pts.join(' ')}" fill="none" stroke="var(--pine)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="3.2" fill="var(--pine)"/>
+  </svg>`;
+}
+
+/* ---- inline SVG line-art for empty states (zero emoji, §9.5) -------------- */
+const SUN_SVG=`<svg class="empty-art" viewBox="0 0 48 48" fill="none" stroke="var(--marigold-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="8"/><path d="M24 6v5M24 37v5M6 24h5M37 24h5M11 11l3.5 3.5M33.5 33.5 37 37M37 11l-3.5 3.5M14.5 33.5 11 37"/></svg>`;
+const PLUG_SVG=`<svg class="empty-art" viewBox="0 0 48 48" fill="none" stroke="var(--ink-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6v10M30 6v10M14 16h20v6a10 10 0 0 1-20 0v-6ZM24 32v10"/></svg>`;
+const PRINTER_SVG=`<svg class="empty-art" viewBox="0 0 48 48" fill="none" stroke="var(--ink-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 20V8h20v12M14 34H10a2 2 0 0 1-2-2V22a2 2 0 0 1 2-2h28a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4M14 28h20v12H14z"/></svg>`;
+const CHEVRON=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--ink-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
+
+/* ---- loading skeleton: same fixed row heights as real Use-it-up rows ------ */
+function todaySkeletonHTML(){
+  const rows=[0,1,2].map(()=>`<div class="urow sk"><div class="urow-main"><div class="sk-line w60"></div><div class="sk-line w40"></div><div class="sk-line w80 tall"></div></div><div class="gutter"><div class="sk-line w70"></div></div></div>`).join('');
+  return `<div id="todaySkeleton" data-view="today-loading" aria-busy="true">
+    <div class="eyebrow">To use up</div>
+    <div class="card today-list">${rows}</div>
+    <div class="eyebrow">This week</div>
+    <div class="tile-card"><div class="sk-line w40 tall"></div></div>
+  </div>`;
+}
+
+function renderToday(){
+  const today=todayLocal();
+  const useUp=useItUpItems(today);
+  const openFlags=(D.needs||[]).filter(n=>n.status==='open');
+  const unread=(D.receipts||[]).filter(r=>r.status==='unprocessed').length;
+  const retailers=(D.config && Array.isArray(D.config.retailers)) ? D.config.retailers : [];
+
+  /* 1 · USE IT UP */
+  const useUpHTML = useUp.length ? useUp.map(it=>{
+    const sl=shelfLife(it, today);
+    const stamp = sl.overdue
+      ? '<span class="stamp today">Use today</span>'
+      : `<span class="stamp useby">Use by ${esc(stampDate(it.useByDate))}</span>`;
+    const meta=`${it.qty!=null?esc(it.qty)+(it.unit?' '+esc(it.unit):''):'—'} · bought ${esc(shortDate(it.purchasedAt))}`;
+    return `<div class="urow" id="urow_${esc(it.id)}">
+      <div class="urow-main">
+        <div class="nm">${esc(it.name||it.rawName||'Item')}</div>
+        <div class="meta">${meta}</div>
+        ${shelfBarHTML(sl)}
+      </div>
+      <div class="gutter">
+        ${stamp}
+        <div class="gutter-actions">
+          <button class="mini use" data-action="todayUsed" data-id="${esc(it.id)}">Used it</button>
+          <button class="mini" data-action="todaySnooze" data-id="${esc(it.id)}">Snooze</button>
+          <button class="mini toss" data-action="todayTossed" data-id="${esc(it.id)}">Tossed</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty"><div>${SUN_SVG}</div><div class="empty-h">Nothing expiring.</div><div class="empty-p">Fresh items show up here three days before their use-by date.</div></div>`;
+  const useUpCount = useUp.length ? `${useUp.length} thing${useUp.length>1?'s':''} to use up` : 'To use up';
+
+  /* 2 · SYNC STRIP — pre-adapter status quo (no retailers configured yet) */
+  let syncHTML;
+  if(retailers.length){
+    // (Reserved for S5+/P1 when adapters exist; render freshness chips per retailer.)
+    syncHTML = `<div class="chips">${retailers.map(r=>`<span class="chip"><span class="d pine"></span>${esc(r.name||r.retailer||'store')}</span>`).join('')}</div>`;
+  } else {
+    syncHTML = `<div class="tile-card sync-empty" data-action="show" data-arg="settings" role="button" tabindex="0">
+      <span class="sync-ico">${PLUG_SVG}</span>
+      <span class="sync-txt"><b>No connected stores yet</b><span>Install the sync extension to pull trips automatically.</span></span>
+      ${CHEVRON}
+    </div>`;
+  }
+  if(unread>0){
+    syncHTML += `<div class="chips" aria-live="polite" style="margin-top:8px"><span class="chip reading"><span class="spin sm"></span>${unread} photo${unread>1?'s':''} reading…</span></div>`;
+  }
+
+  /* 3 · REVIEW CARD */
+  const first=openFlags[0];
+  const reviewHTML = openFlags.length ? `<div class="tile-card rev" data-action="show" data-arg="review" role="button" tabindex="0">
+      <span class="cnt">${openFlags.length}</span>
+      <span class="txt"><b>${esc((first.field||first.kind||'Review').toString())}</b><span>${esc(first.message||'Needs a quick confirm')}</span></span>
+      ${CHEVRON}
+    </div>`
+    : `<div class="tile-card empty-inline"><span class="ok-tick">${provTickSVG()}</span><span class="empty-p" style="margin:0">Nothing needs your attention.</span></div>`;
+
+  /* 4 · THIS WEEK */
+  const buckets=weeklySpend(today);
+  const thisWk=buckets[7], lastWk=buckets[6];
+  const delta = lastWk>0 ? (thisWk<=lastWk?`down from ${money(lastWk)} last week`:`up from ${money(lastWk)} last week`) : 'no spend last week';
+  const weekHTML = `<div class="tile-card week" data-action="show" data-arg="reports" role="button" tabindex="0">
+      <div class="hero-figure week-hero">${money(thisWk)}</div>
+      <div class="cap">${esc(delta)} · 8-week trend</div>
+      ${sparklineSVG(buckets)}
+    </div>`;
+
+  /* 5 · RECENT TRIPS */
+  const trips=(D.receipts||[]).slice().sort((a,b)=>((b.purchasedAt||b.capturedAt||'')).localeCompare(a.purchasedAt||a.capturedAt||'')).slice(0,3);
+  const tripsHTML = trips.length ? `<div class="tile-card trips">${trips.map(r=>{
+      const when=shortDate((r.purchasedAt||r.capturedAt||'').slice(0,10)) || 'unread';
+      const ch=channelChip(r.channel);
+      return `<div class="trow" ${r.id?`data-action="viewReceipt" data-id="${esc(r.id)}" role="button" tabindex="0"`:''}>
+        <div class="store">${esc(r.store||'Unread receipt')}<div class="when">${esc(when)}${ch?' · '+CHANNEL_LABEL[r.channel]:''}</div></div>
+        ${provStamp(r.source)}
+        <span class="amt">${r.total!=null?money(r.total):'—'}</span>
+      </div>`;
+    }).join('')}</div>`
+    : `<div class="empty sm"><div>${PRINTER_SVG}</div><div class="empty-p" style="margin-top:8px">No trips yet.</div></div>`;
+
+  $('#main').innerHTML = `<div id="todayView" data-view="today">
+    <div class="eyebrow">${esc(useUpCount)}</div>
+    <div class="card today-list">${useUpHTML}</div>
+
+    <div class="eyebrow">Connected stores</div>
+    ${syncHTML}
+
+    <div class="eyebrow">Needs your attention</div>
+    ${reviewHTML}
+
+    <div class="eyebrow">This week</div>
+    ${weekHTML}
+
+    <div class="eyebrow">Recent trips</div>
+    ${tripsHTML}
+  </div>`;
+}
+function provTickSVG(){ return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--leaf-ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg>`; }
+
+/* ---- row actions: ONE atomic commit + in-place row mutation (§8.4 #5) ----- */
+async function todayRowAction(itemId, kind){
+  const it=(D.items||[]).find(i=>i.id===itemId); if(!it) return;
+  const today=todayLocal();
+  const pend=(D.reminders||[]).filter(r=>r.itemId===itemId && r.status==='pending').map(r=>r.id);
+  let deltas=[], label='', msg='';
+  if(kind==='used'){
+    deltas.push({ path:FILES.items, op:'setField', id:itemId, fields:{status:'consumed'} });
+    if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
+    label='Used'; msg='Marked used';
+  } else if(kind==='tossed'){
+    const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
+      thrownAt:today, reason:'spoiled', estCost:(+it.price||0), by:LS.me };
+    deltas.push({ path:FILES.items, op:'setField', id:itemId, fields:{status:'thrown_away'} });
+    deltas.push({ path:FILES.waste, op:'append', record:w });
+    if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
+    label='Tossed'; msg='Logged as waste';
+  } else if(kind==='snooze'){
+    const next=addDaysYmd(it.useByDate||today, 2);
+    deltas.push({ path:FILES.items, op:'setField', id:itemId, fields:{useByDate:next} });
+    if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{dueDate:next}})) });
+    label='Snoozed'; msg='Snoozed +2 days';
+  } else return;
+  // Optimistically freeze the row's height, then mutate in place after the commit
+  // so neighbours never move (the §13 class-2 no-reflow guarantee).
+  try{
+    await commitFiles(deltas, 'Today: '+kind+' item '+itemId);
+    markTodayRowDone(itemId, label);
+    updateBadges();
+    toast(msg);
+  }catch(e){ toast(String(e.message||e)); }
+}
+function markTodayRowDone(itemId, label){
+  const row=document.getElementById('urow_'+itemId); if(!row) return;
+  row.classList.add('is-done');
+  row.innerHTML=`<div class="urow-done"><span class="stamp done">${esc(label)}</span></div>`;
 }
 
 /* =========================================================================
@@ -1171,7 +1417,7 @@ window.addEventListener('load', async ()=>{
     // Render instantly from the IndexedDB snapshot if we have one, then revalidate.
     let hadSnap=false;
     try{ hadSnap = await loadSnapshot(); }catch(e){}
-    await show('capture');
+    await show('today');
     if(hadSnap){ try{ await loadAll(); await show(CUR); }catch(e){} }  // conditional refetch of changed paths
     startFreshnessPolling();
   } else {

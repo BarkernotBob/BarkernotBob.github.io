@@ -152,3 +152,127 @@ details summary{cursor:pointer; font-weight:600; font-size:14px}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important; transition-duration:.001ms!important}
 }
+
+/* =============================================================================
+   TODAY view (slice S4) — designed landing. Non-uniform composition (§9.1 #7):
+   tape rows, chip strips, stat blocks. Fixed-height rows so in-place mutation on
+   Used/Tossed/Snooze never reflows neighbours (§8.4 #5). Zero emoji: inline SVG
+   line-art + text stamps only.
+============================================================================= */
+#todayView{max-width:760px; margin:0 auto}
+
+/* section eyebrows: uppercase Archivo, quiet ink-2 (§9.3) */
+.eyebrow{font-family:var(--font-ui); font-size:11px; font-weight:700; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-2); margin:18px 4px 10px}
+#todayView .eyebrow:first-child{margin-top:2px}
+
+/* nav Today glyph is an inline SVG, not an emoji */
+nav .ic-svg{display:block; width:22px; height:22px}
+nav .ic-svg svg{width:22px; height:22px; display:block}
+
+/* ---- Use-it-up list: fixed-height receipt-tape rows ---------------------- */
+.today-list{padding:0 15px}
+.urow{
+  display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+  height:138px; overflow:hidden; border-top:1px solid var(--rule);
+}
+.urow:first-child{border-top:0}
+.urow .nm{font-family:var(--font-ui); font-size:15px; font-weight:500; color:var(--ink); line-height:1.2}
+.urow .meta{font-family:var(--font-mono); font-size:12px; color:var(--ink-2); margin:5px 0 10px; font-variant-numeric:tabular-nums}
+.urow .gutter{display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:104px}
+.gutter-actions{display:flex; flex-direction:column; gap:6px; width:100%; align-items:stretch}
+
+/* shelf-life bar: 4 crate-slat segments, leaf→marigold→tomato as consumed */
+.sl-bar{display:flex; gap:3px; width:130px; max-width:100%}
+.sl-bar i{height:14px; flex:1; border-radius:2px; background:var(--rule)}
+.sl-bar.lvl-fresh i.on{background:var(--leaf)}
+.sl-bar.lvl-mid i.on{background:var(--marigold)}
+.sl-bar.lvl-hot i.on{background:var(--tomato)}
+
+/* in-place "done" state — same fixed height, centred stamp (no reflow) */
+.urow-done{display:flex; align-items:center; justify-content:center; height:100%}
+
+/* ---- stamps (bordered ink chips, not pastel pills; §9.5) ----------------- */
+.stamp{display:inline-block; font-family:var(--font-ui); font-size:12px; font-weight:700;
+  letter-spacing:.09em; text-transform:uppercase; border:1.5px solid; border-radius:var(--r-chip);
+  padding:5px 8px; line-height:1; white-space:nowrap}
+.stamp.useby{color:var(--marigold-ink); border-color:var(--marigold-ink)}
+.stamp.today{color:var(--tomato-ink); border-color:var(--tomato-ink); transform:rotate(-1.5deg)}
+.stamp.done{color:var(--ink-2); border-color:var(--ink-2)}
+
+/* provenance stamps (reused by Trips in S5): SYNC pine · SNAP ink · MAIL dashed */
+.prov{display:inline-block; font-family:var(--font-ui); font-size:11px; font-weight:700;
+  letter-spacing:.11em; text-transform:uppercase; padding:4px 7px; border-radius:var(--r-chip);
+  line-height:1; white-space:nowrap; flex:0 0 auto}
+.prov.sync{color:var(--pine); border:1.5px solid var(--pine)}
+.prov.snap{color:var(--ink); border:1.5px solid var(--ink)}
+.prov.mail{color:var(--ink); border:1.5px dashed var(--ink)}
+
+/* mini action buttons: compact, reserved-space, no reflow on press (§8.4 #3) */
+.mini{font-family:var(--font-ui); font-size:11px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; border:1.4px solid var(--rule); color:var(--ink-2);
+  background:var(--card); border-radius:var(--r-chip); padding:6px 8px; width:100%;
+  min-height:0; cursor:pointer}
+.mini.use{border-color:var(--leaf-ink); color:var(--leaf-ink)}
+.mini.toss{border-color:var(--tomato-ink); color:var(--tomato-ink)}
+.mini:active{background:var(--paper)}
+
+/* ---- generic Today tile-card (flat, hairline; elevation only on overlays) - */
+.tile-card{background:var(--card); border:1px solid var(--rule); border-radius:var(--r-card);
+  padding:14px 15px; margin:0 0 2px}
+[data-action][role="button"]{cursor:pointer}
+
+/* sync strip */
+.chips{display:flex; gap:8px; flex-wrap:wrap}
+.chip{display:flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:12px;
+  border:1px solid var(--rule); border-radius:20px; padding:8px 12px; white-space:nowrap;
+  background:var(--card); color:var(--ink)}
+.chip .d{width:8px; height:8px; border-radius:50%; flex:0 0 auto}
+.chip .d.pine{background:var(--pine)} .chip .d.mar{background:var(--marigold)}
+.chip.reading{color:var(--ink-2)}
+.spin.sm{width:12px; height:12px; border-width:2px}
+.sync-empty{display:flex; align-items:center; gap:12px}
+.sync-empty .sync-ico{flex:0 0 auto; display:grid; place-items:center}
+.sync-empty .sync-txt{flex:1 1 auto; display:flex; flex-direction:column; gap:2px}
+.sync-empty .sync-txt b{font-family:var(--font-ui); font-size:14px; font-weight:600}
+.sync-empty .sync-txt span{font-family:var(--font-mono); font-size:12px; color:var(--ink-2)}
+.empty-art{width:40px; height:40px}
+
+/* review card */
+.rev{display:flex; align-items:center; gap:12px}
+.rev .cnt{font-family:var(--font-display); font-weight:600; font-size:28px; line-height:1; color:var(--tomato-ink); flex:0 0 auto}
+.rev .txt{flex:1 1 auto; min-width:0}
+.rev .txt b{display:block; font-family:var(--font-ui); font-size:14px; font-weight:500}
+.rev .txt span{display:block; font-family:var(--font-mono); font-size:12px; color:var(--ink-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.empty-inline{display:flex; align-items:center; gap:10px}
+.empty-inline .ok-tick{flex:0 0 auto; display:grid; place-items:center}
+
+/* this-week stat block */
+.week .week-hero{font-size:40px; margin:2px 0 4px}
+.week .cap{font-family:var(--font-mono); font-size:12px; color:var(--ink-2)}
+.week .spark{margin-top:10px; display:block}
+
+/* recent trips */
+.trips{padding:2px 15px}
+.trow{display:flex; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--rule)}
+.trow:first-child{border-top:0}
+.trow .store{flex:1 1 auto; min-width:0; font-family:var(--font-ui); font-size:14px; font-weight:500}
+.trow .when{font-family:var(--font-mono); font-size:11px; color:var(--ink-2); margin-top:3px}
+.trow .amt{font-family:var(--font-mono); font-size:14px; font-weight:500; font-variant-numeric:tabular-nums}
+.chan{display:inline-block; font-family:var(--font-ui); font-size:10px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--ink-2); border:1px solid var(--rule); border-radius:var(--r-chip); padding:3px 6px}
+
+/* designed empty states (line-art + dry copy; §9.1 #9) */
+.empty{text-align:center; padding:26px 16px}
+.empty.sm{padding:18px 16px}
+.empty-h{font-family:var(--font-display); font-weight:600; font-size:21px; margin-top:10px}
+.empty-p{font-family:var(--font-ui); font-size:13px; color:var(--ink-2); margin-top:4px}
+
+/* loading skeleton — mirrors the real fixed row heights (§8.5) */
+.urow.sk{grid-template-columns:1fr auto}
+.sk-line{height:12px; border-radius:4px; background:var(--rule); opacity:.6; margin:6px 0}
+.sk-line.tall{height:14px} .sk-line.w40{width:40%} .sk-line.w60{width:60%}
+.sk-line.w70{width:70px} .sk-line.w80{width:80%}
+@keyframes pulse{50%{opacity:.3}}
+.sk-line{animation:pulse 1.2s ease-in-out infinite}

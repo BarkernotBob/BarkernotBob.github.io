@@ -5,7 +5,7 @@ const { bootApp, VIEWPORTS } = require('./support/boot')
 // viewport, in BOTH themes (light + dark, S3 design system), saved to
 // screenshots/ and uploaded as a CI artifact for review.
 
-const VIEWS = ['capture', 'search', 'reports', 'review', 'table', 'settings']
+const VIEWS = ['today', 'capture', 'search', 'reports', 'review', 'table', 'settings']
 const THEMES = ['light', 'dark']
 
 for (const [vpName, viewport] of Object.entries(VIEWPORTS)) {

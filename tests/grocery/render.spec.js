@@ -7,6 +7,7 @@ const { bootApp } = require('./support/boot')
 // fails CI" guarantee.
 
 const VIEWS = [
+  { tab: 'today', ready: '#todayView', assert: 'text=This week' },
   { tab: 'capture', ready: 'text=Snap a receipt', assert: 'text=Recent captures' },
   { tab: 'search', ready: '#sq', assert: 'text=Search items' },
   { tab: 'reports', ready: '#rf', assert: 'text=Spend per store' },
@@ -27,10 +28,10 @@ test.describe('render every view', () => {
   }
 })
 
-test('boot lands on Capture and marks the nav tab active', async ({ page }) => {
+test('boot lands on Today and marks the nav tab active', async ({ page }) => {
   await bootApp(page)
-  await expect(page.locator('text=Snap a receipt')).toBeVisible()
-  await expect(page.locator('nav [data-tab="capture"]')).toHaveClass(/active/)
+  await expect(page.locator('#todayView')).toBeVisible()
+  await expect(page.locator('nav [data-tab="today"]')).toHaveClass(/active/)
 })
 
 test('review badge reflects open flags + due reminders', async ({ page }) => {

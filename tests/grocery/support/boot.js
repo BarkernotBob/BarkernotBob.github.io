@@ -33,11 +33,12 @@ async function bootApp(page, { viewport = VIEWPORTS.mobile, mock: mockOpts = {} 
 
   const mock = await installGitHubMock(page, mockOpts)
   await page.goto(APP_URL)
-  // Boot lands on Capture and runs loadAll(); wait for that first render to
-  // settle before navigating, so a test's nav click doesn't race the boot's
-  // in-flight show('capture') (both would call loadAll and the loser's render
-  // would clobber the winner's). Proper load coordination arrives with S1.
-  await page.getByText('Snap a receipt').waitFor({ state: 'visible' })
+  // S4: boot now lands on TODAY (the default mobile landing) and runs loadAll().
+  // Wait for that first render to settle before navigating, so a test's nav click
+  // doesn't race the boot's in-flight show('today') (both would call loadAll and
+  // the loser's render would clobber the winner's). Other view tests navigate
+  // explicitly with a nav click.
+  await page.locator('#todayView').waitFor({ state: 'visible' })
   return { errors, mock, VIEWPORTS }
 }
 

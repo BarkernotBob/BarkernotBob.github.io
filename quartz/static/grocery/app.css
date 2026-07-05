@@ -178,7 +178,7 @@ nav button{flex:1 1 0; min-width:0; white-space:nowrap}   /* fit the 7th (Today)
 .urow .gutter{display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:96px}
 .mini{font-family:var(--font-ui); font-weight:700; font-size:10px; line-height:1; letter-spacing:.06em;
   text-transform:uppercase; border:1.4px solid var(--rule); color:var(--ink-2); border-radius:6px;
-  padding:5px 8px; background:none}
+  padding:5px 8px; background:none; min-height:0; width:auto}   /* compact chip (mockup); keeps row height gutter-independent so "Used" can't reflow it */
 .mini.use{border-color:var(--leaf-ink); color:var(--leaf-ink)}
 
 /* ink stamps (not pills) */
@@ -224,3 +224,8 @@ nav button{flex:1 1 0; min-width:0; white-space:nowrap}   /* fit the 7th (Today)
 .prov.sync{color:var(--pine); border:1.5px solid var(--pine)}
 .prov.snap{color:var(--ink); border:1.5px solid var(--ink)}
 .prov.mail{color:var(--ink); border:1.5px dashed var(--ink)}
+
+/* "Used" marked in place on Today: dim the row, keep its reserved height so
+   neighbours never shift (§8.4). Full re-render (row gone) waits for next visit. */
+.urow.done{opacity:.5}
+.stamp.done{color:var(--leaf-ink); border-color:var(--leaf-ink)}

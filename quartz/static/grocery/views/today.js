@@ -10,7 +10,10 @@ import { money, esc, todayISO } from '../core/domain.js';
 import { toast } from '../ui/components.js';
 
 const DAY = 86400000;
-const startOfDay = (iso) => Date.parse(iso + 'T00:00:00');
+// Parse calendar dates as UTC midnight so they line up with todayISO() (which is
+// the UTC calendar date) — a local-midnight parse drifts a day off in +/- offset
+// timezones (this-week bucket loses "today", use-by countdown fires a day early).
+const startOfDay = (iso) => Date.parse(iso + 'T00:00:00Z');
 const daysUntil = (iso) => Math.round((startOfDay(iso) - startOfDay(todayISO())) / DAY);
 function fmtDate(iso) {
   if (!iso) return '';
@@ -25,7 +28,7 @@ function weekAgo(n) {
    reminders whose item is still active (matches the Review tab's model). */
 function useUpRows() {
   const rows = (D.reminders || [])
-    .filter((r) => r.status === 'pending')
+    .filter((r) => r.status === 'pending' && r.dueDate)
     .map((r) => ({ r, it: r.itemId ? (D.items || []).find((i) => i.id === r.itemId) : null }))
     .filter((x) => !x.it || x.it.status === 'active')
     .sort((a, b) => (a.r.dueDate || '').localeCompare(b.r.dueDate || ''));
@@ -105,6 +108,10 @@ export function renderToday() {
   const weeks = weekSpends();
   const thisWk = weeks[7],
     lastWk = weeks[6];
+  // "first week tracked" only when there's genuinely no earlier history — a real
+  // $0 last week must still read "vs $0.00", not swallow the comparison.
+  const weekStart = weekAgo(6);
+  const hasPrior = (D.items || []).some((i) => i.purchasedAt && i.purchasedAt < weekStart);
   const recent = receipts
     .filter((r) => r.status !== 'unprocessed') // a still-reading receipt isn't a trip yet
     .sort((a, b) => (b.purchasedAt || b.capturedAt || '').localeCompare(a.purchasedAt || a.capturedAt || ''))
@@ -150,7 +157,7 @@ export function renderToday() {
     <div class="eyebrow">This week</div>
     <div class="tile-card week">
       <div class="figure">${money(thisWk)}</div>
-      <div class="cap">${lastWk ? `vs ${money(lastWk)} last week` : 'first week tracked'} · 8-wk trend</div>
+      <div class="cap">${hasPrior ? `vs ${money(lastWk)} last week` : 'first week tracked'} · 8-wk trend</div>
       ${sparkline(weeks)}
     </div>`;
 
@@ -177,15 +184,25 @@ export const todayActions = {
     const r = (D.reminders || []).find((x) => x.id === t.dataset.id);
     if (!r) return;
     const it = r.itemId ? (D.items || []).find((i) => i.id === r.itemId) : null;
+    // Mark the row used IN PLACE — the row keeps its reserved height and nothing
+    // below shifts (§8.4 "clicking must never reflow the UI"). A full re-render
+    // would drop the row and pull every section up; it only happens on the next
+    // visit to Today (or on commit failure, to restore truth).
+    const row = t.closest('.urow');
+    if (row) {
+      row.classList.add('done');
+      const g = row.querySelector('.gutter');
+      if (g) g.innerHTML = '<span class="stamp done">Used</span>';
+    }
     const deltas = [{ path: FILES.reminders, op: 'setField', id: r.id, fields: { status: 'done' } }];
     if (it) deltas.push({ path: FILES.items, op: 'setField', id: it.id, fields: { status: 'consumed' } });
     try {
       await commitFiles(deltas, 'Mark item used (Today)');
       toast('Marked used');
       updateBadges();
-      renderToday();
     } catch (e) {
       toast(String(e.message || e));
+      renderToday(); // restore the true state on failure
     }
   },
 };

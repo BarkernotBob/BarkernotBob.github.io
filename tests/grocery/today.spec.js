@@ -25,15 +25,23 @@ test('Today composes use-up, sync strip, week spend, and recent trips', async ({
   expect(errors, errors.join(' | ')).toEqual([])
 })
 
-test('marking a use-up item "Used" consumes it and drops the row', async ({ page }) => {
+test('marking a use-up item "Used" consumes it in place, no reflow', async ({ page }) => {
   const { mock, errors } = await bootApp(page)
   const main = page.locator('#main')
   await expect(main.getByText('Whole milk')).toBeVisible()
 
-  // Click "Used" on the first (overdue) row → milk.
+  // A section below the use-up list must not move when "Used" is tapped (§8.4).
+  const week = main.locator('.week')
+  const before = await week.boundingBox()
+
   await main.locator('.urow', { hasText: 'Whole milk' }).locator('.mini.use').click()
   await expect(page.locator('.toast')).toContainText('Marked used')
-  await expect(main.getByText('Whole milk')).toHaveCount(0)
+
+  // Row stays (reserved height), marked used in place — not re-rendered out.
+  await expect(main.locator('.urow.done')).toBeVisible()
+  await expect(main.getByText('Whole milk')).toBeVisible()
+  const after = await week.boundingBox()
+  expect(Math.abs(after.y - before.y), 'week tile shifted on Used tap').toBeLessThanOrEqual(1)
 
   // The commit landed: the item is consumed and its reminder is done.
   const items = JSON.parse(mock.readFile('db/items.json'))

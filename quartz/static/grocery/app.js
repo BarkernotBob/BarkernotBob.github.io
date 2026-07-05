@@ -486,7 +486,7 @@ async function afterSignIn(){
   if(isConfigured()){
     try{ await ensureInitialized(); D={}; for(const k in DB) delete DB[k]; await loadAll(); }catch(e){}
   }
-  show('capture');
+  show('today');   // land on the home screen, consistent with boot
 }
 
 /* =========================================================================
@@ -528,7 +528,7 @@ async function saveSetup(){
     D={}; for(const k in DB) delete DB[k];
     await loadAll();
     toast('Connected! 🎉');
-    show('capture');
+    show('today');
   }catch(e){ toast(String(e.message||e)); }
 }
 async function ensureInitialized(){

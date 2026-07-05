@@ -1,0 +1,154 @@
+/* =============================================================================
+   Grocery Tracker — app chrome & components in the "Grocer's Ledger" system
+   (PRD §9, slice S3). Old view content inside new chrome: every S0–S2 view keeps
+   working; only the look changes. Warm paper ground, hairline rules, ink stamps
+   (not pastel pills), mono tabular figures, Fraunces hero numbers. Tokens live in
+   tokens.css — this file must reference var(--*) only, never raw hex (C-15).
+============================================================================= */
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font-ui);
+  background:var(--paper); color:var(--ink);
+  -webkit-text-size-adjust:100%; -webkit-font-smoothing:antialiased;
+  padding-bottom:72px; line-height:1.47;
+  /* Kill double-tap-to-zoom (FR-18) while keeping pinch-zoom & panning. */
+  touch-action:manipulation;
+}
+
+/* ---- header: paper ground + ink Fraunces wordmark (matches the mockup) ---- */
+header{
+  position:sticky; top:0; z-index:20;
+  background:var(--paper); color:var(--ink);
+  padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px) 12px calc(env(safe-area-inset-left) + 16px);
+  border-bottom:1px solid var(--rule);
+  display:flex; align-items:center; justify-content:space-between;
+}
+header h1{font-family:var(--font-display); font-size:21px; margin:0; font-weight:600; letter-spacing:-.01em}
+header .who{font-family:var(--font-mono); font-size:11px; color:var(--ink-2)}
+
+main{padding:16px calc(env(safe-area-inset-right) + 16px) 16px calc(env(safe-area-inset-left) + 16px); max-width:760px; margin:0 auto}
+
+/* ---- cards: flat, hairline rule, one paper-tone step off ground (§9.4) ---- */
+.card{
+  background:var(--card); border:1px solid var(--rule);
+  border-radius:var(--r-card); padding:16px; margin:0 0 14px;
+}
+.card h2{font-size:17px; font-weight:600; margin:0 0 10px; letter-spacing:-.01em}
+.muted{color:var(--ink-2)}
+.small{font-size:13.5px}
+label{display:block; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); margin:12px 0 5px}
+
+/* ---- inputs: paper-warm, hairline, ≥16px (FR-18 no-zoom floor) ------------ */
+input,select,textarea{
+  width:100%; padding:11px 12px; border:1px solid var(--rule); border-radius:8px;
+  font-size:17px; font-family:var(--font-ui); background:var(--card); color:var(--ink);
+}
+input::placeholder,textarea::placeholder{color:var(--ink-2); opacity:.75}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,
+[data-action]:focus-visible{outline:2px solid var(--pine); outline-offset:2px}
+
+/* ---- buttons: primary solid pine; ghost/danger outline (§9.5 pattern 3) --- */
+button{
+  font-size:15px; font-weight:500; border:1.5px solid transparent; border-radius:8px;
+  padding:11px 15px; background:var(--pine); color:var(--on-pine); cursor:pointer; width:100%;
+  font-family:var(--font-ui); min-height:44px;
+}
+button.sec{background:transparent; color:var(--ink); border-color:var(--rule)}
+button.warn{background:var(--marigold); color:var(--ink)}
+button.danger{background:transparent; color:var(--tomato-ink); border-color:var(--tomato-ink)}
+button.link{background:none; color:var(--pine); width:auto; padding:6px 0; font-weight:600; border:0; min-height:0}
+button:disabled{opacity:.5}
+a{color:var(--pine)}
+
+.row{display:flex; gap:10px} .row>*{flex:1}
+
+/* ---- stamps: bordered uppercase ink chips, NOT pastel pills (§9.5) -------- */
+.pill{
+  display:inline-block; font-family:var(--font-ui); font-size:12px; font-weight:700;
+  letter-spacing:.09em; text-transform:uppercase; padding:4px 8px; border-radius:var(--r-chip);
+  border:1.5px solid var(--ink-2); color:var(--ink-2); background:transparent; line-height:1;
+}
+.pill.warn{border-color:var(--marigold-ink); color:var(--marigold-ink)}
+.pill.ok{border-color:var(--leaf-ink); color:var(--leaf-ink)}
+.pill.gray{border-color:var(--ink-2); color:var(--ink-2)}
+.pill.hsa{border-color:var(--teal); color:var(--teal)}
+
+.item{border-top:1px solid var(--rule); padding:11px 0}
+.item:first-child{border-top:0}
+.flex{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.grp{cursor:pointer}
+.grp .body{display:none; margin-top:8px}
+.grp.open .body{display:block}
+
+/* ---- bottom nav: card ground, pine active, safe-area padded --------------- */
+nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:30;
+  background:var(--card); border-top:1px solid var(--rule);
+  display:flex; padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+}
+nav button{
+  background:none; color:var(--ink-2); border-radius:0; font-size:10px; font-weight:700;
+  letter-spacing:.03em; padding:8px 2px; display:flex; flex-direction:column; align-items:center;
+  gap:3px; min-height:0;
+}
+nav button .ic{font-size:20px; line-height:1}
+nav button.active{color:var(--pine)}
+
+/* absolutely-positioned count badge — never reflows its neighbours (§8.4) */
+.badge{
+  position:absolute; top:4px; margin-left:18px; background:var(--tomato); color:#fff;
+  font-family:var(--font-ui); font-size:10px; font-weight:700; border-radius:999px; padding:0 5px;
+}
+
+.preview{width:100%; border-radius:8px; border:1px solid var(--rule); margin-top:10px; max-height:360px; object-fit:contain; background:var(--paper)}
+.hidden{display:none!important}
+
+/* ---- overlays: the one place elevation exists (§9.4) --------------------- */
+.modal-ov{position:fixed; inset:0; background:rgba(28,26,22,.55); z-index:70; display:flex; align-items:center; justify-content:center; padding:18px}
+.modal-card{background:var(--card); border:1px solid var(--rule); border-radius:var(--r-card); padding:18px; max-width:420px; width:100%; box-shadow:var(--shadow)}
+.modal-card h2{margin:0 0 4px; font-size:17px}
+.modal-card button{width:100%; margin-bottom:8px}
+.modal-card .row{margin-bottom:0}
+.modal-card .row button{margin-bottom:0}
+
+/* ---- ledger table: mono figures, reserved sort-arrow slot ---------------- */
+.tablewrap{overflow-x:auto; overflow-y:auto; margin-top:8px; border:1px solid var(--rule); border-radius:8px}
+.tablewrap table{width:100%; table-layout:fixed; border-collapse:collapse}
+.tablewrap th,.tablewrap td{padding:6px 5px; font-size:11px; word-break:break-word; overflow-wrap:anywhere; vertical-align:top}
+.tablewrap thead th{background:var(--paper); color:var(--ink-2)}
+.tablewrap td{font-family:var(--font-mono)}
+.tablewrap th.sortable{cursor:pointer; user-select:none; line-height:1.2; text-transform:uppercase; letter-spacing:.06em}
+.sortarrow{display:inline-block; width:11px; text-align:left; font-family:var(--font-ui)}
+.tablewrap th input{width:100%; min-width:0; box-sizing:border-box; font-size:16px; padding:2px 4px; font-weight:400; text-transform:none; letter-spacing:0}
+
+/* ---- toast: ink card, dry voice (§9.7) ----------------------------------- */
+.toast{
+  position:fixed; left:16px; right:16px; bottom:84px; background:var(--ink); color:var(--paper);
+  padding:12px 14px; border-radius:8px; text-align:center; z-index:50; opacity:0;
+  transition:opacity .14s ease-out; pointer-events:none; max-width:728px; margin:0 auto;
+  font-size:14px;
+}
+.toast.show{opacity:.98}
+
+/* ---- receipt figures: mono tabular; one Fraunces hero per screen (§9.3) --- */
+.kv{display:flex; justify-content:space-between; padding:4px 0; font-size:14px}
+.kv b{font-weight:600; font-family:var(--font-mono); font-variant-numeric:tabular-nums}
+.big{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:28px; font-weight:500}
+.hero-figure{font-family:var(--font-display); font-weight:600; font-size:44px; line-height:1; letter-spacing:-.01em}
+
+table{width:100%; border-collapse:collapse; font-size:14px}
+td,th{text-align:left; padding:7px 4px; border-bottom:1px solid var(--rule)}
+th{font-size:12px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.08em; font-weight:700}
+td.n,th.n{text-align:right}
+td.n{font-family:var(--font-mono); font-variant-numeric:tabular-nums}
+
+.spin{display:inline-block; width:16px; height:16px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:r .7s linear infinite; vertical-align:-3px}
+@keyframes r{to{transform:rotate(360deg)}}
+details summary{cursor:pointer; font-weight:600; font-size:14px}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important; transition-duration:.001ms!important}
+}

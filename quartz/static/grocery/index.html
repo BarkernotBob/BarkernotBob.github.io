@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#2f7d4f" />
+<meta name="theme-color" content="#F7F2E9" />
+<!-- Apply the saved theme BEFORE first paint so there is no light/dark flash.
+     Plain script (no on* handler) — reads localStorage only. System preference is
+     the default (no attribute); a manual toggle stamps data-theme on <html>. -->
+<script>(function(){try{var t=localStorage.getItem('gt_theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Grocery Tracker</title>
 <!-- PWA (S2): installable, standalone, iOS home-screen. No maximum-scale /
      user-scalable in the viewport above — pinch-zoom stays available; double-tap
@@ -15,102 +19,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Grocery Tracker" />
-<style>
-  :root{
-    --green:#2f7d4f; --green-d:#256340; --bg:#f5f6f4; --card:#fff;
-    --ink:#1f2421; --muted:#6b736d; --line:#e4e7e3; --warn:#b4690e; --danger:#b3261e;
-    --shadow:0 1px 3px rgba(0,0,0,.08);
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%;
-    padding-bottom:72px; line-height:1.45;
-    /* Kill double-tap-to-zoom (FR-18) while keeping pinch-zoom & panning. */
-    touch-action:manipulation;
-  }
-  header{
-    position:sticky; top:0; z-index:20; background:var(--green); color:#fff;
-    padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px) 12px calc(env(safe-area-inset-left) + 16px);
-    box-shadow:var(--shadow);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
-  header .who{font-size:12px;opacity:.9}
-  main{padding:16px calc(env(safe-area-inset-right) + 16px) 16px calc(env(safe-area-inset-left) + 16px);max-width:760px;margin:0 auto}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
-  .card h2{font-size:16px;margin:0 0 10px}
-  .muted{color:var(--muted)}
-  .small{font-size:13px}
-  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
-  input,select,textarea{
-    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-    font-size:16px;background:#fff;color:var(--ink)
-  }
-  button{
-    font-size:15px;font-weight:600;border:0;border-radius:10px;padding:12px 14px;
-    background:var(--green);color:#fff;cursor:pointer;width:100%
-  }
-  button.sec{background:#eef1ee;color:var(--ink);border:1px solid var(--line)}
-  button.warn{background:var(--warn)} button.danger{background:var(--danger)}
-  button.link{background:none;color:var(--green);width:auto;padding:6px 0;font-weight:600}
-  button:disabled{opacity:.5}
-  .row{display:flex;gap:10px} .row>*{flex:1}
-  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
-  .pill.warn{background:#fbecd6;color:#7a4708}
-  .pill.ok{background:#dcefe2;color:#1d5e39}
-  .pill.gray{background:#eceee9;color:#5a615b}
-  .pill.hsa{background:#e2e8fb;color:#2a3a83}
-  .item{border-top:1px solid var(--line);padding:10px 0}
-  .item:first-child{border-top:0}
-  .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .grp{cursor:pointer}
-  .grp .body{display:none;margin-top:8px}
-  .grp.open .body{display:block}
-  nav{
-    position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
-    display:flex;padding-bottom:env(safe-area-inset-bottom);
-    padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)
-  }
-  nav button{background:none;color:var(--muted);border-radius:0;font-size:11px;font-weight:600;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
-  nav button .ic{font-size:20px;line-height:1}
-  nav button.active{color:var(--green)}
-  .badge{position:absolute;top:4px;margin-left:18px;background:var(--danger);color:#fff;font-size:10px;border-radius:999px;padding:0 5px;font-weight:700}
-  .preview{width:100%;border-radius:10px;border:1px solid var(--line);margin-top:10px;max-height:360px;object-fit:contain;background:#fafafa}
-  .hidden{display:none!important}
-  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:center;justify-content:center;padding:18px}
-  .modal-card{background:var(--card);border-radius:14px;padding:18px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-  .modal-card h2{margin:0 0 4px;font-size:17px}
-  .modal-card button{width:100%;margin-bottom:8px}
-  .modal-card .row{margin-bottom:0}
-  .modal-card .row button{margin-bottom:0}
-  .tablewrap{overflow-x:hidden;overflow-y:auto;margin-top:8px;border:1px solid var(--line);border-radius:10px}
-  .tablewrap table{width:100%;table-layout:fixed;border-collapse:collapse}
-  .tablewrap th,.tablewrap td{padding:6px 5px;font-size:11px;word-break:break-word;overflow-wrap:anywhere;vertical-align:top}
-  .tablewrap thead th{background:#f3f5f2}
-  .tablewrap th.sortable{cursor:pointer;user-select:none;line-height:1.2}
-  /* Reserve a fixed slot for the sort arrow so sorting (arrow appears / moves
-     between columns) never rewraps a header and shifts the filter row — the
-     owner's no-reflow rule. */
-  .sortarrow{display:inline-block;width:11px;text-align:left}
-  /* 16px keeps iOS from zooming on focus (FR-18); tight padding keeps the dense
-     filter row compact despite the larger text. */
-  .tablewrap th input{width:100%;min-width:0;box-sizing:border-box;font-size:16px;padding:2px 4px;font-weight:400;text-transform:none;letter-spacing:0}
-  .toast{position:fixed;left:16px;right:16px;bottom:84px;background:#1f2421;color:#fff;padding:12px 14px;border-radius:10px;text-align:center;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:728px;margin:0 auto}
-  .toast.show{opacity:.97}
-  .kv{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
-  .kv b{font-weight:650}
-  .big{font-size:28px;font-weight:750}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  td,th{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line)}
-  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-  td.n,th.n{text-align:right}
-  a{color:var(--green)}
-  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r .7s linear infinite;vertical-align:-3px}
-  @keyframes r{to{transform:rotate(360deg)}}
-  details summary{cursor:pointer;font-weight:600;font-size:14px}
-</style>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="app.css" />
 </head>
 <body>
 <header>
@@ -161,7 +71,23 @@ const LS = {
   set login(v){ localStorage.setItem('gt_login', v) },
   get method(){ return localStorage.getItem('gt_method') || '' },    // 'oauth' | 'token'
   set method(v){ localStorage.setItem('gt_method', v) },
+  get theme(){ return localStorage.getItem('gt_theme') || 'system' }, // 'system' | 'light' | 'dark'
+  set theme(v){ if(v==='system') localStorage.removeItem('gt_theme'); else localStorage.setItem('gt_theme', v) },
 };
+
+/* Apply the chosen theme (§9.2). 'system' clears data-theme so the OS preference
+   (prefers-color-scheme) drives tokens.css; 'light'/'dark' stamp <html data-theme>
+   which WINS both directions. Keep <meta theme-color> in step with the ground. */
+function applyTheme(){
+  const t = LS.theme;
+  const root = document.documentElement;
+  if(t==='light' || t==='dark') root.setAttribute('data-theme', t);
+  else root.removeAttribute('data-theme');
+  const mc = getComputedStyle(root).getPropertyValue('--theme-color').trim();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta && mc) meta.setAttribute('content', mc);
+}
+function setTheme(v){ LS.theme = v; applyTheme(); if(CUR==='settings') renderSettings(); }
 
 const API = 'https://api.github.com';
 const DB = {}; // in-memory read cache: { 'db/items.json': {value, sha:<blobSha>}, ... }
@@ -224,6 +150,7 @@ const CLICK_ACTIONS = {
   testConn,
   saveSettings,
   saveConfig,
+  setTheme:        t => setTheme(t.dataset.theme),
   signOut,
 };
 const INPUT_ACTIONS = {
@@ -560,7 +487,7 @@ async function show(tab){
   CUR=tab;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   if(!isConfigured() && tab!=='settings'){ return renderSetup(); }
-  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:#2f7d4f;border-top-color:transparent"></span> Loading…</div>';
+  const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:var(--pine);border-top-color:transparent"></span> Loading…</div>';
   try{
     if(!isConfigured()){ renderSetup(); return; }
     if(!D.items) await loadAll(); // first load
@@ -802,7 +729,7 @@ function runSearch(){
         ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" data-action="viewReceipt" data-id="${esc(i.receiptId)}"`:''}>
           <div><div>${esc(i.name||i.rawName)} <span class="small muted">${esc(i.rawName&&i.rawName!==i.name?'('+i.rawName+')':'')}</span></div>
             <div class="small muted">${esc(i.purchasedAt||'')} · ${esc(i.store||'')} · ${money(i.price)} ${i.qty?('· qty '+i.qty):''}
-            ${i.status==='thrown_away'?'· <span style="color:var(--danger)">thrown away</span>':i.status==='consumed'?'· used up':''}
+            ${i.status==='thrown_away'?'· <span style="color:var(--tomato-ink)">thrown away</span>':i.status==='consumed'?'· used up':''}
             ${i.useByDate?('· use by '+i.useByDate):''}</div></div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
             ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" data-action="markWaste" data-id="${esc(i.id)}">🗑 Waste</button>`:''}
@@ -847,7 +774,7 @@ function viewReceipt(receiptId){
   const head = r ? `${esc(r.store||'Receipt')} · ${esc((r.purchasedAt||r.capturedAt||'').slice(0,10))}` : 'Receipt';
   const rows = items.length ? items.map(i=>`<div class="item">
       <div class="flex"><div>${esc(i.name||i.rawName||'Item')} ${i.qty?`<span class="small muted">×${esc(i.qty)}</span>`:''}</div><div><b>${money(i.price)}</b></div></div>
-      <div class="small muted">${esc(i.rawName||'')}${i.category?(' · '+esc(i.category)):''}${i.status==='thrown_away'?' · <span style="color:var(--danger)">thrown away</span>':''}${i.useByDate?(' · use by '+esc(i.useByDate)):''}</div>
+      <div class="small muted">${esc(i.rawName||'')}${i.category?(' · '+esc(i.category)):''}${i.status==='thrown_away'?' · <span style="color:var(--tomato-ink)">thrown away</span>':''}${i.useByDate?(' · use by '+esc(i.useByDate)):''}</div>
     </div>`).join('') : '<p class="muted small">No line items recorded for this receipt.</p>';
   const totals = r ? `${r.subtotal!=null?`<div class="kv"><span>Subtotal</span><b>${money(r.subtotal)}</b></div>`:''}${r.tax!=null?`<div class="kv"><span>Tax</span><b>${money(r.tax)}</b></div>`:''}${r.total!=null?`<div class="kv"><span>Total</span><b>${money(r.total)}</b></div>`:''}` : '';
   modal(`<h2 style="margin:0 0 2px">🧾 ${head}</h2>
@@ -991,7 +918,7 @@ function runReports(){
   const waste=D.waste.filter(w=>inRange(w.thrownAt,from,to)); const wasteCost=waste.reduce((s,w)=>s+(+w.estCost||0),0);
 
   $('#rout').innerHTML = `
-  <div class="card"><div class="small muted">Total spend ${esc(from)} → ${esc(to)}</div><div class="big">${money(total)}</div>
+  <div class="card"><div class="small muted">Total spend ${esc(from)} → ${esc(to)}</div><div class="big hero-figure">${money(total)}</div>
     <div class="small muted">${items.length} items across ${storeRows.length} store(s)</div></div>
 
   <div class="card"><h2>Spend per store</h2>
@@ -1126,7 +1053,7 @@ function renderRem(r){
   const due=r.dueDate||''; const overdue=due && due<=todayISO();
   return `<div class="item">
     <div class="flex"><div><b>${esc(r.name||'Item')}</b>
-      <div class="small ${overdue?'':'muted'}" style="${overdue?'color:var(--warn);font-weight:600':''}">use by ${esc(due)}${overdue?' — check now':''}</div></div></div>
+      <div class="small ${overdue?'':'muted'}" style="${overdue?'color:var(--marigold-ink);font-weight:600':''}">use by ${esc(due)}${overdue?' — check now':''}</div></div></div>
     <div class="row" style="margin-top:6px">
       <button class="sec" data-action="remAction" data-id="${esc(r.id)}" data-remaction="kept">Still good</button>
       <button class="sec" data-action="remAction" data-id="${esc(r.id)}" data-remaction="consumed">Used it</button>
@@ -1173,7 +1100,15 @@ function renderSettings(){
     <label>Access key (token)</label>
     <input id="set_token" type="password" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
     <div class="row" style="margin-top:10px"><button class="sec" data-action="testConn">Test connection</button><button data-action="saveSettings">Save</button></div>
-    <button class="link danger" style="color:var(--danger)" data-action="signOut">Sign out / forget key on this device</button>
+    <button class="link" style="color:var(--tomato-ink)" data-action="signOut">Sign out / forget key on this device</button>
+  </div>
+  <div class="card">
+    <h2>Appearance</h2>
+    <label>Theme</label>
+    <div class="row" role="group" aria-label="Theme">
+      ${['system','light','dark'].map(t=>`<button class="${LS.theme===t?'':'sec'}" aria-pressed="${LS.theme===t}" data-action="setTheme" data-theme="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
+    </div>
+    <p class="small muted" style="margin:8px 0 0">System follows your phone's light/dark setting. Your choice is remembered on this device.</p>
   </div>
   <div class="card">
     <h2>📱💻 Using more than one device</h2>
@@ -1227,6 +1162,7 @@ function registerSW(){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 window.addEventListener('load', async ()=>{
+  applyTheme();   // sync <meta theme-color> to the resolved theme (data-theme was set pre-paint)
   registerSW();
   // Handle the "back from GitHub sign-in" return first; otherwise show the app.
   const came = await handleOAuthRedirect();

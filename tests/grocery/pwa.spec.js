@@ -38,7 +38,9 @@ test('apple-touch-icon + web-app-capable meta are present', async ({ page }) => 
   expect(await page.getAttribute('link[rel="apple-touch-icon"]', 'href')).toBe('icons/apple-touch-icon.png')
   expect(await page.getAttribute('meta[name="apple-mobile-web-app-capable"]', 'content')).toBe('yes')
   expect(await page.getAttribute('meta[name="mobile-web-app-capable"]', 'content')).toBe('yes')
-  expect(await page.getAttribute('meta[name="theme-color"]', 'content')).toBe('#2f7d4f')
+  // S3: theme-color now tracks the "Grocer's Ledger" --paper ground (light default),
+  // updated by applyTheme() to match the active theme.
+  expect((await page.getAttribute('meta[name="theme-color"]', 'content')).toUpperCase()).toBe('#F7F2E9')
 })
 
 test('viewport allows zoom (no maximum-scale / user-scalable) but kills double-tap', async ({ page }) => {

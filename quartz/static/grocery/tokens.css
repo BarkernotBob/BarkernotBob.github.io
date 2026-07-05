@@ -1,0 +1,99 @@
+/* =============================================================================
+   Grocery Tracker — "Grocer's Ledger" design tokens (PRD §9.2–§9.4, slice S3).
+   Approved from grocery-tool/design/today-mockup.html. Colors are the signed-off
+   mockup values EXCEPT dark --tomato-ink, lightened for WCAG AA (see note below).
+
+   Theme resolution (last-wins):
+     1. :root                              -> light ("Paper") default
+     2. @media (prefers-color-scheme:dark) -> dark ("After Hours") when the OS asks
+     3. :root[data-theme="dark"|"light"]   -> manual toggle, WINS both directions
+   The tests/grocery/design-tokens + contrast specs are the authority on these
+   values — regressions to system-font / white-card defaults fail CI.
+
+   Self-hosted fonts (no external requests — offline via the S2 service worker):
+   latin WOFF2 extracted from the mockup, ~100 KB total (≤180 KB budget, §9.3).
+============================================================================= */
+
+/* ---- self-hosted typefaces ------------------------------------------------ */
+@font-face{
+  font-family:'Archivo'; font-style:normal; font-weight:400 700; font-display:swap;
+  src:url(fonts/archivo-400-700.woff2) format('woff2');
+}
+@font-face{
+  font-family:'Fraunces'; font-style:normal; font-weight:600; font-display:swap;
+  src:url(fonts/fraunces-600.woff2) format('woff2');
+}
+@font-face{
+  font-family:'IBM Plex Mono'; font-style:normal; font-weight:400; font-display:swap;
+  src:url(fonts/ibm-plex-mono-400.woff2) format('woff2');
+}
+@font-face{
+  font-family:'IBM Plex Mono'; font-style:normal; font-weight:500; font-display:swap;
+  src:url(fonts/ibm-plex-mono-500.woff2) format('woff2');
+}
+
+/* ---- light ("Paper") — default ------------------------------------------- */
+:root{
+  --paper:#F7F2E9; --card:#FFFDF7; --ink:#26221C; --ink-2:#6B6354;
+  --rule:#E6DECD; --rule-dash:#D8CDB6;
+  --pine:#1E4D3B; --leaf:#4C8A54; --leaf-tint:#E7EFE3; --leaf-ink:#35693E;
+  --marigold:#D9A514; --marigold-ink:#7A5D08;
+  --tomato:#C4451C; --tomato-ink:#A93B15;
+  --teal:#2E6E73; --on-pine:#FFFDF7;
+
+  /* type (§9.3) */
+  --font-ui:'Archivo',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  /* space scale — 4px base (§9.4) */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-6:24px; --sp-8:32px; --sp-12:48px; --sp-16:64px;
+
+  /* shape (§9.4) */
+  --r-chip:6px; --r-card:10px; --r-flat:0;
+
+  /* elevation — flat by default; shadow only on overlays (§9.4) */
+  --shadow:0 12px 32px rgba(38,34,28,.18);
+
+  --theme-color:#F7F2E9;
+  color-scheme:light;
+}
+
+/* ---- dark ("After Hours") — system preference ---------------------------- */
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#1C1A16; --card:#26231D; --ink:#EDE6D6; --ink-2:#A89D89;
+    --rule:#3A352B; --rule-dash:#4A4234;
+    --pine:#7FB08F; --leaf:#6FAF78; --leaf-tint:#243128; --leaf-ink:#6FAF78;
+    --marigold:#E0B23F; --marigold-ink:#E0B23F;
+    --tomato:#D0603A; --tomato-ink:#D67453; /* lightened from #D0603A: 4.04→4.84:1 on --card (AA) */
+    --teal:#5FA3A8; --on-pine:#1C1A16;
+    --shadow:0 12px 32px rgba(0,0,0,.5);
+    --theme-color:#1C1A16;
+    color-scheme:dark;
+  }
+}
+
+/* ---- manual override — WINS over system in both directions --------------- */
+:root[data-theme="dark"]{
+  --paper:#1C1A16; --card:#26231D; --ink:#EDE6D6; --ink-2:#A89D89;
+  --rule:#3A352B; --rule-dash:#4A4234;
+  --pine:#7FB08F; --leaf:#6FAF78; --leaf-tint:#243128; --leaf-ink:#6FAF78;
+  --marigold:#E0B23F; --marigold-ink:#E0B23F;
+  --tomato:#D0603A; --tomato-ink:#D67453;
+  --teal:#5FA3A8; --on-pine:#1C1A16;
+  --shadow:0 12px 32px rgba(0,0,0,.5);
+  --theme-color:#1C1A16;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --paper:#F7F2E9; --card:#FFFDF7; --ink:#26221C; --ink-2:#6B6354;
+  --rule:#E6DECD; --rule-dash:#D8CDB6;
+  --pine:#1E4D3B; --leaf:#4C8A54; --leaf-tint:#E7EFE3; --leaf-ink:#35693E;
+  --marigold:#D9A514; --marigold-ink:#7A5D08;
+  --tomato:#C4451C; --tomato-ink:#A93B15;
+  --teal:#2E6E73; --on-pine:#FFFDF7;
+  --shadow:0 12px 32px rgba(38,34,28,.18);
+  --theme-color:#F7F2E9;
+  color-scheme:light;
+}

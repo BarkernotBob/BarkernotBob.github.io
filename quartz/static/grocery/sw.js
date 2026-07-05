@@ -4,10 +4,16 @@
    IndexedDB snapshot (data layer v2, S1). It deliberately does NOT touch
    api.github.com — those requests pass straight through, and when offline the app
    falls back to its IDB snapshot on its own. */
-const VERSION = 'gt-shell-v1'
+const VERSION = 'gt-shell-v2'
 const SHELL = [
   'index.html',
   'manifest.webmanifest',
+  'tokens.css',
+  'app.css',
+  'fonts/archivo-400-700.woff2',
+  'fonts/fraunces-600.woff2',
+  'fonts/ibm-plex-mono-400.woff2',
+  'fonts/ibm-plex-mono-500.woff2',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',

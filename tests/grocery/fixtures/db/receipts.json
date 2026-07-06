@@ -30,5 +30,31 @@
     "currency": "USD",
     "itemIds": [],
     "notes": ""
+  },
+  {
+    "id": "r_wmt_0003",
+    "photo": null,
+    "source": "extension",
+    "retailer": "walmart",
+    "orderId": "1234567890",
+    "orderKey": "walmart:1234567890",
+    "channel": "delivery",
+    "capturedAt": "2026-06-28T18:30:00Z",
+    "capturedBy": "Sync",
+    "status": "processed",
+    "store": "Walmart",
+    "storeId": "walmart",
+    "storeNumber": "1195",
+    "purchasedAt": "2026-06-28",
+    "orderedAt": "2026-06-28T15:00:00Z",
+    "fulfilledAt": "2026-06-28T18:00:00Z",
+    "subtotal": 5.40,
+    "tax": 0.32,
+    "fees": 2.95,
+    "total": 8.67,
+    "currency": "USD",
+    "itemIds": ["i_wmt_1001", "i_wmt_1002"],
+    "notes": "",
+    "rawPayload": "receipts/orders/walmart-1234567890.json"
   }
 ]

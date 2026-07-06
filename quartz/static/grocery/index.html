@@ -31,7 +31,8 @@
   <symbol id="ic-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18l-1.6 10.2a2 2 0 0 1-2 1.8H6.6a2 2 0 0 1-2-1.8L3 8Z"/><path d="M3 8l2.5-4.5M21 8l-2.5-4.5M8.5 12v4M12 12v4M15.5 12v4"/></symbol>
   <symbol id="ic-today" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6M6 10v9h12v-9"/></symbol>
   <symbol id="ic-capture" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4V8Z"/><circle cx="12" cy="13" r="3.2"/></symbol>
-  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="ic-pantry" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5 12 4l8 4.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8.5Z"/><path d="M4 9.5h16M9 13h6"/></symbol>
+  <symbol id="ic-trips" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21Z"/><path d="M9 8h6M9 12h4"/></symbol>
   <symbol id="ic-reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-7"/></symbol>
   <symbol id="ic-review" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="15" rx="1.5"/><path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 12.5l2.2 2.2L15.5 10"/></symbol>
   <symbol id="ic-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="1"/><path d="M4 10h16M4 14.5h16M12 5v14"/></symbol>
@@ -47,8 +48,9 @@
 
 <nav id="nav">
   <button data-tab="today" data-action="show" data-arg="today"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-today"></use></svg></span>Today</button>
+  <button data-tab="pantry" data-action="show" data-arg="pantry"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-pantry"></use></svg></span>Pantry</button>
   <button data-tab="capture" data-action="show" data-arg="capture"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-capture"></use></svg></span>Capture</button>
-  <button data-tab="search" data-action="show" data-arg="search"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-search"></use></svg></span>Search</button>
+  <button data-tab="trips" data-action="show" data-arg="trips"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-trips"></use></svg></span>Trips</button>
   <button data-tab="reports" data-action="show" data-arg="reports"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-reports"></use></svg></span>Reports</button>
   <button data-tab="review" data-action="show" data-arg="review"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-review"></use></svg></span>Review<span id="reviewBadge" class="badge hidden">0</span></button>
   <button data-tab="table" data-action="show" data-arg="table"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-table"></use></svg></span>Table</button>

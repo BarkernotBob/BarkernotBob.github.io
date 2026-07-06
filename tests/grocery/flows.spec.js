@@ -29,7 +29,7 @@ test('table column filter narrows rows', async ({ page }) => {
   await page.click('nav [data-tab="table"]')
   await page.fill('#ttable input[data-f="name"]', 'Bananas')
   await expect(page.locator('#tbody tr')).toHaveCount(1)
-  await expect(page.locator('#tcount')).toContainText('1 of 4')
+  await expect(page.locator('#tcount')).toContainText('1 of 6')
 })
 
 test('reports total updates when the date range changes', async ({ page }) => {

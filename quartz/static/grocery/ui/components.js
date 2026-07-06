@@ -45,6 +45,37 @@ export function confirmModal(message, okLabel = 'OK', danger = false) {
   ).then((v) => v === 'yes');
 }
 
+/* Bottom sheet (S5) — the "sheet model" for Pantry group drill-in and Trip
+   detail. An OVERLAY (position:fixed), so opening it never reflows the list
+   behind it (§8.4). Content uses the same data-action delegation as the rest of
+   the app, so a view's sheet buttons resolve through its *Actions registry.
+   Returns { el, close, setBody } — setBody swaps the .sheet-body in place (used
+   after an in-sheet mutation, e.g. marking a purchase wasted). */
+export function openSheet(innerHtml) {
+  const o = el('div', { class: 'sheet-ov' });
+  o.innerHTML = `<div class="sheet-card" role="dialog" aria-modal="true"><span class="sheet-grip" aria-hidden="true"></span>${innerHtml}</div>`;
+  const close = () => {
+    if (o._done) return;
+    o._done = true;
+    o.classList.remove('in');
+    setTimeout(() => o.remove(), 180);
+  };
+  o.addEventListener('click', (e) => {
+    if (e.target === o) close();
+  });
+  o.querySelectorAll('[data-sheet-close]').forEach((b) => b.addEventListener('click', close));
+  document.body.appendChild(o);
+  requestAnimationFrame(() => o.classList.add('in'));
+  return {
+    el: o,
+    close,
+    setBody(html) {
+      const b = o.querySelector('.sheet-body');
+      if (b) b.innerHTML = html;
+    },
+  };
+}
+
 /* Field-aware input attrs (FR-18): numeric flags get a decimal keypad, date
    flags a native date picker, so the owner isn't typing digits on a QWERTY. */
 export function fixInputAttrs(field) {

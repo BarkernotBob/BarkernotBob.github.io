@@ -9,7 +9,8 @@ const { bootApp } = require('./support/boot')
 const VIEWS = [
   { tab: 'today', ready: 'text=This week', assert: 'text=Recent trips' },
   { tab: 'capture', ready: 'text=Snap a receipt', assert: 'text=Recent captures' },
-  { tab: 'search', ready: '#sq', assert: 'text=Search items' },
+  { tab: 'pantry', ready: '#pq', assert: '.prow' },
+  { tab: 'trips', ready: '.triplist', assert: '.triprow' },
   { tab: 'reports', ready: '#rf', assert: 'text=Spend per store' },
   { tab: 'review', ready: 'text=Needs attention', assert: 'text=Freshness reminders' },
   { tab: 'table', ready: '#ttable', assert: 'text=All items' },

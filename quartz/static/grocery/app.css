@@ -83,9 +83,6 @@ a{color:var(--pine)}
 .item{border-top:1px solid var(--rule); padding:11px 0}
 .item:first-child{border-top:0}
 .flex{display:flex; justify-content:space-between; align-items:center; gap:10px}
-.grp{cursor:pointer}
-.grp .body{display:none; margin-top:8px}
-.grp.open .body{display:block}
 
 /* ---- bottom nav: card ground, pine active, safe-area padded --------------- */
 nav{
@@ -229,3 +226,115 @@ nav button{flex:1 1 0; min-width:0; white-space:nowrap}   /* fit the 7th (Today)
    neighbours never shift (§8.4). Full re-render (row gone) waits for next visit. */
 .urow.done{opacity:.5}
 .stamp.done{color:var(--leaf-ink); border-color:var(--leaf-ink)}
+
+/* ========================================================================
+   S5 — PANTRY + TRIPS (PRD §12 S5). Fixed-height rows; the drill-in is a
+   bottom SHEET (overlay), so opening it never reflows the list (§8.4).
+   ======================================================================== */
+
+/* ---- shared bottom sheet: the one extra place elevation lives (§9.4) ----- */
+.sheet-ov{position:fixed; inset:0; background:rgba(28,26,22,.5); z-index:70;
+  display:flex; align-items:flex-end; justify-content:center; opacity:0; transition:opacity .18s ease-out}
+.sheet-ov.in{opacity:1}
+.sheet-card{background:var(--card); border:1px solid var(--rule); border-top-left-radius:16px;
+  border-top-right-radius:16px; box-shadow:var(--shadow); width:100%; max-width:560px;
+  max-height:88vh; overflow:auto; padding:10px 16px calc(env(safe-area-inset-bottom) + 16px);
+  transform:translateY(18px); transition:transform .18s ease-out}
+.sheet-ov.in .sheet-card{transform:translateY(0)}
+.sheet-grip{display:block; width:38px; height:4px; border-radius:2px; background:var(--rule);
+  margin:2px auto 12px}
+.sheet-body{min-height:40px}
+.sheet-title{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.sheet-title h2{margin:0; font-size:19px}
+.sheet-tags{display:flex; gap:6px; flex:0 0 auto}
+.sheet-sub{margin-top:4px}
+.sheet-shelf{margin-top:8px}
+.sheet-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+.sheet-actions>button:not(.link){flex:1 1 auto; width:auto}
+
+/* ---- pantry: pinned search + horizontally-scrolling filter chips --------- */
+.pantry-head{position:sticky; top:0; z-index:5; background:var(--paper); padding:2px 0 8px; margin:-4px 0 2px}
+.psearch{font-size:16px}
+.chipbar{display:flex; gap:8px; overflow-x:auto; padding:10px 2px 2px; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+.chipbar::-webkit-scrollbar{display:none}
+.fchip{flex:0 0 auto; width:auto; min-height:0; background:var(--card); color:var(--ink-2);
+  border:1.4px solid var(--rule); border-radius:16px; font-family:var(--font-ui); font-weight:600;
+  font-size:12.5px; letter-spacing:.02em; padding:7px 12px; white-space:nowrap}
+.fchip.on{background:var(--pine); color:var(--on-pine); border-color:var(--pine)}
+.chsep{flex:0 0 auto; width:1px; align-self:stretch; background:var(--rule); margin:2px 2px}
+
+/* ---- pantry group rows: fixed height, category eyebrow, mono last price --- */
+.plist{background:var(--card); border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.prow{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  text-align:left; background:none; color:var(--ink); border:0; border-bottom:1px solid var(--rule);
+  border-radius:0; min-height:74px; padding:12px 14px}
+.prow:last-child{border-bottom:0}
+.pr-cat{font-family:var(--font-ui); font-weight:700; font-size:10px; line-height:1; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-2); margin-bottom:5px}
+.pr-nm{font-family:var(--font-ui); font-weight:500; font-size:15.5px; line-height:1.15; color:var(--ink)}
+.pr-sub{font-family:var(--font-mono); font-size:12px; line-height:1; color:var(--ink-2); margin-top:5px}
+.pr-side{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:0 0 auto; min-width:78px}
+.pr-price{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-weight:500; font-size:16px}
+.pr-tags{display:flex; gap:5px}
+.minitag{font-family:var(--font-ui); font-weight:700; font-size:9.5px; line-height:1; letter-spacing:.07em;
+  text-transform:uppercase; border:1.3px solid var(--ink-2); color:var(--ink-2); border-radius:5px; padding:3px 5px}
+.minitag.hsa{border-color:var(--teal); color:var(--teal)}
+.minitag.tom{border-color:var(--tomato-ink); color:var(--tomato-ink)}
+
+/* ---- pantry sheet: price-by-store, shelf state, purchase history --------- */
+.shelf{font-family:var(--font-ui); font-weight:700; font-size:12px; letter-spacing:.04em; text-transform:uppercase}
+.shelf.hot{color:var(--tomato-ink)} .shelf.mid{color:var(--marigold-ink)} .shelf.ok{color:var(--leaf-ink)}
+.phlist{border:1px solid var(--rule); border-radius:10px; overflow:hidden}
+.phist{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 12px;
+  border-bottom:1px solid var(--rule)}
+.phist:last-child{border-bottom:0}
+.ph-when{font-family:var(--font-mono); font-size:12.5px; color:var(--ink)}
+.ph-raw{margin-top:3px; display:flex; align-items:center; gap:6px}
+.ph-r{display:flex; align-items:center; gap:8px; flex:0 0 auto}
+.ph-amt{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:14px}
+
+/* ---- trips list rows ----------------------------------------------------- */
+.triplist{background:var(--card); border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.triprow{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 14px;
+  border-bottom:1px solid var(--rule); cursor:pointer}
+.triprow:last-child{border-bottom:0}
+.tr-l{min-width:0}
+.tr-l .store{font-family:var(--font-ui); font-weight:500; font-size:15px; line-height:1.15}
+.tr-l .when{font-family:var(--font-mono); font-size:12px; color:var(--ink-2); margin-top:4px}
+.tr-r{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:0 0 auto}
+.tr-r .tags{display:flex; gap:6px; align-items:center}
+.tr-r .amt{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:500}
+.chchip{font-family:var(--font-mono); font-size:10.5px; line-height:1; letter-spacing:.04em; text-transform:uppercase;
+  border:1px solid var(--rule); color:var(--ink-2); border-radius:12px; padding:4px 8px}
+
+/* ---- receipt motif (§9.5) — trip detail sheet ONLY (perforation budget) --- */
+/* mask matte uses the `black`/`transparent` keywords as an ALPHA channel (opaque
+   vs cut-out), not a theme color — so var(--*) is semantically inapplicable here
+   and C-15's raw-hex ban doesn't reach a mask matte. */
+.receipt-perf{display:block; height:9px; margin:-2px -16px 4px; background:var(--rule);
+  -webkit-mask:conic-gradient(from -45deg at 50% 0, black 90deg, transparent 0) 50% 0 / 12px 100% repeat-x;
+  mask:conic-gradient(from -45deg at 50% 0, black 90deg, transparent 0) 50% 0 / 12px 100% repeat-x}
+.receipt .rhead{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px}
+.receipt .rstore{font-family:var(--font-display); font-weight:600; font-size:20px; line-height:1}
+.receipt .rwhen{font-family:var(--font-mono); font-size:12px; color:var(--ink-2); margin-top:5px}
+.receipt .rtags{display:flex; gap:6px; flex:0 0 auto}
+.rlines{border-top:1px dashed var(--rule-dash); border-bottom:1px dashed var(--rule-dash); padding:6px 0; margin-bottom:10px}
+.rline{display:flex; align-items:baseline; gap:6px; padding:5px 0; font-family:var(--font-mono); font-size:13.5px}
+.rline .nm{color:var(--ink)} .rline .q{color:var(--ink-2)}
+.rline .lead{flex:1; border-bottom:1.5px dotted var(--rule-dash); transform:translateY(-3px); min-width:14px}
+.rline .amt{font-variant-numeric:tabular-nums; flex:0 0 auto}
+.rtotals{display:flex; flex-direction:column; gap:2px}
+.rtot{display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:13.5px; padding:2px 0}
+.rtot .amt{font-variant-numeric:tabular-nums}
+.rtot.grand{border-top:1px solid var(--ink); margin-top:5px; padding-top:6px; font-weight:600; font-size:15px}
+.rfoot{margin-top:12px; padding-top:10px; border-top:1px dashed var(--rule-dash);
+  font-family:var(--font-mono); font-size:11.5px; color:var(--ink-2); line-height:1.7}
+
+/* ---- print: isolate the open receipt sheet (basic; S7 formalizes) -------- */
+@media print{
+  body{padding:0}
+  body>*:not(.sheet-ov){display:none!important}
+  .sheet-ov{position:static; background:none; display:block}
+  .sheet-card{box-shadow:none; border:0; max-height:none; max-width:none}
+  .sheet-grip,.sheet-actions,.receipt-perf{display:none!important}
+}

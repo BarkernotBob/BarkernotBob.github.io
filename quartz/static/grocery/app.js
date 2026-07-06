@@ -1,6 +1,8 @@
 import { $, el, money, esc, todayISO, uid, b64encode, b64decode, norm } from './core/domain.js';
 import { toast, modal, confirmModal, fixInputAttrs } from './ui/components.js';
 import { renderToday, todayActions } from './views/today.js';
+import { renderPantry, pantryActions, pantryInputs } from './views/pantry.js';
+import { renderTrips, tripsActions } from './views/trips.js';
 
 /* =========================================================================
    Grocery Tracker — single-file app.
@@ -68,9 +70,7 @@ const CLICK_ACTIONS = {
   resetCapture,
   signIn:          () => signInWithGitHub(),
   saveSetup,
-  toggleOpen:      t => t.classList.toggle('open'),
   viewReceipt:     t => viewReceipt(t.dataset.id),
-  markWaste:       t => markWaste(t.dataset.id),
   clearTableFilters,
   sortTable:       t => sortTable(t.dataset.col),
   setRange:        t => setRange(t.dataset.range),
@@ -84,11 +84,11 @@ const CLICK_ACTIONS = {
   signOut,
 };
 // View modules contribute their own handlers to the shared registry (§11.1).
-Object.assign(CLICK_ACTIONS, todayActions);
+Object.assign(CLICK_ACTIONS, todayActions, pantryActions, tripsActions);
 const INPUT_ACTIONS = {
-  search:      () => runSearch(),
   tableFilter: t  => setTableFilter(t.dataset.col, t.value),
 };
+Object.assign(INPUT_ACTIONS, pantryInputs);
 const CHANGE_ACTIONS = {
   pick:    (t,e) => onPick(e),
   reports: () => runReports(),
@@ -425,7 +425,8 @@ async function show(tab){
     if(!D.items) await loadAll(); // first load
     if(tab==='today') renderToday();
     else if(tab==='capture') renderCapture();
-    else if(tab==='search') renderSearch();
+    else if(tab==='pantry') renderPantry();
+    else if(tab==='trips') renderTrips();
     else if(tab==='reports') renderReports();
     else if(tab==='review') renderReview();
     else if(tab==='table') renderTable();
@@ -438,6 +439,8 @@ async function show(tab){
   $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me + (LS.device?(' · '+LS.device):'')) : '';
 }
 function isConfigured(){ return LS.repo && LS.token && LS.me; }
+/* Who's driving this device — view modules stamp `by` on waste records with it. */
+function getMe(){ return LS.me; }
 
 /* =========================================================================
    SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
@@ -614,89 +617,13 @@ async function saveReceipt(){
 }
 
 /* =========================================================================
-   SEARCH  (group similar names; mark thrown away)
+   GROUPING helpers — shared by Pantry (views/pantry.js) and Reports. An item's
+   group key is its canonical groupId, or a normalized raw-name fallback.
    ========================================================================= */
 function groupKeyFor(item){ return item.groupId || ('raw:'+norm(item.name||item.rawName)); }
 function groupLabel(key){
   if(key.startsWith('raw:')) return key.slice(4);
   const g=D.groups[key]; return g? g.canonical : key;
-}
-function matchesQuery(item, q){
-  if(!q) return true;
-  const hay = [item.name,item.rawName, groupLabel(groupKeyFor(item))].map(norm).join(' ');
-  const g=D.groups[item.groupId];
-  const aliases = g? (g.aliases||[]).map(norm).join(' ') : '';
-  return (hay+' '+aliases).includes(norm(q));
-}
-function renderSearch(){
-  $('#main').innerHTML = `
-  <div class="card">
-    <h2>Search items</h2>
-    <input id="sq" placeholder="Type an item, e.g. milk, chicken, bananas" data-input="search"/>
-    <p class="small muted" style="margin-top:6px">Similar names are grouped together. Tap a group to see each purchase and mark waste.</p>
-  </div>
-  <div id="sresults"></div>`;
-  runSearch();
-}
-function runSearch(){
-  const q=$('#sq')?$('#sq').value.trim():'';
-  const items=D.items.filter(i=>matchesQuery(i,q));
-  const groups={};
-  for(const it of items){ const k=groupKeyFor(it); (groups[k]=groups[k]||[]).push(it); }
-  const keys=Object.keys(groups).sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)));
-  const wrap=$('#sresults');
-  if(keys.length===0){ wrap.innerHTML='<div class="card"><p class="muted small">No matching items yet.</p></div>'; return; }
-  wrap.innerHTML = keys.map(k=>{
-    const arr=groups[k].sort((a,b)=>(b.purchasedAt||'').localeCompare(a.purchasedAt||''));
-    const spent=arr.reduce((s,i)=>s+(+i.price||0),0);
-    const qty=arr.reduce((s,i)=>s+(+i.qty||0),0);
-    const last=arr[0]?(arr[0].purchasedAt||''):'';
-    const g=D.groups[k];
-    return `<div class="card grp" data-action="toggleOpen">
-      <div class="flex">
-        <div><b>${esc(groupLabel(k))}</b> ${g&&g.hsaEligible?'<span class="pill hsa">HSA</span>':''} ${g&&g.perishable?'<span class="pill gray">perishable</span>':''}
-          <div class="small muted">${arr.length} purchase(s) · ${qty} bought · last ${esc(last||'—')}</div></div>
-        <div style="text-align:right"><div class="big" style="font-size:18px">${money(spent)}</div><div class="small muted">total spent</div></div>
-      </div>
-      <div class="body">
-        ${arr.map(i=>`<div class="item flex" ${i.receiptId?`style="cursor:pointer" data-action="viewReceipt" data-id="${esc(i.receiptId)}"`:''}>
-          <div><div>${esc(i.name||i.rawName)} <span class="small muted">${esc(i.rawName&&i.rawName!==i.name?'('+i.rawName+')':'')}</span></div>
-            <div class="small muted">${esc(i.purchasedAt||'')} · ${esc(i.store||'')} · ${money(i.price)} ${i.qty?('· qty '+i.qty):''}
-            ${i.status==='thrown_away'?'· <span style="color:var(--tomato-ink)">thrown away</span>':i.status==='consumed'?'· used up':''}
-            ${i.useByDate?('· use by '+i.useByDate):''}</div></div>
-          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-            ${i.status==='active'?`<button class="sec" style="width:auto;padding:8px 10px" data-action="markWaste" data-id="${esc(i.id)}">🗑 Waste</button>`:''}
-            ${i.receiptId?'<span class="muted" aria-hidden="true">🧾›</span>':''}
-          </div>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
-function chooseWasteReason(it){
-  const reasons=['spoiled','expired','leftover','other'];
-  return modal(`<h2>🗑 Throw away</h2>
-    <p class="small muted" style="margin:0 0 12px">"${esc(it.name||it.rawName)}" — why are you tossing it?</p>
-    ${reasons.map(r=>`<button class="sec" data-mval="${r}">${r[0].toUpperCase()+r.slice(1)}</button>`).join('')}
-    <button class="link" data-mcancel style="width:100%">Cancel</button>`);
-}
-async function markWaste(itemId){
-  const it=D.items.find(i=>i.id===itemId); if(!it) return;
-  const reason=await chooseWasteReason(it);   // in-app picker (works in installed PWAs, unlike prompt())
-  if(reason===null) return;
-  const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
-    thrownAt:todayISO(), reason:(reason.trim()||'other'), estCost:(+it.price||0), by:LS.me };
-  const pend=(D.reminders||[]).filter(r=>r.itemId===it.id && r.status==='pending').map(r=>r.id);
-  // items + waste + reminders in ONE atomic commit (no 3-write partial-failure window).
-  const deltas=[
-    { path:FILES.items, op:'setField', id:it.id, fields:{status:'thrown_away'} },
-    { path:FILES.waste, op:'append', record:w }
-  ];
-  if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
-  try{
-    await commitFiles(deltas, 'Mark item thrown away (waste)');
-    toast('Logged as waste 🗑'); updateBadges(); runSearch();
-  }catch(e){ toast(String(e.message||e)); }
 }
 /* Show every item on the same receipt as the tapped item, plus the photo. */
 function viewReceipt(receiptId){
@@ -1108,4 +1035,4 @@ window.addEventListener('load', async ()=>{
    Shared surface consumed by view modules (views/*.js). State (D) is a live
    binding; api/router helpers are functions. Views import from here rather than
    the reverse for anything stateful. */
-export { D, FILES, commitFiles, show, updateBadges };
+export { D, FILES, commitFiles, show, updateBadges, groupKeyFor, groupLabel, getImageDataUrl, viewPhoto, getMe };

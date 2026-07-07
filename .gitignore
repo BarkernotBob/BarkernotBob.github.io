@@ -23,3 +23,9 @@ content/Blockchain.html
 # Must never be published. (Removed from the repo during the security review.)
 .smart-env/
 content/.smart-env/
+
+# Playwright regression-rig local outputs (grocery app). CI uploads these as
+# build artifacts; they're generated, never committed.
+tests/grocery/screenshots/
+tests/grocery/test-results/
+tests/grocery/playwright-report/

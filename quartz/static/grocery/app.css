@@ -27,6 +27,7 @@ header{
 }
 header h1{font-family:var(--font-display); font-size:21px; margin:0; font-weight:600; letter-spacing:-.01em; display:inline-flex; align-items:center; gap:8px}
 header h1 .mk-ic{width:23px; height:23px; color:var(--pine); flex:none}
+.mk-ic{width:1.05em;height:1.05em;vertical-align:-0.16em;flex:none}
 header .who{font-family:var(--font-mono); font-size:11px; color:var(--ink-2)}
 .hd-settings{display:inline-flex; align-items:center; gap:6px}
 .hd-settings .hd-ic{width:17px; height:17px; flex:none}

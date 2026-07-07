@@ -2,7 +2,7 @@ import { $, el, money, esc, todayISO, uid, b64encode, b64decode, norm } from './
 import { toast, modal, confirmModal, fixInputAttrs } from './ui/components.js';
 import { renderToday, todayActions } from './views/today.js';
 import { renderCapture, captureActions, captureChanges } from './views/capture.js';
-import { renderSearch, searchInputs } from './views/search.js';
+import { renderSearch, searchInputs, refreshSearch } from './views/search.js';
 import { renderTable, tableActions, tableInputs } from './views/table.js';
 import { renderReports, reportsActions, reportsChanges } from './views/reports.js';
 import { renderReview, reviewActions, viewPhoto, purgeStaleFlags } from './views/review.js';
@@ -566,7 +566,7 @@ async function markWaste(itemId){
   if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
   try{
     await commitFiles(deltas, 'Mark item thrown away (waste)');
-    toast('Logged as waste 🗑'); updateBadges(); show(CUR);
+    toast('Logged as waste 🗑'); updateBadges(); refreshSearch();
   }catch(e){ toast(String(e.message||e)); }
 }
 /* Show every item on the same receipt as the tapped item, plus the photo. */

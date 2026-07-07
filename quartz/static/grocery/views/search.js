@@ -68,3 +68,9 @@ function runSearch(){
    No CLICK keys are exclusive to Search — its toggleOpen/markWaste/viewReceipt
    actions are all shared handlers that stay in app.js. */
 export const searchInputs = { search: () => runSearch() };
+
+/* Re-render results in place, preserving the typed query. app.js's shared
+   markWaste handler calls this after logging waste (the Waste button only
+   appears in Search), matching the pre-split runSearch() refresh. No-op unless
+   the Search view is currently mounted. */
+export function refreshSearch(){ if($('#sresults')) runSearch(); }

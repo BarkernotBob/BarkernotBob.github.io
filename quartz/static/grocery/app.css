@@ -79,7 +79,6 @@ a{color:var(--pine)}
 .pill.warn{border-color:var(--marigold-ink); color:var(--marigold-ink)}
 .pill.ok{border-color:var(--leaf-ink); color:var(--leaf-ink)}
 .pill.gray{border-color:var(--ink-2); color:var(--ink-2)}
-.pill.hsa{border-color:var(--teal); color:var(--teal)}
 
 .item{border-top:1px solid var(--rule); padding:11px 0}
 .item:first-child{border-top:0}
@@ -131,7 +130,7 @@ nav button.active{color:var(--pine)}
 /* ---- toast: ink card, dry voice (§9.7) ----------------------------------- */
 .toast{
   position:fixed; left:16px; right:16px; bottom:84px; background:var(--ink); color:var(--paper);
-  padding:12px 14px; border-radius:8px; text-align:center; z-index:50; opacity:0;
+  padding:12px 14px; border-radius:8px; text-align:center; z-index:80; opacity:0;
   transition:opacity .14s ease-out; pointer-events:none; max-width:728px; margin:0 auto;
   font-size:14px;
 }
@@ -335,6 +334,8 @@ nav button{flex:1 1 0; min-width:0; white-space:nowrap}   /* fit the 7th (Today)
 @media print{
   body{padding:0}
   body>*:not(.sheet-ov){display:none!important}
+  /* Sheets can stack (Pantry group → Trip). Print only the topmost one. */
+  .sheet-ov:has(~ .sheet-ov){display:none!important}
   .sheet-ov{position:static; background:none; display:block}
   .sheet-card{box-shadow:none; border:0; max-height:none; max-width:none}
   .sheet-grip,.sheet-actions,.receipt-perf{display:none!important}

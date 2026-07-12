@@ -45,7 +45,7 @@ async function viewPhoto(path){
   toast('Loading photo…');
   const url=await getImageDataUrl(path);
   if(!url){ toast('Could not load photo'); return; }
-  const o=el('div',{style:'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px'});
+  const o=el('div',{style:'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px'});
   o.innerHTML=`<img src="${url}" style="max-width:100%;max-height:100%;border-radius:8px"/>`;
   o.onclick=()=>o.remove(); document.body.appendChild(o);
 }

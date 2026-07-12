@@ -107,6 +107,10 @@ export function renderPantry() {
       ${chipBar()}
     </div>
     <div id="presults"></div>`;
+  // Pin the search head just below the sticky app header (its height varies
+  // with safe-area insets, so top:0 in CSS would slide it underneath).
+  const hh = document.querySelector('header')?.offsetHeight || 0;
+  document.querySelector('.pantry-head').style.top = hh + 'px';
   drawPantry();
 }
 

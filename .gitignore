@@ -1,11 +1,10 @@
 .DS_Store
-.gitignore
 node_modules
 node_modules*
 public
 prof
 tsconfig.tsbuildinfo
-.obsidian
+.obsidian/
 .quartz-cache
 private/
 .replit
@@ -13,10 +12,6 @@ replit.nix
 .quartz/
 quartz/cli/tui/dist/
 content/private/
-.obsidian/
-content/private/
-.obsidian/
-content/Blockchain.html
 .claude/
 
 # Obsidian "Smart Connections" data — contains private note paths/metadata.

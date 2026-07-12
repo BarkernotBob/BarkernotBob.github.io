@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Protestant Sabbath Theology — Interactive Reference</title>
+<meta name="description" content="An interactive historical, geographical, and denominational reference on Protestant Sabbath theology from the 16th century Reformation through 20th century secularization."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ===== DESIGN TOKENS ===== */
+:root, [data-theme="light"] {
+  --color-bg: #f5f3ee;
+  --color-surface: #f9f7f3;
+  --color-surface-2: #fdfcfa;
+  --color-surface-offset: #ede9e2;
+  --color-border: #d8d3ca;
+  --color-divider: #e2ddd6;
+  --color-text: #1e1b14;
+  --color-text-muted: #6b6760;
+  --color-text-faint: #a8a59f;
+  --color-primary: #5c3d1e;
+  --color-primary-hover: #3e2910;
+  --color-primary-light: #e8ddd0;
+  --color-accent: #8b4513;
+  --color-accent-hover: #6b3410;
+  --color-accent-light: #f0e0d0;
+  --color-gold: #b8860b;
+  --color-gold-light: #f5edd8;
+  --color-teal: #2a6b6b;
+  --color-teal-light: #d5e8e8;
+  --color-purple: #5c3a7a;
+  --color-purple-light: #e5d8f0;
+  --color-green: #3a6b3a;
+  --color-green-light: #d5e8d5;
+  --color-shadow-sm: 0 1px 3px rgba(30,27,20,0.07);
+  --color-shadow-md: 0 4px 12px rgba(30,27,20,0.10);
+  --color-shadow-lg: 0 12px 32px rgba(30,27,20,0.13);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Sans 3', 'Helvetica Neue', sans-serif;
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.8125rem);
+  --text-sm: clamp(0.8125rem, 0.77rem + 0.22vw, 0.9375rem);
+  --text-base: clamp(0.9375rem, 0.88rem + 0.28vw, 1.0625rem);
+  --text-lg: clamp(1.0625rem, 0.95rem + 0.55vw, 1.375rem);
+  --text-xl: clamp(1.375rem, 1.1rem + 1.1vw, 2rem);
+  --text-2xl: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+  --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+  --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+  --space-16: 4rem; --space-20: 5rem;
+  --sidebar-w: 240px;
+  --header-h: 56px;
+}
+[data-theme="dark"] {
+  --color-bg: #161410;
+  --color-surface: #1c1a16;
+  --color-surface-2: #211f1b;
+  --color-surface-offset: #1a1815;
+  --color-border: #2e2c28;
+  --color-divider: #252320;
+  --color-text: #d8d4cc;
+  --color-text-muted: #7a7672;
+  --color-text-faint: #4a4844;
+  --color-primary: #c8a070;
+  --color-primary-hover: #dbb888;
+  --color-primary-light: #3a2e22;
+  --color-accent: #d4854a;
+  --color-accent-hover: #e09860;
+  --color-accent-light: #3d2516;
+  --color-gold: #d4a843;
+  --color-gold-light: #3d3018;
+  --color-teal: #5aabab;
+  --color-teal-light: #1a3434;
+  --color-purple: #a077cc;
+  --color-purple-light: #2e1f40;
+  --color-green: #6aaa6a;
+  --color-green-light: #1a3a1a;
+  --color-shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
+  --color-shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+  --color-shadow-lg: 0 12px 32px rgba(0,0,0,0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-bg: #161410; --color-surface: #1c1a16; --color-surface-2: #211f1b;
+    --color-surface-offset: #1a1815; --color-border: #2e2c28; --color-divider: #252320;
+    --color-text: #d8d4cc; --color-text-muted: #7a7672; --color-text-faint: #4a4844;
+    --color-primary: #c8a070; --color-primary-hover: #dbb888; --color-primary-light: #3a2e22;
+    --color-accent: #d4854a; --color-accent-hover: #e09860; --color-accent-light: #3d2516;
+    --color-gold: #d4a843; --color-gold-light: #3d3018;
+    --color-teal: #5aabab; --color-teal-light: #1a3434;
+    --color-purple: #a077cc; --color-purple-light: #2e1f40;
+    --color-green: #6aaa6a; --color-green-light: #1a3a1a;
+    --color-shadow-sm: 0 1px 3px rgba(0,0,0,0.25); --color-shadow-md: 0 4px 12px rgba(0,0,0,0.35); --color-shadow-lg: 0 12px 32px rgba(0,0,0,0.45);
+  }
+}
+/* ===== BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background: var(--color-bg); min-height: 100dvh; line-height: 1.65; }
+button { cursor: pointer; background: none; border: none; font: inherit; color: inherit; }
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { color: var(--color-accent-hover); text-decoration: underline; }
+h1,h2,h3,h4 { font-family: var(--font-display); line-height: 1.2; color: var(--color-text); text-wrap: balance; }
+p, li { max-width: 72ch; text-wrap: pretty; }
+::selection { background: var(--color-primary-light); color: var(--color-text); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; border-radius: var(--radius-sm); }
+
+/* ===== LAYOUT ===== */
+#app { display: flex; flex-direction: column; min-height: 100dvh; }
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-h); background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 0 var(--space-4);
+  box-shadow: var(--color-shadow-sm);
+}
+.logo { display: flex; align-items: center; gap: var(--space-3); text-decoration: none; flex-shrink: 0; }
+.logo svg { flex-shrink: 0; }
+.logo-text { font-family: var(--font-display); font-size: var(--text-base); font-weight: 600; color: var(--color-text); line-height: 1.2; white-space: nowrap; }
+.logo-text span { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-text-muted); font-family: var(--font-body); }
+
+.header-search {
+  flex: 1; max-width: 360px;
+  position: relative;
+}
+.header-search input {
+  width: 100%; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-8);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text); font-size: var(--text-sm);
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.header-search input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.header-search .search-icon { position: absolute; left: var(--space-2); top: 50%; transform: translateY(-50%); color: var(--color-text-faint); pointer-events: none; }
+.search-clear { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); color: var(--color-text-muted); padding: 2px; border-radius: var(--radius-sm); display: none; }
+.search-clear.visible { display: flex; }
+.search-clear:hover { color: var(--color-text); background: var(--color-surface-offset); }
+
+.header-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.hamburger-btn { display: none; }
+.icon-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--radius-md); color: var(--color-text-muted); transition: background 150ms, color 150ms; }
+.icon-btn:hover { background: var(--color-surface-offset); color: var(--color-text); }
+
+/* Ask AI popover */
+.ask-ai-wrap { position: relative; }
+.ask-ai-popover {
+  display: none;
+  position: absolute; top: calc(100% + 8px); right: 0;
+  width: 320px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,.14);
+  padding: var(--space-4);
+  z-index: 500;
+}
+.ask-ai-popover.open { display: block; }
+.ask-ai-popover label { display: block; font-size: var(--text-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-faint); margin-bottom: var(--space-2); }
+.ask-ai-popover textarea {
+  width: 100%; resize: none; height: 72px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-body); font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3); box-sizing: border-box;
+  outline: none;
+}
+.ask-ai-popover textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.ask-ai-popover-footer { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3); }
+.ask-ai-popover-hint { font-size: var(--text-xs); color: var(--color-text-faint); }
+.ask-ai-btn-submit {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--color-accent); color: #fff;
+  border: none; border-radius: var(--radius-md);
+  font-size: var(--text-sm); font-weight: 600;
+  padding: 6px 14px; cursor: pointer;
+  transition: background 150ms;
+}
+.ask-ai-btn-submit:hover { opacity: .88; }
+.ask-ai-btn-submit svg { flex-shrink: 0; }
+
+.app-body { display: flex; padding-top: var(--header-h); flex: 1; }
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  height: calc(100dvh - var(--header-h));
+  position: sticky; top: var(--header-h);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto; padding: var(--space-4) 0;
+  display: flex; flex-direction: column; gap: var(--space-1);
+}
+.sidebar-section { padding: var(--space-4) var(--space-4) var(--space-2); }
+.sidebar-section-label { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); }
+.nav-item {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 0; cursor: pointer;
+  font-size: var(--text-sm); color: var(--color-text-muted);
+  transition: background 120ms, color 120ms;
+  border-left: 3px solid transparent;
+  width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--color-surface-offset); color: var(--color-text); }
+.nav-item.active { background: var(--color-primary-light); color: var(--color-primary); border-left-color: var(--color-primary); font-weight: 600; }
+.nav-item svg { flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg { opacity: 1; }
+
+/* ===== MAIN CONTENT ===== */
+.main-content { flex: 1; overflow-y: auto; min-width: 0; }
+.view { display: none; padding: var(--space-8) var(--space-8); }
+.view.active { display: block; }
+
+/* ===== SEARCH OVERLAY ===== */
+#search-results-overlay {
+  display: none; position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0; bottom: 0;
+  background: var(--color-bg); z-index: 90; overflow-y: auto; padding: var(--space-8);
+}
+#search-results-overlay.active { display: block; }
+.search-results-header { margin-bottom: var(--space-6); }
+.search-results-header h2 { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-2); }
+.search-results-header p { color: var(--color-text-muted); font-size: var(--text-sm); }
+.search-result-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-4); cursor: pointer;
+  transition: box-shadow 150ms, border-color 150ms;
+}
+.search-result-card:hover { box-shadow: var(--color-shadow-md); border-color: var(--color-accent); }
+.src-meta { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); flex-wrap: wrap; }
+.src-tag { font-size: var(--text-xs); padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.src-title { font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-2); }
+.src-excerpt { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.7; }
+.src-excerpt mark { background: var(--color-gold-light); color: var(--color-text); border-radius: 2px; padding: 0 2px; }
+.no-results { text-align: center; padding: var(--space-20) var(--space-8); color: var(--color-text-muted); }
+.no-results svg { margin: 0 auto var(--space-4); opacity: 0.3; }
+.no-results h3 { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-2); color: var(--color-text); }
+
+/* ===== SECTION HEADER ===== */
+.section-header { margin-bottom: var(--space-8); max-width: 800px; }
+.section-header h1 { font-size: var(--text-2xl); margin-bottom: var(--space-3); }
+.section-header p { font-size: var(--text-base); color: var(--color-text-muted); line-height: 1.7; }
+
+/* ===== TIMELINE VIEW ===== */
+.timeline-controls {
+  display: flex; align-items: center; gap: var(--space-4);
+  margin-bottom: var(--space-8); flex-wrap: wrap;
+}
+.zoom-label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 500; }
+.zoom-btn {
+  display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text-muted);
+  transition: all 120ms; font-size: 1.1rem; font-weight: 700;
+}
+.zoom-btn:hover { background: var(--color-surface-offset); border-color: var(--color-accent); color: var(--color-accent); }
+.zoom-val { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); min-width: 40px; text-align: center; }
+.zoom-reset { font-size: var(--text-xs); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-muted); }
+.zoom-reset:hover { background: var(--color-surface-offset); color: var(--color-text); }
+
+.timeline-wrapper { overflow-x: auto; padding-bottom: var(--space-8); }
+.timeline-track {
+  position: relative; min-height: 300px;
+  transition: transform 200ms ease;
+}
+.timeline-ruler {
+  display: flex; border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--space-6); position: sticky; top: 0;
+  background: var(--color-bg); z-index: 2; padding-bottom: var(--space-2);
+}
+.ruler-mark {
+  flex-shrink: 0; font-size: var(--text-xs); color: var(--color-text-faint);
+  font-weight: 600; position: relative; text-align: center;
+  padding-top: var(--space-2);
+}
+.ruler-mark::before {
+  content: ''; position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%); width: 1px; height: 8px;
+  background: var(--color-border);
+}
+.timeline-events { position: relative; padding-left: var(--space-6); }
+.tl-era-label {
+  font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600;
+  color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.08em;
+  margin: var(--space-6) 0 var(--space-3);
+}
+.tl-event {
+  display: flex; align-items: flex-start; gap: var(--space-4);
+  margin-bottom: var(--space-5); cursor: pointer; position: relative;
+}
+.tl-event::before {
+  content: ''; position: absolute; left: -var(--space-4);
+  top: 0; bottom: -var(--space-5); width: 2px;
+  background: var(--color-divider);
+}
+.tl-dot {
+  flex-shrink: 0; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--color-bg); box-shadow: 0 0 0 2px currentColor;
+  margin-top: 4px; transition: transform 150ms;
+}
+.tl-event:hover .tl-dot { transform: scale(1.3); }
+.tl-body { flex: 1; }
+.tl-date { font-size: var(--text-xs); font-weight: 700; color: var(--color-text-faint); letter-spacing: 0.05em; margin-bottom: 2px; }
+.tl-title { font-family: var(--font-display); font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-1); color: var(--color-text); }
+.tl-desc { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+.tl-tags { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-2); }
+.tl-tag { font-size: var(--text-xs); padding: 2px 7px; border-radius: var(--radius-sm); font-weight: 500; }
+
+/* Era backgrounds */
+.era-band {
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  margin-bottom: var(--space-6);
+  border-left: 4px solid;
+}
+.era-band.era-1 { background: color-mix(in srgb, var(--color-gold) 8%, var(--color-bg)); border-color: var(--color-gold); }
+.era-band.era-2 { background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg)); border-color: var(--color-accent); }
+.era-band.era-3 { background: color-mix(in srgb, var(--color-teal) 8%, var(--color-bg)); border-color: var(--color-teal); }
+.era-band.era-4 { background: color-mix(in srgb, var(--color-purple) 8%, var(--color-bg)); border-color: var(--color-purple); }
+.era-band.era-5 { background: color-mix(in srgb, var(--color-green) 8%, var(--color-bg)); border-color: var(--color-green); }
+.era-band h3 { font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-1); }
+.era-band .era-range { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); margin-bottom: var(--space-4); }
+
+/* ===== GRID VIEWS ===== */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-5); }
+.card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-5) var(--space-6);
+  cursor: pointer; transition: box-shadow 150ms, border-color 150ms, transform 150ms;
+}
+.card:hover { box-shadow: var(--color-shadow-md); border-color: var(--color-accent); transform: translateY(-1px); }
+.card-icon { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-4); font-size: 1.1rem; }
+.card-title { font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-2); }
+.card-meta { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-faint); margin-bottom: var(--space-3); }
+.card-desc { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.65; }
+.card-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.badge { font-size: var(--text-xs); padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 500; }
+.badge-hist { background: var(--color-gold-light); color: var(--color-gold); }
+.badge-geo { background: var(--color-teal-light); color: var(--color-teal); }
+.badge-denom { background: var(--color-purple-light); color: var(--color-purple); }
+.badge-key { background: var(--color-accent-light); color: var(--color-accent); }
+
+/* ===== DETAIL MODAL / PANEL ===== */
+.detail-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.45); backdrop-filter: blur(2px);
+}
+.detail-backdrop.open { display: flex; align-items: flex-start; justify-content: flex-end; }
+.detail-panel {
+  width: min(680px, 100vw); height: 100dvh; overflow-y: auto;
+  background: var(--color-surface-2); padding: var(--space-8);
+  box-shadow: var(--color-shadow-lg);
+  animation: slideIn 200ms ease;
+}
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.panel-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: var(--radius-md);
+  color: var(--color-text-muted); float: right;
+  transition: background 120ms, color 120ms;
+}
+.panel-close:hover { background: var(--color-surface-offset); color: var(--color-text); }
+.panel-category { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); }
+.panel-title { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-2); clear: both; }
+.panel-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-6); }
+.panel-divider { border: none; border-top: 1px solid var(--color-divider); margin: var(--space-6) 0; }
+.panel-section-title { font-family: var(--font-display); font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-3); color: var(--color-text); }
+.panel-body { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.8; }
+.panel-body p { margin-bottom: var(--space-4); }
+.panel-body strong { color: var(--color-text); font-weight: 600; }
+.panel-body em { font-style: italic; color: var(--color-text); }
+.panel-tags-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }
+.related-items { margin-top: var(--space-6); }
+.related-chip {
+  display: inline-block; margin: var(--space-1); padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-offset); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 500;
+  cursor: pointer; transition: all 120ms;
+}
+.related-chip:hover { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ===== COMPARISON TABLE ===== */
+.comparison-table-wrap { overflow-x: auto; margin: var(--space-6) 0; border-radius: var(--radius-lg); border: 1px solid var(--color-border); }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.comparison-table th { background: var(--color-surface-offset); padding: var(--space-3) var(--space-4); text-align: left; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-faint); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.comparison-table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); vertical-align: top; color: var(--color-text-muted); line-height: 1.5; }
+.comparison-table tr:last-child td { border-bottom: none; }
+.comparison-table tr:hover td { background: var(--color-surface-offset); }
+.comparison-table td:first-child { font-weight: 600; color: var(--color-text); font-family: var(--font-display); }
+.pill { display: inline-block; padding: 2px 7px; border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 500; }
+.pill-yes { background: var(--color-green-light); color: var(--color-green); }
+.pill-no { background: var(--color-accent-light); color: var(--color-accent); }
+.pill-partial { background: var(--color-gold-light); color: var(--color-gold); }
+
+/* ===== OVERVIEW CONTENT ===== */
+.overview-hero { background: linear-gradient(135deg, var(--color-primary-light), color-mix(in srgb, var(--color-gold-light) 60%, var(--color-primary-light))); border-radius: var(--radius-lg); padding: var(--space-10) var(--space-10); margin-bottom: var(--space-8); position: relative; overflow: hidden; }
+.overview-hero::after { content: '✝'; position: absolute; right: var(--space-8); top: 50%; transform: translateY(-50%); font-size: 7rem; opacity: 0.07; color: var(--color-primary); }
+.overview-hero h1 { font-size: var(--text-2xl); margin-bottom: var(--space-4); max-width: 600px; }
+.overview-hero p { font-size: var(--text-base); color: var(--color-text-muted); max-width: 560px; line-height: 1.75; }
+.overview-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-8); }
+.stat-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-5); text-align: center; }
+.stat-number { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; color: var(--color-primary); }
+.stat-label { font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; margin-top: var(--space-1); }
+.quick-nav { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
+.quick-nav-item {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); cursor: pointer; transition: all 150ms;
+  font-size: var(--text-sm); font-weight: 500;
+}
+.quick-nav-item:hover { box-shadow: var(--color-shadow-md); border-color: var(--color-accent); transform: translateY(-1px); }
+.quick-nav-item svg { flex-shrink: 0; }
+.h2 { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-4); }
+
+/* ===== FILTER BAR ===== */
+.filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-6); align-items: center; }
+.filter-label { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-faint); margin-right: var(--space-2); }
+.filter-btn { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 500; color: var(--color-text-muted); background: var(--color-surface); transition: all 120ms; cursor: pointer; }
+.filter-btn:hover { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-light); }
+.filter-btn.active { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+[data-theme="dark"] .filter-btn.active { color: var(--color-bg); }
+--radius-full: 9999px;
+
+/* ===== FOOTNOTE STYLE ===== */
+.source-note { font-size: var(--text-xs); color: var(--color-text-faint); margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-divider); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .sidebar { position: fixed; top: var(--header-h); left: -280px; bottom: 0; width: 260px; z-index: 200; transition: left 250ms cubic-bezier(.4,0,.2,1); box-shadow: 4px 0 20px rgba(0,0,0,.18); overflow-y: auto; }
+  .sidebar.mobile-open { left: 0; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 199; }
+  .sidebar-overlay.active { display: block; }
+  .hamburger-btn { display: flex !important; }
+  #search-results-overlay { left: 0; }
+  .view { padding: var(--space-6) var(--space-4); }
+  .overview-hero { padding: var(--space-8) var(--space-6); }
+  .overview-hero::after { display: none; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .detail-panel { width: 100vw; }
+}
+@media (max-width: 480px) {
+  .logo-text span { display: none; }
+  .header-search { max-width: 180px; }
+}
+
+/* ===== PRINT ===== */
+@media print {
+  .app-header, .sidebar, .timeline-controls { display: none; }
+  .view { padding: 0; }
+  .view.active { display: block; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HEADER -->
+<header class="app-header" role="banner">
+  <!-- Logo -->
+  <button class="logo" onclick="showView('overview')" aria-label="Protestant Sabbath Theology home">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="28" height="28" rx="6" fill="var(--color-primary-light)" stroke="var(--color-primary)" stroke-width="1.5"/>
+      <path d="M15 5 L15 25" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M8 10 L22 10" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 17 L20 17" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+    </svg>
+    <div class="logo-text">Sabbath Theology <span>Protestant Historical Reference</span></div>
+  </button>
+
+  <!-- Search -->
+  <div class="header-search" role="search">
+    <span class="search-icon" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </span>
+    <input type="search" id="main-search" placeholder="Search people, confessions, events…" aria-label="Search the reference" autocomplete="off" data-testid="input-search"/>
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" aria-label="Clear search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="header-actions">
+    <div class="ask-ai-wrap">
+      <button class="icon-btn" id="ask-ai-toggle" aria-label="Ask AI a question" title="Ask AI" onclick="toggleAskAI(event)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
+      </button>
+      <div class="ask-ai-popover" id="ask-ai-popover">
+        <label for="ask-ai-input">Ask a question about Sabbath theology</label>
+        <textarea id="ask-ai-input" placeholder="e.g. How did the Westminster Confession treat the Sabbath?" onkeydown="handleAskAIKey(event)"></textarea>
+        <div class="ask-ai-popover-footer">
+          <span class="ask-ai-popover-hint">Opens in Perplexity</span>
+          <button class="ask-ai-btn-submit" onclick="submitAskAI()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Ask
+          </button>
+        </div>
+      </div>
+    </div>
+    <button class="icon-btn hamburger-btn" id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button class="icon-btn" id="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- MOBILE SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+<!-- BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" role="navigation" aria-label="Section navigation">
+    <div class="sidebar-section"><span class="sidebar-section-label">Reference</span></div>
+    <button class="nav-item active" onclick="showView('overview')" data-view="overview" data-testid="nav-overview">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Overview
+    </button>
+    <button class="nav-item" onclick="showView('timeline')" data-view="timeline" data-testid="nav-timeline">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Timeline
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">By Era</span></div>
+    <button class="nav-item" onclick="showView('historical')" data-view="historical" data-testid="nav-historical">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Historical Eras
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">By Location</span></div>
+    <button class="nav-item" onclick="showView('geographical')" data-view="geographical" data-testid="nav-geographical">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 0 16c-3 0-8-4-8-8s3.6-8 8-8z"/></svg>
+      Geographic Regions
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">By Tradition</span></div>
+    <button class="nav-item" onclick="showView('denominational')" data-view="denominational" data-testid="nav-denominational">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Denominations
+    </button>
+    <button class="nav-item" onclick="showView('confessions')" data-view="confessions" data-testid="nav-confessions">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Key Confessions
+    </button>
+    <button class="nav-item" onclick="showView('theologians')" data-view="theologians" data-testid="nav-theologians">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Key Theologians
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">Analysis</span></div>
+    <button class="nav-item" onclick="showView('comparison')" data-view="comparison" data-testid="nav-comparison">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      Position Comparison
+    </button>
+    <button class="nav-item" onclick="showView('concepts')" data-view="concepts" data-testid="nav-concepts">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M18.66 5.34l1.41-1.41"/></svg>
+      Key Concepts
+    </button>
+  </nav>
+
+  <!-- SEARCH RESULTS OVERLAY -->
+  <div id="search-results-overlay" role="region" aria-live="polite" aria-label="Search results"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" role="main">
+
+    <!-- ======= OVERVIEW ======= -->
+    <section class="view active" id="view-overview">
+      <div class="overview-hero">
+        <h1>Protestant Sabbath Theology</h1>
+        <p>A four-century arc from Luther's abrogation through Westminster's <em>jure divino</em> apex to the secularization of Sunday. Explore the theological, geographical, and denominational dimensions of one of Protestantism's most contested questions.</p>
+      </div>
+      <div class="overview-stats">
+        <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">Historical Eras</div></div>
+        <div class="stat-card"><div class="stat-number">7</div><div class="stat-label">Major Positions</div></div>
+        <div class="stat-card"><div class="stat-number">6</div><div class="stat-label">Regions</div></div>
+        <div class="stat-card"><div class="stat-number">10+</div><div class="stat-label">Key Confessions</div></div>
+        <div class="stat-card"><div class="stat-number">20+</div><div class="stat-label">Theologians</div></div>
+        <div class="stat-card"><div class="stat-number">400+</div><div class="stat-label">Years Covered</div></div>
+      </div>
+      <div class="h2">Navigate by Section</div>
+      <div class="quick-nav">
+        <button class="quick-nav-item" onclick="showView('timeline')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Zoomable Timeline
+        </button>
+        <button class="quick-nav-item" onclick="showView('historical')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-gold)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Historical Eras
+        </button>
+        <button class="quick-nav-item" onclick="showView('geographical')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 0 16c-3 0-8-4-8-8s3.6-8 8-8z"/></svg>
+          Geographic Regions
+        </button>
+        <button class="quick-nav-item" onclick="showView('denominational')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-purple)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Denominations
+        </button>
+        <button class="quick-nav-item" onclick="showView('confessions')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Key Confessions
+        </button>
+        <button class="quick-nav-item" onclick="showView('theologians')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-green)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Key Theologians
+        </button>
+        <button class="quick-nav-item" onclick="showView('comparison')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          Position Comparison
+        </button>
+        <button class="quick-nav-item" onclick="showView('concepts')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-gold)" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2"/></svg>
+          Key Concepts
+        </button>
+      </div>
+      <div style="margin-top: var(--space-10);">
+        <div class="h2">The Central Tension</div>
+        <p style="color:var(--color-text-muted);line-height:1.8;max-width:72ch;">The Protestant Reformation recovered <em>sola Scriptura</em> but split sharply on the fourth commandment. At one pole, Lutheranism declared the Sabbath ordinance strictly Mosaic-ceremonial and abrogated in Christ. At the other, English Puritanism articulated a fully developed <em>jure divino</em> Sabbatarianism in which one day in seven was a perpetual moral commandment — transferred by divine authority to Sunday at the resurrection. Between these poles, Continental Reformed theology occupied a mediating position: Sunday worship theologically warranted, but recreation permitted. The Westminster Confession (1646) crystallized the Puritan apex. Its decline over the following four centuries was driven less by better exegesis than by industrialization, the secular weekend, and the gradual adoption of theological frameworks — New Covenant Theology, Christian liberty arguments — that ratified what culture had already accomplished.</p>
+      </div>
+    </section>
+
+    <!-- ======= TIMELINE ======= -->
+    <section class="view" id="view-timeline">
+      <div class="section-header">
+        <h1>Timeline</h1>
+        <p>400 years of Protestant Sabbath theology — from Luther's 1517 Theses to the 1961 Supreme Court secularization of Sunday closing laws. Zoom in for detail.</p>
+      </div>
+      <div class="timeline-controls">
+        <span class="zoom-label">Zoom:</span>
+        <button class="zoom-btn" onclick="adjustZoom(-25)" aria-label="Zoom out">−</button>
+        <span class="zoom-val" id="zoom-display">100%</span>
+        <button class="zoom-btn" onclick="adjustZoom(25)" aria-label="Zoom in">+</button>
+        <button class="zoom-reset" onclick="resetZoom()">Reset</button>
+        <span style="color:var(--color-text-faint);font-size:var(--text-xs);margin-left:var(--space-4);">Click any event for details</span>
+      </div>
+      <div class="timeline-wrapper" id="timeline-wrapper">
+        <div class="timeline-track" id="timeline-track"></div>
+      </div>
+    </section>
+
+    <!-- ======= HISTORICAL ======= -->
+    <section class="view" id="view-historical">
+      <div class="section-header">
+        <h1>Historical Eras</h1>
+        <p>Five distinct periods in the development of Protestant Sabbath theology, from the Reformation's initial divergence through 20th-century secularization.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Filter:</span>
+        <button class="filter-btn active" data-filter="all" onclick="filterCards('historical','all')">All Eras</button>
+        <button class="filter-btn" data-filter="16th" onclick="filterCards('historical','16th')">16th c.</button>
+        <button class="filter-btn" data-filter="17th" onclick="filterCards('historical','17th')">17th c.</button>
+        <button class="filter-btn" data-filter="18th" onclick="filterCards('historical','18th')">18th c.</button>
+        <button class="filter-btn" data-filter="19th" onclick="filterCards('historical','19th')">19th c.</button>
+        <button class="filter-btn" data-filter="20th" onclick="filterCards('historical','20th')">20th c.</button>
+      </div>
+      <div class="cards-grid" id="historical-grid"></div>
+    </section>
+
+    <!-- ======= GEOGRAPHICAL ======= -->
+    <section class="view" id="view-geographical">
+      <div class="section-header">
+        <h1>Geographic Regions</h1>
+        <p>How Sabbath theology developed differently across England, Scotland, the Continent, and America — shaped by political, ecclesiastical, and cultural contexts in each region.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Region:</span>
+        <button class="filter-btn active" data-filter="all" onclick="filterCards('geographical','all')">All Regions</button>
+        <button class="filter-btn" data-filter="england" onclick="filterCards('geographical','england')">England</button>
+        <button class="filter-btn" data-filter="scotland" onclick="filterCards('geographical','scotland')">Scotland</button>
+        <button class="filter-btn" data-filter="germany" onclick="filterCards('geographical','germany')">Germany</button>
+        <button class="filter-btn" data-filter="netherlands" onclick="filterCards('geographical','netherlands')">Netherlands</button>
+        <button class="filter-btn" data-filter="switzerland" onclick="filterCards('geographical','switzerland')">Switzerland</button>
+        <button class="filter-btn" data-filter="america" onclick="filterCards('geographical','america')">America</button>
+      </div>
+      <div class="cards-grid" id="geographical-grid"></div>
+    </section>
+
+    <!-- ======= DENOMINATIONAL ======= -->
+    <section class="view" id="view-denominational">
+      <div class="section-header">
+        <h1>Denominations &amp; Traditions</h1>
+        <p>How each major Protestant tradition developed its distinct position on the Sabbath, from Lutheran abrogation to Seventh-Day Baptist literalism.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Sabbath View:</span>
+        <button class="filter-btn active" data-filter="all" onclick="filterCards('denominational','all')">All</button>
+        <button class="filter-btn" data-filter="abrogated" onclick="filterCards('denominational','abrogated')">Abrogated</button>
+        <button class="filter-btn" data-filter="continental" onclick="filterCards('denominational','continental')">Continental</button>
+        <button class="filter-btn" data-filter="jure-divino" onclick="filterCards('denominational','jure-divino')">Jure Divino</button>
+        <button class="filter-btn" data-filter="seventh-day" onclick="filterCards('denominational','seventh-day')">Seventh-Day</button>
+        <button class="filter-btn" data-filter="nct" onclick="filterCards('denominational','nct')">NCT</button>
+      </div>
+      <div class="cards-grid" id="denominational-grid"></div>
+    </section>
+
+    <!-- ======= CONFESSIONS ======= -->
+    <section class="view" id="view-confessions">
+      <div class="section-header">
+        <h1>Key Confessions &amp; Documents</h1>
+        <p>The primary confessional texts that shaped Protestant Sabbath theology, with their exact formulations and historical context.</p>
+      </div>
+      <div class="cards-grid" id="confessions-grid"></div>
+    </section>
+
+    <!-- ======= THEOLOGIANS ======= -->
+    <section class="view" id="view-theologians">
+      <div class="section-header">
+        <h1>Key Theologians</h1>
+        <p>The individuals who most significantly shaped Protestant Sabbath theology — their arguments, their influence, and where they stood.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Era:</span>
+        <button class="filter-btn active" data-filter="all" onclick="filterCards('theologians','all')">All</button>
+        <button class="filter-btn" data-filter="reformer" onclick="filterCards('theologians','reformer')">Reformers</button>
+        <button class="filter-btn" data-filter="puritan" onclick="filterCards('theologians','puritan')">Puritans</button>
+        <button class="filter-btn" data-filter="post-reformation" onclick="filterCards('theologians','post-reformation')">Post-Reformation</button>
+        <button class="filter-btn" data-filter="modern" onclick="filterCards('theologians','modern')">Modern</button>
+      </div>
+      <div class="cards-grid" id="theologians-grid"></div>
+    </section>
+
+    <!-- ======= COMPARISON ======= -->
+    <section class="view" id="view-comparison">
+      <div class="section-header">
+        <h1>Position Comparison</h1>
+        <p>Seven major Protestant positions on the Sabbath, compared across their theological foundations, day requirements, confessional expressions, and stance on Sunday recreation.</p>
+      </div>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Tradition</th>
+              <th>Day Required</th>
+              <th>Theological Basis</th>
+              <th>Recreation</th>
+              <th>Confessional Expression</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-tbody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:var(--space-8);">
+        <div class="h2">The Pivotal Question</div>
+        <p style="color:var(--color-text-muted);line-height:1.8;max-width:72ch;">The deepest fault line is not about day (Saturday vs. Sunday) but about <strong>basis</strong>: Is the fourth commandment a <em>moral</em> and perpetual law binding all ages, or a <em>ceremonial/Mosaic</em> law fulfilled and abrogated in Christ? The Westminster tradition answers: moral and perpetual, with the specific day as alterable positive law transferred by divine authority to the first day. The Lutheran and New Covenant traditions answer: ceremonial/Mosaic, therefore abrogated. The Continental Reformed tradition occupies middle ground — affirming the day's theological significance without the strict whole-day prohibition.</p>
+      </div>
+    </section>
+
+    <!-- ======= KEY CONCEPTS ======= -->
+    <section class="view" id="view-concepts">
+      <div class="section-header">
+        <h1>Key Concepts</h1>
+        <p>Essential theological terms and frameworks for understanding the Protestant Sabbath debate.</p>
+      </div>
+      <div class="cards-grid" id="concepts-grid"></div>
+    </section>
+
+  </main>
+</div><!-- /app-body -->
+</div><!-- /app -->
+
+<!-- DETAIL PANEL -->
+<div class="detail-backdrop" id="detail-backdrop" onclick="closePanel(event)">
+  <div class="detail-panel" id="detail-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+    <button class="panel-close" onclick="closeDetailPanel()" aria-label="Close panel">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="panel-category" id="panel-category"></div>
+    <h2 class="panel-title" id="panel-title"></h2>
+    <p class="panel-subtitle" id="panel-subtitle"></p>
+    <hr class="panel-divider"/>
+    <div id="panel-content"></div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const DATA = {
+  timeline: [
+    { id:'tl1', year:1517, title:"Luther's 95 Theses", era:'reformation', desc:"Luther challenges indulgences, launching the Reformation. His hermeneutical approach — law/gospel distinction, fourth commandment as Mosaic-ceremonial — will shape the Lutheran Sabbath position.", tags:['Lutheran','Germany'], color:'var(--color-gold)' },
+    { id:'tl2', year:1530, title:"Augsburg Confession, Art. XXVIII", era:'reformation', desc:"Codifies the Lutheran position: Scripture has abrogated the Sabbath-day. Sunday observance is a free ecclesiastical arrangement, not a divine command. Those who hold it necessary 'greatly err.'", tags:['Lutheran','Confession'], color:'var(--color-gold)' },
+    { id:'tl3', year:1536, title:"Calvin's Institutes (1st ed.)", era:'reformation', desc:"Calvin engages the fourth commandment. He classifies it as at least partly ceremonial — a 'shadow' fulfilled in Christ — yet retains Sunday for church order, corporate worship, and servant rest.", tags:['Reformed','Geneva'], color:'var(--color-accent)' },
+    { id:'tl4', year:1559, title:"Calvin's Institutes (Final ed.)", era:'reformation', desc:"Calvin's mature position in Institutes 2.8.28–34: ceremonial element abrogated, yet Sunday retained for worship. He explicitly rejects the view that the moral part is 'one day in seven.' Forbids recreation in Geneva.", tags:['Reformed','Geneva'], color:'var(--color-accent)' },
+    { id:'tl5', year:1563, title:"Heidelberg Catechism, Q.103", era:'reformation', desc:"Lord's Day 38: Three functions — gospel ministry continues, spiritual rest (ceasing from evil works), anticipation of eternal rest. Notably does not categorically prohibit recreation. Establishes the 'Continental view.'", tags:['Reformed','Netherlands','Confession'], color:'var(--color-accent)' },
+    { id:'tl6', year:1566, title:"Second Helvetic Confession", era:'reformation', desc:"Bullinger: 'We do not believe that one day is holier than another, or that rest in itself is pleasing to God. We keep the Sunday, not the Sabbath, by a voluntary observance.' Most anti-Sabbatarian Continental statement.", tags:['Reformed','Switzerland','Confession'], color:'var(--color-accent)' },
+    { id:'tl7', year:1595, title:"Nicholas Bownd — Sabbathum Veteris", era:'puritan', desc:"First systematic jure divino defense of the Christian Sabbath. Five-part argument: creation ordinance, fourth commandment moral/perpetual, positive-law day transfer by apostles, whole day for God, recreation explicitly forbidden. Archbishop of Canterbury orders copies confiscated.", tags:['Puritan','England','Sabbatarian'], color:'var(--color-teal)' },
+    { id:'tl8', year:1618, title:"King James I — Book of Sports", era:'puritan', desc:"Explicitly permits Sunday recreations after worship: dancing, archery, leaping. Ordered read from every pulpit. Triggers mass Puritan resistance. The Puritan counter: Lord's Day is jure divino; no royal proclamation can override divine law.", tags:['England','Political'], color:'var(--color-teal)' },
+    { id:'tl9', year:1619, title:"Synod of Dort — Sabbath Statement", era:'puritan', desc:"Six-point statement affirming a definite appointed day for divine service with cessation from labor and from recreations discordant with worship. Stricter than Heidelberg, suggesting Continental laxity developed after, not from, classical 17th-century Reformed theology.", tags:['Reformed','Netherlands','Confession'], color:'var(--color-teal)' },
+    { id:'tl10', year:1633, title:"Book of Sports Reissued (Charles I)", era:'puritan', desc:"Charles I reissues the Book of Sports, ordering it read from pulpits. Precipitates scores of Puritan clergy resignations. Crystallizes the theological and political battle between jure divino Sabbatarianism and Prelatic Christian liberty.", tags:['England','Political','Puritan'], color:'var(--color-teal)' },
+    { id:'tl11', year:1646, title:"Westminster Confession, Ch. 21.7–8", era:'puritan', desc:"The apex of Protestant Sabbatarianism. Four interlocking claims: (1) one-in-seven is positive, moral, perpetual commandment; (2) day transferred jure divino at Christ's resurrection; (3) whole-day rest from works, words, and thoughts about worldly employments AND recreations; (4) entire day in public and private worship. The 1689 Baptist Confession reproduces this language nearly verbatim.", tags:['Presbyterian','Baptist','Confession','Sabbatarian'], color:'var(--color-teal)' },
+    { id:'tl12', year:1649, title:"Thomas Shepard — Theses Sabbaticae", era:'puritan', desc:"Most systematic Puritan exegetical rebuttal of antinomian readings of Gal. 4:10, Col. 2:16–17, Rom. 14:5. Argues these texts address abrogated Jewish ceremonial days, not the moral one-in-seven. Essential defense of WCF position.", tags:['Puritan','New England','Sabbatarian'], color:'var(--color-teal)' },
+    { id:'tl13', year:1689, title:"London Baptist Confession, Ch. 22", era:'post-reformation', desc:"Reproduces Westminster Sabbath language nearly verbatim. Establishes jure divino Sabbatarianism as broad Reformed confessional consensus across denominational lines, not merely a Presbyterian position.", tags:['Baptist','Confession','Sabbatarian'], color:'var(--color-purple)' },
+    { id:'tl14', year:1781, title:"Sunday Observance Act (Britain)", era:'industrial', desc:"Closes theaters, museums, zoos, libraries, and shops on Sunday. Driven by Bishop Porteus. Reflects legislative high-water mark of enforced Sunday observance in Britain. Lord's Day Observance Society (est. 1831) campaigns to maintain and extend these restrictions.", tags:['England','Legal','Secularization'], color:'var(--color-green)' },
+    { id:'tl15', year:1843, title:"Saturday Half-Day Movement (Manchester)", era:'industrial', desc:"John Lowes and 400 Manchester/Salford employers agree to close factories at 2pm Saturday. Beginning of the Saturday half-day. By 1870s workers had a 1.5-day weekend. Football culture fills Saturday afternoons, eroding Sunday's distinctiveness as the primary non-working day.", tags:['England','Cultural','Secularization'], color:'var(--color-green)' },
+    { id:'tl16', year:1850, title:"Factory Act — Defined Workweek", era:'industrial', desc:"Formalizes Saturday half-day, freeing Saturday afternoons. English Football Association (1863) anchors Saturday afternoon sports culture. Sunday begins its transformation from consecrated totality to diminished religious residual.", tags:['England','Legal','Cultural'], color:'var(--color-green)' },
+    { id:'tl17', year:1888, title:"Lord's Day Alliance Founded (USA)", era:'industrial', desc:"Interdenominational Protestant organization lobbying to maintain Sunday-closing legislation across America. By 1921, only California and Oregon lack Sunday-closing statutes. Fuses theological Sabbatarianism with nativist opposition to Catholic/immigrant 'Continental Sabbath' culture.", tags:['America','Legal','Sabbatarian'], color:'var(--color-green)' },
+    { id:'tl18', year:1908, title:"First U.S. Five-Day Workweek", era:'industrial', desc:"New England cotton mill introduces five-day workweek to accommodate Jewish workers' Saturday Sabbath. First formal recognition that the six-day week is not economically necessary. A small but structurally significant precedent.", tags:['America','Cultural'], color:'var(--color-green)' },
+    { id:'tl19', year:1926, title:"Henry Ford — Five-Day Week", era:'modern', desc:"Ford Motor Company adopts five-day, 40-hour workweek. Saturday ceases to be a workday. The secular weekend becomes a cultural institution independent of any religious rationale. Sunday's social distinctiveness is now structurally undermined by Saturday leisure, not merely challenged.", tags:['America','Cultural','Secularization'], color:'var(--color-accent)' },
+    { id:'tl20', year:1933, title:"Full Two-Day Weekend (Britain)", era:'modern', desc:"John Boot standardizes full Saturday off at his factory during the Great Depression rather than lay off workers. Other factories follow. Britain's two-day weekend becomes the industrial norm. The cultural institution of the weekend is now firmly secular.", tags:['England','Cultural','Secularization'], color:'var(--color-accent)' },
+    { id:'tl21', year:1938, title:"Fair Labor Standards Act (USA)", era:'modern', desc:"40-hour workweek becomes U.S. law. The weekend is institutionalized as a civic norm, not a religious one. Sunday's legal protection no longer rests on any theological foundation; it is simply one of two days off.", tags:['America','Legal','Secularization'], color:'var(--color-accent)' },
+    { id:'tl22', year:1961, title:"McGowan v. Maryland (SCOTUS)", era:'modern', desc:"Supreme Court upholds Sunday blue laws but on secular grounds: a 'uniform day of rest for all citizens.' Chief Justice Warren explicitly severs the legal justification from any religious purpose. The Christian Sabbath is legally transformed into a secular rest day.", tags:['America','Legal','Secularization'], color:'var(--color-accent)' },
+    { id:'tl23', year:1982, title:"D.A. Carson — From Sabbath to Lord's Day", era:'modern', desc:"Grand Rapids: Zondervan. Edited volume arguing the fourth commandment is not directly applicable to Sunday; the Lord's Day is not the Christian Sabbath in a strict covenantal sense. Highly influential in Reformed Baptist circles. Major scholarly challenge to WCF Sabbatarianism from within evangelical scholarship.", tags:['Baptist','Modern','NCT'], color:'var(--color-accent)' },
+    { id:'tl24', year:1990, title:"Sunday Trading Laws Repealed (UK)", era:'modern', desc:"UK liberalizes Sunday trading significantly. Most Sunday-closing restrictions disappear across the U.S. by the late 20th century, driven by commercial interests, suburbanization, and declining religious homogeneity. The secular weekend is complete.", tags:['England','Legal','Secularization'], color:'var(--color-accent)' }
+  ],
+
+  historical: [
+    { id:'h1', title:"Era I: The Reformation Divergence", meta:"c. 1517–1563", century:'16th', desc:"The Reformation produced irreconcilable Sabbath positions within a generation. Luther declared the fourth commandment Mosaic-ceremonial and abrogated. Calvin retained Sunday for worship but on partly ceremonial grounds. Zwingli/Bullinger went furthest: Sunday as voluntary ecclesiastical convention only. No major Reformer in this period argues jure divino Sunday.", body:"<p>The hermeneutical key is each Reformer's handling of the moral/ceremonial distinction. For Luther, the entire fourth commandment was Mosaic legislation that did not bind Gentile consciences apart from its natural-law content (rest for servants). For Calvin, the commandment was <em>at least partly</em> ceremonial — its shadowy/typical element fulfilled in Christ — but Sunday was retained for practical reasons of church order and piety. The Helvetic tradition went furthest in the anti-Sabbatarian direction: the Second Helvetic Confession (1566) declared Sunday a voluntary observance and explicitly denied that any one day is holier than another.</p><p>The Heidelberg Catechism (1563, Q.103) represents the fullest Continental confessional statement: three functions — continued gospel ministry, spiritual rest (ceasing from evil), anticipation of eternal rest — but no categorical prohibition of recreation. This becomes the axis of later controversy: the Heidelberg tradition defines what Sunday is <em>for</em>; the Westminster tradition adds what it is <em>against</em>.</p><p><strong>Key fault line established:</strong> Lutheran normative principle (what Scripture does not forbid, the church may permit) vs. emerging Reformed RPW (only what Scripture warrants is acceptable in worship). The RPW, when consistently applied, will produce English Sabbatarianism.</p>", color:'var(--color-gold)', tags:['Lutheran','Reformed','16th century'], related:['conf1','conf2','conf3','th1','th2','th3'] },
+    { id:'h2', title:"Era II: The Puritan Apex", meta:"c. 1580–1660", century:'17th', desc:"English Puritanism produced the most fully developed jure divino Sabbatarianism in Protestant history. Nicholas Bownd (1595) made the systematic case; the Westminster Assembly (1646) made it confessional; New England Puritanism made it civil law.", body:"<p>The Puritan movement applied the Regulative Principle of Worship not just to the elements of the worship service but to the entire day. The logical structure was airtight within its own premises: if only what Scripture warrants is acceptable, and if Scripture warrants the fourth commandment as moral and perpetual, then the entire day belongs to God. Recreation — like worldly labor — falls under the prohibition of 'your own pleasure on my holy day' (Isa. 58:13).</p><p>Nicholas Bownd's <em>Sabbathum Veteris et Novi Testamenti</em> (1595) provided the five-part argument that the Westminster Assembly would eventually ratify: (1) creation ordinance, pre-Mosaic; (2) fourth commandment moral/perpetual; (3) specific day is positive law, alterable; (4) apostles transferred the day to Sunday by divine direction; (5) entire day belongs to God. The Archbishop of Canterbury ordered copies confiscated — which primarily widened their distribution.</p><p>The Book of Sports controversy (1618, reissued 1633) forced a political showdown. The Westminster Confession (1646) responded with the most logically developed jure divino Sabbatarian formulation in any Protestant confession, specifying that the Sabbath requires rest from 'works, words, <em>and thoughts</em> about worldly employments and recreations.'</p>", color:'var(--color-teal)', tags:['Puritan','England','New England','17th century'], related:['conf5','conf6','th5','th6','th7'] },
+    { id:'h3', title:"Era III: Fractures and Challenges", meta:"c. 1650–1780", century:'17th,18th', desc:"The Puritan settlement faced challenges from three directions: antinomians (Christian liberty releases from all day-observance), Seventh-Day Baptists (the commandment demands Saturday, not Sunday), and Socinian/Arminian erosion in English Dissent. Scottish Presbyterianism held firm.", body:"<p>The <strong>antinomian challenge</strong> cited Gal. 4:10, Col. 2:16–17, and Rom. 14:5 to argue the new covenant believer is released from all law-observance of days. The Puritan response (Shepard, Theses Sabbaticae, 1649) was threefold: these texts address abrogated Jewish ceremonial feast days, not the moral Decalogue; the fourth commandment's creation-ordinance basis predates the Mosaic covenant entirely; the Decalogue is the permanent moral law.</p><p>The <strong>Seventh-Day Baptist challenge</strong> (Theophilus Brabourne, c. 1630s) accepted the full Puritan logic of the fourth commandment's moral perpetuity but rejected the day-transfer argument. If the commandment is moral and perpetual, they argued, it demands Saturday. Westminster's response: the commandment enjoins a <em>proportion</em> (one in seven), not a specific day; the specific day is positive law alterable by divine authority, as demonstrated by apostolic first-day gathering.</p><p>The <strong>Socinian/Arminian drift</strong> in 18th-century English Dissent and Anglicanism progressively weakened Sabbatarian conviction, driven by emphasis on Christian liberty and a hermeneutical resistance to importing OT legal categories into the new covenant. Scottish Presbyterianism maintained strict Westminster Sabbatarianism. The divergence between English/Scottish practice and Continental practice begins to widen.</p>", color:'var(--color-purple)', tags:['Post-Reformation','17th-18th century'], related:['denom4','denom7','th8','th9'] },
+    { id:'h4', title:"Era IV: Industrialization and Lord's Day Legislation", meta:"c. 1760–1920", century:'19th', desc:"The Industrial Revolution restructured time, threatening Sunday's distinctiveness from below (working-class Saint Monday culture) while legislatures and alliances tried to defend it from above. The secular weekend began to emerge.", body:"<p>The Industrial Revolution (c. 1760–1840) disrupted agrarian rhythms that had given Sunday observance its structural plausibility. Factory workers laboring 12–16 hours six days per week had little capacity for contemplative whole-day Sabbath observance; Sunday became a day of recovery. The informal practice of 'Saint Monday' — extending Sunday into Monday to recover from its revelry — reflected de facto de-Christianization of Sunday among the urban working class, not theological decision.</p><p>The Saturday half-day movement (Manchester, 1843) began the process that produced the modern weekend. By the 1850s workers had Saturday afternoons free; by the 1870s, football culture had colonized them. The English Football Association (1863) anchored Saturday as the day of sport, eroding Sunday's distinctiveness as the primary non-working day.</p><p>Legislative responses were vigorous: Britain's Sunday Observance Act (1781) had already closed theaters, museums, and shops; the Lord's Day Observance Society (1831) campaigned to maintain restrictions. In America, colonial blue laws were amplified; the Lord's Day Alliance (1888) lobbied for Sunday-closing legislation, achieving near-total coverage by 1921. But these legislative efforts were increasingly a rearguard action — culturally, Sunday was already fragmenting.</p><p>Theologically, Princeton (Hodge, Warfield) remained broadly Sabbatarian; Southern Presbyterians (Dabney, Thornwell) defended the Westminster position vigorously; but New School evangelicalism and revivalism increasingly moralized Sabbath observance — enforcing it as social reform rather than confessional doctrine — a shift that paradoxically weakened its theological grounding.</p>", color:'var(--color-green)', tags:['England','Scotland','America','19th century'], related:['geo3','geo5','geo6','th12','th13'] },
+    { id:'h5', title:"Era V: Secularization and Theological Dissolution", meta:"c. 1920–2000", century:'20th', desc:"Henry Ford's five-day week (1926) and the Fair Labor Standards Act (1938) institutionalized the secular weekend. McGowan v. Maryland (1961) completed the legal secularization. Evangelical theology adopted New Covenant Theology and broadened Christian liberty arguments to ratify what culture had already accomplished.", body:"<p>The 20th century completed what industrialization began. Henry Ford's 1926 adoption of the five-day, 40-hour workweek gave the secular weekend its defining industrial imprimatur. Saturday ceased to be a workday; the weekend became a cultural institution independent of religious rationale. The U.S. Fair Labor Standards Act (1938) enshrined the 40-hour week in law. The weekend was now a civic institution.</p><p>The decisive legal moment was <em>McGowan v. Maryland</em>, 366 U.S. 420 (1961), in which the Supreme Court upheld Sunday blue laws but on secular grounds — 'a uniform day of rest for all citizens.' Chief Justice Warren's majority opinion explicitly severed the legal justification from any religious purpose. The Christian Sabbath was legally transformed into a secular rest day. Post-WWII suburban expansion, consumer culture, Sunday shopping, and rising sports culture progressively colonized what remained.</p><p>Theological responses: Neo-orthodoxy (Barth, Brunner) reframed the Sabbath christologically and eschatologically, deprioritizing the question of obligation. New Covenant Theology (Wells, Zaspel) argued the fourth commandment was Mosaic-covenantal, not eternally moral, and was fulfilled/abrogated in Christ. D.A. Carson's edited volume <em>From Sabbath to Lord's Day</em> (1982) provided the most significant evangelical scholarly challenge to WCF Sabbatarianism. Among 1689-subscribing Baptist churches, the most common substantial exception today is to Ch. 22.8 on whole-day observance.</p>", color:'var(--color-accent)', tags:['America','England','20th century','Secularization'], related:['denom8','denom9','th14','th15','th16'] }
+  ],
+
+  geographical: [
+    { id:'geo1', title:"Germany & Lutheran Territories", meta:"Germany / Lutheran", region:'germany', desc:"Birthplace of the Reformation. Luther's sharp law/gospel distinction produced permanent Lutheran anti-Sabbatarianism: Sunday is a free ecclesiastical arrangement, not a divine command.", body:"<p>Luther's hermeneutical framework — the sharp law/gospel distinction and his treatment of the Decalogue — placed the fourth commandment in the category of Mosaic-ceremonial legislation abrogated for Christians. The Augsburg Confession (1530) codified this: Sunday observance is a human ecclesiastical arrangement, not binding on conscience. Any claim that Sunday observance is necessary 'greatly errs.'</p><p>The normative principle governing Lutheran worship is permissive: what Scripture does not forbid, the church may permit. This created space for Sunday as a practical convention without any theological freight. German Lutheranism never developed a tradition of strict Sunday observance comparable to English Puritanism; Sunday became a cultural day for church attendance and recreation, a pattern that continues into the present.</p><p>Key documents: Augsburg Confession Art. XXVIII (1530); Luther's Large Catechism on the Third Commandment.</p>", color:'var(--color-gold)', tags:['Lutheran','Abrogated','16th century'], badges:['badge-geo','badge-denom'] },
+    { id:'geo2', title:"Geneva & French-Speaking Reformed", meta:"Switzerland / Geneva", region:'switzerland', desc:"Calvin's Geneva retained Sunday worship vigorously but on partly ceremonial grounds. Recreation forbidden in practice but not as strict whole-day commandment. Influenced Heidelberg and Huguenot practice.", body:"<p>Calvin's Geneva maintained Sunday as a day of corporate worship, with sessions requiring attendance at multiple services. Recreation was discouraged — Calvin himself stated that 'we are unable to have a true union and sanctity with Christ unless we rest from our work' — but the theological grounding was different from Westminster Sabbatarianism: it was piety and order, not the moral perpetuity of the fourth commandment as such.</p><p>Calvin explicitly rejected the view that the moral part of the fourth commandment is 'one day in seven' (Institutes 2.8.34). His position was: the ceremonial element (typological rest in Christ) is fulfilled; the positive element (church order requiring a fixed day) is retained; but the specific day is alterable by ecclesiastical authority, and the whole-day prohibition is grounded in practical piety rather than moral law.</p><p>French Huguenot practice generally followed Genevan lines. The Synod of Dort (1619), which included Continental delegates, issued a stricter six-point statement — suggesting the later lax 'Continental view' is partially a retrojection from 20th-century practice onto 17th-century theology.</p>", color:'var(--color-accent)', tags:['Reformed','Continental view','16th-17th century'], badges:['badge-geo'] },
+    { id:'geo3', title:"England — Puritan Sabbatarianism", meta:"England / Puritan-Anglican Conflict", region:'england', desc:"The epicenter of jure divino Sabbatarianism. The Puritan-Prelatic conflict over Sunday observance ran from Bownd (1595) through the Book of Sports controversy (1618/1633) to the Westminster Assembly (1646).", body:"<p>England produced the most developed jure divino Sabbatarianism in Protestant history, and also the most politically charged Sabbath controversy. The Elizabethan settlement had maintained Sunday worship while permitting Sunday recreations after morning service. The Puritan movement, applying the RPW consistently, challenged this: if God alone prescribes worship, and if the fourth commandment is moral, then Sunday recreation is a profanation.</p><p>The Book of Sports controversies (1618 James I; 1633 Charles I) crystallized the battle. The royal position: Sunday is a church institution useful for worship; Christian liberty covers post-worship recreation. The Puritan position: the Lord's Day is jure divino; no royal proclamation overrides divine law. Scores of Puritan clergy refused to read the Book of Sports from their pulpits and lost their livings.</p><p>The Westminster Assembly (1646) was the theological resolution — the most fully developed confessional Sabbatarianism in Protestant history, specifying whole-day rest from 'works, words, and thoughts about worldly employments and recreations.'</p><p>New England Puritanism exported strict Sabbatarianism to the colonies, where enforcement was correspondingly severe: 40-shilling fines or public whipping; in extreme cases, capital punishment for Sabbath profanation.</p>", color:'var(--color-teal)', tags:['Puritan','Anglican','Jure divino','17th century'], badges:['badge-geo'] },
+    { id:'geo4', title:"Netherlands — Continental Reformed", meta:"Netherlands / Dutch Reformed", region:'netherlands', desc:"The Dutch Reformed tradition expressed in the Heidelberg Catechism represents the 'Continental view': Sunday for worship and rest, recreation not categorically forbidden. But the Synod of Dort (1619) was stricter than popularly assumed.", body:"<p>The Netherlands produced the Heidelberg Catechism (1563), the primary confessional expression of the Continental view. Q.103 identifies three functions of the Sabbath commandment — gospel ministry continues, spiritual rest, eschatological anticipation — without a categorical prohibition of recreation. This has been widely interpreted as licensing Sunday afternoon recreation within the Dutch Reformed tradition.</p><p>However, the Synod of Dort (1619) adopted a six-point statement that was meaningfully stricter: a definite appointed day for divine service, cessation from labor, and cessation from recreations discordant with worship. This suggests that the 'relaxed Continental view' as typically invoked today is partly a retrojection of 20th-century Dutch practice onto 17th-century confessional theology.</p><p>The Dutch Reformed tradition contains an internal range: from the strict Sabbatarianism of Voetius, Koelman, and Wilhelmus a'Brakel (nearly indistinguishable from Westminster) to the looser federalist position of Cocceius. The modern invocation of the 'Continental view' as uniformly permitting recreation often reflects Cocceian influence more than classical Dutch Reformed consensus.</p>", color:'var(--color-accent)', tags:['Reformed','Continental view','17th century'], badges:['badge-geo'] },
+    { id:'geo5', title:"Scotland — Strictest Confessional Sabbatarianism", meta:"Scotland / Presbyterian", region:'scotland', desc:"Scottish Presbyterianism maintained Westminster Sabbatarianism in its strictest form from the 17th century through the 20th, producing the most rigorous Sunday observance culture in the English-speaking Protestant world.", body:"<p>Scotland's Presbyterian tradition applied Westminster Sabbatarianism with a rigor that exceeded even English Puritan practice in many respects. The Knox reformation shaped a national culture in which Sunday observance was a social as well as theological norm; for centuries, Scottish Sunday meant no sports, no travel for pleasure, no work, no recreation — the entire day given to public and private worship.</p><p>The Free Church of Scotland (1843), formed through the Disruption over the patronage question, maintained strict Westminster Sabbatarianism. The Free Church (Continuing), the Reformed Presbyterian Church of Scotland, and related bodies remain among the strictest confessional Sabbatarians in the world today.</p><p>The Outer Hebrides — particularly Lewis and Harris — are culturally distinctive for their maintenance of strict Sunday observance into the 21st century: no Sunday ferries, no Sunday sports, businesses closed. This represents the living remnant of Westminster Sabbatarianism in its fullest cultural expression.</p>", color:'var(--color-purple)', tags:['Presbyterian','Jure divino','17th-20th century'], badges:['badge-geo'] },
+    { id:'geo6', title:"America — From Blue Laws to Secular Weekend", meta:"United States", region:'america', desc:"American colonies imported strict Puritan Sabbatarianism, enforced through blue laws. The Lord's Day Alliance defended these through the early 20th century. Henry Ford (1926), the FLSA (1938), and McGowan v. Maryland (1961) completed the secularization.", body:"<p>Colonial America imported English Puritan Sabbatarianism along with the settlers themselves. Massachusetts Bay Sabbath laws were among the strictest in the Protestant world: 40-shilling fines, public whipping, and capital punishment for extreme Sabbath profanation. These colonial precedents shaped Sunday-closing laws that persisted in most U.S. states through the mid-20th century.</p><p>The Lord's Day Alliance (founded 1888) lobbied vigorously to maintain these laws. By 1921, only California and Oregon lacked Sunday-closing statutes. Second Great Awakening reformers (Lyman Beecher) fused Sabbatarian theology with nativist opposition to Catholic 'Continental Sabbath' practices — Sunday festivity, alcohol, family recreation — a combination that eventually discredited both the theology and the legislation.</p><p>The structural collapse came through economics: Henry Ford's five-day week (1926) normalized Saturday leisure; the Fair Labor Standards Act (1938) made the two-day weekend law. The decisive legal secularization was <em>McGowan v. Maryland</em> (1961), in which the Supreme Court upheld Sunday blue laws only on secular grounds — severing them from religious rationale. Most remaining Sunday-closing laws have since been repealed or narrowed to alcohol and car sales.</p>", color:'var(--color-green)', tags:['Puritan heritage','Legal','20th century'], badges:['badge-geo'] }
+  ],
+
+  denominational: [
+    { id:'denom1', title:"Lutheran", meta:"Abrogated / Ecclesiastical", view:'abrogated', desc:"Fourth commandment is Mosaic-ceremonial, abrogated for Christians. Sunday is a free ecclesiastical arrangement. Christian liberty governs the day. The normative principle permits Sunday recreation.", body:"<p>Lutheran Sabbath theology flows directly from Luther's law/gospel distinction and his treatment of the Decalogue. The fourth commandment belongs to the specifically Israelite ceremonial legislation that does not bind Gentile consciences apart from its natural-law content. The Augsburg Confession (Art. XXVIII, 1530) codified this: 'Scripture has abrogated the Sabbath-day; for it teaches that, since the Gospel has been revealed, all the ceremonies of Moses can be omitted.'</p><p>Sunday observance is a permissible ecclesiastical arrangement — useful for gathering the people for Word and Sacrament — but not jure divino. Any attempt to bind consciences to Sunday as a divine command was, for the Lutheran tradition, a form of works-righteousness. The normative principle (what Scripture does not forbid, the church may permit) creates space for Sunday recreation without theological conflict.</p><p>The Augsburg Confession uses the Sabbath question as an explicit example of Christian liberty: 'the church designates the Lord's Day for this purpose; and this day seems to have been chosen all the more for this additional reason, that men might have an example of Christian liberty, and might know that the keeping neither of the Sabbath nor of any other day is necessary.'</p>", color:'var(--color-gold)', tags:['Abrogated','Normative Principle'] },
+    { id:'denom2', title:"Early Continental Reformed", meta:"Calvin / Heidelberg / Partly Ceremonial", view:'continental', desc:"Sunday retained for worship and church order on partly ceremonial grounds. Recreation discouraged but not categorically forbidden. Heidelberg Catechism Q.103 is the primary confessional expression.", body:"<p>The early Continental Reformed tradition — Calvin, Ursinus, Heidelberg Catechism — represents the mediating position between Lutheran abrogation and Puritan whole-day prohibition. The fourth commandment is at least partly ceremonial (its typological rest-in-Christ element), but Sunday is retained for three practical reasons: corporate assembly, rest for servants, and church order.</p><p>Calvin's Institutes 2.8.28–34 explicitly rejects the view that the moral part of the commandment is 'one day in seven.' He grounds Sunday in practical necessity and piety rather than moral perpetuity. Yet Calvin's Geneva in practice was nearly as strict as Puritan Sabbatarianism: recreation discouraged, multiple Sunday services required, departures from the city on Sundays restricted. The gap between Calvin's theoretical position and his pastoral practice is notable.</p><p>The Heidelberg Catechism (Q.103) defines the Sabbath positively — what it is for — without the negative prohibition on recreation that characterizes Westminster. This has been widely received as licensing Sunday afternoon recreation, though the Synod of Dort (1619) issued a stricter statement.</p>", color:'var(--color-accent)', tags:['Continental View','Partly Ceremonial'] },
+    { id:'denom3', title:"Westminster Presbyterian", meta:"Jure Divino / Whole-Day Sabbath", view:'jure-divino', desc:"One day in seven is positive, moral, perpetual commandment binding all ages. Day transferred jure divino by Christ's resurrection. Whole-day rest from works, words, thoughts about worldly employments AND recreations. WCF 21.7–8.", body:"<p>The Westminster position is the most logically developed Protestant Sabbatarian system ever formulated. Its internal consistency rests on the conjunction of three claims: (1) the Regulative Principle of Worship (God alone prescribes worship), (2) the moral perpetuity of the Decalogue, and (3) the jure divino transfer of the Sabbath from the seventh to the first day by Christ's resurrection. These three claims lock together: if worship must be scripturally warranted, and if the fourth commandment is moral, then the day must be divinely mandated — and Westminster argues it is.</p><p>The specific requirements of WCF 21.8 are notable for their precision: 'holy rest all the day from their own works, words, and thoughts about their worldly employments and recreations.' This prohibits not merely worldly labor and recreation but worldly <em>words</em> and <em>thoughts</em> about them — the Sabbath demands a total reorientation of mental and conversational focus.</p><p>Contemporary confessional Presbyterians: The OPC and RPCNA formally maintain WCF 21 Sabbatarianism. The PCA formally affirms the RPW (BCO 47-1) but Sabbath observance is inconsistently applied and rarely enforced at session level, reflecting de facto departure from confessional standards even where formal subscription is maintained.</p>", color:'var(--color-teal)', tags:['Jure Divino','Whole-Day','Moral Law'] },
+    { id:'denom4', title:"Seventh-Day Baptists", meta:"Saturday Literalism", view:'seventh-day', desc:"Accept the full Puritan logic of the fourth commandment's moral perpetuity but reject the day-transfer argument. If it is truly moral and perpetual, it demands Saturday, not Sunday. Emerged c. 1630s under Theophilus Brabourne.", body:"<p>The Seventh-Day Baptist position represents a paradoxical challenge to Westminster Sabbatarianism: it accepts the Puritan premise (the fourth commandment is moral and perpetual) but rejects the conclusion (that the day was transferred to Sunday). The argument: if the commandment is genuinely moral and perpetual, then the specific day — Saturday — cannot be altered by ecclesiastical or even apostolic authority, since moral law is immutable.</p><p>The Westminster response was that the commandment enjoins a <em>proportion</em> (one in seven), not a specific day. The specific day constitutes the positive-law element of the commandment, alterable by divine authority — and the apostles, acting under divine direction, transferred the day to the first in commemoration of the resurrection. The creation-week pattern mandates the proportion; apostolic practice determines the specific day.</p><p>The irony noted by later polemicists: both Prelatists and Seventh-Day Baptists agreed that the fourth commandment, if binding, demands Saturday. The Prelatists concluded it was therefore abrogated for Christians. The Seventh-Day Baptists concluded it was therefore still required on Saturday. The Westminster Puritan occupied the logical mean — arguing both that it binds (against Prelatists) and that the day has been transferred (against Seventh-Day Baptists).</p>", color:'var(--color-purple)', tags:['Seventh-Day','Sabbatarian','Saturday'] },
+    { id:'denom5', title:"1689 Reformed Baptists", meta:"Jure Divino / Baptist Confession", view:'jure-divino', desc:"1689 London Baptist Confession Ch. 22.7–8 reproduces Westminster Sabbath language nearly verbatim. Spurgeon was a committed Sabbatarian. Today many 1689-subscribing churches take exceptions to Ch. 22.8 on whole-day observance.", body:"<p>The Second London Baptist Confession of Faith (1689) reproduces the Westminster Confession's Sabbath language in Chapter 22.7–8 almost verbatim, confirming that jure divino Sabbatarianism was not a distinctively Presbyterian position but the broad confessional consensus of 17th-century Reformed Christianity across denominational lines.</p><p>C.H. Spurgeon was an explicit confessional Sabbatarian who upheld the 1689 position and lamented the declining seriousness of Lord's Day observance in Victorian England. The Spurgeon Center has documented that Spurgeon held to 'the letter and spirit' of the 1689 on the Sabbath without exception.</p><p>The contemporary situation is marked by tension. Many 21st-century 1689-subscribing churches take explicit exceptions to Chapter 22.8 on whole-day observance and the prohibition of recreation. Some argue from New Covenant Theology; others from a broadly Continental hermeneutic. The Spurgeon.org blog has noted this is the most common substantial exception in 1689-subscribing churches. Those within the tradition committed to full subscription argue this exception is incompatible with the Confession's three-fold view of the law in Chapter 19.</p>", color:'var(--color-teal)', tags:['Jure Divino','1689 Confession','Baptist'] },
+    { id:'denom6', title:"New Covenant Theology", meta:"Mosaic-Covenantal / Abrogated in Christ", view:'nct', desc:"Fourth commandment is Mosaic-covenantal, not eternally moral. Fulfilled/abrogated in Christ (Heb. 4). Sunday assembly is apostolic practice, not divine commandment. Dominant in many conservative Baptist and independent evangelical circles.", body:"<p>New Covenant Theology (NCT), developed systematically by Tom Wells and Fred Zaspel and popularized in conservative Baptist and independent evangelical circles, argues that the fourth commandment is Mosaic-covenantal in character — part of the Mosaic administration — rather than eternally moral. As Christ fulfills and abrogates the Mosaic covenant, the fourth commandment is fulfilled and abrogated with it. Hebrews 4 describes the believer's entry into Christ's rest as the fulfillment of the Sabbath typology.</p><p>NCT affirms Sunday assembly as an apostolic practice of the new-covenant church, but grounds it in ecclesial convention rather than divine commandment. This structurally resembles the Lutheran position, though NCT proponents resist the identification: they are not arguing from Christian liberty under the moral law but from the redemptive-historical fulfillment of the entire Mosaic covenant.</p><p>NCT has become the de facto position of many conservative Baptist churches that formally subscribe to the 1689 Confession while taking exception to its Sabbath teaching. The influence of John MacArthur and associated networks has reinforced NCT in independent evangelical circles. D.A. Carson's <em>From Sabbath to Lord's Day</em> (1982) provided the most significant scholarly basis for this trajectory.</p>", color:'var(--color-accent)', tags:['NCT','New Covenant','Baptist'] },
+    { id:'denom7', title:"Anglican / Prelatic", meta:"Ecclesiastical / Christian Liberty", view:'continental', desc:"Sunday is not jure divino; it is a church institution. Christian liberty covers post-worship recreation. The normative principle governs. The historical opponent of Puritan Sabbatarianism in England.", body:"<p>The Anglican and Prelatic position represented the established church's counter to Puritan Sabbatarianism throughout the 17th century. The core claim: Sunday is not <em>jure divino</em> but a church institution — valuable for worship, but not binding on conscience as a divine commandment. The fourth commandment, on this reading, is either ceremonial (and therefore abrogated) or applies to the proportion of time rather than the specific day, with the church having authority to determine the day.</p><p>The Book of Sports (1618, 1633) expressed this position in its starkest form: after morning service, lawful recreations are permitted. The Prelatic argument was that the absence of explicit NT ratification of the fourth commandment amounts to its practical abrogation, leaving Sunday as an ecclesiastical custom rather than a divine mandate. Christian liberty therefore covers Sunday afternoon recreation.</p><p>The Anglican tradition's normative principle — what Scripture does not forbid, the church may permit — stands in direct opposition to the Puritan RPW. In practice, this meant a Sunday culture of moderate activity: morning worship followed by afternoon recreation, a pattern that resembles what is today called the 'Continental view.'</p>", color:'var(--color-gold)', tags:['Anglican','Christian Liberty','Ecclesiastical'] },
+    { id:'denom8', title:"Modern Reformed (PCA / NAPARC)", meta:"Contemporary / Mixed Practice", view:'continental', desc:"Formal confessional subscription to WCF (RPW, Sabbath) at the PCA denominational level, but inconsistent application in practice. Many PCA congregations effectively hold a Continental view. RPCNA and OPC maintain stricter practice.", body:"<p>The contemporary confessional Reformed landscape reflects the cumulative effect of 20th-century secularization and theological accommodation. The PCA formally affirms the RPW (BCO 47-1) and subscribes to the Westminster Standards, which include WCF 21.7–8 on the Sabbath. In practice, Sabbath observance is inconsistently applied and rarely enforced at the session level. Most PCA congregations reflect a de facto Continental position — Sunday worship as obligatory, Sunday afternoon recreation as permitted — without formally revising their confessional standards.</p><p>The OPC (Orthodox Presbyterian Church) maintains stricter confessional Sabbatarianism in stated policy. The RPCNA (Reformed Presbyterian Church of North America) is the most consistently confessional in practice, maintaining restrictions on Sunday recreation, sports, and commerce. The RPCNA prohibits members from attending or participating in Sunday professional sports events.</p><p>The gap between formal confessional subscription and actual practice in the broader Reformed world is one of the more significant sources of internal tension. Critics from within the tradition argue that accepting the Continental view while subscribing to the WCF involves an unacknowledged revision of confessional standards.</p>", color:'var(--color-purple)', tags:['PCA','OPC','RPCNA','Contemporary'] },
+    { id:'denom9', title:"Scottish Free Church Tradition", meta:"Scotland / Strictest Sabbatarianism", view:'jure-divino', desc:"The Free Church of Scotland (1843) and its successors maintain Westminster Sabbatarianism in its strictest confessional form. The Outer Hebrides are its living cultural expression.", body:"<p>The Free Church of Scotland, formed in 1843 through the Disruption over the patronage question, maintained strict Westminster Sabbatarianism as a central commitment. The tradition produced some of the most thorough defenses of jure divino Sabbatarianism in the post-Westminster period and maintained a Sunday culture unparalleled in its rigor among English-speaking Protestant bodies.</p><p>The Free Church (Continuing) and the Free Presbyterian Church of Scotland maintain this tradition into the present. The Outer Hebrides — particularly Lewis and Harris — remain the most culturally distinctive expression of Westminster Sabbatarianism in the modern world: no Sunday ferry sailings (a persistent controversy), no Sunday sports, businesses closed, the day given entirely to worship and rest.</p><p>The tradition has been subjected to sustained cultural pressure, particularly since the 1990s, and the Sunday ferry controversy in Lewis represents a larger conflict between the last remnants of confessional Sabbatarian culture and the secular weekend that has otherwise triumphed across the Protestant world.</p>", color:'var(--color-teal)', tags:['Scotland','Free Church','Strictest'] }
+  ],
+
+  confessions: [
+    { id:'conf1', title:"Augsburg Confession, Art. XXVIII", meta:"1530 · Lutheran", desc:"Codifies Lutheran anti-Sabbatarianism. Scripture has abrogated the Sabbath; Sunday is a free ecclesiastical arrangement to allow Christian liberty.", body:"<p><strong>Key text:</strong> 'Scripture has abrogated the Sabbath-day; for it teaches that, since the Gospel has been revealed, all the ceremonies of Moses can be omitted... the observance of the Lord's Day was ordained by the Church, not by the Commandment of God, but by the Church's authority; and those who think that this observance was established by the fourth Commandment greatly err.'</p><p>This remains the authoritative Lutheran confession on the Sabbath. It uses the Sunday question explicitly as an example of Christian liberty: the church may designate a day for worship without binding consciences to it as a divine command. The normative principle (what Scripture does not forbid is permitted) is implicit throughout.</p>", color:'var(--color-gold)', tags:['Lutheran','1530','Confessional'] },
+    { id:'conf2', title:"Calvin's Institutes, 2.8.28–34", meta:"1536/1559 · Reformed / Geneva", desc:"Calvin's mature statement. Fourth commandment is at least partly ceremonial. Explicitly rejects 'one day in seven' as the moral part. Sunday retained for church order and piety, not jure divino Sabbath transfer.", body:"<p><strong>Key text (2.8.34):</strong> 'Hence it follows that Christians ought... to shun completely the superstitious observance of days... For the Jewish holy day was abolished; and as a thing necessary to retain decency, order, and peace in the Church, another day was appointed for that purpose... In this way, we get quit of the trifling of the false prophets, who in later times instilled Jewish ideas into the people, alleging that nothing was abrogated but what was ceremonial in the commandment... while the moral part remains — viz. the observance of one day in seven.'</p><p>Calvin explicitly labels those who argue the moral part is 'one day in seven' as 'false prophets.' This is one of the most commonly misread texts in the Sabbath debate: it is often cited to support the Continental view, but it actually rejects both the Seventh-Day position and the Westminster position's specific grounding of Sunday in the moral law's one-in-seven proportion.</p>", color:'var(--color-accent)', tags:['Reformed','Calvin','1559'] },
+    { id:'conf3', title:"Heidelberg Catechism, Q.103", meta:"1563 · Continental Reformed", desc:"Lord's Day 38. Three functions of the Sabbath: gospel ministry, spiritual rest, eternal Sabbath anticipation. No categorical prohibition of recreation. Primary expression of the 'Continental view.'", body:"<p><strong>Key text:</strong> 'First, that the ministry of the gospel and the schools be maintained; and that I, especially on the sabbath, that is, on the day of rest, diligently frequent the church of God, to hear his word, to use the sacraments, publicly to call upon the Lord, and contribute to the relief of the poor. Second, that every day of my life I rest from my evil works, let the Lord work in me by his Holy Spirit, and thus begin in this life the eternal sabbath. Third, that I carefully observe, especially during the day of rest, my diligent attendance to the exercises of religion.'</p><p>Notably, the catechism does not use the phrase 'holy rest from works and recreations.' It defines the day positively — what it is for — without the Westminster negative prohibition on recreation. This is the axis of the Continental/Puritan distinction in application.</p>", color:'var(--color-accent)', tags:['Reformed','1563','Continental'] },
+    { id:'conf4', title:"Second Helvetic Confession, Ch. XXIV", meta:"1566 · Swiss Reformed", desc:"Most explicitly anti-Sabbatarian Continental confession. 'We do not believe that one day is holier than another... We keep the Sunday, not the Sabbath, by a voluntary observance.'", body:"<p><strong>Key text:</strong> 'We celebrate the Lord's day, and not the Sabbath, as a free observance. The Sabbath of the seventh day having been abrogated... And we do not believe that one day is holier than another, or that rest in itself is pleasing to God... Moreover, this Sabbath... concerns the perpetual holy rest of the people of God. This Sabbath is therefore the fulfilling of the rest of the old and typical Sabbath.'</p><p>Bullinger's formulation goes furthest in the anti-Sabbatarian direction among the classical Reformed confessions. It makes explicit what other Continental documents leave implicit: Sunday is purely voluntary, no day is inherently holier than another, and the Old Testament Sabbath is entirely fulfilled in Christ. This is the position that, taken consistently, would produce the most permissive Sunday practice — and that the Synod of Dort (1619) implicitly corrected.</p>", color:'var(--color-accent)', tags:['Swiss Reformed','1566','Anti-Sabbatarian'] },
+    { id:'conf5', title:"Westminster Confession, Ch. 21.7–8", meta:"1646 · Presbyterian", desc:"The apex of Protestant Sabbatarianism. One-in-seven is 'positive, moral, and perpetual commandment binding all men in all ages.' Day transferred jure divino. Whole-day rest from works, words, thoughts about worldly employment AND recreations.", body:"<p><strong>Key text (21.7):</strong> 'As it is the law of nature, that, in general, a due proportion of time be set apart for the worship of God; so, in his Word, by a positive, moral, and perpetual commandment binding all men in all ages, he hath particularly appointed one day in seven, for a Sabbath, to be kept holy unto him: which, from the beginning of the world to the resurrection of Christ, was the last day of the week; and, from the resurrection of Christ, was changed into the first day of the week, which, in Scripture, is called the Lord's Day, and is to be continued to the end of the world, as the Christian Sabbath.'</p><p><strong>Key text (21.8):</strong> 'This Sabbath is then kept holy unto the Lord, when men, after a due preparing of their hearts, and ordering of their common affairs beforehand, do not only observe a holy rest, all the day, from their own works, words, and thoughts about their worldly employments and recreations, but also are taken up, the whole time, in the public and private exercises of his worship, and in the duties of necessity and mercy.'</p><p>The precision of this formulation is notable. 'Works, words, AND thoughts' — the Sabbath demands a total reorientation of mental focus, not just behavioral abstention. This was not incidental; the Divines were responding to Prelatic arguments that permitted Sunday recreation as long as church was attended in the morning.</p>", color:'var(--color-teal)', tags:['Presbyterian','1646','Sabbatarian','Jure Divino'] },
+    { id:'conf6', title:"London Baptist Confession, Ch. 22.7–8", meta:"1689 · Reformed Baptist", desc:"Reproduces Westminster Sabbath language nearly verbatim, confirming jure divino Sabbatarianism as the broad 17th-century confessional consensus across both Presbyterian and Baptist lines.", body:"<p><strong>Key text (22.7):</strong> 'As it is the law of nature, that in general a proportion of time, by God's appointment, be set apart for the worship of God, so by his Word, in a positive moral, and perpetual commandment, binding all men, in all ages, he has particularly appointed one day in seven for a sabbath to be kept holy unto him, which from the beginning of the world to the resurrection of Christ was the last day of the week, and from the resurrection of Christ was changed into the first day of the week, which is called the Lord's Day: and is to be continued to the end of the world as the Christian Sabbath, the observation of the last day of the week being abolished.'</p><p>The 1689 reproduces the Westminster position with one additional clarification: 'the observation of the last day of the week being abolished' — a direct rebuttal of Seventh-Day Baptist claims. The 1689 General Assembly in London enforced full subscription to this chapter, refusing to admit churches that held a Saturday Sabbath even when they agreed with everything else in the Confession.</p>", color:'var(--color-teal)', tags:['Baptist','1689','Sabbatarian'] },
+    { id:'conf7', title:"Dort Sabbath Statement", meta:"1619 · Dutch Reformed", desc:"Six-point statement. Affirms a definite appointed day for divine service with cessation from labor and from recreations discordant with worship. Stricter than Heidelberg; suggests classical Continental Reformed theology was more Sabbatarian than modern 'Continental view' implies.", body:"<p><strong>Key points (reconstructed from historical record):</strong><br>1. The fourth commandment contains both ceremonial and moral elements.<br>2. The ceremonial element (specific day, rest typifying Christ) has been abrogated.<br>3. The moral element remains: a definite, appointed day must be set aside for divine service.<br>4. Sunday (the Lord's Day) has been appointed as that day.<br>5. On this day Christians must rest from all servile and ordinary labor.<br>6. The day must be so consecrated to divine worship that there shall be a cessation from recreations discordant with the worship of God.</p><p>Point 6 is crucial: recreations 'discordant with the worship of God' must cease. This is stricter than the Heidelberg's silence on recreation and represents the Dutch Reformed mainline position as of 1619 — suggesting that the lenient 'Continental view' often invoked today reflects post-Dort development, not classical Continental Reformed consensus.</p>", color:'var(--color-accent)', tags:['Dutch Reformed','1619','Synod of Dort'] },
+    { id:'conf8', title:"Westminster Larger Catechism, Q.115–121", meta:"1647 · Presbyterian", desc:"The most detailed confessional statement on Sabbath observance. Q.117 specifies duties; Q.119 specifies sins against the Sabbath including 'needless works, words, and thoughts about worldly employments or recreations.'", body:"<p><strong>Q. 119 — Sins against the Fourth Commandment:</strong> 'The sins forbidden in the fourth commandment are, all omissions of the duties required, all careless, negligent, and unprofitable performing of them, and being weary of them; all profaning the day by idleness, and doing that which is in itself sinful; and by all needless works, words, and thoughts about our worldly employments and recreations.'</p><p>The Larger Catechism is more specific than the Confession and provides the most detailed Reformed account of what Sabbath observance requires. The explicit mention of 'words and thoughts' about recreations as forbidden removes any ambiguity about whether the Sabbath merely prohibits action (work, play) or extends to mental and conversational content about worldly matters.</p><p>Q. 117 is equally specific about positive duties: the entire day is to be spent in public and private exercises of God's worship, with preparation the day before. The catechism envisions a total transformation of Sunday into a day completely unlike the other six.</p>", color:'var(--color-teal)', tags:['Presbyterian','1647','Sabbatarian','Catechism'] }
+  ],
+
+  theologians: [
+    { id:'th1', title:"Martin Luther", meta:"1483–1546 · Lutheran · Germany", era:'reformer', desc:"Fourth commandment is Mosaic-ceremonial, abrogated for Christians. Sunday is free ecclesiastical arrangement. Sharp law/gospel distinction drives Sabbath position.", body:"<p>Luther's Sabbath theology flows directly from his hermeneutical principle of law/gospel distinction and his treatment of the Decalogue. For Luther, the Decalogue as a whole was not the exclusively Mosaic legislation but included both moral law (natural law written on the heart) and Mosaic-ceremonial elements. The specific day — and the specific rest from labor — belonged to the Mosaic-ceremonial category.</p><p>His Large Catechism states: 'God set apart the seventh day, and appointed it to be observed, and commanded that it should be considered holy above all others; and this command, as far as the outward observance was concerned, was given to the Jews alone... Therefore this commandment, literally understood, does not apply to us Christians; for it is entirely outward, like other ordinances of the Old Testament, bound to modes, and persons, and times, and customs, all of which are now left free by Christ.'</p><p>Luther retained Sunday for the practical necessity of gathering for Word and Sacrament, not as a theological obligation. His framing of Sunday as a liberating example of Christian freedom — demonstrating that no day is inherently holy — remained the permanent Lutheran theological framework.</p>", color:'var(--color-gold)', tags:['Reformer','Lutheran','Abrogation'] },
+    { id:'th2', title:"John Calvin", meta:"1509–1564 · Reformed · Geneva", era:'reformer', desc:"Fourth commandment partly ceremonial (shadow fulfilled in Christ). Explicitly rejects 'one day in seven' as the moral part. Retains Sunday for church order and piety. Forbids recreation in Geneva but not as jure divino moral law.", body:"<p>Calvin's Sabbath position is one of the most contested in the tradition — used by both Sabbatarians and their opponents to support their respective positions. The key texts are Institutes 2.8.28–34 and his Deuteronomy sermons.</p><p>In the Institutes, Calvin argues: (1) The ceremonial element of the commandment — its typological pointing to rest in Christ — is fulfilled and abrogated. (2) Two legitimate uses remain: a fixed day for corporate worship, and rest for servants. (3) He explicitly rejects the view that the moral part is 'one day in seven,' calling those who hold this 'false prophets' who install Jewish ideas into the church. (4) Yet he vigorously forbids recreation on Sunday in Geneva, on the ground that we cannot have true union with Christ unless we rest from our work.</p><p>The apparent tension in Calvin: he rejects the theoretical framework (one-in-seven as moral law) while maintaining the practical outcome (no Sunday recreation) on different grounds (piety, order). 20th-century invocations of Calvin to license Sunday recreation press his texts beyond what his pastoral practice in Geneva warrants.</p>", color:'var(--color-accent)', tags:['Reformer','Reformed','Geneva'] },
+    { id:'th3', title:"Zacharias Ursinus", meta:"1534–1583 · Reformed · Heidelberg", era:'reformer', desc:"Primary author of the Heidelberg Catechism (1563). Q.103 expresses the Continental view. Held that the fourth commandment is 'partly ceremonial, partly moral' — perpetual in its moral element.", body:"<p>Ursinus, as the primary author of the Heidelberg Catechism, represents the mature expression of Calvinist Sabbath theology in the Continental Reformed tradition. His Larger Catechism (pre-Heidelberg) treated the fourth commandment as 'partly ceremonial, partly moral' — the ceremonial element being the specific seventh-day designation and the Levitical observances; the moral element being the perpetual obligation to set apart time for worship.</p><p>Ursinus held that the moral element of the fourth commandment — the proportion of time for worship — remained binding under the new covenant. The specific day has been transferred from Saturday to Sunday by apostolic practice. This position is closer to Westminster than to the Second Helvetic Confession, though the Heidelberg Catechism (Q.103) stops short of the Westminster prohibition on recreation.</p><p>The Heidelberg's Q.103 defines the Sabbath in terms of its positive content — gospel ministry, spiritual rest, eternal anticipation — without adding a negative prohibition on recreation. Whether Ursinus personally held recreation to be forbidden on Sunday is a matter of scholarly dispute, but the catechism text itself does not resolve it.</p>", color:'var(--color-accent)', tags:['Reformer','Continental','Heidelberg'] },
+    { id:'th4', title:"Heinrich Bullinger", meta:"1504–1575 · Reformed · Zurich", era:'reformer', desc:"Zwingli's successor. Second Helvetic Confession (1566): 'We keep the Sunday, not the Sabbath, by a voluntary observance.' Most explicitly anti-Sabbatarian Continental Reformer.", body:"<p>Heinrich Bullinger, as Zwingli's successor in Zurich and the author of the Second Helvetic Confession (1566), represents the most thoroughly anti-Sabbatarian position within the classical Reformed tradition. The Second Helvetic is explicit where other Reformed confessions are cautious: 'We celebrate the Lord's day... as a free observance. We do not believe that one day is holier than another, or that rest in itself is pleasing to God.'</p><p>Bullinger's position is that the Old Testament Sabbath is entirely fulfilled in Christ — the typological rest is complete — and that Sunday observance is a purely voluntary ecclesiastical convention, useful for gathering the church but not binding on conscience as a divine command. This goes further than Calvin, who at least retained Sunday as practically necessary and discouraged recreation.</p><p>The Second Helvetic's voluntarist position is theoretically the most permissive of any major Reformed confession. In practice, Zurich maintained Sunday observance through civic convention rather than theological necessity, a pattern that would prove vulnerable to secularization in ways that more robustly grounded positions would not.</p>", color:'var(--color-accent)', tags:['Reformer','Swiss Reformed','Anti-Sabbatarian'] },
+    { id:'th5', title:"Nicholas Bownd", meta:"d. 1613 · Puritan · England", era:'puritan', desc:"Author of Sabbathum Veteris et Novi Testamenti (1595). First systematic jure divino defense of the Christian Sabbath. Archbishop of Canterbury ordered copies confiscated. Foundational for Westminster Sabbatarianism.", body:"<p>Bownd's Sabbathum Veteris et Novi Testamenti (1595) is the foundational text of English Sabbatarianism. Its argument proceeds through five interlocking claims that the Westminster Assembly would later ratify: (1) the Sabbath is a creation ordinance, pre-Mosaic and pre-ceremonial; (2) the fourth commandment is therefore moral and perpetual, not ceremonial; (3) the specific seventh-day designation is positive law, alterable by divine authority, but the principle of one-in-seven is morally immutable; (4) the apostles, by divine direction, transferred the Sabbath to the first day in honor of the resurrection; (5) the entire day belongs to God, prohibiting not only labor but recreation, secular study, and worldly conversation.</p><p>The Archbishop of Canterbury ordered copies of the book confiscated — a measure that chiefly served to widen its circulation. Bownd was a dissenting minister in Suffolk. His book represents a synthesis of earlier scattered Sabbatarian impulses into a systematic theological argument that could sustain confessional codification.</p><p>Bownd's creation-ordinance argument was particularly significant: by grounding the Sabbath in Genesis 2 rather than Exodus 20, he established that the fourth commandment predated the Mosaic covenant entirely, removing the strongest objection to its perpetuity (that it belongs to the abrogated Mosaic ceremonial law).</p>", color:'var(--color-teal)', tags:['Puritan','England','Jure Divino','Foundational'] },
+    { id:'th6', title:"Thomas Shepard", meta:"1605–1649 · Puritan · New England", era:'puritan', desc:"Theses Sabbaticae (1649): most systematic Puritan exegetical rebuttal of antinomian readings of Gal. 4:10, Col. 2:16–17, and Rom. 14:5. Harvard's first president. Strict New England Sabbatarianism.", body:"<p>Thomas Shepard's Theses Sabbaticae (1649) is the most systematic Puritan defense of the Sabbath against antinomian objections. Shepard addresses head-on the Pauline texts that antinomians cited to argue the new covenant releases believers from Sabbath observance: Galatians 4:10, Colossians 2:16–17, and Romans 14:5.</p><p>His threefold response: (1) These texts address the abrogated Jewish ceremonial feast cycle — new moons, annual festivals, the Jubilee calendar — not the moral one-day-in-seven of the Decalogue. The fourth commandment belongs to the moral law, not the ceremonial law. (2) The fourth commandment's creation-ordinance basis (Gen. 2:1–3) predates the Mosaic covenant entirely, demonstrating it cannot be merely Mosaic-ceremonial. (3) The Decalogue is the permanent moral law; Christ came not to abrogate but to fulfill it. The Sabbath commandment's perpetuity follows from its inclusion in the Decalogue.</p><p>Shepard was also the first president of Harvard College. New England Puritanism under his influence maintained strict Sabbath observance backed by civil law — fines, public whipping, and in extreme cases capital punishment for Sabbath profanation.</p>", color:'var(--color-teal)', tags:['Puritan','New England','Exegete'] },
+    { id:'th7', title:"Samuel Rutherford", meta:"1600–1661 · Presbyterian · Scotland", era:'puritan', desc:"Westminster Divine. Rigorously defended jure divino Sabbatarianism. His position: the fourth commandment is moral and perpetual; the specific day is positive law alterable by divine authority; the Lord's Day is therefore jure divino.", body:"<p>Samuel Rutherford was one of the most rigorous defenders of Westminster Sabbatarianism among the Westminster Divines themselves. His treatment of the Sabbath question in his works addresses the precise distinctions that separated the Westminster position from both the Continental view and the antinomian challenge.</p><p>Rutherford's key contribution was the precise articulation of the moral/positive-law distinction within the fourth commandment: the moral element (one day in seven as a proportion) is perpetual and immutable; the positive-law element (which specific day) is alterable by divine authority. This distinction allows Westminster to hold simultaneously that the fourth commandment is moral and perpetual (against antinomians and Prelatists) and that the day has legitimately changed from Saturday to Sunday (against Seventh-Day Baptists).</p><p>His formulation: 'The fourth commandment is moral and perpetual as to the substance of the thing commanded... not as to the particular determination of the seventh day [a matter of positive right], which moreover as ceremonial could be changed.' This became the standard Westminster exposition.</p>", color:'var(--color-teal)', tags:['Westminster Divine','Scottish Presbyterian','Sabbatarian'] },
+    { id:'th8', title:"Robert Lewis Dabney", meta:"1820–1898 · Presbyterian · American South", era:'post-reformation', desc:"Southern Presbyterian theologian. Defended jure divino Westminster Sabbatarianism vigorously in the Southern Presbyterian Review. Acknowledged minority within the tradition who grounded Sunday in church authority rather than moral law.", body:"<p>Robert Lewis Dabney was the pre-eminent Southern Presbyterian theologian of the 19th century and a rigorous defender of Westminster Sabbatarianism. His essays in the Southern Presbyterian Review address the question of whether Sunday's obligation is jure divino or merely ecclesiastical, defending the Westminster position against those within the Reformed tradition who located Sunday observance in church authority rather than moral law.</p><p>Dabney's analysis is significant for acknowledging the internal diversity within the tradition: he recognized a minority Reformed position that treated Sunday as a church institution (resembling the Anglican/Prelatic view), not as the transferred fourth commandment. His defense of the Westminster position against this minority view confirms that jure divino Sabbatarianism was the confessional mainstream, not an outlier.</p><p>Dabney also provides historical analysis of the Puritan origins of Westminster Sabbatarianism, correctly identifying Nicholas Bownd (1595) as the founder of the systematic jure divino argument. His treatment distinguishes the Westminster position from the equally unacceptable alternatives of (1) pure ecclesiastical convention (too weak) and (2) Saturday Seventh-Day literalism (wrong day).</p>", color:'var(--color-purple)', tags:['Southern Presbyterian','19th century','Sabbatarian'] },
+    { id:'th9', title:"C.H. Spurgeon", meta:"1834–1892 · Baptist · England", era:'post-reformation', desc:"Spurgeon was an explicit confessional Sabbatarian per the 1689 Baptist Confession. Lamented declining Lord's Day observance in Victorian England. Held 'the letter and spirit' of the 1689 Sabbath chapter without exception.", body:"<p>Charles Haddon Spurgeon, England's most prominent Victorian Baptist preacher, held explicitly to the 1689 London Baptist Confession's Sabbatarian position. He believed the Sabbath was established as a creation ordinance, that Christ's resurrection transferred the Sabbath to Sunday, and that the entire day should be devoted to worship, rest, and works of mercy — with recreation forbidden.</p><p>Spurgeon's Sabbatarian convictions were not incidental to his theology. He preached on the Lord's Day as the Christian Sabbath, lamented the declining seriousness with which Victorian England observed it, and held that 'we find cause to mourn that the Lord's Day is no more religiously and carefully observed.'</p><p>The Spurgeon Center has documented that Spurgeon's Sabbatarianism was not a matter of exception or qualification — he held to the 1689 on this point without reservation. Contemporary Reformed Baptists who appeal to Spurgeon's authority while rejecting the 1689's Sabbath teaching therefore face a historical inconsistency: Spurgeon himself would not have shared their exception to Chapter 22.8.</p>", color:'var(--color-purple)', tags:['Baptist','Victorian','Sabbatarian'] },
+    { id:'th10', title:"B.B. Warfield", meta:"1851–1921 · Presbyterian · Princeton", era:'post-reformation', desc:"Princeton theologian. Broadly Sabbatarian; affirmed the fourth commandment as moral and perpetual. Princeton's position somewhat less stringent in application than strictest Scottish Presbyterianism.", body:"<p>Benjamin Breckinridge Warfield, perhaps the most influential American Reformed theologian of the late 19th and early 20th centuries, affirmed the fourth commandment as moral and perpetual. His Sabbatarianism was broadly in the Westminster tradition, though Princeton's overall application was somewhat less rigorous in practice than the strictest Scottish or Free Church Presbyterianism.</p><p>Warfield's significance is as a marker of where the Princeton tradition stood on Sabbath questions before the 20th-century abandonment of jure divino Sabbatarianism in mainstream Reformed circles. Together with Charles Hodge (who was also broadly Sabbatarian), Warfield represents the last generation of major American Presbyterian scholars for whom Westminster Sabbatarianism was the theological default rather than one contested option among several.</p>", color:'var(--color-purple)', tags:['Princeton','Presbyterian','Post-Reformation'] },
+    { id:'th11', title:"Wilhelmus à Brakel", meta:"1635–1711 · Dutch Reformed · Netherlands", era:'post-reformation', desc:"Dutch Reformed theologian in the Voetian tradition. Held a rigorously Sabbatarian position nearly indistinguishable from Westminster, demonstrating that classical Continental Reformed theology was far stricter than the modern 'Continental view' implies.", body:"<p>Wilhelmus à Brakel's The Christian's Reasonable Service provides one of the most thorough Dutch Reformed treatments of the Sabbath question. His position is notably rigorous — nearly identical to Westminster Sabbatarianism — and is significant as evidence against the common claim that classical Continental Reformed theology was uniformly permissive regarding Sunday recreation.</p><p>À Brakel held: the Sabbath is a creation ordinance; the fourth commandment is moral and perpetual; the day has been transferred to Sunday by apostolic authority; and the entire day must be devoted to God. His treatment of recreations is strict: activities that distract from divine worship on the Sabbath are prohibited.</p><p>À Brakel stands within the Voetian tradition (named for Gisbertus Voetius), which represented the rigorist wing of Dutch Reformed theology against the more federalist/looser position of Cocceius. The later identification of the 'Continental view' with Cocceian laxity rather than Voetian rigor is a significant historical misrepresentation that has shaped contemporary Reformed practice.</p>", color:'var(--color-accent)', tags:['Dutch Reformed','Post-Reformation','Sabbatarian'] },
+    { id:'th12', title:"R.C. Sproul", meta:"1939–2017 · Presbyterian · Contemporary", era:'modern', desc:"Defended the Continental view (recreation permitted, worship required). His framing of 'two views' in Reformed tradition (Continental vs. Puritan) has been widely influential, legitimizing Sunday afternoon recreation in contemporary Reformed circles.", body:"<p>R.C. Sproul's influence on contemporary Reformed Sabbath practice has been disproportionately large relative to his technical theological output on the question. His Ligonier article 'Defining the Debate' presented two legitimate Reformed options — the Continental view (worship required, recreation permitted) and the Puritan view (whole-day observance, recreation forbidden) — and endorsed the Continental view as his own position.</p><p>Sproul's framing was historically accurate insofar as it identified a real tradition of Continental practice less strict than Westminster. However, critics have argued that his account passes over evidence that classical 17th-century Continental Reformed theologians were considerably stricter than the 'Continental view' label typically suggests in popular usage — and that the lenient 'Continental view' reflects 20th-century accommodation more than classical Continental Reformed consensus.</p><p>Sproul did affirm the Lord's Day's binding character and defended Sunday observance against secular dissolution. His position was not that Sunday observance is optional but that the specific prohibition of recreation was not required. The practical effect of his framing in contemporary Reformed circles has been to provide theological legitimation for Sunday afternoon recreation across the PCA and broadly evangelical Reformed world.</p>", color:'var(--color-accent)', tags:['Modern','Presbyterian','Continental View'] },
+    { id:'th13', title:"John Frame", meta:"b. 1939 · Presbyterian · Contemporary", era:'modern', desc:"Broad RPW: applies the regulative principle to all of life, not just corporate worship. This effectively loosens the RPW's application to Sunday specifics while maintaining formal commitment to its general principle. Took exceptions to WCF 21 on the Sabbath.", body:"<p>John Frame's contribution to contemporary Sabbath theology is indirect but significant. His broadening of the Regulative Principle of Worship to 'all of life' — rather than restricting it to corporate worship services — dissolves the specific Westminster linkage between the RPW and jure divino Sabbatarianism. If the RPW applies everywhere, it loses its specific application to the Lord's Day as a distinctively regulated sphere.</p><p>Frame also took formal exceptions to WCF 21 on the Sabbath. His critics — particularly those in the Westminster Seminary California 2K theology orbit — argued, with some force, that this move dissolves the very distinction the RPW was designed to protect: the liberty of conscience from ecclesiastical imposition of unwarranted worship practices. If everything is worship, nothing is distinctively set apart.</p><p>Frame's broader influence has been to provide a sophisticated theological framework within which Presbyterians can maintain formal RPW commitment while substantially loosening its traditional Sunday application. His work represents one of several 20th-century theological moves that provided doctrinal rationale for the practical Continental drift in American Presbyterian practice.</p>", color:'var(--color-accent)', tags:['Modern','Presbyterian','RPW'] },
+    { id:'th14', title:"D.A. Carson (ed.)", meta:"b. 1946 · Baptist / Reformed · Contemporary", era:'modern', desc:"From Sabbath to Lord's Day (1982): argues fourth commandment is not directly applicable to Sunday; the Lord's Day is not the Christian Sabbath in a strict covenantal sense. Most significant evangelical scholarly challenge to Westminster Sabbatarianism.", body:"<p>D.A. Carson's edited volume From Sabbath to Lord's Day: A Biblical, Historical, and Theological Investigation (Grand Rapids: Zondervan, 1982) represents the most significant scholarly challenge to Westminster Sabbatarianism from within evangelical scholarship. Carson and his contributors argue: (1) the fourth commandment is not directly applicable to Sunday; (2) the Lord's Day is not the Christian Sabbath in a strict covenantal sense; (3) the NT evidence for a transferred Sabbath is insufficient to sustain the Westminster construction; (4) the early church observed Sunday as the Lord's Day on different grounds than OT Sabbath continuity.</p><p>The volume was highly influential particularly among Reformed Baptists who resisted strict Sabbatarianism while maintaining high regard for biblical scholarship. It provided exegetical ammunition for those wishing to take exceptions to 1689 LBCF 22.7–8, and it shaped a generation of evangelical scholars' approach to the Sabbath question.</p><p>Critics have argued that the volume's argument is essentially a sophisticated version of the antinomian challenge that Westminster Sabbatarians answered in the 17th century: by classifying the Sabbath as primarily typological and fulfilled in Christ, it reproduces the Continental/NCT conclusion on different exegetical grounds.</p>", color:'var(--color-accent)', tags:['Modern','Baptist','NCT adjacent','Scholarly'] },
+    { id:'th15', title:"Cornelius Van Til", meta:"1895–1987 · Presbyterian · Westminster", era:'modern', desc:"Reformed apologist. Took a formal exception to WCF 21 on the Sabbath despite subscribing to the Westminster Standards. Illustrates growing 20th-century tolerance for Sabbath exceptions within confessional Presbyterian circles.", body:"<p>Cornelius Van Til, the foundational Reformed apologist of the 20th century and a Westminster Theological Seminary faculty member for decades, took a formal exception to WCF Chapter 21 on the Sabbath despite subscribing to the Westminster Standards ex animo in all other respects. This exception is significant primarily as an institutional data point: it demonstrates that by the mid-20th century, formal exceptions to the Westminster Sabbath position were being tolerated within the most strictly confessional Presbyterian seminary in America.</p><p>Van Til's exception was not accompanied by a major published defense of his alternative position; it was noted in passing and accepted without controversy. This institutional tolerance of the exception — in the context of overall rigorous subscription to Reformed theology — helped normalize the practice of Sabbath exceptionalism within confessional Presbyterian circles that would otherwise expect full subscription to the Westminster Standards.</p>", color:'var(--color-purple)', tags:['Modern','Presbyterian','Van Til','Exception'] },
+    { id:'th16', title:"Tom Wells & Fred Zaspel", meta:"Contemporary · New Covenant Theology", era:'modern', desc:"Primary systematic developers of New Covenant Theology. Fourth commandment is Mosaic-covenantal, not eternally moral. Sabbath fulfilled in Christ. Sunday assembly is apostolic practice, not divine commandment. New Sabbath Theology (2002).", body:"<p>Tom Wells and Fred Zaspel's New Sabbath Theology (2002) provides the most systematic development of the New Covenant Theology position on the Sabbath. Their argument: the Mosaic covenant is a unified whole — not divisible into moral, civil, and ceremonial components — and has been fulfilled and superseded by the new covenant. The fourth commandment, as part of the Mosaic covenant, shares in this fulfillment. Christians are not bound to any day by the fourth commandment.</p><p>Sunday assembly is affirmed as a new-covenant practice of the church, grounded in apostolic example and the theological significance of the first day (resurrection day), but not grounded in the fourth commandment as such. The Sabbath rest that Christians 'enter' (Heb. 4) is salvation rest in Christ, not weekly observance.</p><p>NCT as developed by Wells and Zaspel represents a distinctive position from both the Lutheran and Reformed traditions: it is not Lutheran (which abrogates the Mosaic-ceremonial element of the fourth commandment while retaining natural law) but a new-covenant fulfillment argument that classifies the entire Mosaic covenant, including the Decalogue, as superseded in principle. Critics from the Westminster tradition argue this effectively places NCT outside the bounds of confessional Reformed theology.</p>", color:'var(--color-accent)', tags:['Modern','NCT','Baptist','Systematic'] }
+  ],
+
+  concepts: [
+    { id:'con1', title:"Jure Divino", meta:"By Divine Right", desc:"The claim that an institution is established by divine authority, not merely by human or ecclesiastical convention. Applied to the Sabbath: Sunday observance is jure divino if the fourth commandment morally mandates it, not merely jure humano (by human church authority).", body:"<p>The Latin phrase <em>jure divino</em> ('by divine right') is the pivotal category in Protestant Sabbath debate. An institution is jure divino if God himself has established it by positive command, making it binding on conscience regardless of human or ecclesiastical approval. It is <em>jure humano</em> or <em>jure ecclesiastico</em> if the church has established it for practical reasons, binding by convention but not by divine mandate.</p><p>For Puritans and the Westminster tradition, Sunday observance is jure divino: the fourth commandment, being moral and perpetual, positively commands one day in seven, and the apostolic transfer of that day to Sunday was itself a divinely authorized change. This makes Sunday observance as binding as any of the other nine commandments.</p><p>For Lutherans, Anglicans, and the broader 'Prelatic' position, Sunday observance is at most jure ecclesiastico: the church has designated Sunday for worship, a useful convention, but not a divine mandate. Christian liberty therefore governs the day's use after worship.</p><p>The Puritan vs. Prelatic controversy in 17th-century England was fundamentally a dispute about this category: the Book of Sports controversy turned on whether Sunday recreation was prohibited by divine command or permitted by Christian liberty. Westminster settled it for confessional Presbyterians and Baptists: jure divino, whole-day prohibition.</p>", color:'var(--color-teal)', tags:['Technical Term','Westminster','Fundamental'] },
+    { id:'con2', title:"Regulative Principle of Worship (RPW)", meta:"Only what Scripture warrants", desc:"God alone prescribes acceptable worship. Anything not warranted by Scripture — explicitly or by necessary inference — is forbidden in worship. WCF 21.1. The logical connection between the RPW and jure divino Sabbatarianism is direct.", body:"<p>The Regulative Principle of Worship (RPW) holds that the acceptable way of worshiping God is instituted by God himself, so limited by his revealed will that he may not be worshiped according to human imagination, tradition, or innovation. Anything in worship that lacks positive scriptural warrant — either explicitly commanded or necessarily implied — is forbidden. WCF 21.1 is its primary confessional expression.</p><p>The RPW stands in contrast to the normative principle (what Scripture does not forbid is permitted), held by Lutherans and Anglicans. Reformed churches applying the RPW stripped their worship of organs, choirs, visual symbolism, ecclesiastical holidays (except the Lord's Day), and any practice not positively warranted by Scripture.</p><p>The logical connection to jure divino Sabbatarianism: if worship must be scripturally warranted in all its elements, then the day of worship must be scripturally mandated — and Westminster argues it is, in the fourth commandment's moral perpetuity and apostolic day-transfer. The RPW and Sabbatarianism are not independent commitments; they are logically linked within the Westminster system. This is why abandoning jure divino Sabbatarianism typically requires either revising the RPW or reclassifying the fourth commandment.</p>", color:'var(--color-teal)', tags:['Worship','Westminster','Foundational'] },
+    { id:'con3', title:"Normative Principle of Worship", meta:"What Scripture doesn't forbid is permitted", desc:"The Lutheran/Anglican alternative to the RPW. What Scripture does not forbid, the church may permit in worship. Leads to permission of Sunday recreations as long as morning worship is attended.", body:"<p>The normative principle holds that in worship, what Scripture does not explicitly prohibit may be legitimately practiced. The church has authority to order worship using human wisdom and tradition, provided no scriptural prohibition is violated. This stands in direct contrast to the Reformed RPW, which requires positive scriptural warrant for every worship practice.</p><p>In Lutheran and Anglican practice, the normative principle means: Sunday may include recreations after worship, since no NT text explicitly prohibits Sunday recreation. It also permits liturgical practices (vestments, kneeling, church year observance) that the Reformed RPW would exclude as lacking positive scriptural warrant.</p><p>The normative principle produces a different Sunday culture: morning worship obligatory, afternoon activities governed by Christian liberty. This is structurally what is called the 'Continental view' in contemporary Reformed discourse — though many who hold it remain within Reformed traditions that formally subscribe to the RPW, creating a tension between formal confession and actual practice.</p>", color:'var(--color-gold)', tags:['Worship','Lutheran','Anglican'] },
+    { id:'con4', title:"Christian Liberty", meta:"Freedom from legal obligation not in Scripture", desc:"The freedom of the Christian conscience from laws, commands, and obligations not established by Scripture. Properly applied, it protects against human traditions being imposed as divine commands. Improperly invoked, it licenses cultural conformity disguised as theological principle.", body:"<p>Christian liberty is the freedom of the Christian conscience from obligations that are not established by the Word of God. WCF 20.2: 'God alone is Lord of the conscience, and hath left it free from the doctrines and commandments of men which are in any thing contrary to his word, or not contained in it.'</p><p>In the Reformation context, Christian liberty was invoked against medieval Catholic ceremonialism — the imposition of feast days, fasts, pilgrimages, and penance as necessary to salvation. The Reformers rightly argued that these human traditions could not bind conscience.</p><p>In the Sabbath debate, Christian liberty has been invoked in two opposite ways: (1) legitimately, by Lutherans and Anglicans, to resist the imposition of Sunday as a jure divino divine command when they deny it is such; (2) questionably, in the 20th-century context, by those who invoke 'Christian liberty' regarding Sunday not to resist ecclesiastical imposition of a day but to license the adoption of the secular weekend's cultural norms. The Reformers who most emphasized Christian liberty against Sabbatarian legalism had no secular weekend in view; they were resisting medieval Catholic ceremonialism, not secularization.</p>", color:'var(--color-accent)', tags:['Liberty','Reformation','Contested'] },
+    { id:'con5', title:"Creation Ordinance", meta:"Pre-Mosaic moral law", desc:"A divine institution established at creation and therefore binding on all humanity, not merely on Israel under the Mosaic covenant. The Puritan argument that the Sabbath is a creation ordinance (Gen. 2:1–3) was their most powerful argument for its perpetuity.", body:"<p>A creation ordinance is a divine institution established at creation for all humanity, predating and therefore independent of the Mosaic covenant. Marriage is the paradigmatic example: instituted at creation (Gen. 2), it binds all people in all cultures and eras, not merely Israel. The Sabbath was argued by Puritans to be a similarly pre-Mosaic creation ordinance: God rested on the seventh day and blessed/sanctified it at the conclusion of the creation week (Gen. 2:1–3), before the covenant with Abraham, before the Mosaic legislation.</p><p>This was Bownd's most important argument for the perpetuity of the Sabbath. If the Sabbath was instituted at creation, it cannot be merely Mosaic-ceremonial legislation, since it predates Moses by millennia. Its abrogation at Christ's coming would require explicit NT evidence of abrogation — and the Sabbatarian tradition argued no such explicit abrogation exists.</p><p>Opponents questioned whether Gen. 2:1–3 describes a <em>command</em> (God instituted a Sabbath for humanity) or merely a <em>pattern</em> (God rested on the seventh day, providing the template for the later Mosaic Sabbath). The Hebrew word <em>šabbat</em> appears nowhere in the creation narrative; the text says God 'rested' and 'blessed' the day, but does not record a command to Adam. This exegetical question — whether Gen. 2 establishes a creation ordinance or merely a divine pattern — remains disputed.</p>", color:'var(--color-teal)', tags:['Sabbath Argument','Exegetical','Key Concept'] },
+    { id:'con6', title:"New Covenant Theology (NCT)", meta:"Mosaic-covenantal fulfillment / 20th century", desc:"Fourth commandment is Mosaic-covenantal, not eternally moral. The entire Mosaic covenant (including the Decalogue) is fulfilled in Christ. Sunday assembly is apostolic convention. Dominant in many conservative Baptist circles.", body:"<p>New Covenant Theology (NCT) is a redemptive-historical hermeneutic that classifies the Mosaic covenant as a unified whole that has been fulfilled and superseded in Christ. Unlike the traditional Reformed three-fold division of the law (moral, civil, ceremonial), NCT resists dividing the Mosaic legislation into abrogated (ceremonial) and perpetual (moral) components. All of the Mosaic covenant shares in its fulfillment.</p><p>Applied to the Sabbath: the fourth commandment is Mosaic-covenantal, part of the Sinai administration, and shares in its fulfillment at Calvary. Christians are not under the fourth commandment and therefore not bound to observe any day by divine commandment. Hebrews 4's 'entering the rest' describes salvation rest in Christ — not ongoing weekly observance.</p><p>NCT differs from the Lutheran position structurally: Lutherans abrogate the Mosaic-ceremonial element while retaining natural law; NCT abrogates the entire Mosaic covenant as such. In practice, both produce the same conclusion on Sunday observance (no divine commandment for a specific day), but on different grounds.</p><p>NCT's critics from the Westminster tradition argue that it effectively eliminates the moral law as a perpetual rule for Christian living, collapsing the distinction between justification and sanctification in ways that echo antinomianism. NCT proponents respond that the moral law's content is re-given under the new covenant through Christ's commands, not inherited as an unchanged Mosaic package.</p>", color:'var(--color-purple)', tags:['NCT','Hermeneutical','Contemporary'] },
+    { id:'con7', title:"The Continental vs. Puritan Divide", meta:"A genuine or exaggerated distinction?", desc:"The standard framing (Sproul: two legitimate Reformed views) captures real differences in application but likely overstates the foundational divergence. Classical 17th-century Continental Reformed theologians were considerably stricter than the modern 'Continental view' implies.", body:"<p>The distinction between the 'Continental view' and the 'Puritan view' of the Sabbath has been popularized particularly through R.C. Sproul's Ligonier article 'Defining the Debate.' Sproul's framing: both views agree that Sunday worship is obligatory and that the day is a time of rest; they differ on recreation (Continental: permitted; Puritan: forbidden) and on the basis of the whole-day prohibition.</p><p>Several considerations complicate the clean binary: (1) Calvin himself forbade recreation in Geneva and stated that we cannot have true union with Christ unless we rest from our work — nearly indistinguishable from Puritan reasoning. (2) The Synod of Dort (1619) issued a stricter statement than Heidelberg, requiring cessation from recreations discordant with worship. (3) Wilhelmus à Brakel and Gisbertus Voetius in the Dutch tradition held positions nearly identical to Westminster. The 'relaxed Continental view' better describes Cocceian federalism than classical Continental Reformed consensus.</p><p>Richard Gaffin (Westminster and the Sabbath) has argued the distinction should not be exaggerated: 'The difference between the English Sabbath and the Continental Sunday should not be overstated... Here we may speak of a Reformed consensus, or, as it may also be put, a consensus of general Calvinism.' The modern invocation of the 'Continental view' as licensing Sunday afternoon sport is frequently a retrojection of 20th-century laxity onto 17th-century practice.</p>", color:'var(--color-gold)', tags:['Key Debate','Reformed','Historiography'] },
+    { id:'con8', title:"Blue Laws / Sunday Closing Laws", meta:"Legal enforcement of Sunday observance", desc:"Colonial American and British legislation requiring businesses to close and restricting public activities on Sunday. Rooted in Puritan Sabbatarianism. Upheld by SCOTUS in 1961 (McGowan v. Maryland) but only on secular grounds, completing the legal secularization of Sunday.", body:"<p>Blue laws (also Sunday closing laws) are statutes restricting commercial activity, public entertainment, and certain other activities on Sunday. In colonial America, they were explicitly religious in purpose — protecting the Christian Sabbath as the fourth commandment required. In Britain, the Sunday Observance Act (1781) closed theaters, museums, zoos, and shops.</p><p>These laws represented the attempt to maintain through civil legislation what confessional theology had established as divine command. Second Great Awakening reformers (Lyman Beecher) reinforced this framework in early 19th-century America, fusing Sabbatarian theology with nativist opposition to Catholic/immigrant Sunday festivity practices.</p><p>The decisive legal moment was McGowan v. Maryland (1961): the Supreme Court upheld Sunday closing laws but only on secular grounds — providing 'a uniform day of rest for all citizens,' not protecting the Christian Sabbath. Chief Justice Warren explicitly severed the legal justification from religious purpose. This completed in law what industrialization had accomplished in culture: Sunday was no longer the Christian Sabbath protected by divine law, but a civic rest day protected by secular public welfare legislation.</p><p>Most Sunday closing laws have since been repealed or narrowed. The primary surviving remnants are alcohol sales restrictions and car dealership closures in some states — traces of their religious origins maintained by interest-group lobbying rather than theological conviction.</p>", color:'var(--color-green)', tags:['Legal History','America','Secularization'] }
+  ],
+
+  comparison: [
+    { tradition:'Lutheran', day:'None required', basis:'4th commandment Mosaic-ceremonial; abrogated in Christ. Sunday = ecclesiastical order. Christian liberty governs.', recreation:'Permitted', confession:'Augsburg Confession, Art. XXVIII (1530)', rec_class:'pill-yes' },
+    { tradition:'Early Continental Reformed', day:'Sunday (practical)', basis:'Partly ceremonial; shadow fulfilled in Christ. Sunday for church order, worship, and servant rest. Recreation discouraged but not categorically forbidden.', recreation:'Discouraged, not forbidden', confession:'Calvin, Institutes 2.8; Heidelberg Catechism Q.103 (1563)', rec_class:'pill-partial' },
+    { tradition:'Synod of Dort', day:'Sunday (definite)', basis:'Mixed moral/positive law. Appointed day for divine service and cessation from labor.', recreation:'Cease recreations discordant with worship', confession:'Dort (1619) six-point Sabbath statement', rec_class:'pill-partial' },
+    { tradition:'Westminster Confession', day:'Sunday (jure divino)', basis:'4th commandment moral, perpetual, binding all ages. Day transferred by Christ\'s resurrection.', recreation:'Explicitly forbidden: whole-day prohibition on works, words, and thoughts about worldly employments and recreation', confession:'WCF 21.7–8 (1646)', rec_class:'pill-no' },
+    { tradition:'1689 Baptist Confession', day:'Sunday (jure divino)', basis:'Identical to WCF. Positive, moral, perpetual commandment. Lord\'s Day = Christian Sabbath.', recreation:'Explicitly forbidden all day', confession:'1689 LBCF 22.7–8', rec_class:'pill-no' },
+    { tradition:'New Covenant Theology', day:'None required', basis:'4th commandment Mosaic-covenantal; fulfilled/abrogated in Christ (Heb. 4). Sunday assembly = apostolic practice only.', recreation:'N/A (no day commanded)', confession:'Wells, Zaspel; many conservative Baptist circles', rec_class:'pill-yes' },
+    { tradition:'Contemporary Continental', day:'Sunday (practical)', basis:'Church order; RPW loosely applied to elements of worship, not the whole day.', recreation:'Permitted', confession:'Widely adopted in PCA, Dutch Reformed, many evangelical Reformed churches', rec_class:'pill-yes' }
+  ]
+};
+
+// ===== ZOOM STATE =====
+let zoomLevel = 100;
+
+function adjustZoom(delta) {
+  zoomLevel = Math.max(50, Math.min(300, zoomLevel + delta));
+  document.getElementById('zoom-display').textContent = zoomLevel + '%';
+  const track = document.getElementById('timeline-track');
+  track.style.fontSize = (zoomLevel / 100) + 'em';
+}
+
+function resetZoom() {
+  zoomLevel = 100;
+  document.getElementById('zoom-display').textContent = '100%';
+  const track = document.getElementById('timeline-track');
+  track.style.fontSize = '1em';
+}
+
+// ===== RENDER FUNCTIONS =====
+function getEraLabel(era) {
+  return { reformation:'Reformation Era', puritan:'Rise of English Sabbatarianism', 'post-reformation':'Post-Reformation Challenges', industrial:'Industrial Age', modern:'20th Century Secularization' }[era] || era;
+}
+function getEraClass(era) {
+  return { reformation:'era-1', puritan:'era-2', 'post-reformation':'era-3', industrial:'era-4', modern:'era-5' }[era] || 'era-1';
+}
+
+function renderTimeline() {
+  const track = document.getElementById('timeline-track');
+  if (!track) return;
+  const eras = ['reformation','puritan','post-reformation','industrial','modern'];
+  let html = '';
+  eras.forEach(era => {
+    const events = DATA.timeline.filter(e => e.era === era);
+    if (!events.length) return;
+    html += `<div class="era-band ${getEraClass(era)}">
+      <h3>${getEraLabel(era)}</h3>
+      <div class="era-range">${events[0].year} – ${events[events.length-1].year}</div>
+      <div class="timeline-events">`;
+    events.forEach(ev => {
+      const tagHtml = ev.tags.map(t => `<span class="tl-tag" style="background:color-mix(in srgb,${ev.color} 12%,var(--color-bg));color:${ev.color};">${t}</span>`).join('');
+      html += `<div class="tl-event" onclick="openDetail('timeline','${ev.id}')" data-testid="tl-event-${ev.id}" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail('timeline','${ev.id}')">
+        <div class="tl-dot" style="color:${ev.color};"></div>
+        <div class="tl-body">
+          <div class="tl-date">${ev.year}</div>
+          <div class="tl-title">${ev.title}</div>
+          <div class="tl-desc">${ev.desc}</div>
+          <div class="tl-tags">${tagHtml}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  track.innerHTML = html;
+}
+
+function renderCards(containerId, items) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = items.map(item => {
+    const colorVar = item.color || 'var(--color-accent)';
+    const tags = item.tags || [];
+    const tagHtml = tags.map(t => `<span class="badge badge-key">${t}</span>`).join('');
+    return `<div class="card" onclick="openDetail('${containerId.replace('-grid','')}','${item.id}')" data-testid="card-${item.id}" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail('${containerId.replace('-grid','')}','${item.id}')" data-filter="${(item.century||item.region||item.view||item.era||'').toString()}">
+      <div class="card-icon" style="background:color-mix(in srgb,${colorVar} 15%,var(--color-bg));color:${colorVar};">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="card-meta">${item.meta}</div>
+      <div class="card-title">${item.title}</div>
+      <div class="card-desc">${item.desc}</div>
+      <div class="card-badges">${tagHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterCards(gridName, filter) {
+  const grid = document.getElementById(gridName + '-grid');
+  if (!grid) return;
+  // Update active filter button
+  const filterBar = grid.closest('.view').querySelector('.filter-bar');
+  if (filterBar) {
+    filterBar.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = filterBar.querySelector(`[data-filter="${filter}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+  const cards = grid.querySelectorAll('.card');
+  cards.forEach(c => {
+    const fAttr = c.getAttribute('data-filter') || '';
+    if (filter === 'all' || fAttr.includes(filter)) {
+      c.style.display = '';
+    } else {
+      c.style.display = 'none';
+    }
+  });
+}
+
+function renderComparison() {
+  const tbody = document.getElementById('comparison-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = DATA.comparison.map(row => `<tr>
+    <td>${row.tradition}</td>
+    <td>${row.day}</td>
+    <td>${row.basis}</td>
+    <td><span class="pill ${row.rec_class}">${row.recreation}</span></td>
+    <td style="font-size:var(--text-xs);color:var(--color-text-faint);">${row.confession}</td>
+  </tr>`).join('');
+}
+
+// ===== DETAIL PANEL =====
+function findItem(source, id) {
+  const map = { timeline: DATA.timeline, historical: DATA.historical, geographical: DATA.geographical, denominational: DATA.denominational, confessions: DATA.confessions, theologians: DATA.theologians, concepts: DATA.concepts };
+  for (const key of Object.keys(map)) {
+    const found = map[key].find(i => i.id === id);
+    if (found) return { item: found, source: key };
+  }
+  return null;
+}
+
+function openDetail(source, id) {
+  const result = findItem(source, id);
+  if (!result) return;
+  const { item } = result;
+  const panel = document.getElementById('detail-panel');
+  const backdrop = document.getElementById('detail-backdrop');
+
+  const sourceLabels = { timeline:'Timeline Event', historical:'Historical Era', geographical:'Geographic Region', denominational:'Denomination', confessions:'Confession / Document', theologians:'Theologian', concepts:'Key Concept' };
+  document.getElementById('panel-category').innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> ${sourceLabels[result.source] || source}`;
+  document.getElementById('panel-title').textContent = item.title;
+  document.getElementById('panel-subtitle').textContent = item.meta || '';
+
+  let relatedHtml = '';
+  if (item.related && item.related.length) {
+    relatedHtml = `<div class="related-items"><div class="panel-section-title">Related Entries</div><div>`;
+    item.related.forEach(relId => {
+      const rel = findItem(null, relId);
+      if (rel) relatedHtml += `<span class="related-chip" onclick="openDetail('${rel.source}','${relId}')">${rel.item.title}</span>`;
+    });
+    relatedHtml += `</div></div>`;
+  }
+
+  const tagHtml = (item.tags||[]).map(t => `<span class="badge badge-key">${t}</span>`).join('');
+
+  document.getElementById('panel-content').innerHTML = `
+    <div class="panel-body">${item.body || `<p>${item.desc}</p>`}</div>
+    ${tagHtml ? `<div class="panel-tags-row">${tagHtml}</div>` : ''}
+    ${relatedHtml}
+  `;
+
+  backdrop.classList.add('open');
+  panel.focus();
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closePanel(e) {
+  if (e.target === document.getElementById('detail-backdrop')) closeDetailPanel();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDetailPanel(); closeMobileSidebar(); }
+});
+
+// ===== MOBILE SIDEBAR =====
+// Ask AI
+function toggleAskAI(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('ask-ai-popover');
+  const isOpen = pop.classList.toggle('open');
+  if (isOpen) setTimeout(() => document.getElementById('ask-ai-input').focus(), 50);
+}
+function submitAskAI() {
+  const q = document.getElementById('ask-ai-input').value.trim();
+  if (!q) return;
+  const context = 'Protestant Sabbath theology Reformation Westminster church history';
+  const url = 'https://www.perplexity.ai/search?q=' + encodeURIComponent(q + ' — ' + context);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  document.getElementById('ask-ai-popover').classList.remove('open');
+  document.getElementById('ask-ai-input').value = '';
+}
+function handleAskAIKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAskAI(); }
+  if (e.key === 'Escape') document.getElementById('ask-ai-popover').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.ask-ai-wrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('ask-ai-popover').classList.remove('open');
+});
+
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar.classList.contains('mobile-open');
+  if (isOpen) { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); }
+  else { sidebar.classList.add('mobile-open'); overlay.classList.add('active'); }
+}
+function closeMobileSidebar() {
+  document.querySelector('.sidebar')?.classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay')?.classList.remove('active');
+}
+
+// ===== VIEW NAVIGATION =====
+function showView(viewName) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + viewName);
+  if (target) target.classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.getAttribute('data-view') === viewName);
+  });
+
+  // Hide search overlay
+  document.getElementById('search-results-overlay').classList.remove('active');
+
+  // Close mobile sidebar
+  closeMobileSidebar();
+
+  // Scroll to top
+  const mc = document.querySelector('.main-content');
+  if (mc) mc.scrollTop = 0;
+}
+
+// ===== SEARCH =====
+const searchInput = document.getElementById('main-search');
+const searchClear = document.getElementById('search-clear');
+const searchOverlay = document.getElementById('search-results-overlay');
+
+function buildSearchIndex() {
+  const index = [];
+  const sources = [
+    { key:'timeline', label:'Timeline', data: DATA.timeline, colorKey:'color' },
+    { key:'historical', label:'Historical Era', data: DATA.historical, colorKey:'color' },
+    { key:'geographical', label:'Geographic Region', data: DATA.geographical, colorKey:'color' },
+    { key:'denominational', label:'Denomination', data: DATA.denominational, colorKey:'color' },
+    { key:'confessions', label:'Confession', data: DATA.confessions, colorKey:'color' },
+    { key:'theologians', label:'Theologian', data: DATA.theologians, colorKey:'color' },
+    { key:'concepts', label:'Key Concept', data: DATA.concepts, colorKey:'color' }
+  ];
+  sources.forEach(s => {
+    s.data.forEach(item => {
+      index.push({
+        id: item.id, source: s.key, label: s.label,
+        title: item.title, meta: item.meta || '',
+        searchText: [item.title, item.meta, item.desc, (item.body||'').replace(/<[^>]+>/g,''), (item.tags||[]).join(' ')].join(' ').toLowerCase(),
+        desc: item.desc, color: item.color || 'var(--color-accent)'
+      });
+    });
+  });
+  return index;
+}
+
+const searchIndex = buildSearchIndex();
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function highlightMatch(text, query) {
+  if (!query) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+
+function doSearch(query) {
+  const q = query.trim().toLowerCase();
+  searchClear.classList.toggle('visible', q.length > 0);
+
+  if (!q) {
+    searchOverlay.classList.remove('active');
+    return;
+  }
+
+  const words = q.split(/\s+/).filter(Boolean);
+  const results = searchIndex.filter(item => words.every(w => item.searchText.includes(w)));
+
+  const tagColors = {
+    'timeline':'var(--color-accent)', 'historical':'var(--color-gold)',
+    'geographical':'var(--color-teal)', 'denominational':'var(--color-purple)',
+    'confessions':'var(--color-accent)', 'theologians':'var(--color-green)',
+    'concepts':'var(--color-gold)'
+  };
+
+  let html = `<div class="search-results-header"><h2>Search Results</h2><p>${results.length} result${results.length!==1?'s':''} for "<strong>${escHtml(query)}</strong>"</p></div>`;
+
+  if (results.length === 0) {
+    html += `<div class="no-results"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><h3>No results found</h3><p>Try a different search term — person names, doctrines, years, or confessions.</p></div>`;
+  } else {
+    html += results.slice(0, 40).map(r => {
+      const tc = tagColors[r.source] || 'var(--color-accent)';
+      const excerpt = r.desc.slice(0, 200) + (r.desc.length > 200 ? '…' : '');
+      return `<div class="search-result-card" onclick="openDetail('${r.source}','${r.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail('${r.source}','${r.id}')">
+        <div class="src-meta">
+          <span class="src-tag" style="background:color-mix(in srgb,${tc} 12%,var(--color-bg));color:${tc};">${r.label}</span>
+          <span style="font-size:var(--text-xs);color:var(--color-text-faint);">${r.meta}</span>
+        </div>
+        <div class="src-title">${highlightMatch(r.title, query)}</div>
+        <div class="src-excerpt">${highlightMatch(excerpt, query)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  searchOverlay.innerHTML = html;
+  searchOverlay.classList.add('active');
+}
+
+searchInput.addEventListener('input', e => doSearch(e.target.value));
+searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') clearSearch(); });
+
+function clearSearch() {
+  searchInput.value = '';
+  searchClear.classList.remove('visible');
+  searchOverlay.classList.remove('active');
+  searchInput.focus();
+}
+
+// ===== DARK MODE TOGGLE =====
+(function() {
+  const toggle = document.getElementById('theme-toggle');
+  const root = document.documentElement;
+  let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  root.setAttribute('data-theme', theme);
+  updateToggleIcon();
+
+  function updateToggleIcon() {
+    if (toggle) toggle.innerHTML = theme === 'dark'
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  }
+
+  if (toggle) toggle.addEventListener('click', () => {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', theme);
+    updateToggleIcon();
+    toggle.setAttribute('aria-label', 'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode');
+  });
+})();
+
+// ===== INIT =====
+(function init() {
+  renderTimeline();
+  renderCards('historical-grid', DATA.historical);
+  renderCards('geographical-grid', DATA.geographical);
+  renderCards('denominational-grid', DATA.denominational);
+  renderCards('confessions-grid', DATA.confessions);
+  renderCards('theologians-grid', DATA.theologians);
+  renderCards('concepts-grid', DATA.concepts);
+  renderComparison();
+})();
+</script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>

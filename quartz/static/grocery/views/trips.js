@@ -9,7 +9,8 @@
    orders (HSA artifact, §10.9) with an iOS-standalone share fallback.
    Read-only view: opening a sheet mutates nothing. Reads from in-memory D only.
    ========================================================================= */
-import { D, viewPhoto } from '../app.js';
+import { D } from '../app.js';
+import { viewPhoto } from './review.js';
 import { money, esc, fmtShortDate } from '../core/domain.js';
 import { toast, openSheet } from '../ui/components.js';
 

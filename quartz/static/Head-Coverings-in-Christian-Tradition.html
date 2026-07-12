@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Head Coverings in Christian Tradition — Interactive Reference</title>
+<meta name="description" content="A comprehensive reference on head coverings in Christian theology — from the Apostolic era through the modern church — across Catholic, Eastern Orthodox, Protestant, and Anabaptist traditions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== DESIGN TOKENS ===== */
+:root {
+  --color-primary: #2c4a3e;
+  --color-primary-mid: #3d6b5a;
+  --color-primary-light: #e8f0ec;
+  --color-accent: #6b8f71;
+  --color-accent-warm: #8a6a3e;
+  --color-gold: #b8973a;
+
+  --color-bg: #f5f3ef;
+  --color-surface: #ffffff;
+  --color-surface-offset: #ede9e3;
+  --color-divider: #d6cfc4;
+  --color-text: #1a1a18;
+  --color-text-muted: #5a5850;
+  --color-text-faint: #9a9488;
+
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.75rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --sidebar-w: 220px;
+  --header-h: 52px;
+  --detail-w: 420px;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.15);
+}
+
+.dark {
+  --color-bg: #111310;
+  --color-surface: #1c1f1a;
+  --color-surface-offset: #252820;
+  --color-divider: #303530;
+  --color-text: #e8e5e0;
+  --color-text-muted: #8a9088;
+  --color-text-faint: #565c54;
+  --color-primary-light: #1e2e28;
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: var(--font-body); font-size: var(--text-base); background: var(--color-bg); color: var(--color-text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+a { color: inherit; text-decoration: none; }
+
+/* ===== LAYOUT ===== */
+#app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+  background: var(--color-surface); border-bottom: 1px solid var(--color-divider);
+  display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4);
+  z-index: 100; box-shadow: var(--shadow-sm);
+}
+
+.logo { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-md); transition: background 150ms; flex-shrink: 0; }
+.logo:hover { background: var(--color-surface-offset); }
+.logo-text { font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); line-height: 1.1; }
+.logo-text span { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-text-faint); font-family: var(--font-body); }
+
+.header-search {
+  flex: 1; max-width: 400px; position: relative;
+}
+.header-search input {
+  width: 100%; padding: var(--space-2) var(--space-3) var(--space-2) 2.2rem;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-lg);
+  background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-body); font-size: var(--text-sm);
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.header-search input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.header-search .search-icon { position: absolute; left: var(--space-2); top: 50%; transform: translateY(-50%); color: var(--color-text-faint); pointer-events: none; }
+.search-clear { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); display: none; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; color: var(--color-text-faint); }
+.search-clear.visible { display: flex; }
+.search-clear:hover { color: var(--color-text); background: var(--color-surface-offset); }
+
+.header-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.hamburger-btn { display: none; }
+.icon-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--radius-md); color: var(--color-text-muted); transition: background 150ms, color 150ms; }
+.icon-btn:hover { background: var(--color-surface-offset); color: var(--color-text); }
+
+/* Ask AI popover */
+.ask-ai-wrap { position: relative; }
+.ask-ai-popover {
+  display: none;
+  position: absolute; top: calc(100% + 8px); right: 0;
+  width: 320px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,.14);
+  padding: var(--space-4);
+  z-index: 500;
+}
+.ask-ai-popover.open { display: block; }
+.ask-ai-popover label { display: block; font-size: var(--text-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-faint); margin-bottom: var(--space-2); }
+.ask-ai-popover textarea {
+  width: 100%; resize: none; height: 72px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-body); font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3); box-sizing: border-box;
+  outline: none;
+}
+.ask-ai-popover textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.ask-ai-popover-footer { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3); }
+.ask-ai-popover-hint { font-size: var(--text-xs); color: var(--color-text-faint); }
+.ask-ai-btn-submit {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--color-primary); color: #fff;
+  border: none; border-radius: var(--radius-md);
+  font-size: var(--text-sm); font-weight: 600;
+  padding: 6px 14px; cursor: pointer;
+  transition: background 150ms;
+}
+.ask-ai-btn-submit:hover { background: var(--color-primary-dark, #1e3329); }
+.ask-ai-btn-submit svg { flex-shrink: 0; }
+
+.app-body { display: flex; padding-top: var(--header-h); flex: 1; overflow: hidden; }
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--color-surface); border-right: 1px solid var(--color-divider);
+  overflow-y: auto; padding: var(--space-4) 0;
+}
+.sidebar-section { padding: var(--space-3) var(--space-4) var(--space-1); }
+.sidebar-section-label { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); }
+.nav-item {
+  display: flex; align-items: center; gap: var(--space-2);
+  width: 100%; padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm); color: var(--color-text-muted);
+  text-align: left; transition: background 120ms, color 120ms;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { background: var(--color-primary-light); color: var(--color-text); }
+.nav-item.active { background: var(--color-primary-light); color: var(--color-primary); border-left-color: var(--color-primary); font-weight: 500; }
+.nav-item svg { flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg { opacity: 1; }
+
+/* ===== MAIN CONTENT ===== */
+.main-content { flex: 1; overflow-y: auto; min-width: 0; }
+.view { display: none; padding: var(--space-8) var(--space-10); max-width: 1200px; }
+.view.active { display: block; }
+
+.view-header { margin-bottom: var(--space-8); }
+.view-header h1 { font-family: var(--font-display); font-size: var(--text-4xl); font-weight: 700; color: var(--color-text); line-height: 1.1; margin-bottom: var(--space-3); }
+.view-header p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 680px; line-height: 1.6; }
+
+/* ===== FILTER BAR ===== */
+.filter-bar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-6); }
+.filter-label { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); margin-right: var(--space-2); }
+.filter-chip {
+  padding: var(--space-1) var(--space-3); border-radius: 20px;
+  border: 1px solid var(--color-divider); font-size: var(--text-sm);
+  color: var(--color-text-muted); background: var(--color-surface);
+  transition: all 150ms; cursor: pointer;
+}
+.filter-chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.filter-chip.active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+
+/* ===== CARDS GRID ===== */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-5); }
+.card {
+  background: var(--color-surface); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-xl); padding: var(--space-6);
+  cursor: pointer; transition: transform 150ms, box-shadow 150ms, border-color 150ms;
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-accent); }
+.card-icon { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-4); }
+.card-meta { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); margin-bottom: var(--space-2); }
+.card h3 { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-3); line-height: 1.2; }
+.card p { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+.card-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.tag { padding: 2px var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 500; background: var(--color-surface-offset); color: var(--color-text-muted); }
+.card[hidden] { display: none; }
+
+/* ===== OVERVIEW ===== */
+.overview-hero {
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, color-mix(in srgb, var(--color-primary-light) 60%, var(--color-bg)) 100%);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-xl);
+  padding: var(--space-10) var(--space-12); margin-bottom: var(--space-8);
+  position: relative; overflow: hidden;
+}
+.overview-hero::after {
+  content: '✝'; position: absolute; right: var(--space-12); top: 50%;
+  transform: translateY(-50%); font-size: 8rem; color: var(--color-primary);
+  opacity: 0.06; pointer-events: none;
+}
+.overview-hero h1 { font-family: var(--font-display); font-size: var(--text-4xl); font-weight: 700; color: var(--color-text); margin-bottom: var(--space-4); line-height: 1.1; }
+.overview-hero p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 640px; line-height: 1.7; }
+
+.stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-8); }
+.stat-card { background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); text-align: center; }
+.stat-card .stat-num { font-family: var(--font-display); font-size: var(--text-3xl); color: var(--color-primary); display: block; }
+.stat-card .stat-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); margin-top: 2px; }
+
+.section-shortcuts h2 { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin-bottom: var(--space-5); }
+.shortcuts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-10); }
+.shortcut-btn {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4); background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-lg);
+  font-size: var(--text-sm); color: var(--color-text-muted);
+  transition: all 150ms; cursor: pointer; text-align: left;
+}
+.shortcut-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
+.shortcut-btn svg { flex-shrink: 0; color: var(--color-primary); }
+
+.central-tension h2 { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin-bottom: var(--space-5); }
+.central-tension p { color: var(--color-text-muted); line-height: 1.8; margin-bottom: var(--space-4); max-width: 760px; }
+
+/* ===== TIMELINE ===== */
+.timeline-controls { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6); }
+.zoom-label { font-size: var(--text-sm); color: var(--color-text-muted); }
+.zoom-value { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); min-width: 46px; text-align: center; }
+.zoom-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--color-surface); border: 1px solid var(--color-divider); color: var(--color-text-muted); font-size: 1.1rem; transition: all 150ms; }
+.zoom-btn:hover { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary); }
+.reset-btn { padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface); border: 1px solid var(--color-divider); font-size: var(--text-sm); color: var(--color-text-muted); transition: all 150ms; }
+.reset-btn:hover { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary); }
+.zoom-hint { font-size: var(--text-sm); color: var(--color-text-faint); font-style: italic; }
+
+.timeline-wrapper { overflow-x: auto; }
+.timeline-track { transition: font-size 180ms ease; }
+
+.era-band { border-left: 3px solid; border-radius: var(--radius-md) 0 0 var(--radius-md); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-2); }
+.era-band h3 { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; color: var(--color-text); }
+.era-range { font-size: var(--text-sm); color: var(--color-text-faint); margin-top: 2px; }
+.era-1 { background: color-mix(in srgb, #4a7c6a 8%, var(--color-bg)); border-color: #4a7c6a; }
+.era-2 { background: color-mix(in srgb, #7c6a4a 8%, var(--color-bg)); border-color: #7c6a4a; }
+.era-3 { background: color-mix(in srgb, #4a6a7c 8%, var(--color-bg)); border-color: #4a6a7c; }
+.era-4 { background: color-mix(in srgb, #6a4a7c 8%, var(--color-bg)); border-color: #6a4a7c; }
+.era-5 { background: color-mix(in srgb, #7c4a4a 8%, var(--color-bg)); border-color: #7c4a4a; }
+
+.timeline-events { padding: var(--space-2) 0 var(--space-4) var(--space-6); }
+.tl-event {
+  display: flex; gap: var(--space-4); align-items: flex-start;
+  padding: var(--space-3) var(--space-4); margin-bottom: var(--space-2);
+  border-radius: var(--radius-lg); cursor: pointer; transition: background 150ms;
+}
+.tl-event:hover { background: var(--color-surface); }
+.tl-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--color-accent); background: var(--color-bg); flex-shrink: 0; margin-top: 5px; }
+.tl-body { flex: 1; }
+.tl-date { font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.tl-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; color: var(--color-text); margin: 2px 0; }
+.tl-desc { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+.tl-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
+.tl-tag { padding: 1px var(--space-2); border-radius: 10px; font-size: var(--text-xs); background: var(--color-surface-offset); color: var(--color-text-muted); }
+
+/* ===== COMPARISON TABLE ===== */
+.comparison-table-wrap { overflow-x: auto; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.comparison-table th {
+  background: var(--color-primary); color: white;
+  padding: var(--space-3) var(--space-4); text-align: left;
+  font-weight: 600; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.comparison-table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); vertical-align: top; }
+.comparison-table tr:hover td { background: var(--color-primary-light); }
+.comparison-table td:first-child { font-weight: 600; color: var(--color-text); white-space: nowrap; }
+.badge { display: inline-block; padding: 2px var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }
+.badge-required { background: #1a4a2a; color: #6bcc88; }
+.badge-recommended { background: #2a3a1a; color: #a8cc6b; }
+.badge-optional { background: #3a3a1a; color: #ccb86b; }
+.badge-discouraged { background: #3a1a1a; color: #cc6b6b; }
+.badge-abolished { background: #2a2a2a; color: #999; }
+
+/* ===== PATRISTIC QUOTES ===== */
+.quotes-grid { display: grid; gap: var(--space-5); }
+.quote-card {
+  background: var(--color-surface); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-xl); padding: var(--space-6);
+  border-left: 3px solid var(--color-accent);
+}
+.quote-text { font-family: var(--font-display); font-style: italic; font-size: var(--text-lg); color: var(--color-text); line-height: 1.7; margin-bottom: var(--space-4); }
+.quote-text::before { content: '"'; color: var(--color-accent); font-size: 2rem; line-height: 0; vertical-align: -0.4em; margin-right: 3px; }
+.quote-attribution { font-size: var(--text-sm); color: var(--color-text-muted); }
+.quote-attribution strong { color: var(--color-primary); }
+
+/* ===== DETAIL PANEL ===== */
+.detail-panel {
+  position: fixed; top: var(--header-h); right: 0; bottom: 0;
+  width: var(--detail-w); background: var(--color-surface);
+  border-left: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-lg); z-index: 90;
+  transform: translateX(100%); transition: transform 300ms cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column;
+}
+.detail-panel.open { transform: translateX(0); }
+.detail-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-divider); flex-shrink: 0;
+}
+.detail-panel-type { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); display: flex; align-items: center; gap: var(--space-2); }
+.detail-close { color: var(--color-text-muted); padding: var(--space-1); border-radius: var(--radius-sm); }
+.detail-close:hover { color: var(--color-text); background: var(--color-surface-offset); }
+.detail-body { flex: 1; overflow-y: auto; padding: var(--space-5); }
+.detail-body h2 { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; color: var(--color-text); margin-bottom: var(--space-4); line-height: 1.2; }
+.detail-body .detail-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.8; }
+.detail-body .detail-text p { margin-bottom: var(--space-3); }
+.detail-body .detail-text ul { padding-left: var(--space-5); margin-bottom: var(--space-3); }
+.detail-body .detail-text li { margin-bottom: var(--space-2); }
+.detail-body .detail-text strong { color: var(--color-text); }
+.detail-body .detail-text em { font-style: italic; }
+.detail-tags-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
+.detail-tag { padding: var(--space-1) var(--space-3); border-radius: 20px; font-size: var(--text-xs); background: var(--color-surface-offset); color: var(--color-text-muted); border: 1px solid var(--color-divider); }
+.detail-related { margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--color-divider); }
+.detail-related h4 { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-faint); margin-bottom: var(--space-3); }
+.related-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.related-chip { padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); background: var(--color-primary-light); color: var(--color-primary); border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent); cursor: pointer; transition: all 150ms; }
+.related-chip:hover { background: var(--color-primary); color: white; }
+
+#detail-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.25); z-index: 89;
+}
+#detail-backdrop.active { display: block; }
+
+/* ===== SEARCH RESULTS ===== */
+#search-results-overlay {
+  position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0; bottom: 0;
+  background: var(--color-bg); z-index: 80; overflow-y: auto;
+  display: none; padding: var(--space-8) var(--space-10);
+}
+#search-results-overlay.active { display: block; }
+.search-result-item {
+  background: var(--color-surface); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-3); cursor: pointer; transition: border-color 150ms;
+}
+.search-result-item:hover { border-color: var(--color-accent); }
+.search-result-type { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-faint); margin-bottom: var(--space-1); }
+.search-result-title { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-text); margin-bottom: var(--space-2); }
+.search-result-title mark { background: #ffe066; color: inherit; border-radius: 2px; }
+.search-result-snippet { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+.search-result-snippet mark { background: #ffe066; color: inherit; border-radius: 2px; }
+#search-summary { font-size: var(--text-sm); color: var(--color-text-faint); margin-bottom: var(--space-5); }
+#search-summary strong { color: var(--color-text); }
+
+/* ===== SOURCES ===== */
+.source-note { font-size: var(--text-xs); color: var(--color-text-faint); margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-divider); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .sidebar { position: fixed; top: var(--header-h); left: -280px; bottom: 0; width: 260px; z-index: 200; transition: left 250ms cubic-bezier(.4,0,.2,1); box-shadow: 4px 0 20px rgba(0,0,0,.18); overflow-y: auto; }
+  .sidebar.mobile-open { left: 0; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 199; }
+  .sidebar-overlay.active { display: block; }
+  .hamburger-btn { display: flex !important; }
+  #search-results-overlay { left: 0; }
+  .view { padding: var(--space-6) var(--space-4); }
+  .overview-hero { padding: var(--space-8) var(--space-6); }
+  .overview-hero::after { display: none; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .detail-panel { width: 100vw; }
+}
+@media (max-width: 480px) {
+  .logo-text span { display: none; }
+  .header-search { max-width: 160px; }
+}
+
+/* ===== PRINT ===== */
+@media print {
+  .app-header, .sidebar, .timeline-controls { display: none; }
+  .view { padding: 0; }
+  .view.active { display: block; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header" role="banner">
+  <button class="logo" onclick="showView('overview')" aria-label="Head Coverings in Christian Tradition home">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="28" height="28" rx="6" fill="var(--color-primary-light)" stroke="var(--color-primary)" stroke-width="1.5"/>
+      <!-- Stylized veil/arc over a cross -->
+      <path d="M8 14 Q15 7 22 14" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M15 14 L15 24" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M11 19 L19 19" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="logo-text">Head Coverings <span>Christian Historical Reference</span></div>
+  </button>
+
+  <div class="header-search" role="search">
+    <span class="search-icon" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </span>
+    <input type="search" id="main-search" placeholder="Search fathers, traditions, texts…" aria-label="Search the reference" autocomplete="off" data-testid="input-search"/>
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" aria-label="Clear search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="header-actions">
+    <div class="ask-ai-wrap">
+      <button class="icon-btn" id="ask-ai-toggle" aria-label="Ask AI a question" title="Ask AI" onclick="toggleAskAI(event)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
+      </button>
+      <div class="ask-ai-popover" id="ask-ai-popover">
+        <label for="ask-ai-input">Ask a question about head coverings</label>
+        <textarea id="ask-ai-input" placeholder="e.g. What did Tertullian say about virgins being veiled?" onkeydown="handleAskAIKey(event)"></textarea>
+        <div class="ask-ai-popover-footer">
+          <span class="ask-ai-popover-hint">Opens in Perplexity</span>
+          <button class="ask-ai-btn-submit" onclick="submitAskAI()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Ask
+          </button>
+        </div>
+      </div>
+    </div>
+    <button class="icon-btn hamburger-btn" id="mobile-menu-btn" aria-label="Open navigation" onclick="toggleMobileSidebar()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button class="icon-btn" id="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+<div class="app-body">
+  <nav class="sidebar" role="navigation" aria-label="Section navigation">
+    <div class="sidebar-section"><span class="sidebar-section-label">Reference</span></div>
+    <button class="nav-item active" onclick="showView('overview')" data-view="overview" data-testid="nav-overview">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Overview
+    </button>
+    <button class="nav-item" onclick="showView('timeline')" data-view="timeline" data-testid="nav-timeline">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Timeline
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">By Era</span></div>
+    <button class="nav-item" onclick="showView('historical')" data-view="historical" data-testid="nav-historical">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Historical Eras
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">By Location</span></div>
+    <button class="nav-item" onclick="showView('geographical')" data-view="geographical" data-testid="nav-geographical">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      Geographic Regions
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">By Tradition</span></div>
+    <button class="nav-item" onclick="showView('traditions')" data-view="traditions" data-testid="nav-traditions">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Church Traditions
+    </button>
+    <button class="nav-item" onclick="showView('fathers')" data-view="fathers" data-testid="nav-fathers">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Church Fathers
+    </button>
+    <button class="nav-item" onclick="showView('texts')" data-view="texts" data-testid="nav-texts">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Key Texts
+    </button>
+
+    <div class="sidebar-section"><span class="sidebar-section-label">Analysis</span></div>
+    <button class="nav-item" onclick="showView('comparison')" data-view="comparison" data-testid="nav-comparison">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      Tradition Comparison
+    </button>
+    <button class="nav-item" onclick="showView('quotes')" data-view="quotes" data-testid="nav-quotes">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Patristic Quotes
+    </button>
+    <button class="nav-item" onclick="showView('concepts')" data-view="concepts" data-testid="nav-concepts">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      Key Concepts
+    </button>
+  </nav>
+
+  <main class="main-content" role="main" id="main-content">
+
+    <!-- ===== OVERVIEW ===== -->
+    <section id="view-overview" class="view active" aria-label="Overview">
+      <div class="overview-hero">
+        <h1>Head Coverings in Christian Tradition</h1>
+        <p>From Paul's letter to Corinth through 2,000 years of Church history — how Catholic, Orthodox, Protestant, and Anabaptist traditions have interpreted, debated, codified, and abandoned the practice of women's head coverings in worship.</p>
+      </div>
+
+      <div class="stats-row" id="stats-row"></div>
+
+      <div class="section-shortcuts">
+        <h2>Navigate by Section</h2>
+        <div class="shortcuts-grid" id="shortcuts-grid"></div>
+      </div>
+
+      <div class="central-tension">
+        <h2>The Central Question</h2>
+        <p>At the heart of this 2,000-year debate lies a single passage: 1 Corinthians 11:2–16. Paul grounds the practice in creation order, the image of God, and angelic observation — yet also appeals to "nature" and "custom." The question that has divided exegetes ever since: are these grounds <strong>timeless and universal</strong>, or <strong>culturally conditioned</strong> to first-century Corinth?</p>
+        <p>The patristic consensus was virtually unanimous — every major Church Father from Irenaeus to Augustine treated the covering as a binding, continuing obligation. This consensus held across both East and West for over 1,500 years. The fracture came not from a theological revolution but from second-wave feminism, the misreported demise of Canon 1262, and the broader Western cultural turn of the 1960s.</p>
+        <p>Today the landscape is fragmented: Eastern Orthodox and traditional Catholics retain the practice as normative; Conservative Anabaptists treat it as an ordinance; most Western Protestants have abandoned it as culturally relative; a growing subset of younger Catholics and Lutherans has revived it as voluntary reverence.</p>
+      </div>
+    </section>
+
+    <!-- ===== TIMELINE ===== -->
+    <section id="view-timeline" class="view" aria-label="Timeline">
+      <div class="view-header">
+        <h1>Timeline</h1>
+        <p>2,000 years of head covering theology — from Paul's letter to the 1983 Code of Canon Law. Zoom in for detail.</p>
+      </div>
+      <div class="timeline-controls">
+        <span class="zoom-label">Zoom:</span>
+        <button class="zoom-btn" onclick="zoomTimeline(-1)" aria-label="Zoom out">−</button>
+        <span class="zoom-value" id="zoom-display">100%</span>
+        <button class="zoom-btn" onclick="zoomTimeline(1)" aria-label="Zoom in">+</button>
+        <button class="reset-btn" onclick="resetZoom()">Reset</button>
+        <span class="zoom-hint">Click any event for details</span>
+      </div>
+      <div class="timeline-wrapper">
+        <div class="timeline-track" id="timeline-track"></div>
+      </div>
+    </section>
+
+    <!-- ===== HISTORICAL ERAS ===== -->
+    <section id="view-historical" class="view" aria-label="Historical Eras">
+      <div class="view-header">
+        <h1>Historical Eras</h1>
+        <p>Six distinct periods in the development of head covering theology and practice, from the Apostolic church through modern secularization.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Filter:</span>
+        <button class="filter-chip active" onclick="filterCards('historical','all')" data-filter="all">All Eras</button>
+        <button class="filter-chip" onclick="filterCards('historical','apostolic')" data-filter="apostolic">Apostolic</button>
+        <button class="filter-chip" onclick="filterCards('historical','patristic')" data-filter="patristic">Patristic</button>
+        <button class="filter-chip" onclick="filterCards('historical','medieval')" data-filter="medieval">Medieval</button>
+        <button class="filter-chip" onclick="filterCards('historical','early-modern')" data-filter="early-modern">Early Modern</button>
+        <button class="filter-chip" onclick="filterCards('historical','modern')" data-filter="modern">Modern</button>
+      </div>
+      <div class="cards-grid" id="historical-cards"></div>
+    </section>
+
+    <!-- ===== GEOGRAPHICAL ===== -->
+    <section id="view-geographical" class="view" aria-label="Geographic Regions">
+      <div class="view-header">
+        <h1>Geographic Regions</h1>
+        <p>How the theology and practice of head coverings developed differently across the Roman Empire, the Byzantine East, Western Europe, and the Americas.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Region:</span>
+        <button class="filter-chip active" onclick="filterCards('geographical','all')" data-filter="all">All Regions</button>
+        <button class="filter-chip" onclick="filterCards('geographical','near-east')" data-filter="near-east">Near East</button>
+        <button class="filter-chip" onclick="filterCards('geographical','north-africa')" data-filter="north-africa">North Africa</button>
+        <button class="filter-chip" onclick="filterCards('geographical','rome')" data-filter="rome">Rome & West</button>
+        <button class="filter-chip" onclick="filterCards('geographical','byzantine')" data-filter="byzantine">Byzantine East</button>
+        <button class="filter-chip" onclick="filterCards('geographical','northern-europe')" data-filter="northern-europe">N. Europe</button>
+        <button class="filter-chip" onclick="filterCards('geographical','americas')" data-filter="americas">Americas</button>
+      </div>
+      <div class="cards-grid" id="geographical-cards"></div>
+    </section>
+
+    <!-- ===== TRADITIONS ===== -->
+    <section id="view-traditions" class="view" aria-label="Church Traditions">
+      <div class="view-header">
+        <h1>Church Traditions</h1>
+        <p>How each major Christian tradition has interpreted and practiced head coverings — from universal mandate to abolished custom.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Position:</span>
+        <button class="filter-chip active" onclick="filterCards('traditions','all')" data-filter="all">All</button>
+        <button class="filter-chip" onclick="filterCards('traditions','required')" data-filter="required">Required</button>
+        <button class="filter-chip" onclick="filterCards('traditions','normative')" data-filter="normative">Normative</button>
+        <button class="filter-chip" onclick="filterCards('traditions','optional')" data-filter="optional">Optional</button>
+        <button class="filter-chip" onclick="filterCards('traditions','cultural')" data-filter="cultural">Cultural Only</button>
+      </div>
+      <div class="cards-grid" id="traditions-cards"></div>
+    </section>
+
+    <!-- ===== FATHERS ===== -->
+    <section id="view-fathers" class="view" aria-label="Church Fathers">
+      <div class="view-header">
+        <h1>Church Fathers &amp; Theologians</h1>
+        <p>The major voices who shaped the theology of head coverings — from Clement and Tertullian through Aquinas, Calvin, and modern scholars.</p>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Era:</span>
+        <button class="filter-chip active" onclick="filterCards('fathers','all')" data-filter="all">All</button>
+        <button class="filter-chip" onclick="filterCards('fathers','apostolic')" data-filter="apostolic">Apostolic Age</button>
+        <button class="filter-chip" onclick="filterCards('fathers','early-fathers')" data-filter="early-fathers">Early Fathers</button>
+        <button class="filter-chip" onclick="filterCards('fathers','late-patristic')" data-filter="late-patristic">Late Patristic</button>
+        <button class="filter-chip" onclick="filterCards('fathers','medieval')" data-filter="medieval">Medieval</button>
+        <button class="filter-chip" onclick="filterCards('fathers','reformation')" data-filter="reformation">Reformation</button>
+        <button class="filter-chip" onclick="filterCards('fathers','modern')" data-filter="modern">Modern</button>
+      </div>
+      <div class="cards-grid" id="fathers-cards"></div>
+    </section>
+
+    <!-- ===== TEXTS ===== -->
+    <section id="view-texts" class="view" aria-label="Key Texts">
+      <div class="view-header">
+        <h1>Key Texts &amp; Documents</h1>
+        <p>Primary sources — scriptural, patristic, conciliar, and canonical — that have shaped the debate over head coverings through Church history.</p>
+      </div>
+      <div class="cards-grid" id="texts-cards"></div>
+    </section>
+
+    <!-- ===== COMPARISON ===== -->
+    <section id="view-comparison" class="view" aria-label="Tradition Comparison">
+      <div class="view-header">
+        <h1>Tradition Comparison</h1>
+        <p>Major Christian traditions compared on their head covering position, theological basis, canonical status, and contemporary practice.</p>
+      </div>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table" id="comparison-table">
+          <thead>
+            <tr>
+              <th>Tradition</th>
+              <th>Position</th>
+              <th>Theological Basis</th>
+              <th>Canonical Status</th>
+              <th>Current Practice</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== QUOTES ===== -->
+    <section id="view-quotes" class="view" aria-label="Patristic Quotes">
+      <div class="view-header">
+        <h1>Patristic Quotes</h1>
+        <p>Direct quotations from the Church Fathers, Reformers, and canonical sources on the practice and theology of head coverings.</p>
+      </div>
+      <div class="quotes-grid" id="quotes-grid"></div>
+    </section>
+
+    <!-- ===== CONCEPTS ===== -->
+    <section id="view-concepts" class="view" aria-label="Key Concepts">
+      <div class="view-header">
+        <h1>Key Concepts</h1>
+        <p>Theological terms, exegetical debates, and interpretive frameworks central to the head covering question.</p>
+      </div>
+      <div class="cards-grid" id="concepts-cards"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="detail-backdrop"></div>
+<aside class="detail-panel" id="detail-panel" role="complementary" aria-label="Detail view">
+  <div class="detail-panel-header">
+    <span class="detail-panel-type" id="detail-type">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      <span id="detail-type-text">Detail</span>
+    </span>
+    <button class="detail-close icon-btn" onclick="closeDetailPanel()" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="detail-body">
+    <h2 id="detail-title"></h2>
+    <div class="detail-tags-row" id="detail-tags"></div>
+    <div class="detail-text" id="detail-content"></div>
+    <div class="detail-related" id="detail-related" style="display:none">
+      <h4>Related</h4>
+      <div class="related-chips" id="related-chips"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- SEARCH RESULTS -->
+<div id="search-results-overlay" role="search" aria-label="Search results">
+  <p id="search-summary"></p>
+  <div id="search-results-list"></div>
+</div>
+
+<script>
+// =====================================================================
+// DATA
+// =====================================================================
+const DATA = {
+
+timeline: [
+  { id: 'tl1', era: 1, year: 56, title: "1 Corinthians Written", desc: "Paul sends his letter from Ephesus to the divided Corinthian church. Chapter 11:2–16 establishes head covering theology grounded in creation order, the image of God, and the presence of angels.", tags: ["Paul", "Corinth"], tradition: "Apostolic", region: "Near East" },
+  { id: 'tl2', era: 1, year: 90, title: "Didache & Apostolic Teaching", desc: "Early church manuals reflect the norm of women covering their heads in worship. No controversy recorded — the practice is simply assumed.", tags: ["Apostolic", "Liturgy"], tradition: "Early Church", region: "Syria" },
+  { id: 'tl3', era: 1, year: 125, title: "Irenaeus: First Patristic Citation", desc: "Irenaeus (c.125–202) cites 1 Cor 11:10 in Against Heresies, treating the 'authority on her head' as a cloth veil (kalumma). The earliest post-apostolic witness to a literal covering.", tags: ["Irenaeus", "Patristic"], tradition: "Early Church", region: "Rome" },
+  { id: 'tl4', era: 1, year: 190, title: "Clement of Alexandria: Paedagogus", desc: "Clement writes that women should be 'entirely covered' in public and may uncover only at home. Women ought to pray veiled 'as fitting the will of the Word.' Establishes the Alexandrian patristic position.", tags: ["Clement", "Alexandria"], tradition: "Early Church", region: "North Africa" },
+  { id: 'tl5', era: 1, year: 202, title: "Hippolytus: Apostolic Tradition", desc: "Hippolytus instructs: 'Let all the women have their heads covered with an opaque cloth, not with a veil of thin linen, for this is not a true covering.' Specifies opacity — no sheer veils.", tags: ["Hippolytus", "Rome"], tradition: "Early Church", region: "Rome" },
+  { id: 'tl6', era: 1, year: 210, title: "Tertullian: De Virginibus Velandis", desc: "Tertullian writes his most detailed treatise on veiling. He argues unmarried women must veil just as married women do. He insists custom, nature, and apostolic command all require covering. Against those allowing virgins to go unveiled in Carthage.", tags: ["Tertullian", "Carthage"], tradition: "Early Church", region: "North Africa" },
+  { id: 'tl7', era: 1, year: 230, title: "Didascalia Apostolorum", desc: "Composed in northern Syria, c.230. Instructs women not to dress hair 'like a harlot' and to cover heads with a robe when walking in the street. Extends the covering ethic beyond worship to daily life.", tags: ["Syria", "Liturgy"], tradition: "Early Church", region: "Near East" },
+  { id: 'tl8', era: 2, year: 350, title: "Diodorus of Tarsus", desc: "Diodorus links the covering directly to the imago Dei argument: man as 'image and glory of God' prays uncovered; woman as 'glory of man' is veiled. Represents the Syrian school of exegesis.", tags: ["Diodorus", "Antioch"], tradition: "Eastern Church", region: "Near East" },
+  { id: 'tl9', era: 2, year: 390, title: "John Chrysostom: Homily 26 on 1 Corinthians", desc: "Chrysostom's most extensive treatment. He argues the covering must be worn 'continually, not at the time of prayer only.' He insists on a cloth that 'covers over' (katakalupto) — careful, full enclosure, not merely a cap over the brain. 'Do not tell me this is a small sin.'", tags: ["Chrysostom", "Constantinople"], tradition: "Eastern Church", region: "Byzantine" },
+  { id: 'tl10', era: 2, year: 400, title: "Jerome & Augustine", desc: "Jerome reports that women in Egypt and Syria 'do not go about with heads uncovered in defiance of the apostle's command.' Augustine writes: 'It is not becoming, even in married women, to uncover their hair, since the apostle commands women to keep their heads covered.' Universal patristic consensus established.", tags: ["Jerome", "Augustine", "West"], tradition: "Latin Church", region: "North Africa" },
+  { id: 'tl11', era: 2, year: 430, title: "Cyril of Alexandria", desc: "Cyril writes: 'The angels find it extremely hard to bear if this law [that women cover their heads] is disregarded.' The 'because of the angels' argument receives its most forceful patristic statement.", tags: ["Cyril", "Alexandria"], tradition: "Eastern Church", region: "North Africa" },
+  { id: 'tl12', era: 3, year: 585, title: "Synod of Auxerre", desc: "French regional synod formally requires women to wear a head covering during Holy Mass. One of the earliest explicit conciliar codifications in the West.", tags: ["Council", "Gaul"], tradition: "Latin Church", region: "Northern Europe" },
+  { id: 'tl13', era: 3, year: 743, title: "Synod of Rome", desc: "Declares: 'A woman praying in church without her head covered brings shame upon her head, according to the word of the Apostle.' Pontifical endorsement of the universal obligation.", tags: ["Council", "Rome"], tradition: "Latin Church", region: "Rome" },
+  { id: 'tl14', era: 3, year: 866, title: "Pope Nicholas I", desc: "Supports the head covering requirement for church services. The papacy formally endorses what had been universal practice.", tags: ["Papacy", "Canon Law"], tradition: "Latin Church", region: "Rome" },
+  { id: 'tl15', era: 3, year: 1270, title: "Thomas Aquinas: Summa Theologica", desc: "Aquinas provides the scholastic synthesis: the man should not cover his head to show immediate subjection to God; the woman should cover hers to show natural subjection to another besides God. Creation-order argument given its definitive medieval form.", tags: ["Aquinas", "Scholastic"], tradition: "Latin Church", region: "Northern Europe" },
+  { id: 'tl16', era: 4, year: 1520, title: "Luther & Melanchthon", desc: "Luther encourages wives to wear a veil in public worship. Melanchthon holds that 'a woman sins who goes in public without her head covered.' The Reformation does not challenge the covering — it reasserts it.", tags: ["Luther", "Melanchthon", "Reformation"], tradition: "Lutheran", region: "Northern Europe" },
+  { id: 'tl17', era: 4, year: 1540, title: "John Calvin", desc: "Calvin treats head coverings as normative for Christian women. He warns that if women are permitted uncovered heads, 'modesty will disappear and social indecency will follow.' Subsumes the requirement under order and decency in worship.", tags: ["Calvin", "Geneva"], tradition: "Reformed", region: "Northern Europe" },
+  { id: 'tl18', era: 4, year: 1600, title: "Wesley & Methodist Position", desc: "John Wesley instructs a woman, 'especially in a religious assembly,' to 'keep on her veil.' Thomas Coke, Adam Clarke, and other Methodist commentators reflect the same: veils enjoined, caps forbidden to men while praying.", tags: ["Wesley", "Methodist"], tradition: "Methodist", region: "Northern Europe" },
+  { id: 'tl19', era: 4, year: 1730, title: "Moravian Haube", desc: "Nicolaus von Zinzendorf introduces the Haube — the distinctive white cap worn by Moravian women since at least the 1730s, likened to a 'visible diadem' representative of Jesus' burial cloth. Still worn by Moravian women in lovefeasts.", tags: ["Moravian", "Zinzendorf"], tradition: "Moravian", region: "Northern Europe" },
+  { id: 'tl20', era: 5, year: 1917, title: "1917 Code of Canon Law, Canon 1262", desc: "Pope Benedict XV promulgates Canon 1262 §2: 'Women, however, shall have a covered head and be modestly dressed, especially when they approach the table of the Lord.' First explicit canonization of what had been universal custom.", tags: ["Canon Law", "Catholic"], tradition: "Catholic", region: "Rome" },
+  { id: 'tl21', era: 5, year: 1966, title: "Detweiler Princeton Study", desc: "Richard Detweiler's Princeton study traces Anabaptist veiling history: 1525–1865 (symptom — no distinctive religious significance), 1866–1910 (preachers begin appealing to 1 Cor 11), 1910–1950 (veiling frozen as religious symbol), 1950–present (disintegrating legitimacy).", tags: ["Anabaptist", "Mennonite"], tradition: "Anabaptist", region: "Americas" },
+  { id: 'tl22', era: 5, year: 1968, title: "NOW Resolution on Head Coverings", desc: "The National Organization for Women adopts a 'Resolution on Head Coverings' calling for a 'national unveiling' — women to send head coverings to the task force chairman. In 1969, fifteen NOW women protest at a Milwaukee Catholic church, removing hats at the communion rail.", tags: ["Feminism", "Cultural"], tradition: "Secular", region: "Americas" },
+  { id: 'tl23', era: 5, year: 1983, title: "1983 Code of Canon Law", desc: "The new code promulgated by John Paul II abrogates the 1917 code in its entirety. Canon 1262 is silently dropped — no new canon on head coverings is issued. The universal canonical obligation for Catholic women ceases, though custom and Canon 26's provision for immemorial custom remain debated.", tags: ["Canon Law", "Catholic", "Vatican II"], tradition: "Catholic", region: "Rome" },
+  { id: 'tl24', era: 5, year: 2010, title: "21st-Century Revival", desc: "A growing subset of younger Catholics and Lutherans revive veiling, often linked to interest in the Traditional Latin Mass. Catholic vendors report increased sales. Eastern Orthodox and Conservative Anabaptist communities maintain the practice without interruption.", tags: ["Revival", "Modern"], tradition: "Multiple", region: "Americas" },
+],
+
+historical: [
+  {
+    id: 'h1', century: 'apostolic', era: 'Apostolic & Sub-Apostolic (AD 30–150)',
+    title: 'Era I: The Apostolic Foundation',
+    meta: 'AD 30 – 150',
+    summary: 'Paul grounds the covering in creation order and the nature of God — not merely cultural convention. The sub-apostolic church assumes it.',
+    body: `<p>The foundational text, 1 Corinthians 11:2–16, was written c. AD 56 from Ephesus. Paul provides not one but <strong>four theological grounds</strong> for the covering: (1) the creation-order headship structure (v.3); (2) the image and glory argument (v.7); (3) the creation narrative of woman's derivation from and purpose toward man (vv.8–9); and (4) the angels (v.10). He also appeals to nature (vv.13–15) and universal church custom (v.16).</p>
+    <p>The passage's exegetical difficulty lies in whether these grounds are <em>culturally instantiated universals</em> (headship is timeless, the covering is its local expression) or <em>universal practices derived from timeless principles</em> (covering is as abiding as the creation order it signifies). The patristic tradition uniformly held the latter.</p>
+    <p>The Didache (~AD 90) and Didascalia Apostolorum (~AD 230, Syria) both assume women covering their heads in worship as settled practice. No sub-apostolic document records any controversy about whether the covering was required — only, per Tertullian, about whether unmarried virgins were exempt.</p>`,
+    tags: ['Paul', 'Corinthians', 'Apostolic'], related: ['f1', 'txt1', 'c1']
+  },
+  {
+    id: 'h2', century: 'patristic', era: 'Patristic Consensus (AD 150–430)',
+    title: 'Era II: The Patristic Consensus',
+    meta: 'AD 150 – 430',
+    summary: 'Near-total consensus across East and West: women must cover, men must not. The theological weight is creation-order, image of God, and angelic witness.',
+    body: `<p>The patristic witness is strikingly unanimous. Every major Church Father who addresses 1 Corinthians 11 — Irenaeus, Clement of Alexandria, Tertullian, Hippolytus, Diodorus of Tarsus, Chrysostom, Jerome, Augustine, and Cyril of Alexandria — treats the covering as a binding, continuing obligation. No patristic writer argues it was merely cultural or time-limited.</p>
+    <p><strong>Irenaeus</strong> (~AD 125–202) is the earliest post-apostolic witness, citing 1 Cor 11:10 and identifying the "authority on her head" as a cloth veil (<em>kalumma</em>). <strong>Clement of Alexandria</strong> (~190) requires full covering in public and worship. <strong>Tertullian</strong> (~210) writes his most detailed defense in <em>De Virginibus Velandis</em>, arguing even unmarried virgins must veil. <strong>Hippolytus</strong> (~202) specifies opacity — no sheer linen. <strong>Chrysostom</strong> (~390) insists on <em>continual</em> wearing, not merely during prayer, and specifies full enclosure (<em>katakalupto</em>). <strong>Augustine</strong> (~400): 'It is not becoming, even in married women, to uncover their hair.'</p>
+    <p>The patristic arguments cluster around: (a) creation order and headship, (b) the <em>imago Dei</em> distinction, (c) angelic presence and holy reverence, and (d) natural propriety. The consensus spans Carthage, Alexandria, Antioch, Constantinople, and Rome.</p>`,
+    tags: ['Patristic', 'Consensus', 'Creation Order'], related: ['f2', 'f3', 'f4', 'f5', 'txt2']
+  },
+  {
+    id: 'h3', century: 'medieval', era: 'Medieval Codification (AD 430–1500)',
+    title: 'Era III: Medieval Codification',
+    meta: 'AD 430 – 1500',
+    summary: 'Synods, councils, and finally the papacy formally codify what has been universal custom. Aquinas provides the definitive scholastic synthesis.',
+    body: `<p>During the medieval period, the practice moves from universal custom to formal conciliar and papal law. Key moments:</p>
+    <p>The <strong>Synod of Auxerre (585)</strong> in Gaul formally requires head coverings during Mass — one of the first explicit conciliar codifications in the West. The <strong>Synod of Rome (743)</strong> declares that a woman praying without a head covering 'brings shame upon her head, according to the word of the Apostle.' <strong>Pope Nicholas I (866)</strong> formally endorses the requirement.</p>
+    <p><strong>Thomas Aquinas</strong> (1225–1274) provides the definitive scholastic synthesis in the <em>Summa Theologica</em>: the man should pray uncovered to show immediate subjection to God; the woman should cover to show natural subjection to another besides God. He grounded the practice in natural law and the order of creation — not merely church custom.</p>
+    <p>Through the medieval period, bareheaded women in Southern Italy and other regions were socially coded as adulteresses or prostitutes. The covering was simultaneously a theological statement and a social index of respectability.</p>`,
+    tags: ['Medieval', 'Aquinas', 'Canon Law'], related: ['f6', 'txt3', 'c3']
+  },
+  {
+    id: 'h4', century: 'early-modern', era: 'Reformation & Early Modern (1500–1900)',
+    title: 'Era IV: Reformation Continuity',
+    meta: 'AD 1500 – 1900',
+    summary: 'The Reformation does not challenge head coverings — it reasserts them. Luther, Calvin, Wesley, and Zinzendorf all uphold the practice.',
+    body: `<p>A common misconception is that the Protestant Reformation challenged the head covering. It did not. The major Reformers uniformly upheld the practice:</p>
+    <p><strong>Luther</strong> encouraged wives to veil in public worship. <strong>Melanchthon</strong> held that 'a woman sins who goes in public without her head covered.' <strong>Calvin</strong> treated the covering as normative, warning that uncovered heads would lead to the disappearance of modesty. <strong>John Wesley</strong> instructed women to 'keep on her veil' especially in religious assembly. Methodist commentators Thomas Coke, Adam Clarke, and Joseph Benson all reflected the same position.</p>
+    <p>Among <strong>Anabaptists</strong>, the covering was similarly assumed — though the Detweiler study shows it did not become a distinct religious ordinance until preachers began citing 1 Corinthians 11 explicitly in the 1866–1910 period. <strong>Zinzendorf's Moravians</strong> introduced the Haube (white cap) from at least the 1730s, likened to the burial cloth of Christ.</p>
+    <p>The <strong>1917 Code of Canon Law</strong> canonized what had been universal Catholic custom: Canon 1262 §2 formally required women to have covered heads, especially at the Lord's Table. This was the first time the universal custom was expressed in positive canonical law.</p>`,
+    tags: ['Reformation', 'Luther', 'Calvin', 'Anabaptist'], related: ['f7', 'f8', 'f9', 'txt4']
+  },
+  {
+    id: 'h5', century: 'modern', era: '20th Century: Erosion & Abandonment (1900–2000)',
+    title: 'Era V: The 20th-Century Fracture',
+    meta: 'AD 1900 – 2000',
+    summary: 'Second-wave feminism, a misreported Vatican statement, and the 1983 Code of Canon Law end the universal Western practice — but do not eliminate it.',
+    body: `<p>At the start of the 20th century, head coverings were normative across virtually all Christian denominations in the West — Catholic, Lutheran, Methodist, Reformed, Anglican, Anabaptist, Pentecostal. The fracture was rapid and largely driven by cultural rather than exegetical pressure.</p>
+    <p><strong>1968:</strong> The National Organization for Women adopts a 'Resolution on Head Coverings' calling for a national unveiling. Women burn veils. <strong>1969:</strong> Fifteen NOW members protest at a Milwaukee Catholic church. That same year, Vatican official Fr. Annibale Bugnini makes a statement misreported as abolishing the head covering requirement. Bugnini subsequently clarified: 'The rule has not been changed.' But the misinformation spread globally.</p>
+    <p><strong>1983:</strong> The new Code of Canon Law abrogates the 1917 code in full. Canon 1262 is not re-issued. The canonical obligation ceases — though some canonists argue immemorial custom (Canon 26) still has binding force.</p>
+    <p>By the end of the 20th century, most Western Protestant denominations had effectively abandoned the practice, reinterpreting 1 Corinthians 11 as culturally conditioned. Eastern Orthodox and Conservative Anabaptist communities maintained it without interruption.</p>`,
+    tags: ['Modern', 'Feminism', 'Canon Law', 'Secularization'], related: ['c5', 'txt5', 'con1']
+  },
+  {
+    id: 'h6', century: 'modern', era: '21st Century: Revival & Global Persistence',
+    title: 'Era VI: Revival & Global Persistence',
+    meta: 'AD 2000 – Present',
+    summary: 'The practice persists globally and is experiencing revival in unexpected quarters — while remaining assumed in the Orthodox world and among Anabaptists.',
+    body: `<p>The 21st century has seen head covering become a contested identity marker rather than a universal practice. Several dynamics are at play:</p>
+    <p><strong>Global persistence:</strong> In the Eastern Hemisphere — South Asia, the Middle East, Eastern Europe, sub-Saharan Africa — head coverings in Christian worship remain broadly normative regardless of denomination. Orthodox churches, whether Greek, Russian, Coptic, or Ethiopian, universally maintain the practice.</p>
+    <p><strong>Western revival:</strong> A growing subset of younger Catholic women have revived veiling, often in connection with interest in the Traditional Latin Mass. Catholic veil vendors report increased sales. Some Lutheran women have independently revived the practice as a voluntary sign of reverence. This revival is typically framed as devotional choice rather than legal obligation.</p>
+    <p><strong>Conservative retention:</strong> Old Order Amish, Old Order Mennonites, Conservative Anabaptists, Free Presbyterian Church of Scotland, Heritage Reformed Congregations, and Central Yearly Meeting of Friends (Conservative Quakers) continue the practice as a binding ordinance or strong norm.</p>
+    <p><strong>Academic reconsideration:</strong> Several scholars have pushed back on the dominant cultural-relativity interpretation, arguing that Paul's creation-order and imago Dei grounds cannot be reduced to first-century Corinthian sociology.</p>`,
+    tags: ['Revival', '21st Century', 'Global', 'Orthodox'], related: ['c1', 'c2', 'c4']
+  },
+],
+
+geographical: [
+  {
+    id: 'g1', region: 'near-east',
+    title: 'Corinth & Asia Minor: The Source',
+    meta: 'Near East / Aegean',
+    summary: 'The site of Paul\'s letter, where Roman social norms on women\'s veiling intersected with the new Christian community.',
+    body: `<p>The covering debate originates in first-century Corinth — a Roman colony where veiling customs were in social flux. Roman citizens, particularly elite women, typically veiled in public as a mark of respectability; uncovered hair was associated with prostitutes or women of loose character. Paul's command enters this social context but grounds itself in creation theology rather than mere convention.</p>
+    <p>The Greek phrase <em>kata kephalēs</em> (v.4, 'having down from the head') and <em>katakalupto</em> (v.5–7, 'to cover completely') both suggest a cloth covering draped over the head — the standard Roman female veil. Paul's appeal to 'nature' (vv.13–14) may reflect Stoic natural philosophy about appropriate male and female bodily presentation.</p>
+    <p>The Didascalia Apostolorum (~230, northern Syria) shows that neighboring communities in the Near East practiced the covering as normative outside worship as well.</p>`,
+    tags: ['Corinth', 'Paul', 'Roman culture'], related: ['txt1', 'h1', 'f1']
+  },
+  {
+    id: 'g2', region: 'north-africa',
+    title: 'North Africa: The Patristic Epicenter',
+    meta: 'Carthage / Alexandria / Egypt',
+    summary: 'Tertullian (Carthage), Clement, and Cyril (Alexandria) produced the most detailed patristic treatments of head covering theology.',
+    body: `<p>North Africa produced three of the most important patristic voices on head coverings:</p>
+    <p><strong>Tertullian of Carthage</strong> (~155–220) wrote <em>De Virginibus Velandis</em>, his comprehensive treatise arguing that unmarried virgins must veil alongside married women. He grounds the argument in apostolic command, the nature of womanhood, and creation order. His context: in Carthage, adult women covered their heads in the street as a social norm (uncovered = lower-class or immoral); the dispute is about whether Christian virgins are exempt.</p>
+    <p><strong>Clement of Alexandria</strong> (~150–215) in <em>Paedagogus</em> requires women to be 'entirely covered' in worship and public, with only modest veils — no purple or ostentation. Jerome later reports that women in Egypt 'do not go about with heads uncovered in defiance of the apostle's command.'</p>
+    <p><strong>Cyril of Alexandria</strong> (~376–444) provides the strongest statement on the angelic argument: 'The angels find it extremely hard to bear if this law is disregarded.'</p>`,
+    tags: ['Tertullian', 'Clement', 'Alexandria', 'Carthage'], related: ['f2', 'f3', 'f5']
+  },
+  {
+    id: 'g3', region: 'rome',
+    title: 'Rome & the Latin West',
+    meta: 'Rome / Gaul / Italy',
+    summary: 'The Western church codified the practice through councils and canon law, culminating in the 1917 Code\'s Canon 1262.',
+    body: `<p>The Latin West moved from universal custom to formal law through a series of conciliar and papal acts:</p>
+    <p>The <strong>Synod of Auxerre (585)</strong> in Gaul and the <strong>Synod of Rome (743)</strong> formally required women to cover at Mass. <strong>Pope Nicholas I (866)</strong> endorsed the requirement. <strong>Hippolytus of Rome</strong> (~202) specified that coverings must be opaque linen, not sheer fabric. <strong>Augustine of Hippo</strong> (~430) confirmed the obligation extends to married women's uncovered hair at all times.</p>
+    <p>The theological synthesis was provided by <strong>Thomas Aquinas</strong> (1225–1274) in the <em>Summa Theologica</em>: the covering signals woman's natural subjection — not to God immediately, as man is, but mediately through the male. This became the standard Western scholastic position.</p>
+    <p>The <strong>1917 Code of Canon Law</strong> (Canon 1262 §2) first expressed the universal custom in positive law. Its abrogation by the 1983 Code removed the canonical obligation but not the underlying theological tradition.</p>`,
+    tags: ['Rome', 'Canon Law', 'Aquinas', 'Council'], related: ['f6', 'txt4', 'h3']
+  },
+  {
+    id: 'g4', region: 'byzantine',
+    title: 'The Byzantine East',
+    meta: 'Constantinople / Antioch / Asia Minor',
+    summary: 'Chrysostom\'s extensive homilies established the Eastern standard; the Byzantine liturgical tradition preserves a specific prayer for "binding up the head of a woman."',
+    body: `<p>The Eastern tradition was shaped above all by <strong>John Chrysostom</strong>, Archbishop of Constantinople (~347–407). His Homily 26 on 1 Corinthians is the most extensive patristic treatment of the passage. Chrysostom insists on: (a) continual wearing, not merely during prayer; (b) full enclosure (<em>katakalupto</em>, not merely <em>kalupto</em>); and (c) the creation-order basis as equivalent to natural law. 'Do not tell me this is a small sin.'</p>
+    <p>Byzantine Euchologia manuscripts spanning from 8th-century Constantinople to 11th-century Palestine contain a liturgical 'Prayer for Binding Up the Head of a Woman,' showing veiling was blessed in a liturgical rite of passage. The prayer texts contrast uncovered male prayer (immediate before God) with covered female prayer (modesty and sobriety before God and angels).</p>
+    <p><strong>Diodorus of Tarsus</strong> (~390) and the broader Syrian school tied the covering directly to the <em>imago Dei</em> distinction. Old Believers maintain the <em>povoinik</em> (married women's knitted bonnet) underneath the outer headscarf, worn continuously.</p>`,
+    tags: ['Chrysostom', 'Constantinople', 'Liturgy', 'Byzantine'], related: ['f4', 'txt2', 'h2']
+  },
+  {
+    id: 'g5', region: 'northern-europe',
+    title: 'Northern Europe: Reformation & Continuity',
+    meta: 'Germany / Switzerland / Britain / Scandinavia',
+    summary: 'The Reformation upheld the practice; Scandinavian Lutherans and Moravians maintained distinctive covering customs into the 20th century.',
+    body: `<p>The Protestant Reformation did not break with the patristic consensus on head coverings. <strong>Luther</strong> (Germany) and <strong>Calvin</strong> (Geneva) both upheld the practice. Melanchthon held non-covering to be sinful. Calvin treated it as a matter of decent order in worship.</p>
+    <p>In <strong>Scandinavia</strong>, Lutheran women maintained head coverings in worship until the early 20th century. The Firstborn Laestadian tradition retains the practice today, calling the headscarf the <em>huckle</em> or <em>hilka</em>. Swedish Lutheran women commonly wore the <em>huva</em> (cap) in church.</p>
+    <p><strong>Zinzendorf's Moravians</strong> (from 1730s, Germany/Bohemia) introduced the Haube — the white lace cap — as a distinctive mark of Moravian women. Still worn in Moravian lovefeasts and diener service today.</p>
+    <p>In <strong>Britain</strong>, the practice was normative across Anglican, Methodist, Reformed, and Nonconformist churches through the 19th century. Wesley's explicit instruction, plus commentary by Coke, Clarke, and Benson, kept it in Methodist practice. The decline came rapidly after WWII, correlated with changes in women's public dress.</p>`,
+    tags: ['Luther', 'Calvin', 'Moravian', 'Scandinavia'], related: ['f7', 'f8', 'f9', 'h4']
+  },
+  {
+    id: 'g6', region: 'americas',
+    title: 'The Americas: Persistence & Abandonment',
+    meta: 'United States / Canada / Latin America',
+    summary: 'The Americas show the full spectrum — from Old Order Anabaptist communities that have never wavered, to mainline churches that abandoned the practice in the 1960s.',
+    body: `<p>The Americas present the starkest contrast in contemporary Christian practice:</p>
+    <p><strong>Old Order Anabaptists</strong> (Amish, Old Order Mennonites, Conservative Mennonites, River Brethren) maintain the covering as a binding ordinance. The kapp (white organza prayer cap) is worn throughout waking hours by Old Order women in Pennsylvania, Ohio, Indiana, and elsewhere. Ontario Mennonites made it a test of membership in the 1920s.</p>
+    <p><strong>Mainstream Protestant decline:</strong> The NOW campaign (1968–1969) accelerated what was already a trend. Most American evangelical churches stopped requiring or teaching head coverings by the 1970s, reinterpreting 1 Cor 11 as culturally specific.</p>
+    <p><strong>Catholic revival:</strong> After the 1983 code, the requirement lapsed. But from the 2010s, a growing cohort of younger American Catholic women — especially in Traditional Latin Mass communities — have revived the mantilla as a voluntary act of reverence. Catholic veil vendors report significant growth.</p>
+    <p><strong>Latin America:</strong> In many Latin American Catholic and Pentecostal communities, head coverings remain normative without the theological controversy visible in North America.</p>`,
+    tags: ['Anabaptist', 'Americas', 'Revival', 'Mennonite'], related: ['c4', 'h5', 'h6']
+  },
+],
+
+traditions: [
+  {
+    id: 'c1', view: 'required',
+    title: 'Eastern Orthodox',
+    meta: 'Normative / Universal',
+    summary: 'For 2,000 years, Orthodox tradition has required women to cover their heads in worship, and often outside it. Rooted in apostolic tradition, patristic consensus, and iconographic practice.',
+    body: `<p>The Eastern Orthodox position is among the most clearly maintained in contemporary Christianity. The tradition grounds the covering in multiple reinforcing authorities:</p>
+    <p><strong>Scriptural:</strong> 1 Corinthians 11:2–16, interpreted by Chrysostom as requiring continual wearing. <strong>Patristic:</strong> Irenaeus, Clement, Chrysostom, Cyril, and Diodorus all treated covering as binding. <strong>Iconographic:</strong> Virtually every female saint in Eastern iconography is depicted veiled. <strong>Liturgical:</strong> The Byzantine Euchologion contains a specific prayer for 'binding up the head of a woman.'</p>
+    <p>Chrysostom's teaching is definitive for the East: women ought to be covered 'not at the time of prayer only but also continually.' Many Orthodox theologians teach it is expected of all women 'not only during liturgical periods of prayer, but at all times.'</p>
+    <p>Bishop Alexei Trader connects the veil theologically to sacred coverings — the temple veil, the chalice veil — arguing that what is placed under a veil is set apart as holy. The Standing Conference of Oriental Orthodox Churches (SCOOCH) enjoins head covering as 'Proper Attire in Church.' Old Believers maintain the <em>povoinik</em> continuously under the outer veil.</p>
+    <p>Contemporary non-compliance is noted by Orthodox writers as a failure of catechesis and an influence of secular modernism, not as a theological revision.</p>`,
+    tags: ['Orthodox', 'Required', 'Byzantine', 'Patristic'], related: ['g4', 'f4', 'h2']
+  },
+  {
+    id: 'c2', view: 'required',
+    title: 'Catholic (Pre-1983)',
+    meta: 'Canon Law Required / Now Optional',
+    summary: 'Universal Catholic practice for 1,900 years, canonized in 1917. The 1983 Code silently dropped Canon 1262, ending the formal obligation — but not the theological tradition.',
+    body: `<p>The Catholic position has two phases:</p>
+    <p><strong>Pre-1983:</strong> Head covering was the universal practice of the Latin Church, unanimously maintained. Key codifications: Synod of Auxerre (585), Synod of Rome (743, 'brings shame upon her head'), Pope Nicholas I (866), and finally Canon 1262 §2 of the 1917 Code: 'women, however, shall have a covered head and be modestly dressed, especially when they approach the table of the Lord.'</p>
+    <p><strong>Post-1983:</strong> The 1983 Code abrogated the 1917 Code in full (Canon 6.1.n.1). Canon 1262 was not re-issued. Canonists including Dr. Edward Peters and Fr. John Zuhlsdorf confirmed the legal obligation ceased. A 1969 Vatican press conference by Fr. Annibale Bugnini was misreported as abolishing the requirement; Bugnini subsequently clarified: 'The rule has not been changed.' But misinformation spread globally, and by the time the 1983 Code confirmed the lapse, most women had already stopped.</p>
+    <p>Some canonists argue that <strong>Canon 26</strong> of the 1983 Code — providing that immemorial customs (100+ years of practice) obtain the force of law — means the tradition is still binding despite the absence of an explicit canon. This view is minority but serious.</p>
+    <p>Cardinal Burke and others have encouraged revival of the practice as devotional. Traditional Latin Mass communities widely maintain it as a norm.</p>`,
+    tags: ['Catholic', 'Canon Law', 'Pre-Vatican II', 'Revival'], related: ['txt4', 'txt5', 'g3']
+  },
+  {
+    id: 'c3', view: 'required',
+    title: 'Conservative Anabaptist',
+    meta: 'Binding Ordinance',
+    summary: 'Old Order Amish, Conservative Mennonites, and related groups treat head covering as a New Testament ordinance — one of the "Seven Ordinances" — worn throughout waking hours.',
+    body: `<p>Conservative Anabaptist groups — Old Order Amish, Old Order Mennonites, Conservative Mennonites, Dunkard Brethren, River Brethren, Schwarzenau Brethren — maintain head covering as a distinct theological ordinance, not merely a cultural custom.</p>
+    <p>The covering is formally counted among the <strong>Seven Ordinances</strong> of Conservative Mennonite practice. Unlike most Protestant traditions, which limit the covering to worship contexts, Conservative Anabaptists follow the Chrysostom/Pauline interpretation of continual wearing: the kapp (white organza prayer cap) is worn throughout all waking hours, sometimes combined with a bonnet for outdoor use.</p>
+    <p>Amish women wear white kapps (married) or black kapps (unmarried). Ontario Mennonites made the white net head-dress a <strong>test of membership</strong> in the 1920s. The hair itself is also kept long, center-parted, and pinned up — the covering is not merely additional garb but part of a complete plain dress theology.</p>
+    <p>Merle Ruth's <em>The Significance of the Christian Woman's Veiling</em> argues that 'Let her be covered' is present active imperative — 'let her <em>continue</em> to be veiled' — supporting ongoing, uninterrupted wearing. The covering expresses the wearer's place in God's order.</p>`,
+    tags: ['Anabaptist', 'Mennonite', 'Amish', 'Ordinance'], related: ['g6', 'h4']
+  },
+  {
+    id: 'c4', view: 'normative',
+    title: 'Eastern Christianity (Coptic, Ethiopian, Syriac)',
+    meta: 'Normative Practice',
+    summary: 'Oriental Orthodox and Eastern Rite churches universally maintain women\'s head covering as normative liturgical practice, largely undisrupted by Western cultural shifts.',
+    body: `<p>The Oriental Orthodox churches — Coptic, Ethiopian, Eritrean, Syriac, Armenian — and the Eastern Catholic rites all maintain head covering as normative. In these traditions, the 1960s Western disruption had minimal theological impact because the practice was never subjected to the same cultural-relativity critique.</p>
+    <p>The <strong>Coptic Orthodox Church</strong> expects women to cover their heads during the Divine Liturgy. Ethiopian women commonly cover with white <em>netela</em> shawls. Syriac and Maronite Catholic women wear head coverings in Mass. The Believers Eastern Church formally requires head coverings based on 1 Cor 11.</p>
+    <p>K. P. Yohannan, former Metropolitan Bishop (Believers Eastern Church), teaches that when a woman wears a head covering she is 'essentially a rebuke to all the fallen angels... I choose not to follow your example of rebellion and pride.'</p>
+    <p>The SCOOCH (Standing Conference of Oriental Orthodox Churches) formally lists head covering as 'Proper Attire in Church' for women.</p>`,
+    tags: ['Coptic', 'Ethiopian', 'Oriental Orthodox', 'Normative'], related: ['c1', 'g4']
+  },
+  {
+    id: 'c5', view: 'optional',
+    title: 'Catholic (Post-1983)',
+    meta: 'No Canonical Obligation / Devotional Revival',
+    summary: 'Since the 1983 Code of Canon Law, no universal canonical obligation exists. The practice persists as devotional — especially in Traditional Latin Mass communities.',
+    body: `<p>After 1983, the Catholic Church has no formal universal law requiring head coverings. The practice exists on a spectrum:</p>
+    <p><strong>Traditional Latin Mass communities:</strong> The mantilla (lace head covering) is essentially expected — it is the de facto norm, though formally optional. Many traditionalist Catholic websites, clergy, and authors encourage or strongly commend the practice.</p>
+    <p><strong>Ordinary Form (Novus Ordo) communities:</strong> The practice is uncommon in most Western parishes. In some countries (India, parts of Latin America, Philippines) it remains normative culturally.</p>
+    <p><strong>Theological argument for revival:</strong> Cardinal Burke and others argue: (a) the absence of a positive canon does not equal prohibition; (b) Canon 26's immemorial custom provision may give the tradition continuing legal force; (c) the theological basis (creation order, Eucharistic reverence) remains sound regardless of canonical status.</p>
+    <p><strong>Bugnini clarification:</strong> The 1969 press conference statement was misinterpreted. Bugnini confirmed: 'The rule has not been changed. It is a matter of general discipline.' The misreporting nonetheless drove global abandonment, and the 1983 Code arrived too late to reverse it.</p>`,
+    tags: ['Catholic', 'Optional', 'Mantilla', 'Revival'], related: ['c2', 'txt5', 'g3']
+  },
+  {
+    id: 'c6', view: 'normative',
+    title: 'Reformed / Presbyterian (Confessional)',
+    meta: 'Normative in Confessional Churches',
+    summary: 'Calvin, Knox, and the early Reformed tradition upheld head covering. Confessional Reformed and Presbyterian churches retain or revive it; modern evangelical Reformed churches generally do not.',
+    body: `<p>The Reformed tradition presents a divided picture:</p>
+    <p><strong>16th–17th century:</strong> Calvin, Knox, and the Westminster divines treated head covering as normative. Calvin specifically warned against uncovered heads as leading to immodesty. John Knox called for women to cover. Westminster commentators William Greenhill, William Gouge, John Lightfoot, Thomas Manton, and Christopher Love all upheld the practice. Even the Geneva Bible (1599) commentary addresses the covering, though some Geneva Bible scholars saw it as cultural (Beza, Perkins).</p>
+    <p><strong>Churches retaining the practice today:</strong> Heritage Reformed Congregations, Netherlands Reformed Congregations, Free Presbyterian Church of Scotland, Free Church of Scotland (Continuing), Free Presbyterian Church of North America, Presbyterian Reformed Church. These churches formally require or strongly expect women to cover in public worship.</p>
+    <p><strong>Modern evangelical Reformed churches</strong> (PCA, RTS, NAPARC generally) have largely adopted the cultural-relativity interpretation. Wayne Grudem argues contemporary Christians no longer need head coverings because veils no longer carry the social meaning they did in first-century Corinth.</p>`,
+    tags: ['Reformed', 'Presbyterian', 'Calvin', 'Westminster'], related: ['f7', 'h4', 'g5']
+  },
+  {
+    id: 'c7', view: 'optional',
+    title: 'Lutheran',
+    meta: 'Normative in early Lutheranism / Now varies',
+    summary: 'Luther and Melanchthon upheld the practice. Scandinavian Lutheran communities maintained it well into the 20th century. Contemporary practice varies widely.',
+    body: `<p>Lutheranism shows a clear historical arc from affirmation to decline:</p>
+    <p><strong>Reformation era:</strong> Luther encouraged wives to veil in public worship. Melanchthon explicitly held that 'a woman sins who goes in public without her head covered.' The Lutheran position was consistent with universal Catholic practice they retained from Rome.</p>
+    <p><strong>Evangelical Lutheran Synodical Conference of North America</strong> stated: 'It is a laudable custom, based upon a Scriptural injunction (1 Cor. 11:3–15), for women to wear an appropriate head covering in Church, especially at the time of divine service.'</p>
+    <p><strong>Scandinavian Lutherans:</strong> In Sweden and other Nordic countries, hats were the norm in worship through the early 20th century. Firstborn Laestadians in Sweden retain the headscarf (<em>huckle</em> or <em>hilka</em>) in services today.</p>
+    <p><strong>Contemporary Lutheran revival:</strong> A growing subset of confessional Lutheran women — particularly in the LCMS and WELS — have revived the practice independently, framing it as voluntary reverence rather than binding law.</p>`,
+    tags: ['Lutheran', 'Luther', 'Melanchthon', 'Scandinavia'], related: ['f7', 'g5', 'h4']
+  },
+  {
+    id: 'c8', view: 'cultural',
+    title: 'Mainline Protestant / Modern Evangelical',
+    meta: 'Cultural Interpretation',
+    summary: 'Most modern Western Protestant churches interpret 1 Corinthians 11 as culturally specific to first-century Corinth. The covering is seen as a local application of a timeless headship principle, not as a universal practice.',
+    body: `<p>The dominant position in 21st-century Western evangelical and mainline Protestant churches is the cultural-relativity interpretation. Its key claims:</p>
+    <p>1. Paul was addressing a specific problem in Corinth — women removing their veils as a sign of social liberation within the new Christian egalitarianism. The covering was the culturally appropriate marker of modesty and marital status in first-century Corinth specifically.</p>
+    <p>2. Paul's appeal to 'nature' and 'custom' (vv.13–16) suggests he himself recognized a cultural component. The timeless principle is headship and order; the covering was its first-century expression.</p>
+    <p>3. Since uncovered hair no longer signals immodesty or insubordination in contemporary Western culture, the covering is no longer needed to signal the timeless principle.</p>
+    <p><strong>Key scholars:</strong> Gordon Fee, Pierce & Groothuis, J. Murphy-O'Connor, Anthony Thiselton, Hans Conzelmann. Wayne Grudem (complementarian) holds headship as timeless but the covering as culturally variable.</p>
+    <p><strong>Counter-argument:</strong> Paul grounds the covering not in Corinthian culture but in creation order, the image of God, and the presence of angels — arguments that would be equally applicable in any culture. The patristic tradition never acknowledged a cultural-relativity exemption.</p>`,
+    tags: ['Cultural', 'Modern', 'Protestant', 'Evangelical'], related: ['con3', 'h5']
+  },
+  {
+    id: 'c9', view: 'required',
+    title: 'Quaker (Conservative) & Plain Friends',
+    meta: 'Binding Ordinance',
+    summary: 'Conservative Friends and Central Yearly Meeting of Friends treat 1 Corinthians 11 as instituting veiling as a Christian woman\'s way of honoring male headship in the church.',
+    body: `<p>The Central Yearly Meeting of Friends (Conservative Quakers) has a formal teaching on head coverings, citing 1 Corinthians 11 as Paul's institution of veiling as 'a Christian woman's way of properly honoring the headship of men in the church and of making a statement of submission to their authority (vs. 3, 5).' The veil is 'the statement of genuine Christian piety and submission.'</p>
+    <p>Ohio Yearly Meeting (Conservative) women wear head coverings, usually as a scarf, bonnet, or cap. Plymouth Brethren women wear a headscarf during worship and some form of covering in public.</p>
+    <p>Jehovah's Witnesses require female members who must lead prayer or teaching (when no baptized male is available) to do so wearing a head covering — a visible marker that her role is an extraordinary exception to normal male headship.</p>`,
+    tags: ['Quaker', 'Plymouth Brethren', 'Conservative'], related: ['c3', 'h4']
+  },
+],
+
+fathers: [
+  {
+    id: 'f1', era: 'apostolic',
+    title: 'Paul the Apostle',
+    meta: 'Apostle / c. AD 5–67',
+    summary: '1 Corinthians 11:2–16 — the foundational text. Paul grounds the covering in creation order, the image of God, headship, and angelic presence.',
+    body: `<p>Paul establishes the theological framework for head coverings in 1 Corinthians 11:2–16, written c. AD 56. His argument is structured in layers:</p>
+    <p><strong>Headship chain</strong> (v.3): God → Christ → Man → Woman. The covering signifies the woman's place in this order. <strong>Shame/glory</strong> (vv.4–6): A man who covers dishonors Christ (his head); a woman who does not cover dishonors her husband (her head) — the shame equivalent to being shaved. <strong>Image and glory</strong> (v.7): Man is the image and glory of God; woman is the glory of man. <strong>Creation order</strong> (vv.8–9): Woman was made from man, for man. <strong>Angels</strong> (v.10): Because of the angels. <strong>Nature</strong> (vv.13–15): Natural propriety and long hair as glory. <strong>Universal custom</strong> (v.16): 'We have no other custom than this, and neither do God's other churches.'</p>
+    <p>The exegetical crux is v.16: does 'no such custom' mean there is no custom of contention (as some read it), or that covering is the universal church custom? The patristic consensus uniformly read it as universal affirmation of the practice.</p>`,
+    tags: ['Paul', 'Apostolic', '1 Corinthians'], related: ['txt1', 'h1', 'con1', 'con2']
+  },
+  {
+    id: 'f2', era: 'early-fathers',
+    title: 'Clement of Alexandria',
+    meta: 'c. 150–215 / Alexandria',
+    summary: 'Paedagogus requires women to be entirely covered in public and worship — only at home may they uncover. No purple or ostentatious veils.',
+    body: `<p>Clement of Alexandria (~150–215) addresses head coverings in his <em>Paedagogus</em> (The Instructor), his manual on Christian conduct. His key positions:</p>
+    <p>Women must be 'entirely covered' in public and may uncover only at home. Women ought to pray veiled 'as fitting the will of the Word.' He warns against conspicuous or luxurious veils — no purple fabric, no sheer linen — as ostentatious. The covering must be functional, not fashionable.</p>
+    <p>Clement links the covering to the broader principle of Christian modesty and the avoidance of lust. He is also the source of the manuals of early Christianity — alongside the <em>Didascalia Apostolorum</em> — that instructed women to wear head coverings during prayer and worship as well as outside the home.</p>`,
+    tags: ['Clement', 'Alexandria', 'Early Church'], related: ['g2', 'h2', 'txt2']
+  },
+  {
+    id: 'f3', era: 'early-fathers',
+    title: 'Tertullian of Carthage',
+    meta: 'c. 155–220 / Carthage',
+    summary: 'Author of the most detailed patristic treatise on veiling. Argues from apostolic command, nature, and creation that virgins as well as married women must cover.',
+    body: `<p>Tertullian (~155–220) wrote <em>De Virginibus Velandis</em> (On the Veiling of Virgins) — the most extensive single patristic treatment of head coverings. The occasion: some Christian virgins in Carthage were going unveiled, arguing they were not yet 'women' in the sense Paul's command addressed.</p>
+    <p>Tertullian argues: (a) 'woman' in Paul's usage encompasses all females past puberty, including virgins; (b) veiling is required by apostolic command, nature, and universal church custom; (c) the practice preceded Paul's letter and is not invented by it; (d) even the body itself (physical maturity) and the spirit (conscience) testify that the virgin is a woman and must veil.</p>
+    <p>His description of the veil matches Roman matronal portraiture: a cloth covering the head, falling on both sides over the ears and nape to the shoulders. He explicitly rejects the full-face veil as <em>barbarior</em> (excessively foreign) and also rejects turbans, woollen bands, and small linen caps as inadequate substitutes.</p>
+    <p>Tertullian's context: in Carthage, uncovered adult women in the street were coded as prostitutes or lower-class. He argues the Christian church cannot be more permissive than pagan social norms.</p>`,
+    tags: ['Tertullian', 'Carthage', 'Virgins'], related: ['g2', 'h2', 'txt2']
+  },
+  {
+    id: 'f4', era: 'late-patristic',
+    title: 'John Chrysostom',
+    meta: 'c. 347–407 / Constantinople',
+    summary: 'The most extensive Eastern patristic treatment. Chrysostom insists on continual wearing, full enclosure, and treats the covering as equivalent to the law of nature.',
+    body: `<p>John Chrysostom, Archbishop of Constantinople and author of the Divine Liturgy bearing his name, gave the definitive Eastern patristic treatment in Homily 26 on 1 Corinthians. Key positions:</p>
+    <p><strong>Continual wearing:</strong> 'Not at the time of prayer only, but also continually... she ought to be covered.' He argues that if covering is required during prayer, and women are commanded to pray without ceasing (1 Thess 5:17), the covering must be worn continuously.</p>
+    <p><strong>Full enclosure:</strong> He insists on <em>katakalupto</em> ('to cover completely') rather than merely <em>kalupto</em> ('to cover'). 'Covered over... carefully wrapped up on every side.' A small cap over the crown of the head is not sufficient.</p>
+    <p><strong>Natural law equivalence:</strong> 'If thou cast away the covering appointed by the law of God, cast away likewise that appointed by nature.' He equates the divine command with the natural propriety of feminine covering.</p>
+    <p><strong>Gravity:</strong> 'Do not tell me this is a small sin.' He treats noncompliance as genuinely serious — not a minor rubric but a violation of divinely ordered creation.</p>`,
+    tags: ['Chrysostom', 'Constantinople', 'Eastern'], related: ['c1', 'g4', 'h2']
+  },
+  {
+    id: 'f5', era: 'late-patristic',
+    title: 'Augustine of Hippo',
+    meta: '354–430 / North Africa',
+    summary: 'Augustine confirms the obligation extends to all women, including married women, in accordance with the apostle\'s command — even outside worship.',
+    body: `<p>Augustine of Hippo (354–430) addresses head coverings in multiple contexts, most directly in Letter 245 to Possidus. His key statement: 'It is not becoming, even in married women, to uncover their hair, since the apostle commands women to keep their heads covered.'</p>
+    <p>This is significant for two reasons: (1) Augustine applies the command to <em>married</em> women, not merely virgins or all women in general — directly addressing those who might think the command applies only to unmarried women; (2) he does not restrict it to worship but speaks generally.</p>
+    <p>Augustine's endorsement completed the patristic consensus across both Latin West and Greek East: no major Church Father dissented from the position that women must cover their heads.</p>`,
+    tags: ['Augustine', 'North Africa', 'Latin Church'], related: ['g2', 'h2', 'g3']
+  },
+  {
+    id: 'f6', era: 'medieval',
+    title: 'Thomas Aquinas',
+    meta: '1225–1274 / Paris & Naples',
+    summary: 'Summa Theologica provides the definitive scholastic synthesis: men pray uncovered (immediate subjection to God); women cover (mediate subjection through man). Grounded in natural law.',
+    body: `<p>Thomas Aquinas (1225–1274) synthesizes the patristic tradition in the <em>Summa Theologica</em>. His treatment of 1 Corinthians 11 in his Pauline commentary provides the clearest medieval argument:</p>
+    <p>The covering is grounded in the <strong>natural order of authority</strong>: man is immediately subject to God and therefore shows this by praying with head uncovered (showing no human authority over him). Woman is naturally subject to another besides God (her husband) and therefore covers her head as a sign of this subjection.</p>
+    <p>Aquinas explicitly grounds this in <strong>natural law</strong>, not merely positive ecclesial law — meaning it is not merely a church rule but an expression of how creation is ordered. This scholastic grounding made the covering more theologically robust than a mere custom argument.</p>
+    <p>His synthesis became the standard reference point for Western Catholic and later Protestant arguments for the covering's universal and continuing obligation.</p>`,
+    tags: ['Aquinas', 'Medieval', 'Scholastic', 'Natural Law'], related: ['h3', 'g3', 'con2']
+  },
+  {
+    id: 'f7', era: 'reformation',
+    title: 'Martin Luther & Philip Melanchthon',
+    meta: '1483–1546 / 1497–1560 / Germany',
+    summary: 'Luther encouraged wives to veil in worship. Melanchthon held it sinful for a woman to go in public uncovered. The Reformation did not question the practice.',
+    body: `<p>The magisterial Reformers did not challenge the universal practice of head covering. Both Luther and Melanchthon upheld it:</p>
+    <p><strong>Luther</strong> encouraged wives to wear a veil in public worship. His position was not primarily exegetical but practical — he saw it as appropriate order in the church.</p>
+    <p><strong>Melanchthon</strong> held that 'a woman sins who goes in public without her head covered' — a stronger statement that moves beyond encouragement to moral obligation. Melanchthon's engagement with 1 Corinthians 11 treats the covering as part of Christian order rather than a mere cultural artifact.</p>
+    <p>Neither Reformer subjected the practice to the kind of exegetical scrutiny they applied to Catholic sacraments, purgatory, or indulgences. The covering was simply assumed as part of the Christian tradition they had inherited and were reforming in other areas.</p>`,
+    tags: ['Luther', 'Melanchthon', 'Reformation', 'Germany'], related: ['c7', 'g5', 'h4']
+  },
+  {
+    id: 'f8', era: 'reformation',
+    title: 'John Calvin',
+    meta: '1509–1564 / Geneva',
+    summary: 'Calvin treated head coverings as normative Christian practice. He warned uncovered heads would cause modesty to disappear. Some Geneva Bible scholars read the text as cultural.',
+    body: `<p>John Calvin addressed 1 Corinthians 11 in his Commentaries and treated the covering as normative:</p>
+    <p>'Should any one now object, that her hair is enough, as being a natural covering, Paul says that it is not, for it is such a covering as requires another thing to be made use of for covering it.' Calvin explicitly rejected the 'hair alone is the covering' interpretation.</p>
+    <p>He warned: if women are permitted to have their heads uncovered, 'modesty will disappear and social indecency will follow.' He subsumed the covering under the principle of decent order and good custom in worship.</p>
+    <p>Calvin located it within the broader framework of Christian liberty and church order — the covering is not salvific, but it is an expression of proper order in the congregation.</p>
+    <p>Notably, the Geneva Bible (1599) commentary on the passage implies a more cultural reading, and Theodore Beza (Calvin's successor) appears to have been among those treating the covering as a custom of Paul's time. This bifurcation in early Reformed interpretation set up the later divide between confessional and evangelical Reformed churches.</p>`,
+    tags: ['Calvin', 'Geneva', 'Reformed'], related: ['c6', 'g5', 'h4']
+  },
+  {
+    id: 'f9', era: 'reformation',
+    title: 'John Wesley',
+    meta: '1703–1791 / England',
+    summary: 'Wesley explicitly instructed women to keep their veil on, especially in religious assembly. Methodist commentators — Coke, Clarke, Benson — maintained the same.',
+    body: `<p>John Wesley (1703–1791) addressed head coverings in his commentary on 1 Corinthians 11. He instructed a woman, 'especially in a religious assembly,' to 'keep on her veil.' This was not a minor aside but part of his careful exposition of Paul's letter.</p>
+    <p>The major Methodist commentators of Wesley's generation and after — <strong>Thomas Coke</strong>, <strong>Adam Clarke</strong>, <strong>Joseph Sutcliffe</strong>, <strong>Joseph Benson</strong>, and <strong>Walter Ashbel Sellew</strong> — all reflected the same position: veils are enjoined for women, while caps are forbidden to men while praying.</p>
+    <p>Today, certain Methodist and Wesleyan-Holiness traditions retain the practice. The Fellowship of Independent Methodist Churches has women wearing head coverings. African Methodist Episcopal Zion Church and Christian Methodist Episcopal Church retain the practice among women, particularly deaconesses who wear deaconess caps.</p>`,
+    tags: ['Wesley', 'Methodist', 'England'], related: ['c7', 'g5', 'h4']
+  },
+  {
+    id: 'f10', era: 'modern',
+    title: 'Gordon Fee & Modern Critics',
+    meta: 'Contemporary / Cultural-Relativity Position',
+    summary: 'Fee, Pierce, Groothuis, and Thiselton argue Paul\'s covering instruction was culturally specific to Corinth and does not bind modern Christians universally.',
+    body: `<p>The major 20th–21st century scholars advocating the cultural-relativity interpretation include:</p>
+    <p><strong>Gordon Fee</strong>: Argues the covering's social meaning (modesty, marital status) was specific to Corinth and has no cultural equivalent in modern Western societies. The timeless principle is headship; the covering was its local expression. Not a binding universal practice.</p>
+    <p><strong>Pierce & Groothuis</strong>: The covering and its social meaning were context-bound; personal choice today.</p>
+    <p><strong>A. C. Thiselton</strong>: The passage marks gender differentiation rather than prescribing a timeless dress law. The concern is with appropriate gendered behavior, not a specific garment.</p>
+    <p><strong>J. Murphy-O'Connor</strong>: Situates the text in Mediterranean honor/shame codes; the covering was a social marker, not a theological absolute.</p>
+    <p><strong>Counter-argument:</strong> Wayne Grudem (who is not himself a proponent of the practice today) notes that Paul's grounds — creation order, image of God, angels — are explicitly not cultural. Grudem argues headship is timeless; the covering is culturally variable. Critics of this position argue this distinction is arbitrary — Paul didn't offer a 'timeless principle / cultural application' framework; he simply commanded the covering.</p>`,
+    tags: ['Fee', 'Modern', 'Cultural', 'Exegesis'], related: ['c8', 'con3', 'h5']
+  },
+],
+
+texts: [
+  {
+    id: 'txt1', 
+    title: '1 Corinthians 11:2–16',
+    meta: 'Scripture / c. AD 56',
+    summary: 'The foundational New Testament text. Paul grounds the covering in creation order, the image of God, headship, and angelic presence across sixteen verses.',
+    body: `<p>Written c. AD 56 from Ephesus, addressed to the divided Corinthian church. The passage is the <em>only</em> direct New Testament discussion of head coverings in corporate worship.</p>
+    <p><strong>Structure of the argument:</strong></p>
+    <p>v.2 — Commendation for keeping traditions as Paul delivered them. v.3 — Headship chain: God/Christ/Man/Woman. vv.4–6 — Covering rules with shame-language: man covered = disgraces Christ; woman uncovered = equivalent to being shaved. v.7 — Image/glory: man = image and glory of God; woman = glory of man. vv.8–9 — Creation order derivation: woman from man, for man. v.10 — 'Ought to have authority on her head because of the angels.' vv.11–12 — Mutual dependence in the Lord. vv.13–15 — Natural propriety: judge for yourselves; long hair = natural glory. v.16 — 'We have no such custom, nor do the churches of God.'</p>
+    <p><strong>Key Greek terms:</strong> <em>kata kephalēs echōn</em> (v.4, 'having down from the head'); <em>katakalupto</em> (vv.5–7, 'to cover completely'); <em>peribolaion</em> (v.15, 'mantle/wrap,' used of hair). The use of different Greek terms for the hair-covering and the additional cloth covering suggests Paul distinguishes between them.</p>`,
+    tags: ['Scripture', 'Paul', 'Corinthians'], related: ['f1', 'h1', 'con1', 'con2', 'con3']
+  },
+  {
+    id: 'txt2',
+    title: 'Tertullian: De Virginibus Velandis',
+    meta: 'Patristic / c. AD 210',
+    summary: 'The most comprehensive patristic treatise on veiling. Argues from apostolic command, the nature of womanhood, and universal church custom that virgins must veil alongside married women.',
+    body: `<p><em>De Virginibus Velandis</em> (On the Veiling of Virgins), c. AD 210. Written to resolve a dispute in Carthage about whether Christian virgins must veil like married women.</p>
+    <p>Tertullian's argument structure: (1) 'Women' in Paul's usage means all adult females, not only married; (2) the apostolic tradition requires covering universally; (3) nature, conscience, and the physical body of the mature virgin all testify she is a 'woman' under Paul's command; (4) custom in Carthage (and even pagan Arabia) confirms that adult women cover.</p>
+    <p>The text is also important for its historical description of the veil: it corresponds to the Roman matronal veil as seen in portraiture — a cloth covering the head and falling on both sides over the ears, nape, and shoulders. Tertullian specifically rejects: the full-face veil (barbarior), turbans, woollen bands, and small linen caps that only cover the crown of the brain.</p>
+    <p>He describes the dispute as one in which some argue against this — showing that even by AD 210, not all Christians agreed. But Tertullian treats those arguing for virgin exemption as wrong.</p>`,
+    tags: ['Tertullian', 'Patristic', 'Virgins', 'Carthage'], related: ['f3', 'g2', 'h2']
+  },
+  {
+    id: 'txt3',
+    title: 'Synod of Auxerre & Synod of Rome',
+    meta: 'Conciliar / AD 585, 743',
+    summary: 'Two regional councils formally codifying what had been universal practice: women must cover at Mass. The Synod of Rome explicitly invokes Paul\'s apostolic authority.',
+    body: `<p><strong>Synod of Auxerre (585)</strong>, in Gaul (modern France): Formally required women to wear a head covering during Holy Mass. This is one of the earliest explicit conciliar codifications in the Western church, translating universal custom into formal ecclesiastical law.</p>
+    <p><strong>Synod of Rome (743)</strong>: Declared — 'A woman praying in church without her head covered brings shame upon her head, according to the word of the Apostle.' This Roman declaration is significant for citing Paul's apostolic authority directly and for making the shame-language of 1 Corinthians 11 the basis for the conciliar ruling.</p>
+    <p>These two synods represent the medieval Western church's formal legal codification of the patristic consensus. Prior to these, the practice rested on apostolic tradition and patristic teaching alone. After, it had conciliar force.</p>`,
+    tags: ['Council', 'Medieval', 'Canon Law'], related: ['h3', 'g3', 'c2']
+  },
+  {
+    id: 'txt4',
+    title: '1917 Code of Canon Law: Canon 1262 §2',
+    meta: 'Canon Law / AD 1917',
+    summary: 'The first explicit canonization of the universal Catholic practice. Promulgated by Pope Benedict XV, enforced from 1918.',
+    body: `<p>The 1917 Code of Canon Law, promulgated by Pope Benedict XV and in force from 1918, codified the universal Catholic head covering practice in Canon 1262 §2:</p>
+    <p><em>"It is desirable that, consistent with ancient discipline, women be separated from men in church. Men, in a church or outside a church, while they are assisting at sacred rites, shall be bare-headed, unless the approved mores of the people or peculiar circumstances of things determine otherwise; women, however, shall have a covered head and be modestly dressed, especially when they approach the table of the Lord."</em></p>
+    <p>This was the first time the universal custom — maintained since the Apostolic period — was expressed in the Church's positive universal law. The canon was understood as a confirmation and codification of existing practice, not an innovation.</p>
+    <p>Note: Pope Pius X had initiated the comprehensive codification of canon law in 1904; the 1917 Code was the first-ever comprehensive codification of Catholic canon law. Canon 1262's inclusion reflected the universal practice across all prior centuries.</p>`,
+    tags: ['Canon Law', 'Catholic', '1917'], related: ['c2', 'txt5', 'g3']
+  },
+  {
+    id: 'txt5',
+    title: '1983 Code of Canon Law: Silence on Coverings',
+    meta: 'Canon Law / AD 1983',
+    summary: 'John Paul II\'s 1983 Code abrogates the 1917 code in full. Canon 1262 is not re-issued. The canonical obligation ends. Canon 26 on immemorial custom remains debated.',
+    body: `<p>The 1983 Code of Canon Law, promulgated by Pope John Paul II, replaced the 1917 Code in its entirety. Canon 6.1.n.1 specifies that the entire 1917 Code is abrogated. No new canon on head coverings was issued.</p>
+    <p>The legal effect: the canonical obligation for Catholic women to cover their heads in church ceased in 1983 at the latest. Canonists Edward Peters and Fr. John Zuhlsdorf both confirmed this. Some canonists cite the 1969 misinformation as the de facto end point, but 1983 is the formal legal terminus.</p>
+    <p><strong>The immemorial custom argument:</strong> Canon 26 of the 1983 Code provides that a custom legitimately practiced for 100+ years 'prevails against' canonical law, even if a written canon prohibits it. Some canonists (including Taylor Marshall) argue that since the practice of head covering is nearly 2,000 years old, the immemorial custom clause gives it continuing binding force — even without an explicit canon. This view is minority but theologically serious.</p>
+    <p><strong>The Bugnini confusion:</strong> In May 1969, Vatican official Fr. Annibale Bugnini stated at a press conference that head coverings were under discussion. This was widely misreported as their abolition. Bugnini subsequently clarified: 'The rule has not been changed.' But the global misinformation had already driven widespread abandonment, years before the 1983 Code made the lapse official.</p>`,
+    tags: ['Canon Law', 'Catholic', '1983', 'Vatican II'], related: ['c2', 'c5', 'txt4']
+  },
+  {
+    id: 'txt6',
+    title: 'Chrysostom: Homily 26 on 1 Corinthians',
+    meta: 'Patristic / c. AD 390',
+    summary: 'The definitive Eastern patristic treatment. Argues for continual wearing, full enclosure, and the gravity of noncompliance.',
+    body: `<p>John Chrysostom's Homily 26 on 1 Corinthians (~AD 390) is the most extensive single treatment of the head covering question by any Church Father. Key sections:</p>
+    <p><em>"But the woman he commands to be at all times covered. Wherefore also having said, 'Every woman that prayeth or prophesieth with her head unveiled dishonoreth her head,' he stayed not at this point only, but also proceeded to say, 'for it is one and the same thing as if she were shaven.'"</em></p>
+    <p><em>"He signifies that not at the time of prayer only but also continually, she ought to be covered… he said not merely covered, but 'covered over' [οὐδὲ γὰρ καλύπτεσθαι, ἀλλα κατακαλύπτεσθαι]. Meaning that she be carefully wrapped up on every side."</em></p>
+    <p><em>"If thou cast away the covering appointed by the law of God, cast away likewise that appointed by nature."</em></p>
+    <p><em>"And don't tell me that this is a small sin."</em></p>
+    <p>The Homily was authoritative for the entire Eastern tradition. Its insistence on continual wearing (not merely during prayer) and full enclosure (katakalupto, not merely kalupto) set the Eastern standard for 1,600 years.</p>`,
+    tags: ['Chrysostom', 'Patristic', 'Homily', 'Eastern'], related: ['f4', 'c1', 'g4']
+  },
+  {
+    id: 'txt7',
+    title: 'Hippolytus: Apostolic Tradition',
+    meta: 'Apostolic / c. AD 202',
+    summary: 'Catechetical instructions for early Christians: all women must cover with opaque cloth, not sheer linen. Specifies the material character of the covering.',
+    body: `<p>The <em>Apostolic Tradition</em>, attributed to Hippolytus of Rome (~AD 202), includes catechetical instructions for new Christians that address head coverings explicitly:</p>
+    <p><em>"Moreover, let all the women have their heads covered with an opaque cloth, not with a veil of thin linen, for this is not a true covering."</em></p>
+    <p>This text is significant for several reasons: (1) it is addressed to all women without qualification — not merely married or older women; (2) it specifies that the covering must be <em>opaque</em>, not transparent linen; (3) it treats the covering as a basic catechetical instruction for all Christians, not a disputed or advanced question.</p>
+    <p>The specification of opacity anticipates Tertullian's similar complaint about inadequate substitutes. It suggests that by AD 202, some women were attempting to technically comply by wearing sheer fabric that did not actually conceal the hair — a practice Hippolytus explicitly rejects.</p>`,
+    tags: ['Hippolytus', 'Rome', 'Apostolic Tradition'], related: ['f3', 'h1', 'h2']
+  },
+  {
+    id: 'txt8',
+    title: 'Didascalia Apostolorum',
+    meta: 'Early Church Manual / c. AD 230, Syria',
+    summary: 'Early Syrian church manual instructing women to cover their heads with a robe when walking in the street and during worship — extending the covering practice beyond the liturgy.',
+    body: `<p>The <em>Didascalia Apostolorum</em> (Teaching of the Apostles), composed in Greek c. AD 230 in northern Syria, possibly by a bishop, is one of the earliest comprehensive church manuals. It addresses head coverings in the context of modesty and feminine conduct:</p>
+    <p>It instructs women not to dress their hair 'with the hairstyle of a harlot' and to 'cover your head with your robe so that your great beauty is concealed by your veiling' when walking in the street. The covering serves as both a mark of modesty and a protection against male attention.</p>
+    <p>The Didascalia is significant because it extends the covering practice <em>beyond the liturgy</em> — it applies outside the church building, in public daily life. This reflects the broader patristic consensus that the covering is not merely a liturgical garment but a constant expression of Christian feminine modesty.</p>
+    <p>It also shows that by AD 230 in Syria (near the original setting of Paul's missionary work), the head covering was deeply embedded in daily Christian practice without controversy.</p>`,
+    tags: ['Syria', 'Didascalia', 'Apostolic', 'Daily Life'], related: ['h1', 'g1', 'f2']
+  },
+],
+
+quotes: [
+  { id: 'q1', text: "Not at the time of prayer only but also continually, she ought to be covered… he said not merely covered, but 'covered over'… Meaning that she be carefully wrapped up on every side. And don't tell me that this is a small sin.", attribution: "John Chrysostom", source: "Homily 26 on 1 Corinthians, c. AD 390" },
+  { id: 'q2', text: "It is not becoming, even in married women, to uncover their hair, since the apostle commands women to keep their heads covered.", attribution: "Augustine of Hippo", source: "Letter CCXLV to Possidus, c. AD 425" },
+  { id: 'q3', text: "Let all the women have their heads covered with an opaque cloth, not with a veil of thin linen, for this is not a true covering.", attribution: "Hippolytus of Rome", source: "Apostolic Tradition, c. AD 202" },
+  { id: 'q4', text: "The business of whether to cover one's head was legislated by nature. When I say 'nature,' I mean 'God.' If thou cast away the covering appointed by the law of God, cast away likewise that appointed by nature.", attribution: "John Chrysostom", source: "Homily 26 on 1 Corinthians" },
+  { id: 'q5', text: "The angels find it extremely hard to bear if this law [that women cover their heads] is disregarded.", attribution: "Cyril of Alexandria", source: "Commentary on 1 Corinthians, c. AD 430" },
+  { id: 'q6', text: "Should any one now object, that her hair is enough, as being a natural covering, Paul says that it is not, for it is such a covering as requires another thing to be made use of for covering it.", attribution: "John Calvin", source: "Commentary on 1 Corinthians 11, c. 1546" },
+  { id: 'q7', text: "A woman praying in church without her head covered brings shame upon her head, according to the word of the Apostle.", attribution: "Synod of Rome", source: "Conciliar Declaration, AD 743" },
+  { id: 'q8', text: "It is a laudable custom, based upon a Scriptural injunction (1 Cor. 11:3–15), for women to wear an appropriate head covering in Church, especially at the time of divine service.", attribution: "Evangelical Lutheran Synodical Conference of North America", source: "Official Statement" },
+  { id: 'q9', text: "The rule has not been changed. It is a matter of general discipline.", attribution: "Fr. Annibale Bugnini", source: "Clarification statement, 1969 — correcting the global misreport of his May press conference" },
+  { id: 'q10', text: "Women, however, shall have a covered head and be modestly dressed, especially when they approach the table of the Lord.", attribution: "1917 Code of Canon Law", source: "Canon 1262 §2, promulgated by Pope Benedict XV" },
+  { id: 'q11', text: "When a woman wears a head covering she is essentially a rebuke to all the fallen angels... she is saying: 'I choose not to follow your example of rebellion and pride.'", attribution: "K. P. Yohannan", source: "Former Metropolitan Bishop, Believers Eastern Church" },
+  { id: 'q12', text: "Cover your head with your robe so that your great beauty is concealed by your veiling.", attribution: "Didascalia Apostolorum", source: "c. AD 230, northern Syria" },
+],
+
+concepts: [
+  {
+    id: 'con1',
+    title: 'Creation Order & Headship',
+    meta: 'Core Theological Argument',
+    summary: 'Paul grounds the covering in the creation-order headship chain: God → Christ → Man → Woman. This is the primary argument for the covering\'s universality across all cultures.',
+    body: `<p>The creation-order argument is the core of the patristic and confessional case for head coverings as a timeless practice.</p>
+    <p>The argument structure: (a) There is a divinely established headship order: God is the head of Christ; Christ is the head of every man; man is the head of woman (1 Cor 11:3). (b) The covering is the visible, embodied sign of this order. (c) Because this order is grounded in creation — not in Corinthian culture — the sign transcends cultural contexts.</p>
+    <p>Aquinas made the natural-law version of this argument: the covering reflects the natural order of woman's subjection, which is not merely ecclesiastical convention but an expression of how creation is structured.</p>
+    <p>Chrysostom connected it to the law of nature: 'If thou cast away the covering appointed by the law of God, cast away likewise that appointed by nature.' For Chrysostom, the covering is as universal as natural sexual differentiation.</p>
+    <p><strong>The counter-argument:</strong> The headship principle may be timeless while its cultural expression (the covering) is variable. Paul himself seems to appeal to what is 'proper' and to 'custom' in vv.13–16, suggesting local application rather than universal mandate.</p>`,
+    tags: ['Creation Order', 'Headship', 'Timeless'], related: ['f1', 'f4', 'f6', 'txt1']
+  },
+  {
+    id: 'con2',
+    title: 'Imago Dei Argument',
+    meta: 'Theological Concept',
+    summary: 'Paul\'s distinction in 1 Cor 11:7: man is the image and glory of God; woman is the glory of man. The covering conceals woman\'s glory so God\'s glory alone shines in worship.',
+    body: `<p>Paul writes in 1 Corinthians 11:7 that 'a man ought not to cover his head, since he is the image and glory of God, but woman is the glory of man.' This <em>imago Dei</em> argument is one of the most theologically distinctive elements of the passage.</p>
+    <p>The logic: In public worship, glory should be directed toward God, not displayed. Man, as the image and glory of God, appropriately prays uncovered — his uncovered head reflects God's glory directly. Woman, as the glory of man, covers her head so that man's glory is not displayed in the place of worship. The covering conceals her glory (her head, which reflects man) so that only God's glory fills the room.</p>
+    <p>Diodorus of Tarsus made the sharpest version of this argument: man as 'image and glory of God' and 'the one who rules' prays uncovered; woman as 'the glory of man' is veiled.</p>
+    <p><strong>Significance:</strong> This argument does not appeal to cultural norms or shame codes. It is a straightforward theological argument about the nature of worship and whose glory should be visible before God. It is therefore very difficult to relativize as culturally specific — the <em>imago Dei</em> argument is as universal as the doctrine of creation.</p>`,
+    tags: ['Imago Dei', 'Glory', 'Worship'], related: ['f1', 'f4', 'con1', 'txt1']
+  },
+  {
+    id: 'con3',
+    title: 'Cultural vs. Timeless Debate',
+    meta: 'Exegetical Debate',
+    summary: 'The central interpretive question: are Paul\'s grounds (creation order, image of God, angels) timeless universals, or was the covering merely the first-century cultural expression of those universals?',
+    body: `<p>The fundamental exegetical debate divides interpreters into two camps:</p>
+    <p><strong>Timeless practice view:</strong> Paul grounds the covering in creation order (v.3), the image of God (v.7), the creation narrative (vv.8–9), angels (v.10), and universal church custom (v.16). None of these grounds are culturally specific. The patristic tradition for 1,500 years treated the covering as a binding universal. To dismiss it as cultural is to dismiss Paul's explicit theological grounds.</p>
+    <p><strong>Cultural application view:</strong> Paul's timeless principle is headship and appropriate gender differentiation in worship. The covering was the first-century Corinthian <em>application</em> of that principle — because in that culture, uncovered hair signaled sexual availability or social rebellion. The principle remains; the application is culturally variable. Paul's appeals to 'judge for yourselves' (v.13) and 'nature' (v.14) suggest he recognized a cultural element.</p>
+    <p><strong>The Abel Isaakson 'hair only' view (1965):</strong> Some modern scholars argue Paul was not commanding a cloth covering at all — 'hair' is the covering in view throughout. But this reading is rejected by most scholars: the Greek uses different words for hair (<em>komē</em>) and covering (<em>katakalupto</em>), and v.6 becomes nonsensical if hair is the covering ('if a woman is not covered [i.e., has no hair], let her also be shorn').</p>`,
+    tags: ['Exegesis', 'Culture', 'Timeless', 'Debate'], related: ['f10', 'c8', 'txt1']
+  },
+  {
+    id: 'con4',
+    title: 'The Angel Argument',
+    meta: 'Theological Concept',
+    summary: '1 Cor 11:10 — "because of the angels." Three major patristic interpretations: holy angels present at worship, fallen angels attracted to women, or angels as ministers/messengers.',
+    body: `<p>One of the most discussed phrases in 1 Corinthians 11 is the statement that a woman ought to have a 'symbol of authority on her head because of the angels' (v.10).</p>
+    <p><strong>Three major interpretations:</strong></p>
+    <p>1. <strong>Good angels watching over worship</strong> (Chrysostom, Cyril, most patristic): The holy angels are present at the Church's liturgy. The covering honors the order of creation before these divine witnesses. Cyril: 'The angels find it extremely hard to bear if this law is disregarded.' K. P. Yohannan and modern Orthodox writers follow this interpretation.</p>
+    <p>2. <strong>Fallen angels / lustful angels</strong> (some modern scholars, Dale Martin): The covering is a protection against fallen angels who are attracted to women's uncovered hair (connected to Genesis 6:1–4 and the sons of God). The veil is a spiritual armor.</p>
+    <p>3. <strong>Human messengers/visitors</strong> (Bruce Winter): 'Angels' may mean human emissaries visiting from other churches, for whose benefit proper order must be maintained.</p>
+    <p>The patristic tradition almost unanimously favored interpretation #1. Joseph Fitzmyer argues that the 'good angels watching over worship' is the contextually most appropriate reading given the parallels in Qumran literature (1QSa 2.3–9), which excluded the physically blemished from the congregation because of the presence of holy angels.</p>`,
+    tags: ['Angels', 'Liturgy', 'Spiritual', '1 Corinthians'], related: ['f1', 'f4', 'f5', 'con1']
+  },
+  {
+    id: 'con5',
+    title: 'Katakalupto vs. Kalupto',
+    meta: 'Greek Exegesis',
+    summary: 'The Greek distinction between "covering" and "covering completely" — Chrysostom\'s basis for insisting on a full, enclosing cloth rather than a small cap or partial covering.',
+    body: `<p>A key Greek distinction in 1 Corinthians 11 that has shaped the theology of what kind of covering is required:</p>
+    <p><strong>Kalupto</strong> (καλύπτω) — to cover. A general term for covering.</p>
+    <p><strong>Katakalupto</strong> (κατακαλύπτω) — to cover completely, to cover over. The prefix <em>kata</em> intensifies the covering — it suggests something thoroughly, fully covered.</p>
+    <p>Paul uses <em>katakalupto</em> in vv.5–7 ('every woman who prays with her head uncovered/covered'). Chrysostom made this distinction the basis for his insistence on full enclosure: 'He said not merely <em>covered</em>, but <em>covered over</em>… Meaning that she be carefully wrapped up on every side.'</p>
+    <p>Hippolytus made the same point practically: the covering must be opaque cloth, not sheer linen. Tertullian rejected turbans, woollen bands, and small linen caps as insufficient.</p>
+    <p>This has practical implications: a small decorative hairclip, a doily on the crown of the head, or a transparent veil would not satisfy the patristic understanding of <em>katakalupto</em>. The covering must genuinely enclose the head.</p>`,
+    tags: ['Greek', 'Exegesis', 'Chrysostom', 'Katakalupto'], related: ['f4', 'f3', 'txt1']
+  },
+  {
+    id: 'con6',
+    title: 'Immemorial Custom & Canon 26',
+    meta: 'Canon Law Concept',
+    summary: 'The 1983 Code\'s Canon 26 provision: a custom practiced for 100+ years prevails against canonical law. Does 2,000 years of head covering practice retain binding force despite the silence of the 1983 Code?',
+    body: `<p>The 1983 Code of Canon Law, Canon 26, states: 'A custom that has been legitimately practiced for at least thirty years obtains the force of law, and an immemorial custom (practiced over 100 years) prevails against canonical law.'</p>
+    <p>Canon 6.1 abrogated the 1917 Code including Canon 1262. But Canon 26 was not abrogated. Some canonists (notably Taylor Marshall) argue:</p>
+    <p>Since the practice of women covering their heads in church has been maintained for nearly 2,000 years — far exceeding the 100-year threshold for immemorial custom — it satisfies Canon 26's conditions. An immemorial custom is 'impervious to change' and therefore, even if a written canon prohibiting coverings existed, the immemorial custom would nullify it. The mere silence of the 1983 Code does not eliminate it.</p>
+    <p><strong>Counter-argument:</strong> Canon 6.1's explicit abrogation of the 1917 Code abolished Canon 1262's positive law, and the Church's universal custom cannot sustain itself as a canonical obligation without positive canonical support in the new code. The silence of the 1983 Code is a deliberate omission, not an oversight.</p>
+    <p>The dispute remains unresolved in canon law scholarship. Most canonists hold the obligation ceased; a minority maintain immemorial custom survives.</p>`,
+    tags: ['Canon Law', 'Immemorial Custom', 'Catholic'], related: ['txt4', 'txt5', 'c2', 'c5']
+  },
+  {
+    id: 'con7',
+    title: 'Hair as Covering: The Isaakson View',
+    meta: 'Modern Exegetical View',
+    summary: 'The 1965 view that Paul was not commanding a cloth covering at all — the \'covering\' in 1 Cor 11 refers only to long hair. Widely rejected on linguistic and contextual grounds.',
+    body: `<p>In 1965, Scandinavian theologian Abel Isaakson proposed a 'hair only' interpretation: the covering Paul commands is long hair, not a cloth veil. This view gained traction in some modern Protestant circles.</p>
+    <p><strong>The argument:</strong> Paul's appeal to 'nature' (v.13–15) and his statement that long hair 'is given to her for a covering' (v.15) suggests hair itself is the covering in view throughout the passage.</p>
+    <p><strong>Problems with this view:</strong></p>
+    <p>1. Paul uses different Greek words: <em>katakalupto</em> for the covering he commands (vv.5–7, 13) and <em>peribolaion</em> (mantle, wrap) in v.15 for the hair. The different terms suggest he distinguishes between them — hair is a natural <em>peribolaion</em> that corresponds to the cloth <em>katakalupto</em> but does not replace it.</p>
+    <p>2. Verse 6 becomes nonsensical: 'If a woman does not cover [<em>katakalupto</em>], let her also be shorn.' If hair is the covering, this reads: 'If a woman has no hair, let her be shaved' — a tautology.</p>
+    <p>3. The entire patristic tradition unanimously understood Paul to be commanding a cloth covering, not merely long hair. No early interpreter read the passage as hair-only.</p>
+    <p>The Isaakson view is rejected by most contemporary NT scholars, including those who otherwise argue for a cultural-relativity interpretation of the covering command.</p>`,
+    tags: ['Isaakson', 'Hair', 'Modern', 'Exegesis'], related: ['con3', 'txt1', 'f10']
+  },
+  {
+    id: 'con8',
+    title: 'The Kapp & Mantilla: Physical Forms',
+    meta: 'Liturgical & Cultural Practice',
+    summary: 'The two dominant physical forms of the Christian head covering: the Anabaptist kapp (white organza prayer cap) and the Catholic mantilla (Spanish lace veil).',
+    body: `<p>The two most recognizable contemporary forms of Christian head covering carry distinct histories and theological associations:</p>
+    <p><strong>The Kapp</strong> (Pennsylvania German: <em>Kappe</em>): A rounded, white organza prayer cap worn by Old Order Amish and many Mennonite women. It is pinned over a woman's coiled hair and tied under the chin with ribbons. White kapps are worn by married women; black by unmarried girls. The kapp is worn throughout all waking hours in Old Order communities. The New Testament Reference Bible specifically calls the kapp a 'prayer covering' in reference to 1 Cor 11. Among River Brethren and Schwarzenau Brethren, a similar cap is worn, often accompanied by a bonnet for outdoor use.</p>
+    <p><strong>The Mantilla</strong> (from Spanish): A lace head covering worn by Catholic and some other Christian women. Typically triangular or oblong lace, draped over the head and sometimes pinned. Black mantillas are traditionally worn by married women; white by unmarried. The mantilla is especially associated with Traditional Latin Mass communities and Spanish-speaking Catholic cultures. It is not a hat or bonnet — it is a specifically reverential garment placed on the head as an act of worship, not merely a fashion item.</p>
+    <p>Other forms include: the Moravian haube (white lace cap), the Orthodox headscarf (<em>platok</em> in Russian tradition, white netela in Ethiopian), and the Conservative Quaker bonnet.</p>`,
+    tags: ['Kapp', 'Mantilla', 'Practice', 'Forms'], related: ['c2', 'c3', 'c5']
+  },
+],
+
+comparison: [
+  { tradition: 'Eastern Orthodox', position: 'required', basis: 'Apostolic tradition, patristic consensus (Chrysostom), creation order, iconographic witness', canonical: 'No universal code, but universal tradition; SCOOCH formally enjoins it', practice: 'Universally normative; worn in church; many traditions require continual wearing' },
+  { tradition: 'Catholic (pre-1983)', position: 'required', basis: 'Apostolic tradition, patristic consensus, natural law (Aquinas), Canon 1262', canonical: 'Canon 1262 §2, 1917 Code — legally binding universal obligation', practice: 'Universal Western Catholic practice until 1960s–70s' },
+  { tradition: 'Catholic (post-1983)', position: 'optional', basis: 'Canon 1262 abrogated; underlying theology unchanged; immemorial custom debated', canonical: '1983 Code — Canon 1262 not re-issued; Canon 26 immemorial custom debated', practice: 'Mantilla normative in TLM communities; uncommon in ordinary form outside global South' },
+  { tradition: 'Oriental Orthodox (Coptic, Ethiopian)', position: 'normative', basis: 'Same patristic and apostolic basis as Eastern Orthodox; uninterrupted tradition', canonical: 'No formal universal code; tradition and liturgical practice', practice: 'Broadly maintained; Ethiopian netela, Coptic practice in liturgy' },
+  { tradition: 'Conservative Anabaptist', position: 'required', basis: '1 Cor 11 as binding ordinance; creation order; connection to plain dress theology', canonical: 'Among the Seven Ordinances; test of membership in some communities', practice: 'Kapp worn throughout waking hours; among the most visible contemporary practitioners' },
+  { tradition: 'Lutheran (confessional)', position: 'normative', basis: 'Luther, Melanchthon; ELSCNA statement; scriptural injunction', canonical: 'No formal canon; historical teaching', practice: 'Retained in Firstborn Laestadians (Scandinavia); revival among confessional Lutherans' },
+  { tradition: 'Reformed (confessional)', position: 'normative', basis: 'Calvin, Westminster divines; creation order; decent order in worship', canonical: 'No formal canon; historical Reformed teaching', practice: 'Heritage Reformed Congregations, Netherlands Reformed, Free Presbyterian Church of Scotland' },
+  { tradition: 'Methodist / Wesleyan', position: 'optional', basis: 'Wesley\'s instruction; Coke, Clarke commentary; 1 Cor 11', canonical: 'No formal requirement; historical practice', practice: 'Fellowship of Independent Methodist Churches; AME Zion deaconess caps; declining in mainline Methodism' },
+  { tradition: 'Mainline Protestant / Evangelical', position: 'cultural', basis: 'Cultural-relativity interpretation; headship principle retained; covering as first-century application', canonical: 'No requirement; practice largely abandoned', practice: 'Rarely practiced; some individual women choose it; not taught from most pulpits' },
+  { tradition: 'Moravian', position: 'normative', basis: 'Zinzendorf\'s haube tradition; the haube as diadem and burial cloth of Christ', canonical: 'Historic tradition; still worn in lovefeasts', practice: 'Haube worn by women serving as dieners in lovefeasts; some wear in worship' },
+]
+
+};
+
+// =====================================================================
+// RENDERING
+// =====================================================================
+
+function renderAll() {
+  renderOverview();
+  renderTimeline();
+  renderCards('historical', DATA.historical, 'century');
+  renderCards('geographical', DATA.geographical, 'region');
+  renderCards('traditions', DATA.traditions, 'view');
+  renderCards('fathers', DATA.fathers, 'era');
+  renderCards('texts', DATA.texts, null);
+  renderComparison();
+  renderQuotes();
+  renderCards('concepts', DATA.concepts, null);
+}
+
+function renderOverview() {
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><span class="stat-num">6</span><span class="stat-label">Historical Eras</span></div>
+    <div class="stat-card"><span class="stat-num">10</span><span class="stat-label">Traditions</span></div>
+    <div class="stat-card"><span class="stat-num">6</span><span class="stat-label">Regions</span></div>
+    <div class="stat-card"><span class="stat-num">10+</span><span class="stat-label">Church Fathers</span></div>
+    <div class="stat-card"><span class="stat-num">8</span><span class="stat-label">Key Texts</span></div>
+    <div class="stat-card"><span class="stat-num">2,000+</span><span class="stat-label">Years Covered</span></div>
+  `;
+  const shortcuts = [
+    { view: 'timeline', icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', label: 'Zoomable Timeline' },
+    { view: 'historical', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', label: 'Historical Eras' },
+    { view: 'geographical', icon: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>', label: 'Geographic Regions' },
+    { view: 'traditions', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', label: 'Church Traditions' },
+    { view: 'fathers', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', label: 'Church Fathers' },
+    { view: 'texts', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', label: 'Key Texts' },
+    { view: 'comparison', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/>', label: 'Tradition Comparison' },
+    { view: 'quotes', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', label: 'Patristic Quotes' },
+  ];
+  document.getElementById('shortcuts-grid').innerHTML = shortcuts.map(s => `
+    <button class="shortcut-btn" onclick="showView('${s.view}')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${s.icon}</svg>
+      ${s.label}
+    </button>
+  `).join('');
+}
+
+const ERA_COLORS = ['#4a7c6a','#7c6a4a','#4a6a7c','#6a4a7c','#7c4a4a'];
+function renderTimeline() {
+  const eras = [
+    { num: 1, label: 'Apostolic & Sub-Apostolic', range: 'AD 30 – 250' },
+    { num: 2, label: 'Patristic Consensus', range: 'AD 250 – 500' },
+    { num: 3, label: 'Medieval Codification', range: 'AD 500 – 1500' },
+    { num: 4, label: 'Reformation & Early Modern', range: 'AD 1500 – 1900' },
+    { num: 5, label: '20th–21st Century', range: 'AD 1900 – Present' },
+  ];
+  const track = document.getElementById('timeline-track');
+  track.innerHTML = eras.map(era => {
+    const events = DATA.timeline.filter(e => e.era === era.num);
+    const eventsHtml = events.map(ev => `
+      <div class="tl-event" onclick="openDetail('tl','${ev.id}')" data-testid="tl-event-${ev.id}">
+        <div class="tl-dot"></div>
+        <div class="tl-body">
+          <div class="tl-date">${ev.year < 1000 ? 'AD ' + ev.year : ev.year}</div>
+          <div class="tl-title">${ev.title}</div>
+          <div class="tl-desc">${ev.desc}</div>
+          <div class="tl-tags">${(ev.tags||[]).map(t=>`<span class="tl-tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+    `).join('');
+    return `
+      <div class="era-band era-${era.num}">
+        <h3>${era.label}</h3>
+        <div class="era-range">${era.range}</div>
+      </div>
+      <div class="timeline-events">${eventsHtml}</div>
+    `;
+  }).join('');
+}
+
+const ICON_COLORS = ['#4a7c6a','#7c6a4a','#4a6a7c','#6a4a7c','#7c4a4a','#5a7c6a','#7c5a4a','#4a5a7c','#6a5a7c','#7c5a5a'];
+let iconIdx = 0;
+function getIconColor() { return ICON_COLORS[iconIdx++ % ICON_COLORS.length]; }
+
+function renderCards(section, items, filterAttr) {
+  const container = document.getElementById(section + '-cards');
+  if (!container) return;
+  iconIdx = 0;
+  container.innerHTML = items.map((item, i) => {
+    const color = ICON_COLORS[i % ICON_COLORS.length];
+    const filterVal = filterAttr ? (item[filterAttr] || 'all') : 'all';
+    return `
+      <div class="card" onclick="openDetail('${section}','${item.id}')" data-filter="${filterVal}" data-testid="card-${item.id}">
+        <div class="card-icon" style="background:color-mix(in srgb, ${color} 12%, var(--color-bg))">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="card-meta">${item.meta || ''}</div>
+        <h3>${item.title}</h3>
+        <p>${item.summary}</p>
+        <div class="card-tags">${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderComparison() {
+  const tbody = document.getElementById('comparison-tbody');
+  tbody.innerHTML = DATA.comparison.map(row => {
+    const badges = { required: 'badge-required', normative: 'badge-recommended', optional: 'badge-optional', cultural: 'badge-discouraged' };
+    const labels = { required: 'Required', normative: 'Normative', optional: 'Optional', cultural: 'Cultural Only' };
+    const cls = badges[row.position] || 'badge-optional';
+    const lbl = labels[row.position] || row.position;
+    return `<tr>
+      <td>${row.tradition}</td>
+      <td><span class="badge ${cls}">${lbl}</span></td>
+      <td>${row.basis}</td>
+      <td>${row.canonical}</td>
+      <td>${row.practice}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderQuotes() {
+  document.getElementById('quotes-grid').innerHTML = DATA.quotes.map(q => `
+    <div class="quote-card">
+      <div class="quote-text">${q.text}</div>
+      <div class="quote-attribution"><strong>${q.attribution}</strong> — <em>${q.source}</em></div>
+    </div>
+  `).join('');
+}
+
+// =====================================================================
+// INTERACTIONS
+// =====================================================================
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDetailPanel(); closeMobileSidebar(); }
+});
+
+// Mobile sidebar
+// Ask AI
+function toggleAskAI(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('ask-ai-popover');
+  const isOpen = pop.classList.toggle('open');
+  if (isOpen) setTimeout(() => document.getElementById('ask-ai-input').focus(), 50);
+}
+function submitAskAI() {
+  const q = document.getElementById('ask-ai-input').value.trim();
+  if (!q) return;
+  const context = 'head coverings church history patristic Catholic Orthodox Protestant theology';
+  const url = 'https://www.perplexity.ai/search?q=' + encodeURIComponent(q + ' — ' + context);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  document.getElementById('ask-ai-popover').classList.remove('open');
+  document.getElementById('ask-ai-input').value = '';
+}
+function handleAskAIKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAskAI(); }
+  if (e.key === 'Escape') document.getElementById('ask-ai-popover').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.ask-ai-wrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('ask-ai-popover').classList.remove('open');
+});
+
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar.classList.contains('mobile-open');
+  if (isOpen) { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); }
+  else { sidebar.classList.add('mobile-open'); overlay.classList.add('active'); }
+}
+function closeMobileSidebar() {
+  document.querySelector('.sidebar')?.classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay')?.classList.remove('active');
+}
+
+// View navigation
+function showView(viewName) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + viewName);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.getAttribute('data-view') === viewName);
+  });
+  document.getElementById('search-results-overlay').classList.remove('active');
+  closeMobileSidebar();
+  const mc = document.querySelector('.main-content');
+  if (mc) mc.scrollTop = 0;
+}
+
+// Filter
+function filterCards(section, filterValue) {
+  const container = document.getElementById(section + '-cards');
+  if (!container) return;
+  container.querySelectorAll('.card').forEach(card => {
+    if (filterValue === 'all') { card.hidden = false; }
+    else { card.hidden = card.getAttribute('data-filter') !== filterValue; }
+  });
+  const view = document.getElementById('view-' + section);
+  if (view) {
+    view.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.getAttribute('data-filter') === filterValue);
+    });
+  }
+}
+
+// Zoom
+let zoomLevel = 100;
+function zoomTimeline(dir) {
+  zoomLevel = Math.min(300, Math.max(50, zoomLevel + dir * 25));
+  document.getElementById('timeline-track').style.fontSize = (zoomLevel / 100) + 'em';
+  document.getElementById('zoom-display').textContent = zoomLevel + '%';
+}
+function resetZoom() {
+  zoomLevel = 100;
+  document.getElementById('timeline-track').style.fontSize = '1em';
+  document.getElementById('zoom-display').textContent = '100%';
+}
+
+// Detail panel
+function openDetail(section, id) {
+  const item = findItem(id);
+  if (!item) return;
+  const typeLabels = {
+    tl: 'Timeline Event', historical: 'Historical Era', geographical: 'Geographic Region',
+    traditions: 'Church Tradition', fathers: 'Church Father / Theologian',
+    texts: 'Key Text', concepts: 'Key Concept'
+  };
+  document.getElementById('detail-type-text').textContent = typeLabels[section] || 'Detail';
+  document.getElementById('detail-title').textContent = item.title;
+  const tags = [...(item.tags||[])];
+  if (item.meta) tags.unshift(item.meta);
+  document.getElementById('detail-tags').innerHTML = tags.map(t=>`<span class="detail-tag">${t}</span>`).join('');
+  document.getElementById('detail-content').innerHTML = item.body || `<p>${item.summary || ''}</p>`;
+  const related = item.related || [];
+  const relDiv = document.getElementById('detail-related');
+  const chipsDiv = document.getElementById('related-chips');
+  if (related.length > 0) {
+    chipsDiv.innerHTML = related.map(rid => {
+      const rel = findItem(rid);
+      return rel ? `<button class="related-chip" onclick="openDetailById('${rid}')">${rel.title}</button>` : '';
+    }).filter(Boolean).join('');
+    relDiv.style.display = '';
+  } else { relDiv.style.display = 'none'; }
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-backdrop').classList.add('active');
+}
+
+function openDetailById(id) {
+  const sectionMap = {};
+  ['tl','historical','geographical','traditions','fathers','texts','concepts'].forEach(s => {
+    const src = s === 'tl' ? DATA.timeline : DATA[s];
+    if (src) src.forEach(item => { sectionMap[item.id] = s; });
+  });
+  const section = sectionMap[id] || 'texts';
+  openDetail(section, id);
+}
+
+function findItem(id) {
+  const sources = [DATA.timeline, DATA.historical, DATA.geographical, DATA.traditions, DATA.fathers, DATA.texts, DATA.concepts];
+  for (const src of sources) { const found = src?.find(i => i.id === id); if (found) return found; }
+  return null;
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-backdrop').classList.remove('active');
+}
+
+document.getElementById('detail-backdrop').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail-backdrop')) closeDetailPanel();
+});
+
+// =====================================================================
+// SEARCH
+// =====================================================================
+
+function getAllSearchable() {
+  const results = [];
+  const add = (items, type) => items.forEach(i => results.push({ ...i, _type: type }));
+  add(DATA.timeline, 'Timeline');
+  add(DATA.historical, 'Historical Era');
+  add(DATA.geographical, 'Geographic Region');
+  add(DATA.traditions, 'Church Tradition');
+  add(DATA.fathers, 'Church Father');
+  add(DATA.texts, 'Key Text');
+  add(DATA.concepts, 'Key Concept');
+  return results;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function highlight(text, query) {
+  if (!query || !text) return text || '';
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(escaped, 'gi'), m => `<mark>${m}</mark>`);
+}
+
+function stripHtml(html) { const d = document.createElement('div'); d.innerHTML = html; return d.textContent || ''; }
+
+const searchInput = document.getElementById('main-search');
+const searchClear = document.getElementById('search-clear');
+const searchOverlay = document.getElementById('search-results-overlay');
+
+let searchThrottle = null;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchThrottle);
+  searchThrottle = setTimeout(doSearch, 200);
+});
+
+function doSearch() {
+  const query = searchInput.value.trim();
+  searchClear.classList.toggle('visible', query.length > 0);
+  if (!query) { searchOverlay.classList.remove('active'); return; }
+  const all = getAllSearchable();
+  const lq = query.toLowerCase();
+  const hits = all.filter(item => {
+    const text = [item.title, item.summary, stripHtml(item.body||''), (item.tags||[]).join(' '), item.desc||''].join(' ').toLowerCase();
+    return text.includes(lq);
+  });
+  document.getElementById('search-summary').innerHTML = `<strong>${hits.length}</strong> results for "<strong>${escHtml(query)}</strong>"`;
+  document.getElementById('search-results-list').innerHTML = hits.map(item => {
+    const bodyText = stripHtml(item.body || item.desc || '');
+    const idx = bodyText.toLowerCase().indexOf(lq);
+    const snippet = idx >= 0
+      ? '…' + bodyText.slice(Math.max(0, idx - 80), idx + 120) + '…'
+      : bodyText.slice(0, 200) + '…';
+    return `
+      <div class="search-result-item" onclick="handleSearchClick('${item.id}','${item._type}')">
+        <div class="search-result-type">${item._type}</div>
+        <div class="search-result-title">${highlight(item.title, query)}</div>
+        <div class="search-result-snippet">${highlight(snippet, query)}</div>
+      </div>`;
+  }).join('') || '<p style="color:var(--color-text-faint);font-size:var(--text-sm)">No results found.</p>';
+  searchOverlay.classList.add('active');
+}
+
+function handleSearchClick(id, type) {
+  const sectionMap = { 'Timeline': 'tl', 'Historical Era': 'historical', 'Geographic Region': 'geographical', 'Church Tradition': 'traditions', 'Church Father': 'fathers', 'Key Text': 'texts', 'Key Concept': 'concepts' };
+  const section = sectionMap[type] || 'texts';
+  const viewMap = { 'tl': 'timeline', 'historical': 'historical', 'geographical': 'geographical', 'traditions': 'traditions', 'fathers': 'fathers', 'texts': 'texts', 'concepts': 'concepts' };
+  showView(viewMap[section] || 'overview');
+  searchOverlay.classList.remove('active');
+  setTimeout(() => openDetail(section, id), 100);
+}
+
+function clearSearch() {
+  searchInput.value = '';
+  searchClear.classList.remove('visible');
+  searchOverlay.classList.remove('active');
+}
+
+// =====================================================================
+// DARK MODE
+// =====================================================================
+
+(function() {
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (prefersDark) document.documentElement.classList.add('dark');
+  const btn = document.getElementById('theme-toggle');
+  const sunSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+  const moonSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+  function updateIcon() { btn.innerHTML = document.documentElement.classList.contains('dark') ? sunSvg : moonSvg; }
+  updateIcon();
+  btn.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    updateIcon();
+  });
+})();
+
+// =====================================================================
+// INIT
+// =====================================================================
+
+renderAll();
+</script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>

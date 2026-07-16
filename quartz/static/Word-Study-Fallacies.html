@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Word Study Fallacies</title>
+<style>
+  :root{
+    --paper:#f6efdf; --paper2:#fdf9ee; --ink:#221b10; --faint:#6b6152;
+    --rule:#c9bda4; --rubric:#a52a12; --rubric-ink:#8c2410;
+    --good:#2e6b34; --tint:#efe5cd;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua','Charter',Georgia,serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--serif);
+    line-height:1.65; touch-action:manipulation; padding-bottom:110px;
+    font-size:17px;
+  }
+  .wrap{max-width:700px; margin:0 auto; padding:30px 22px 40px;}
+  h1{font-size:clamp(1.7rem,4.5vw,2.5rem); line-height:1.2; margin:0 0 6px; font-weight:600;}
+  h2{font-size:clamp(1.3rem,3.2vw,1.75rem); margin:0 0 16px; font-weight:600;}
+  h3{font-size:1rem; margin:26px 0 8px; color:var(--rubric-ink);
+     text-transform:uppercase; letter-spacing:.14em; font-weight:600;}
+  h3::after{content:""; display:block; height:1px; background:var(--rule); margin-top:6px;}
+  p{margin:11px 0;}
+  em{font-style:italic;}
+  .dim{color:var(--faint);}
+  .greek{font-style:normal;}
+  .kicker{
+    color:var(--rubric); text-transform:uppercase; letter-spacing:.22em;
+    font-size:.72rem; font-weight:600; margin-bottom:10px;
+    border-top:3px double var(--ink); padding-top:14px;
+  }
+  .panel{
+    background:var(--paper2); border:1px solid var(--ink);
+    padding:18px 22px; margin:18px 0;
+    box-shadow:3px 3px 0 var(--rule);
+  }
+  .callout{
+    border:1px solid var(--rule); border-left:4px solid var(--rubric);
+    background:var(--paper2); padding:14px 20px; margin:18px 0;
+  }
+  .callout.plain{border-left-color:var(--ink);}
+  button{font-family:var(--serif); cursor:pointer; color:var(--ink);}
+  .step{display:none;}
+  .step.active{display:block;}
+
+  /* progress markers — small page numerals */
+  .dots{display:flex; gap:4px; justify-content:center; margin:0 0 24px;}
+  .dots button{
+    width:32px; height:32px; border:none; background:transparent;
+    font-size:.85rem; color:var(--faint); padding:0;
+    border-bottom:2px solid transparent;
+  }
+  .dots button.done{color:var(--ink);}
+  .dots button.cur{color:var(--rubric); border-bottom-color:var(--rubric); font-weight:700;}
+
+  /* fixed nav */
+  .nav{
+    position:fixed; left:0; right:0; bottom:0; height:84px;
+    background:var(--paper); border-top:1px solid var(--ink);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 max(20px, calc((100vw - 700px)/2 + 20px)); z-index:50;
+  }
+  .nav button{
+    min-width:120px; height:48px; font-size:1rem; font-weight:600;
+    border:1.5px solid var(--ink); background:var(--paper2); border-radius:2px;
+  }
+  .nav .next{background:var(--ink); border-color:var(--ink); color:var(--paper);}
+  .nav button:disabled{opacity:.3; cursor:default;}
+  .navlabel{color:var(--faint); font-size:.85rem; text-align:center; flex:1; padding:0 10px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:italic;}
+
+  /* builder */
+  .stickyhead{
+    position:sticky; top:0; z-index:10;
+    background:var(--paper); margin:0 -22px 20px; padding:8px 22px 10px;
+  }
+  .sentencebar{
+    background:var(--paper2); border:1px solid var(--ink);
+    border-top:3px double var(--ink); border-bottom:3px double var(--ink);
+    padding:12px 18px; min-height:100px;
+    font-size:1.15rem;
+  }
+  .sentencebar .lbl{font-size:.7rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--rubric); margin-bottom:5px; font-weight:600;}
+  .toolbtns{margin:0 0 10px;}
+  .toolbtns button{
+    border:1.5px solid var(--ink); background:var(--paper2); border-radius:2px;
+    padding:9px 16px; font-weight:600; margin-right:10px; font-size:.95rem;
+  }
+  #toggleEntriesBtn{min-width:185px;}
+  .wordrow{border-top:1px solid var(--rule); padding:13px 0;}
+  .wordrow .gw{font-size:1.25rem; margin-right:10px; font-weight:600;}
+  .wordrow .sn{color:var(--faint); font-size:.82rem; font-style:italic;}
+  .chips{margin-top:8px;}
+  .chips button{
+    border:1.5px solid var(--rule); background:transparent;
+    border-radius:2px; padding:5px 13px; margin:3px 4px 3px 0; font-size:.92rem;
+  }
+  .chips button.sel{border-color:var(--rubric); background:var(--rubric); color:var(--paper);}
+  .entrydet{margin:7px 0 2px;}
+  .entrydet summary{
+    cursor:pointer; font-size:.85rem; font-style:italic; color:var(--rubric-ink);
+  }
+  .entrydet .entrybody{
+    background:var(--paper2); border:1px solid var(--rule);
+    padding:10px 14px; margin-top:7px; font-size:.93rem;
+  }
+  .entrybody .num{color:var(--rubric-ink); font-weight:700;}
+  .entrybody .hw{font-size:1.15rem;}
+
+  /* comparison */
+  .rendering{font-size:1.15rem; min-height:3.2em; font-style:italic;}
+  .taglabel{font-size:.7rem; letter-spacing:.18em; text-transform:uppercase;
+    font-weight:600; margin-bottom:6px; color:var(--rubric);}
+
+  /* anatomy */
+  .anat{font-size:1rem; line-height:1.95;}
+  .anat span{padding:1px 3px; transition:background .15s;}
+  .anat .on-num{background:#f0d284;}
+  .anat .on-tr{background:#cde4d4;}
+  .anat .on-ety{background:#e2d3ea;}
+  .anat .on-gl{background:#cfdfee;}
+  .anat .on-colon{background:#f3c4b6; outline:2px solid var(--rubric);}
+  .anat .on-kjv{background:#dde8c0;}
+  .legend{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 12px;}
+  .legend button{
+    border-radius:2px; padding:7px 14px; font-size:.88rem; font-weight:600;
+    border:1.5px solid var(--rule); background:transparent;
+  }
+  .legend button.sel{border-color:var(--rubric); background:var(--rubric); color:var(--paper);}
+  .legendbox{min-height:130px; background:var(--paper2); border:1px solid var(--ink);
+    padding:14px 20px;}
+
+  /* quiz */
+  .quizcard{
+    background:var(--paper2); border:1px solid var(--ink);
+    box-shadow:3px 3px 0 var(--rule);
+    padding:22px; display:flex; flex-direction:column;
+  }
+  .quizword{font-size:2.1rem; text-align:center; height:64px; font-weight:600;}
+  .quizq{text-align:center; color:var(--faint); height:28px; font-style:italic; font-size:.95rem;}
+  .quizbtns{display:flex; gap:12px; justify-content:center; margin:14px 0; height:52px;}
+  .quizbtns button{
+    min-width:150px; border-radius:2px; font-size:.95rem; font-weight:600;
+    border:1.5px solid var(--ink); background:transparent; padding:0 14px;
+  }
+  .quizbtns button:disabled{opacity:.3;}
+  .quizreveal{min-height:190px; padding:4px 2px;}
+  @media(max-width:480px){ .quizreveal{min-height:240px;} }
+  .quizreveal .verdict{font-weight:700; height:26px;}
+  .verdict.good{color:var(--good);} .verdict.bad{color:var(--rubric-ink);}
+  .quizfoot{display:flex; justify-content:space-between; align-items:center; height:52px;}
+  .quizfoot .score{color:var(--faint); font-size:.9rem; min-width:80px; font-style:italic;}
+  .quizfoot button{
+    min-width:140px; height:44px; border-radius:2px; font-weight:600; font-size:.95rem;
+    border:1.5px solid var(--ink); background:var(--ink); color:var(--paper);
+  }
+  .quizfoot button:disabled{opacity:.3;}
+
+  /* greek compound cards */
+  .gcard{border:1px solid var(--rule); border-left:4px solid var(--good);
+    background:var(--paper2); padding:14px 20px; margin:14px 0;}
+  .gcard.bad{border-left-color:var(--rubric);}
+  .gcard .gw{font-size:1.3rem; font-weight:600;}
+  .gtag{font-size:.85rem; font-weight:400; font-style:italic;}
+  .gtag.ok{color:var(--good);} .gtag.no{color:var(--rubric-ink);}
+
+  .big{font-size:1.08rem;}
+  ol li, ul li{margin:9px 0;}
+  .lede::first-letter{
+    font-size:3.2em; float:left; line-height:.85; padding:4px 8px 0 0;
+    color:var(--rubric); font-weight:600;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="dots" id="dots"></div>
+
+  <!-- ============ STEP 0 : INTRO ============ -->
+  <section class="step" data-title="The Invitation">
+    <div class="kicker">An interactive word study</div>
+    <h1>“The Greek word here really means…”</h1>
+    <p class="big lede">If you've ever looked up a Strong's number, you were reaching for something genuinely good: the words behind the words. You wanted to stand as close to the original text as you could get. That instinct deserves to be honored, not scolded — and this little experiment is built for people who have it.</p>
+    <div class="panel">
+      <p><strong>Here is the experiment.</strong> You're going to translate one real verse of the New Testament using nothing but Strong's entries, exactly as printed — every option in front of you will come straight from the book.</p>
+      <p class="dim">Which verse? That stays sealed until you've translated it yourself, so nothing you already know about it can help. No Greek knowledge required.</p>
+    </div>
+    <p>Along the way, three honest questions:</p>
+    <ol>
+      <li>What kind of book is Strong's, really — and what did Strong himself say it was?</li>
+      <li>Can a list of English words carry you all the way to a verse's meaning?</li>
+      <li>Do a word's parts reveal what it means? <span class="dim">(We'll test this on a language you already speak.)</span></li>
+    </ol>
+    <p class="dim">Tap <strong>Next</strong> to begin.</p>
+  </section>
+
+  <!-- ============ STEP 1 : BUILD ============ -->
+  <section class="step" data-title="Your Turn">
+    <div class="kicker">Step 1 · Your turn</div>
+    <h2>Build your translation</h2>
+    <p>Below is your verse — every Greek word, in order. Under each word are English options, and <strong>every option comes straight from that word's entry in Strong's</strong> — nothing added, nothing held back. Pick the one you think belongs, and your sentence takes shape at the top as you go.</p>
+    <p>Each word's full Strong's entry is shown with it, exactly as printed and unedited — read it before you choose. You can collapse the entries if you'd rather work from the options alone.</p>
+    <p class="dim">You'll notice some words offer a single option and others offer more than twenty. That contrast is part of the experiment.</p>
+    <div class="stickyhead">
+      <div class="toolbtns">
+        <button id="toggleEntriesBtn">Collapse all entries</button>
+        <button id="clearBtn">Clear my picks</button>
+      </div>
+      <div class="sentencebar">
+        <div class="lbl">Your rendering</div>
+        <div id="sentence" class="dim">— pick words below —</div>
+      </div>
+    </div>
+    <div id="builder"></div>
+  </section>
+
+  <!-- ============ STEP 2 : COMPARISON ============ -->
+  <section class="step" data-title="The Comparison">
+    <div class="kicker">Step 2 · The comparison</div>
+    <h2>How did it go?</h2>
+    <div class="panel">
+      <div class="taglabel">Your rendering, from Strong's alone</div>
+      <div class="rendering" id="finalSentence">—</div>
+    </div>
+    <div class="panel">
+      <div class="taglabel">The same verse — Luke 7:1, unsealed — from a committee of Greek scholars (ESV)</div>
+      <div class="rendering">“After he had finished all his sayings in the hearing of the people, he entered Capernaum.”</div>
+    </div>
+    <p class="dim">Why this verse? Luke 7:1 is an ordinary hinge between two scenes, with no doctrine hanging on it. It was chosen precisely because it's ordinary: whatever you just experienced came from the method, not from a hard verse.</p>
+    <h3>So what happened?</h3>
+    <p>Nothing went wrong on your end — this happens to everyone who tries it. Every option you saw really was in the entries. The gap comes from three things a sentence needs that the entries simply don't carry:</p>
+    <ul>
+      <li><strong>Word endings.</strong> In Greek, the ending of a word does the work that word order does in English: it tells you who did the action and when. The verse's second word doesn't just mean “finish” — its ending says <em>he</em> finished, in the past: “he had finished.” Strong's prints every word in its plain dictionary form, so the endings — and everything they carry — are invisible.</li>
+      <li><strong>The missing option.</strong> The verse's sixth word, <span class="greek">αὐτοῦ</span>, means <strong>“his”</strong> here. Open its entry and scan the thirty-odd options again — “his” isn't one of them. The one word this sentence needs most never made the list.</li>
+      <li><strong>Figures of speech.</strong> Word for word, the middle of the verse says “into the ears of the people.” That's simply how Greek says “in their hearing” — the way English says “keep an eye on.” A word-at-a-time list has no way to tell you when several words are acting together as one phrase.</li>
+    </ul>
+    <div class="callout plain">
+      <strong>Up next:</strong> a guided tour of a Strong's entry — what each of its sections is, and what each one is for.
+    </div>
+  </section>
+
+  <!-- ============ STEP 3 : WHAT STRONG'S IS ============ -->
+  <section class="step" data-title="What Strong's Is">
+    <div class="kicker">Step 3 · Read the manual</div>
+    <h2>What Strong's says it is</h2>
+    <p>James Strong built something remarkable: an <strong>index</strong> that lets a reader with no Greek training find every verse where a given word occurs in the King James Version. For 1890, that was a landmark of scholarship, and it still works beautifully. The numbered entries in the back were his lookup key. Here's the anatomy of one — tap each part:</p>
+    <div class="legend" id="legend"></div>
+    <div class="panel anat greek" id="anatEntry">
+      <span data-part="num"><b>4137.</b></span>
+      <span data-part="tr">πληρόω <b>plērŏō</b>, <i>play-rŏ´-o</i>;</span>
+      <span data-part="ety">from <i>4134</i>;</span>
+      <span data-part="gl">to <i>make replete</i>, i.e. (lit.) to <i>cram</i> (a net), <i>level up</i> (a hollow), or (fig.) to <i>furnish</i>, <i>satisfy</i>, <i>execute</i> (an office), <i>finish</i> (a period or task), <i>verify</i> (or <i>coincide</i> with a prediction), etc.</span><span data-part="colon"><b>:—</b></span>
+      <span data-part="kjv">accomplish, × after, (be) complete, end, expire, fill (up), fulfil, (be, make) full (come), fully preach, perfect, supply.</span>
+    </div>
+    <div class="legendbox" id="legendBox">
+      <p class="dim">Tap a label above to see what that part of the entry actually is.</p>
+    </div>
+    <div class="callout" style="margin-top:18px">
+      <strong>The punchline:</strong> by the book's own stated convention, everything after the <b>:—</b> mark (the list we tend to read aloud as “the Greek word means…”) is a record of <em>how the KJV translators already rendered it</em>. So when we use that list to look behind our English Bible, we aren't reaching the Greek. We're reaching an older English Bible. Strong never claimed otherwise; his book has simply been handed a job it never applied for.
+    </div>
+    <div class="callout plain">
+      <strong>Up next:</strong> etymology — what a word's parts can tell us, and what they can't.
+    </div>
+  </section>
+
+  <!-- ============ STEP 4 : COMPOUND QUIZ ============ -->
+  <section class="step" data-title="A Game">
+    <div class="kicker">Step 4 · A game</div>
+    <h2>Do the parts tell the story?</h2>
+    <p>A beloved word-study move: split a word into its parts and add them up. It's appealing — and sometimes it genuinely works. Let's test it on <em>English</em>, a language you've spoken your whole life. Four words. For each: would the two parts alone get you to the real meaning?</p>
+    <div class="quizcard">
+      <div class="quizword" id="quizWord">—</div>
+      <div class="quizq">If you only knew the parts, would you land on the meaning?</div>
+      <div class="quizbtns">
+        <button id="btnYes">Parts add up</button>
+        <button id="btnNo">Parts mislead</button>
+      </div>
+      <div class="quizreveal">
+        <div class="verdict" id="quizVerdict"></div>
+        <p id="quizExplain" class="dim"></p>
+      </div>
+      <div class="quizfoot">
+        <div class="score" id="quizScore">1 / 4</div>
+        <button id="btnNext" disabled>Next word →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 5 : GREEK COMPOUNDS ============ -->
+  <section class="step" data-title="Greek Compounds">
+    <div class="kicker">Step 5 · Back to the Greek</div>
+    <h2>Greek plays by the same rules</h2>
+    <p>Greek built big words the same way English does — by gluing smaller words together. And just like in English, sometimes the glued-together word means exactly what its parts say, and sometimes it wandered off long ago and picked up a life of its own. Nothing about the parts themselves tells you which kind you're holding. Three real examples:</p>
+    <div class="gcard">
+      <div class="gw">εἰσέρχομαι <span class="gtag ok">— the parts tell the truth</span></div>
+      <p>This word is in your verse. <span class="greek">εἰς</span> means <em>into</em>; <span class="greek">ἔρχομαι</span> means <em>come</em>. Glue them together and you get “come into” — that is, <strong>enter</strong>. And that's exactly what it means, everywhere it's used. Like <em>flowerpot</em>: the parts tell the whole story.</p>
+    </div>
+    <div class="gcard bad">
+      <div class="gw">ἐπειδή <span class="gtag no">— the parts fall behind</span></div>
+      <p>Also from your verse — it was your very first word. <span class="greek">ἐπεί</span> means <em>when</em>; <span class="greek">δή</span> means <em>indeed</em>. Add them up and you'd expect “when indeed.” But by New Testament times the word had settled into meaning <em>since</em> or <em>because</em>. The parts are really there — they just can't tell you what the word grew up to mean. Like <em>benchmark</em>: real parts, and you'd still never guess the meaning from them.</p>
+    </div>
+    <div class="gcard bad">
+      <div class="gw">δύναμις <span class="gtag no">— a famous example</span></div>
+      <p>You may have heard it preached, warmly and sincerely: “The gospel is the <em>dynamite</em> of God — that's the Greek word <span class="greek">dynamis</span> in Romans 1:16!” The image lands; the love for the text is real. The difficulty is only this: dynamite was named in 1867, <em>from</em> the Greek — not the other way around. Paul couldn't have been thinking of explosives, and his word suggests steady, effective power more than detonation. <strong>Word history runs forward only.</strong> Reading a word's descendants back into an author's mouth is the same slip as deriving butterflies from butter — easy to make, and worth learning to avoid.</p>
+    </div>
+    <div class="callout">
+      Etymology is a <strong>clue about where a word came from</strong> — a genuinely interesting one. It just isn't <strong>proof of what a speaker meant by it</strong>. Meaning lives in usage, and usage is exactly what translators and lexicographers spend their careers observing.
+    </div>
+  </section>
+
+  <!-- ============ STEP 6 : TAKEAWAYS ============ -->
+  <section class="step" data-title="Takeaways">
+    <div class="kicker">Step 6 · Takeaways</div>
+    <h2>What to keep</h2>
+    <div class="panel">
+      <ol class="big">
+        <li><strong>Keep the hunger. Upgrade the tools.</strong> Wanting to get closer to the original words is one of the best instincts a Bible reader can have. It deserves instruments built for the job.</li>
+        <li><strong>Strong's is an index, and a very good one.</strong> Use it for what Strong built it to do: find every place a word occurs, and see how the KJV handled it. The English lists after <b>:—</b> are translation history, not a menu of meanings — Strong's own × and + marks say as much.</li>
+        <li><strong>Translation is not lookup.</strong> You watched a verse come apart with a full set of “meanings” in hand. Grammar, idiom, and context did all the real work in “After he had finished all his sayings…” — and none of those live in a numbered list.</li>
+        <li><strong>Word parts are a hint, not a verdict.</strong> <span class="greek">εἰσέρχομαι</span> is a flowerpot; <span class="greek">δύναμις</span>-as-dynamite is a butterfly. The only way to know which kind you're holding is to watch the word in use.</li>
+      </ol>
+    </div>
+    <h3>A better way in</h3>
+    <p>Read <strong>several good translations side by side</strong> — ESV, NIV, NASB, NRSV. Each is a committee of people who have spent their lives reading Greek. Where they agree, the Greek is clear. Where they differ, you've found a genuinely open question — the very thing word studies hope to uncover — and you found it on solid ground. And if the hunger runs deeper still, the door is open: real lexicons, or even first-year Greek, welcome anyone willing to walk in. The original words are worth it.</p>
+    <p class="dim" style="margin-top:28px">All Strong's entries quoted as printed. Luke 7:1 quoted from the ESV and KJV.</p>
+  </section>
+
+</div>
+
+<div class="nav">
+  <button id="prevBtn">← Back</button>
+  <div class="navlabel" id="navLabel"></div>
+  <button id="nextBtn" class="next">Next →</button>
+</div>
+
+<script>
+(function(){
+  /* ---------- data ---------- */
+  const ENTRIES = {
+    "1894": {hw:"ἐπειδή ĕpĕidē", body:"<span class='num'>1894.</span> <span class='hw greek'>ἐπειδή</span> <b>ĕpĕidē</b>, <i>ep-i-day´</i>; from <i>1893</i> and <i>1211</i>; <i>since now</i>, i.e. (of time) <i>when</i>, or (of cause) <i>whereas</i>:— after that, because, for (that, -asmuch as), seeing, since."},
+    "4137": {hw:"πληρόω plērŏō", body:"<span class='num'>4137.</span> <span class='hw greek'>πληρόω</span> <b>plērŏō</b>, <i>play-rŏ´-o</i>; from <i>4134</i>; to <i>make replete</i>, i.e. (lit.) to <i>cram</i> (a net), <i>level up</i> (a hollow), or (fig.) to <i>furnish</i> (or <i>imbue, diffuse, influence</i>), <i>satisfy, execute</i> (an office), <i>finish</i> (a period or task), <i>verify</i> (or <i>coincide</i> with a prediction), etc.:— accomplish, × after, (be) complete, end, expire, fill (up), fulfil, (be, make) full (come), fully preach, perfect, supply."},
+    "3956": {hw:"πᾶς pas", body:"<span class='num'>3956.</span> <span class='hw greek'>πᾶς</span> <b>pas</b>, <i>pas</i>; incl. all the forms of declension; appar. a primary word; <i>all, any, every</i>, the <i>whole</i>:— all (manner of, means), alway (-s), any (one), × daily, + ever, every (one, way), as many as, + no (-thing), × thoroughly, whatsoever, whole, whosoever."},
+    "3588": {hw:"ὁ hŏ", body:"<span class='num'>3588.</span> <span class='hw greek'>ὁ</span> <b>hŏ</b>; incl. the fem. <span class='greek'>ἡ</span> <b>hē</b>, and the neut. <span class='greek'>τό</span> <b>tŏ</b>; in all their inflections; the def. art.; <i>the</i> (sometimes to be supplied, at others omitted, in English idiom):— the, this, that, one, he, she, it, etc."},
+    "4487": {hw:"ῥῆμα rhēma", body:"<span class='num'>4487.</span> <span class='hw greek'>ῥῆμα</span> <b>rhēma</b>, <i>hray´-mah</i>; from <i>4483</i>; an <i>utterance</i> (indiv., collect. or spec.); by impl. a <i>matter</i> or <i>topic</i> (espec. of narration, command or dispute); with a neg. <i>naught</i> whatever:— + evil, + nothing, saying, word."},
+    "846": {hw:"αὐτός autŏs", body:"<span class='num'>846.</span> <span class='hw greek'>αὐτός</span> <b>autŏs</b> [perh. akin to the base of <i>109</i> through the idea of a <i>baffling</i> wind] (<i>backward</i>); the refl. pron. <i>self</i>, used (alone or in the comp. <i>1438</i>) of the third pers., and (with the proper pers. pron.) of the other persons:— her, it (-self), one, the other, (mine) own, said, ([self-], the) same, ([him-, my-, thy-]) self, [your-] selves, she, that, their (-s), them ([-selves]), there [-at, -by, -in, -into, -of, -on, -with], they, (these) things, this (man), those, together, very, which."},
+    "1519": {hw:"εἰς ĕis", body:"<span class='num'>1519.</span> <span class='hw greek'>εἰς</span> <b>ĕis</b>, <i>ice</i>; a primary prep.; <i>to</i> or <i>into</i> (indicating the point reached or entered), of place, time, or (fig.) purpose (result, etc.); also in adv. phrases:— [abundant-] ly, against, among, as, at, [back-] ward, before, by, concerning, + continual, + far more exceeding, for [intent, purpose], fore, + forth, in (among, at, unto, -so much that, to), to the intent that, + of one mind, + never, of, (up-) on, + perish, + set at one again, (so) that, therefore (-unto), throughout, till, to (be, the end, -ward), (here-) until (-to), … ward, [where-] fore, with."},
+    "189": {hw:"ἀκοή akŏē", body:"<span class='num'>189.</span> <span class='hw greek'>ἀκοή</span> <b>akŏē</b>, <i>ak-o-ay´</i>; from <i>191</i>; <i>hearing</i> (the act, the sense or the thing heard):— audience, ear, fame, which ye heard, hearing, preached, report, rumor."},
+    "2992": {hw:"λαός laŏs", body:"<span class='num'>2992.</span> <span class='hw greek'>λαός</span> <b>laŏs</b>, <i>lah-os´</i>; appar. a primary word; a <i>people</i> (in general; thus differing from <i>1218</i>, which denotes one's <i>own</i> populace):— people."},
+    "1525": {hw:"εἰσέρχομαι ĕisĕrchŏmai", body:"<span class='num'>1525.</span> <span class='hw greek'>εἰσέρχομαι</span> <b>ĕisĕrchŏmai</b>, <i>ice-er´-khom-ahee</i>; from <i>1519</i> and <i>2064</i>; to <i>enter</i> (lit. or fig.):— × arise, come (in, into), enter in (-to), go in (through)."},
+    "2584": {hw:"Καπερναούμ Kapĕrnaŏum", body:"<span class='num'>2584.</span> <span class='hw greek'>Καπερναούμ</span> <b>Kapĕrnaŏum</b>, <i>cap-er-nah-oom´</i>; of Heb. or. [prob. <i>3723</i> and <i>5151</i>]; <i>Capernaum</i> (i.e. <i>Caphanachum</i>), a place in Pal.:— Capernaum."}
+  };
+
+  const WORDS = [
+    {gr:"Ἐπειδὴ",     num:"1894", opts:["after that","because","forasmuch as","seeing","since"]},
+    {gr:"ἐπλήρωσεν",  num:"4137", opts:["accomplish","complete","end","expire","fill up","fulfil","fully preach","perfect","supply","cram"]},
+    {gr:"πάντα",      num:"3956", opts:["all","any","every","the whole","daily","as many as","whosoever","nothing"]},
+    {gr:"τὰ",         num:"3588", opts:["the","this","that","one","he","she","it"]},
+    {gr:"ῥήματα",     num:"4487", opts:["sayings","words","matters","topics","evils","nothings"]},
+    {gr:"αὐτοῦ",      num:"846",  opts:["her","it","one","the other","own","said","same","self","she","their","them","they","this man","those","together","very","which"]},
+    {gr:"εἰς",        num:"1519", opts:["against","among","as","at","before","by","concerning","for","into","never","of","on","perish","therefore","throughout","till","to","unto","toward","wherefore","with"]},
+    {gr:"τὰς",        num:"3588", opts:["the","this","that","one","he","she","it"]},
+    {gr:"ἀκοὰς",      num:"189",  opts:["audiences","ears","fames","hearings","reports","rumors","things preached"]},
+    {gr:"τοῦ",        num:"3588", opts:["the","this","that","one","he","she","it"]},
+    {gr:"λαοῦ",       num:"2992", opts:["people"]},
+    {gr:"εἰσῆλθεν",   num:"1525", opts:["arise","come in","enter","go in through"]},
+    {gr:"εἰς",        num:"1519", opts:["against","among","as","at","before","by","concerning","for","into","never","of","on","perish","therefore","throughout","till","to","unto","toward","wherefore","with"]},
+    {gr:"Καφαρναούμ", num:"2584", opts:["Capernaum"]}
+  ];
+
+  const QUIZ = [
+    {w:"flowerpot",  ok:true,  why:"A pot for flowers. The parts tell the whole story — and compounds like this are common enough to make the method feel dependable."},
+    {w:"butterfly",  ok:false, why:"Not butter that flies. The word's true origin is genuinely unknown — maybe butter-colored wings, maybe old folklore about butterflies stealing butter. Either way, the parts get you nowhere."},
+    {w:"benchmark",  ok:false, why:"From surveying: a mark cut into stone where a leveling bench (a metal bracket) was seated. Real parts, but a sense of “bench” almost no one would guess — the sneakiest kind of half-clue."},
+    {w:"chipmunk",   ok:false, why:"Nothing to do with chips — and there's no such thing as a munk. It's most likely an English respelling of an Ojibwe word; the “parts” were never parts at all. English ears just heard familiar chunks in a foreign word."}
+  ];
+
+  const LEGEND = [
+    {id:"num", label:"The number", cls:"on-num", text:"<strong>An address, not a meaning.</strong> 4137 points you to every KJV verse that uses this word — the concordance part, and it's genuinely useful. The number system is the book's real invention, and it still serves readers well."},
+    {id:"tr", label:"Transliteration", cls:"on-tr", text:"<strong>How to pronounce it.</strong> Helpful for saying the word aloud. Says nothing about meaning."},
+    {id:"ety", label:"Etymology", cls:"on-ety", text:"<strong>Where Strong thought the word came from.</strong> Sometimes solid, sometimes an educated guess — his entry for αὐτός (“self”) suggests it may trace back to the idea of “a baffling wind.” A word's ancestry is a point of interest, not its meaning."},
+    {id:"gl", label:"Strong's sketch", cls:"on-gl", text:"<strong>His compressed one-man gloss</strong> — “to cram (a net), level up (a hollow)…”. The closest thing to a definition here, and it's a 19th-century thumbnail. A full Greek lexicon (like BDAG) gives this word pages, sorted by context — that's the scale real definition requires."},
+    {id:"colon", label:"The :— mark", cls:"on-colon", text:"<strong>The easiest mark in the book to overlook.</strong> By Strong's own stated convention, everything after :— is not definition at all. It marks where his meaning-sketch ends and the KJV-rendering index begins."},
+    {id:"kjv", label:"The English list", cls:"on-kjv", text:"<strong>Every way the KJV translated this word, anywhere it occurs.</strong> Not meanings — translation choices, already made, in 1611. Strong even flags the fragile ones himself: × means “only via an idiom,” + means “only in combination with other words.” He was careful; the list just asks to be read the way he wrote it."}
+  ];
+
+  /* ---------- steps / nav ---------- */
+  const steps = Array.from(document.querySelectorAll('.step'));
+  const dotsEl = document.getElementById('dots');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const navLabel = document.getElementById('navLabel');
+  let cur = 0;
+
+  steps.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.textContent = i+1;
+    b.setAttribute('aria-label','Step '+(i+1));
+    b.addEventListener('click',()=>go(i));
+    dotsEl.appendChild(b);
+  });
+
+  function go(i){
+    cur = Math.max(0, Math.min(steps.length-1, i));
+    steps.forEach((s,j)=>s.classList.toggle('active', j===cur));
+    Array.from(dotsEl.children).forEach((d,j)=>{
+      d.classList.toggle('cur', j===cur);
+      d.classList.toggle('done', j<cur);
+    });
+    prevBtn.disabled = cur===0;
+    nextBtn.disabled = cur===steps.length-1;
+    navLabel.textContent = (cur+1)+' / '+steps.length+' · '+steps[cur].dataset.title;
+    if (steps[cur].dataset.title==='The Comparison') renderFinal();
+    window.scrollTo({top:0});
+  }
+  prevBtn.addEventListener('click',()=>go(cur-1));
+  nextBtn.addEventListener('click',()=>go(cur+1));
+
+  /* ---------- builder ---------- */
+  const builder = document.getElementById('builder');
+  const sentenceEl = document.getElementById('sentence');
+  const picks = new Array(WORDS.length).fill(null);
+
+  WORDS.forEach((w,i)=>{
+    const row = document.createElement('div');
+    row.className = 'wordrow';
+    const head = document.createElement('div');
+    const optCount = w.opts.length+' option'+(w.opts.length===1?'':'s');
+    head.innerHTML = '<span class="gw greek">'+w.gr+'</span><span class="sn">Strong\'s '+w.num+' · '+optCount+'</span>';
+    row.appendChild(head);
+
+    const det = document.createElement('details');
+    det.className = 'entrydet';
+    det.open = true;
+    det.innerHTML = '<summary>The full Strong\'s entry, as printed</summary>'+
+      '<div class="entrybody"><p>'+ENTRIES[w.num].body+'</p></div>';
+    row.appendChild(det);
+
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    w.opts.forEach(o=>{
+      const c = document.createElement('button');
+      c.textContent = o;
+      c.addEventListener('click',()=>{
+        picks[i] = (picks[i]===o) ? null : o;
+        Array.from(chips.children).forEach(x=>x.classList.toggle('sel', x.textContent===picks[i]));
+        renderSentence();
+      });
+      chips.appendChild(c);
+    });
+    row.appendChild(chips);
+    builder.appendChild(row);
+  });
+
+  function renderSentence(){
+    const parts = picks.map(p=>p||'___');
+    const any = picks.some(p=>p);
+    sentenceEl.classList.toggle('dim', !any);
+    if(!any){ sentenceEl.textContent = '— pick words below —'; return; }
+    let s = parts.join(' ');
+    s = s.charAt(0).toUpperCase()+s.slice(1)+'.';
+    sentenceEl.textContent = '“'+s+'”';
+  }
+
+  const toggleBtn = document.getElementById('toggleEntriesBtn');
+  let entriesOpen = true;
+  toggleBtn.addEventListener('click',()=>{
+    entriesOpen = !entriesOpen;
+    builder.querySelectorAll('details').forEach(d=>{ d.open = entriesOpen; });
+    toggleBtn.textContent = entriesOpen ? 'Collapse all entries' : 'Expand all entries';
+  });
+
+  document.getElementById('clearBtn').addEventListener('click',()=>{
+    picks.fill(null);
+    builder.querySelectorAll('.chips button').forEach(x=>x.classList.remove('sel'));
+    renderSentence();
+  });
+
+  function renderFinal(){
+    const el = document.getElementById('finalSentence');
+    if(picks.some(p=>p)){
+      let s = picks.map(p=>p||'___').join(' ');
+      el.textContent = '“'+(s.charAt(0).toUpperCase()+s.slice(1))+'.”';
+    } else {
+      el.innerHTML = '<span class="dim">You skipped the builder — it\'s worth the two minutes. Go back one step and try it.</span>';
+    }
+  }
+
+  /* ---------- anatomy ---------- */
+  const legendEl = document.getElementById('legend');
+  const legendBox = document.getElementById('legendBox');
+  const anat = document.getElementById('anatEntry');
+  LEGEND.forEach(item=>{
+    const b = document.createElement('button');
+    b.textContent = item.label;
+    b.addEventListener('click',()=>{
+      Array.from(legendEl.children).forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+      anat.querySelectorAll('span[data-part]').forEach(sp=>{
+        sp.className = (sp.dataset.part===item.id) ? item.cls : '';
+      });
+      legendBox.innerHTML = '<p>'+item.text+'</p>';
+    });
+    legendEl.appendChild(b);
+  });
+
+  /* ---------- quiz ---------- */
+  let qi = 0, qScore = 0;
+  const qWord = document.getElementById('quizWord');
+  const qVerdict = document.getElementById('quizVerdict');
+  const qExplain = document.getElementById('quizExplain');
+  const qScoreEl = document.getElementById('quizScore');
+  const btnYes = document.getElementById('btnYes');
+  const btnNo = document.getElementById('btnNo');
+  const btnNext = document.getElementById('btnNext');
+
+  function showQuiz(){
+    if(qi >= QUIZ.length){
+      qWord.textContent = '—';
+      qVerdict.textContent = 'You called '+qScore+' of '+QUIZ.length+' correctly.';
+      qVerdict.className = 'verdict good';
+      qExplain.textContent = 'Notice what just happened: in your own native language, with words you\'ve used all your life, the parts kept their secrets. That\'s no failure of yours — it\'s simply how language works. Worth remembering before we lean on the parts of a Greek word we met five minutes ago.';
+      btnYes.disabled = true; btnNo.disabled = true; btnNext.disabled = true;
+      qScoreEl.textContent = QUIZ.length+' / '+QUIZ.length;
+      return;
+    }
+    qWord.textContent = QUIZ[qi].w;
+    qVerdict.textContent = '';
+    qExplain.textContent = '';
+    btnYes.disabled = false; btnNo.disabled = false; btnNext.disabled = true;
+    qScoreEl.textContent = (qi+1)+' / '+QUIZ.length;
+  }
+  function answer(saidYes){
+    const item = QUIZ[qi];
+    const right = (saidYes === item.ok);
+    if(right) qScore++;
+    qVerdict.textContent = (right?'Right — ':'Not quite — ') + (item.ok?'the parts add up here.':'this one keeps its secret.');
+    qVerdict.className = 'verdict ' + (right?'good':'bad');
+    qExplain.textContent = item.why;
+    btnYes.disabled = true; btnNo.disabled = true; btnNext.disabled = false;
+    btnNext.textContent = (qi === QUIZ.length-1) ? 'See the summary →' : 'Next word →';
+  }
+  btnYes.addEventListener('click',()=>answer(true));
+  btnNo.addEventListener('click',()=>answer(false));
+  btnNext.addEventListener('click',()=>{ qi++; showQuiz(); });
+  showQuiz();
+
+  go(0);
+})();
+</script>
+</body>
+</html>

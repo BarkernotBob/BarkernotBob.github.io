@@ -81,7 +81,7 @@ test('field-aware inputs: numeric keypad, email, date picker', async ({ page }) 
 
 test('no input is smaller than 16px anywhere (prevents iOS zoom-on-focus)', async ({ page }) => {
   await bootApp(page)
-  for (const tab of ['capture', 'search', 'reports', 'review', 'table', 'settings']) {
+  for (const tab of ['capture', 'pantry', 'trips', 'reports', 'review', 'table', 'settings']) {
     await page.click(`nav [data-tab="${tab}"]`)
     await page.waitForTimeout(40)
     const tooSmall = await page.$$eval('input, select, textarea', (els) =>

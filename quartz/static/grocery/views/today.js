@@ -6,22 +6,12 @@
    First proper view module (§11.1) — S5–S8 screens follow this shape.
    ========================================================================= */
 import { D, FILES, commitFiles, show, updateBadges } from '../app.js';
-import { money, esc, todayISO } from '../core/domain.js';
+import { money, esc, todayISO, DAY_MS, startOfDay, daysUntil, fmtShortDate } from '../core/domain.js';
 import { toast } from '../ui/components.js';
 
-const DAY = 86400000;
-// Parse calendar dates as UTC midnight so they line up with todayISO() (which is
-// the UTC calendar date) — a local-midnight parse drifts a day off in +/- offset
-// timezones (this-week bucket loses "today", use-by countdown fires a day early).
-const startOfDay = (iso) => Date.parse(iso + 'T00:00:00Z');
-const daysUntil = (iso) => Math.round((startOfDay(iso) - startOfDay(todayISO())) / DAY);
-function fmtDate(iso) {
-  if (!iso) return '';
-  const d = new Date(startOfDay(iso.slice(0, 10)));
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+const fmtDate = (iso) => fmtShortDate(iso);
 function weekAgo(n) {
-  return new Date(startOfDay(todayISO()) - n * DAY).toISOString().slice(0, 10);
+  return new Date(startOfDay(todayISO()) - n * DAY_MS).toISOString().slice(0, 10);
 }
 
 /* Perishables approaching use-by, soonest first — sourced from pending use-by

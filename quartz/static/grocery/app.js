@@ -1,8 +1,9 @@
 import { $, el, money, esc, todayISO, uid, b64encode, b64decode, norm } from './core/domain.js';
 import { toast, modal, confirmModal, fixInputAttrs } from './ui/components.js';
 import { renderToday, todayActions } from './views/today.js';
+import { renderPantry, pantryActions, pantryInputs } from './views/pantry.js';
+import { renderTrips, tripsActions } from './views/trips.js';
 import { renderCapture, captureActions, captureChanges } from './views/capture.js';
-import { renderSearch, searchInputs, refreshSearch } from './views/search.js';
 import { renderTable, tableActions, tableInputs } from './views/table.js';
 import { renderReports, reportsActions, reportsChanges } from './views/reports.js';
 import { renderReview, reviewActions, viewPhoto, purgeStaleFlags } from './views/review.js';
@@ -71,16 +72,14 @@ const CLICK_ACTIONS = {
   show:            t => show(t.dataset.arg),
   signIn:          () => signInWithGitHub(),
   saveSetup,
-  toggleOpen:      t => t.classList.toggle('open'),
   viewReceipt:     t => viewReceipt(t.dataset.id),
-  markWaste:       t => markWaste(t.dataset.id),
 };
 // View modules contribute their own handlers to the shared registry (§11.1).
-Object.assign(CLICK_ACTIONS, todayActions);
+Object.assign(CLICK_ACTIONS, todayActions, pantryActions, tripsActions);
 Object.assign(CLICK_ACTIONS, captureActions, tableActions, reportsActions, reviewActions, settingsActions);
 const INPUT_ACTIONS = {};
 const CHANGE_ACTIONS = {};
-Object.assign(INPUT_ACTIONS, searchInputs, tableInputs);
+Object.assign(INPUT_ACTIONS, pantryInputs, tableInputs);
 Object.assign(CHANGE_ACTIONS, captureChanges, reportsChanges);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-action]');
@@ -415,7 +414,8 @@ async function show(tab){
     if(!D.items) await loadAll(); // first load
     if(tab==='today') renderToday();
     else if(tab==='capture') renderCapture();
-    else if(tab==='search') renderSearch();
+    else if(tab==='pantry') renderPantry();
+    else if(tab==='trips') renderTrips();
     else if(tab==='reports') renderReports();
     else if(tab==='review') renderReview();
     else if(tab==='table') renderTable();
@@ -428,6 +428,8 @@ async function show(tab){
   $('#whoami').textContent = LS.me ? ('Signed in as '+LS.me + (LS.device?(' · '+LS.device):'')) : '';
 }
 function isConfigured(){ return LS.repo && LS.token && LS.me; }
+/* Who's driving this device — view modules stamp `by` on waste records with it. */
+function getMe(){ return LS.me; }
 
 /* =========================================================================
    SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
@@ -537,37 +539,13 @@ async function ensureInitialized(){
 }
 
 /* =========================================================================
-   SHARED grouping helpers (imported by search/reports modules)
+   GROUPING helpers — shared by Pantry (views/pantry.js) and Reports. An item's
+   group key is its canonical groupId, or a normalized raw-name fallback.
    ========================================================================= */
 function groupKeyFor(item){ return item.groupId || ('raw:'+norm(item.name||item.rawName)); }
 function groupLabel(key){
   if(key.startsWith('raw:')) return key.slice(4);
   const g=D.groups[key]; return g? g.canonical : key;
-}
-function chooseWasteReason(it){
-  const reasons=['spoiled','expired','leftover','other'];
-  return modal(`<h2>🗑 Throw away</h2>
-    <p class="small muted" style="margin:0 0 12px">"${esc(it.name||it.rawName)}" — why are you tossing it?</p>
-    ${reasons.map(r=>`<button class="sec" data-mval="${r}">${r[0].toUpperCase()+r.slice(1)}</button>`).join('')}
-    <button class="link" data-mcancel style="width:100%">Cancel</button>`);
-}
-async function markWaste(itemId){
-  const it=D.items.find(i=>i.id===itemId); if(!it) return;
-  const reason=await chooseWasteReason(it);   // in-app picker (works in installed PWAs, unlike prompt())
-  if(reason===null) return;
-  const w={ id:uid('w'), itemId:it.id, groupId:it.groupId||null, name:it.name||it.rawName, qty:it.qty||1,
-    thrownAt:todayISO(), reason:(reason.trim()||'other'), estCost:(+it.price||0), by:LS.me };
-  const pend=(D.reminders||[]).filter(r=>r.itemId===it.id && r.status==='pending').map(r=>r.id);
-  // items + waste + reminders in ONE atomic commit (no 3-write partial-failure window).
-  const deltas=[
-    { path:FILES.items, op:'setField', id:it.id, fields:{status:'thrown_away'} },
-    { path:FILES.waste, op:'append', record:w }
-  ];
-  if(pend.length) deltas.push({ path:FILES.reminders, op:'setFields', updates:pend.map(id=>({id, fields:{status:'done'}})) });
-  try{
-    await commitFiles(deltas, 'Mark item thrown away (waste)');
-    toast('Logged as waste 🗑'); updateBadges(); refreshSearch();
-  }catch(e){ toast(String(e.message||e)); }
 }
 /* Show every item on the same receipt as the tapped item, plus the photo. */
 function viewReceipt(receiptId){
@@ -621,4 +599,4 @@ window.addEventListener('load', async ()=>{
    Shared surface consumed by view modules (views/*.js). State (D) is a live
    binding; api/router helpers are functions. Views import from here rather than
    the reverse for anything stateful. */
-export { D, FILES, commitFiles, show, updateBadges, LS, DB, API, ghHeaders, groupLabel, groupKeyFor, getImageDataUrl, signOut, setTheme, resetCaches };
+export { D, FILES, commitFiles, show, updateBadges, LS, DB, API, ghHeaders, groupLabel, groupKeyFor, getImageDataUrl, getMe, signOut, setTheme, resetCaches };

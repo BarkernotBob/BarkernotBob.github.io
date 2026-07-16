@@ -7,10 +7,10 @@ const { bootApp } = require('./support/boot')
 
 test('mark-waste is ONE atomic commit across items+waste+reminders', async ({ page }) => {
   const { mock, errors } = await bootApp(page)
-  await page.click('nav [data-tab="search"]')
-  await page.fill('#sq', 'milk') // i_milk_0001 is active + has a pending reminder
-  await page.locator('#sresults .grp').first().click()
-  await page.locator('#sresults [data-action="markWaste"]').first().click()
+  await page.click('nav [data-tab="pantry"]')
+  await page.fill('#pq', 'milk') // i_milk_0001 is active + has a pending reminder
+  await page.locator('.prow').first().click() // open the group sheet
+  await page.locator('.sheet-card [data-action="pantryWaste"]').first().click()
   await page.locator('.modal-card [data-mval="spoiled"]').click()
   await expect(page.locator('.toast')).toContainText('waste')
 
@@ -51,10 +51,10 @@ test('no lost update: a concurrent writer between build and PATCH is not clobber
     flags: [],
   })
 
-  await page.click('nav [data-tab="search"]')
-  await page.fill('#sq', 'milk')
-  await page.locator('#sresults .grp').first().click()
-  await page.locator('#sresults [data-action="markWaste"]').first().click()
+  await page.click('nav [data-tab="pantry"]')
+  await page.fill('#pq', 'milk')
+  await page.locator('.prow').first().click()
+  await page.locator('.sheet-card [data-action="pantryWaste"]').first().click()
   await page.locator('.modal-card [data-mval="spoiled"]').click()
   await expect(page.locator('.toast')).toContainText('waste')
 
@@ -73,9 +73,9 @@ test('a >1 MB items.json loads and renders (blobs API, ceiling gone)', async ({ 
   const { errors } = await bootApp(page, { mock: { oversizeItems: true } })
   await page.click('nav [data-tab="table"]')
   await expect(page.locator('#ttable')).toBeVisible()
-  // 4 fixture items + 6000 filler rows are all present — a Contents GET would
+  // 6 fixture items + 6000 filler rows are all present — a Contents GET would
   // have 403'd at 1 MB; the blob read did not.
-  await expect(page.locator('#tcount')).toContainText('of 6004')
+  await expect(page.locator('#tcount')).toContainText('of 6006')
   expect(errors).toEqual([])
 })
 
@@ -133,7 +133,7 @@ test('a truncated recursive tree still loads db/ via the subtree fallback', asyn
   const { errors } = await bootApp(page, { mock: { truncateTree: true } })
   await page.click('nav [data-tab="table"]')
   await expect(page.locator('#ttable')).toBeVisible()
-  await expect(page.locator('#tcount')).toContainText('of 4') // all fixture items resolved
+  await expect(page.locator('#tcount')).toContainText('of 6') // all fixture items resolved
   expect(errors).toEqual([])
 })
 

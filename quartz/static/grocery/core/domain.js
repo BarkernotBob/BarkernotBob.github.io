@@ -18,6 +18,25 @@ export const esc = (s) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 export const todayISO = () => new Date().toISOString().slice(0, 10);
+
+/* Calendar-date helpers shared by every view (§11.1). Parse a YYYY-MM-DD as UTC
+   midnight so it lines up with todayISO() (the UTC calendar date) — a local-
+   midnight parse drifts a day in +/- offset timezones (this-week bucket loses
+   "today", a use-by countdown fires a day early). */
+export const DAY_MS = 86400000;
+// Take the date part only, so a stray time suffix can't turn the parse into NaN.
+export const startOfDay = (iso) => Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z');
+export const daysUntil = (iso) => Math.round((startOfDay(iso) - startOfDay(todayISO())) / DAY_MS);
+export function fmtShortDate(iso, withYear = false) {
+  if (!iso) return '';
+  const d = new Date(startOfDay(iso));
+  if (isNaN(d)) return '';
+  // Format in UTC — the instant is UTC-midnight of the calendar date, so a local
+  // -offset zone (the owner is in FL) must not render it as the previous day.
+  const opts = { month: 'short', day: 'numeric', timeZone: 'UTC' };
+  if (withYear) opts.year = 'numeric';
+  return d.toLocaleDateString('en-US', opts);
+}
 export function uid(p) {
   return p + '_' + Math.floor(Date.now() / 1000) + '_' + Math.random().toString(36).slice(2, 6);
 }

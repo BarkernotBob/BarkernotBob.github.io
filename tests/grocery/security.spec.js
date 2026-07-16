@@ -9,7 +9,7 @@ const { bootApp } = require('./support/boot')
 
 test('no inline on* handlers exist in any rendered view', async ({ page }) => {
   await bootApp(page)
-  const tabs = ['capture', 'search', 'reports', 'review', 'table', 'settings']
+  const tabs = ['capture', 'pantry', 'trips', 'reports', 'review', 'table', 'settings']
   for (const tab of tabs) {
     await page.click(`nav [data-tab="${tab}"]`)
     await page.waitForTimeout(50)
@@ -18,34 +18,41 @@ test('no inline on* handlers exist in any rendered view', async ({ page }) => {
   }
 })
 
-test('malicious item name is escaped, not executed', async ({ page }) => {
+test('malicious item name is escaped, not executed (pantry sheet)', async ({ page }) => {
   await bootApp(page)
-  await page.click('nav [data-tab="search"]')
-  await expect(page.locator('#sq')).toBeVisible()
+  await page.click('nav [data-tab="pantry"]')
+  await page.fill('#pq', 'Evil')
+  // Open the group sheet, which shows the raw (payload-bearing) name.
+  await page.locator('.prow').first().click()
+  await expect(page.locator('.sheet-card')).toBeVisible()
 
   // The onerror payload must never have fired.
   const xss = await page.evaluate(() => window.__xss)
   expect(xss).toBeUndefined()
 
   // No stray <img> injected from the payload string.
-  const imgs = await page.locator('#sresults img').count()
+  const imgs = await page.locator('.sheet-card img').count()
   expect(imgs).toBe(0)
 
-  // The payload text renders literally somewhere in the results.
-  await expect(page.locator('#sresults')).toContainText('onerror=window.__xss=1')
+  // The payload text renders literally (escaped, so it's inert text).
+  await expect(page.locator('.sheet-card')).toContainText('onerror=window.__xss=1')
 })
 
 test('waste action on a quote-laden id resolves to the right item', async ({ page }) => {
   const { mock } = await bootApp(page)
-  await page.click('nav [data-tab="search"]')
-  await page.fill('#sq', 'Evil')
-  // Open the group card, then click its Waste button.
-  await page.locator('#sresults .grp').first().click()
-  await page.locator('#sresults [data-action="markWaste"]').first().click()
-  // Waste reason modal appears (data-action delegation reached markWaste).
+  await page.click('nav [data-tab="pantry"]')
+  await page.fill('#pq', 'Evil')
+  // Open the group sheet, then click the purchase's Waste button.
+  await page.locator('.prow').first().click()
+  await page.locator('.sheet-card [data-action="pantryWaste"]').first().click()
+  // Waste reason modal appears (data-action delegation reached pantryWaste,
+  // decoding the quote-laden id from data-id correctly).
   await expect(page.locator('.modal-card', { hasText: 'Throw away' })).toBeVisible()
   await page.locator('.modal-card [data-mval="spoiled"]').click()
   // A write happened (item + waste + reminders in ONE commit); UI updated cleanly.
   await expect(page.locator('.toast')).toContainText('waste')
   expect(mock.commits.length).toBeGreaterThan(0)
+  // The RIGHT item (the quote-laden one) was marked, not some other.
+  const items = JSON.parse(mock.readFile('db/items.json'))
+  expect(items.find((i) => i.id === `i_e'"vil_0004`).status).toBe('thrown_away')
 })

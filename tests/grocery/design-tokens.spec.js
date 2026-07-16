@@ -75,7 +75,7 @@ for (const theme of ['light', 'dark']) {
 // emoji glyphs and proves each nav tab + the wordmark resolve a <use href="#ic-*">.
 test('nav + header render SVG icons, zero emoji as icons', async ({ page }) => {
   await bootApp(page)
-  const tabs = ['capture', 'search', 'reports', 'review', 'table', 'settings']
+  const tabs = ['capture', 'pantry', 'trips', 'reports', 'review', 'table', 'settings']
   for (const tab of tabs) {
     const use = page.locator(`nav [data-tab="${tab}"] .ic svg use`)
     await expect(use, `${tab} nav icon`).toHaveCount(1)

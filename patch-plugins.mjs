@@ -137,7 +137,11 @@ patchFile(contentIndexFile, (src) => {
     `var m = rc.match(/data-static-redirect=(?:"|&quot;)([^"&]+)/); ` +
     `if (m) return '<p><a href="https://' + base + m[1] + '">Open ' + escapeHTML(content.title || "page") + ' →</a></p>'; ` +
     `return content.description || ""; } ` +
-    `return rc != null ? rc : content.description; }\n  `
+    `var body = rc != null ? rc : content.description; ` +
+    // Quartz appends a full inline <svg> icon to every external link and heading anchor;
+    // in a feed those are pure clutter. Strip them (richContent is escaped, so match &lt;svg…).
+    `if (typeof body === "string") body = body.replace(new RegExp("&lt;svg[^]*?&lt;/svg&gt;", "g"), ""); ` +
+    `return body; }\n  `
   const filter =
     `.filter(([__slug]) => { ` +
     `if (__slug === "index" || __slug.endsWith("/index")) return false; ` +

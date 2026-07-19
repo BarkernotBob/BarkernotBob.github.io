@@ -456,7 +456,7 @@
     "avoidFees": "$500 Minimum Daily Balance",
     "churnable": true,
     "monthsTillReopen": 12,
-    "notes": "First statement cycle may not count toward the requirement \u2014 confirm timing.",
+    "notes": "First statement cycle may not count toward the requirement — confirm timing.",
     "status": "backlog"
   },
   {
@@ -637,6 +637,26 @@
     "churnable": false,
     "monthsTillReopen": null,
     "notes": "",
+    "status": "backlog"
+  },
+  {
+    "id": "seed_33",
+    "person": null,
+    "institution": "Northwest Bank",
+    "bonus": 400,
+    "referralValue": 50,
+    "directDepositTotal": 1000,
+    "requiresMultipleDeposits": false,
+    "nbDeposits": null,
+    "minBalance": null,
+    "minBalDays": null,
+    "additionalRequirements": "Open Affinity Checking with promo code GET400. Direct deposits totaling $1,000+ within a single statement cycle, within the first 3 statement cycles. Qualifying DD = ACH credit (payroll, pension, or government).",
+    "daysToCompleteReq": 90,
+    "bonusTiming": "Within 30 days after the statement cycle in which the requirement is met",
+    "avoidFees": "No Fees (basic Affinity Checking — no monthly fee, no minimum balance)",
+    "churnable": true,
+    "monthsTillReopen": 12,
+    "notes": "States: NY, OH, IN, PA. Offer ends 12/31/2026. Not for existing Northwest checking customers or anyone who closed a Northwest checking within the last 12 months. Referral $50 requires the referred customer to make $1,000+ DD and 10 debit transactions within 60 days. (DoC article slug says $160 but the current live offer is $400.)",
     "status": "backlog"
   }
 ]

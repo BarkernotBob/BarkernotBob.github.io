@@ -113,6 +113,8 @@ plugins:
       enableRSS: true
       # Put each note's rendered HTML in the feed body (default false = blank entries).
       rssFullHtml: true
+      # Show more than the default 10 so notes aren't crowded out by launcher pages.
+      rssLimit: 30
   - source: github:quartz-community/favicon
     enabled: true
   - source: github:quartz-community/og-image

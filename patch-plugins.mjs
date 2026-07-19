@@ -113,18 +113,39 @@ patchFile(explicitPublishFile, (src) => {
   return withOpts.replace(oldReturn, newReturn)
 }, PUBLISH_MARKER)
 
-// --- 4. content-index: keep auto-generated tag pages out of the RSS feed ---
-// The RSS emitter iterates the whole content index, so /tags/<name> list pages show up as
-// blank, dateless feed items and crowd out real notes. Filter them from the feed ONLY —
-// leave them in the sitemap and search index. Anchor on the `const items = Array.from(idx)`
-// that builds the <item> list inside generateRSSFeed.
+// --- 4. content-index: clean up the RSS feed ---
+// The RSS emitter iterates the WHOLE content index, so auto-generated list pages pollute the
+// feed and redirect-stub pages dump their raw "Loading… click here" HTML into the entry body.
+// We make two changes to the feed ONLY (sitemap + search index are untouched):
+//   A. FILTER OUT non-articles: tag list pages (slug under tags/) and home/folder landing
+//      pages (slug "index" or ending /index, e.g. the "Theology" folder page).
+//   B. CLEAN UP static-file launchers: the games/tools/essay stubs whose whole job is to
+//      redirect to a /static/*.html app. Instead of their ugly raw HTML, emit a tidy
+//      "Open <title> →" link (pointing at the same /static file). Detected by the
+//      data-static-redirect marker. Relies on rssFullHtml:true (quartz.config.default.yaml)
+//      so the launcher's HTML lands in richContent where we can see + parse that marker.
+// Two anchors, both inside generateRSSFeed: the `const items = Array.from(idx).sort(` list
+// builder, and the `${content.richContent ?? content.description}` description expression.
 patchFile(contentIndexFile, (src) => {
-  const anchor = "const items = Array.from(idx).sort("
-  if (!src.includes(anchor)) return null
-  return src.replace(
-    anchor,
-    `const items = Array.from(idx).filter(([__slug]) => ${RSS_MARKER} !__slug.startsWith("tags/") && __slug !== "tags").sort(`,
-  )
+  const itemsAnchor = "const items = Array.from(idx).sort("
+  const descAnchor = "${content.richContent ?? content.description}"
+  if (!src.includes(itemsAnchor) || !src.includes(descAnchor)) return null
+  const helper =
+    `function __rssBody(content, base) { ${RSS_MARKER} ` +
+    `var rc = content.richContent; ` +
+    `if (rc && rc.indexOf("data-static-redirect") !== -1) { ` +
+    `var m = rc.match(/data-static-redirect=(?:"|&quot;)([^"&]+)/); ` +
+    `if (m) return '<p><a href="https://' + base + m[1] + '">Open ' + escapeHTML(content.title || "page") + ' →</a></p>'; ` +
+    `return content.description || ""; } ` +
+    `return rc != null ? rc : content.description; }\n  `
+  const filter =
+    `.filter(([__slug]) => { ` +
+    `if (__slug === "index" || __slug.endsWith("/index")) return false; ` +
+    `if (__slug === "tags" || __slug.startsWith("tags/")) return false; ` +
+    `return true; })`
+  return src
+    .replace(itemsAnchor, helper + `const items = Array.from(idx)${filter}.sort(`)
+    .replace(descAnchor, "${__rssBody(content, base)}")
 }, RSS_MARKER)
 
 console.log(`order-frontmatter patch: ${patched} file(s) patched, ${skipped} already current.`)

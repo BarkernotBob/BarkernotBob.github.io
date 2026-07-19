@@ -111,6 +111,8 @@ plugins:
     options:
       enableSiteMap: true
       enableRSS: true
+      # Put each note's rendered HTML in the feed body (default false = blank entries).
+      rssFullHtml: true
   - source: github:quartz-community/favicon
     enabled: true
   - source: github:quartz-community/og-image

@@ -23,6 +23,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs"
 
 const MARKER = "/* order-frontmatter patch */"
 const PUBLISH_MARKER = "/* publish-by-default patch */"
+const RSS_MARKER = "/* rss-exclude-tags patch */"
 let patched = 0
 let skipped = 0
 
@@ -111,5 +112,19 @@ patchFile(explicitPublishFile, (src) => {
   if (!withOpts.includes(oldReturn)) return null
   return withOpts.replace(oldReturn, newReturn)
 }, PUBLISH_MARKER)
+
+// --- 4. content-index: keep auto-generated tag pages out of the RSS feed ---
+// The RSS emitter iterates the whole content index, so /tags/<name> list pages show up as
+// blank, dateless feed items and crowd out real notes. Filter them from the feed ONLY —
+// leave them in the sitemap and search index. Anchor on the `const items = Array.from(idx)`
+// that builds the <item> list inside generateRSSFeed.
+patchFile(contentIndexFile, (src) => {
+  const anchor = "const items = Array.from(idx).sort("
+  if (!src.includes(anchor)) return null
+  return src.replace(
+    anchor,
+    `const items = Array.from(idx).filter(([__slug]) => ${RSS_MARKER} !__slug.startsWith("tags/") && __slug !== "tags").sort(`,
+  )
+}, RSS_MARKER)
 
 console.log(`order-frontmatter patch: ${patched} file(s) patched, ${skipped} already current.`)

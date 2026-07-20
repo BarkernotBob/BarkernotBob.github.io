@@ -11,10 +11,11 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 import {
-  CONTENT, STATIC, REPO, HttpError,
+  CONTENT, STATIC, REPO, TRASH, HttpError,
   safeResolve, writeFile, hashOf,
   splitFrontmatter, applyFrontmatter,
   parseBlocks, spliceBlock,
+  trashPath, listTrash, restoreFromTrash,
 } from "./lib.mjs"
 
 const mdFiles: string[] = []
@@ -198,6 +199,52 @@ test("backups of an out-of-repo path stay inside .studio-backups", () => {
   assert.ok(fs.existsSync(parked), "outside-repo backup should land in _external")
   fs.rmSync(dir, { recursive: true, force: true })
   fs.rmSync(parked, { recursive: true, force: true })
+})
+
+// ---------------------------------------------------------------- trash
+
+test("trash records where a file came from, and restores it exactly there", () => {
+  const dir = path.join(CONTENT, "_studio_trash_test")
+  const f = path.join(dir, "Round Trip.md")
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(f, "---\ntitle: Round Trip\n---\n\nbody\n")
+
+  const trashed = trashPath(f)
+  assert.ok(!fs.existsSync(f), "file should have left its original location")
+
+  const item = listTrash().find((t) => t.original.endsWith("Round Trip.md"))
+  assert.ok(item, "trashed file should be listed")
+  assert.equal(item.title, "Round Trip")
+  assert.ok(!isNaN(new Date(item.at).getTime()), "trash timestamp must be a real date")
+
+  restoreFromTrash(item.name)
+  assert.equal(fs.readFileSync(f, "utf8"), "---\ntitle: Round Trip\n---\n\nbody\n", "restored content must be identical")
+
+  fs.rmSync(dir, { recursive: true, force: true })
+  fs.rmSync(path.join(REPO, trashed), { force: true })
+})
+
+test("restore refuses to overwrite a file that is already back", () => {
+  const dir = path.join(CONTENT, "_studio_trash_test2")
+  const f = path.join(dir, "Clash.md")
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(f, "one\n")
+  trashPath(f)
+  fs.writeFileSync(f, "someone recreated it\n") // same path occupied again
+
+  const item = listTrash().find((t) => t.original.endsWith("Clash.md"))!
+  assert.throws(() => restoreFromTrash(item.name), (e: any) => e instanceof HttpError && e.status === 409)
+  assert.equal(fs.readFileSync(f, "utf8"), "someone recreated it\n", "restore must not clobber")
+
+  fs.rmSync(dir, { recursive: true, force: true })
+  fs.rmSync(path.join(TRASH, item.name), { force: true })
+  fs.rmSync(path.join(TRASH, `${item.name}.studio.json`), { force: true })
+})
+
+test("trash names can't be used to escape the trash folder", () => {
+  for (const bad of ["../secret.md", "sub/dir.md", ""]) {
+    assert.throws(() => restoreFromTrash(bad), HttpError, `should reject ${JSON.stringify(bad)}`)
+  }
 })
 
 // ------------------------------------------------------- deploy isolation

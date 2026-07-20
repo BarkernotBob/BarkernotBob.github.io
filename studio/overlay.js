@@ -77,6 +77,55 @@
     }, ms)
   }
 
+  // ---------------------------------------------------------- navigation
+
+  /**
+   * Go to a page once Quartz has actually built it.
+   *
+   * Two things make a plain `setTimeout(() => location.pathname = ...)` fail:
+   * writing a file triggers a Quartz rebuild, whose live-reload socket reloads
+   * the page and destroys the pending timer; and the new page may not be built
+   * yet, so navigating early lands on a 404. So the intent is parked in
+   * sessionStorage — which survives reloads — and retried until the target
+   * responds, or we give up and stop pestering.
+   */
+  const GOTO_KEY = "studio:goto"
+
+  /** @param urls one URL, or candidates tried in order (first one that exists wins) */
+  function gotoWhenReady(urls) {
+    const list = [].concat(urls)
+    sessionStorage.setItem(GOTO_KEY, JSON.stringify({ urls: list, until: Date.now() + 20000 }))
+    pumpGoto()
+  }
+
+  async function pumpGoto() {
+    const raw = sessionStorage.getItem(GOTO_KEY)
+    if (!raw) return
+    let job
+    try { job = JSON.parse(raw) } catch { return sessionStorage.removeItem(GOTO_KEY) }
+    const done = () => sessionStorage.removeItem(GOTO_KEY)
+
+    if (job.urls.some((u) => new URL(u, location.origin).pathname === location.pathname)) return done()
+    if (Date.now() > job.until) {
+      done()
+      return toast("That page is taking a while to build — try refreshing.", "warn", 5000)
+    }
+    for (const u of job.urls) {
+      const target = new URL(u, location.origin)
+      try {
+        const r = await fetch(target.href, { cache: "no-store" })
+        if (r.ok) { done(); return location.assign(target.href) }
+      } catch {}
+    }
+    setTimeout(pumpGoto, 400)
+  }
+
+  /** The nearest place that still exists after deleting the current page. */
+  const parentUrl = () => {
+    const up = location.pathname.replace(/\/+$/, "").split("/").slice(0, -1).join("/")
+    return [up ? up + "/" : "/", "/"]
+  }
+
   // ------------------------------------------------------- page identity
 
   const isStaticPage = () => location.pathname.startsWith("/static/")
@@ -130,6 +179,9 @@
       <button id="studio-new" class="studio-btn" title="New page">
         <span class="studio-ic">＋</span><span class="studio-label">New</span>
       </button>
+      <button id="studio-browse" class="studio-btn" title="Go to any page (G)">
+        <span class="studio-ic">☰</span><span class="studio-label">Go to</span>
+      </button>
       <div class="studio-sep"></div>
       <button id="studio-publish" class="studio-btn studio-btn--publish" title="Publish to the live site">
         <span class="studio-ic">↑</span><span class="studio-label">Publish</span>
@@ -140,26 +192,31 @@
     $("#studio-edit").onclick = guard(() => setEditing(!state.editing))
     $("#studio-page").onclick = guard(openPagePanel)
     $("#studio-new").onclick = guard(openNewPage)
+    $("#studio-browse").onclick = guard(openBrowse)
     $("#studio-publish").onclick = guard(openPublish)
 
     document.addEventListener("keydown", (e) => {
       if (e.target.matches("input, textarea, [contenteditable]")) return
-      if (e.key === "e" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault()
-        setEditing(!state.editing)
-      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === "e") { e.preventDefault(); setEditing(!state.editing) }
+      if (e.key === "g") { e.preventDefault(); guard(openBrowse)() }
     })
     refreshDirty()
     setInterval(refreshDirty, 15000)
+  }
+
+  function refreshBadge() {
+    const b = $("#studio-dirty")
+    if (!b) return
+    b.hidden = state.dirtyCount === 0
+    b.textContent = state.dirtyCount
   }
 
   async function refreshDirty() {
     try {
       const { dirty } = await api("/status")
       state.dirtyCount = dirty
-      const b = $("#studio-dirty")
-      b.hidden = dirty === 0
-      b.textContent = dirty
+      refreshBadge()
     } catch {}
   }
 
@@ -181,6 +238,7 @@
     if (isStaticPage()) {
       showBanner("This is a standalone app page — Studio edits its HTML source directly.", [
         { label: "Edit HTML source", onClick: openStaticSource },
+        { label: "Go to a page", onClick: openBrowse },
       ])
       return
     }
@@ -195,15 +253,31 @@
       )
       return
     }
+    // A landing stub for one of the standalone apps. Live visitors get bounced
+    // to the app; Studio holds them here so the page can be edited at all.
     state.mapping.forEach((node, i) => {
       node.classList.add("studio-block")
       node.dataset.studioBlock = String(i)
       node.addEventListener("click", onBlockClick)
     })
-    showBanner(`Click any block to edit it. ${state.mapping.length} editable blocks.`, [
+
+    const actions = [
       { label: "Edit page source", onClick: openPageSource },
       { label: "Page settings", onClick: openPagePanel },
-    ])
+    ]
+
+    // A landing stub for one of the standalone apps. Live visitors get bounced
+    // to the app; Studio holds them here so the page can be edited at all.
+    const redirect = $("[data-studio-redirect]")
+    if (redirect) {
+      const target = redirect.getAttribute("data-studio-redirect")
+      return showBanner(
+        "Visitors are sent straight to the app from here — Studio kept you on the page so you can edit it.",
+        [{ label: "Open the app", onClick: () => location.assign(target) }, ...actions],
+      )
+    }
+
+    showBanner(`Click any block to edit it. ${state.mapping.length} editable blocks.`, actions)
   }
 
   function disableBlocks() {
@@ -454,8 +528,9 @@
               if (wantPath !== state.page.path) {
                 const r = await api("/move", { method: "POST", body: JSON.stringify({ from: state.page.path, to: wantPath }) })
                 closeModal()
-                toast("Moved — rebuilding…", "ok")
-                return setTimeout(() => (location.pathname = "/" + r.slug), 1600)
+                toast("Moved — opening it at its new address…", "ok")
+                refreshDirty()
+                return gotoWhenReady("/" + r.slug)
               }
               closeModal()
               awaitRebuild("Saved")
@@ -479,8 +554,11 @@
             try {
               await api("/delete", { method: "POST", body: JSON.stringify({ path: state.page.path }) })
               closeModal()
-              toast("Moved to .studio-trash — nothing permanently deleted.", "ok", 5000)
-              setTimeout(() => (location.pathname = "/"), 1400)
+              toast("Deleted — kept in the trash, nothing is gone for good.", "ok", 5000)
+              refreshDirty()
+              // Leave immediately: staying on a page that no longer exists is
+              // what made deletes look like they hadn't worked.
+              gotoWhenReady(parentUrl())
             } catch (err) {
               toast(err.message, "error", 6000)
             }
@@ -517,8 +595,9 @@
             try {
               const r = await api("/create", { method: "POST", body: JSON.stringify({ title: title.value, dir: folder.value }) })
               closeModal()
-              toast("Created — opening…", "ok")
-              setTimeout(() => (location.pathname = "/" + r.slug), 1600)
+              toast("Created — opening it now…", "ok")
+              refreshDirty()
+              gotoWhenReady("/" + r.slug)
             } catch (err) {
               btn.disabled = false
               btn.textContent = "Create"
@@ -532,23 +611,154 @@
     setTimeout(() => title.focus(), 50)
   }
 
+  // ------------------------------------------------------------- browse
+
+  /**
+   * Jump to any page without using the site's own navigation.
+   *
+   * Needed because the standalone app/game pages are full-screen HTML with no
+   * link back into the site — once you're on one, the only way out was the
+   * browser's Back button.
+   */
+  async function openBrowse() {
+    const { files } = await api("/tree")
+    const search = el("input", { className: "studio-input", placeholder: "Search pages…", type: "search" })
+    const list = el("div", { className: "studio-changes studio-browse" })
+
+    const render = () => {
+      const q = search.value.trim().toLowerCase()
+      const hits = files.filter((f) => !q || f.title.toLowerCase().includes(q) || f.path.toLowerCase().includes(q))
+      list.textContent = ""
+      if (!hits.length) return list.append(el("p", { className: "studio-empty", textContent: "No page matches that." }))
+      for (const f of hits.slice(0, 300)) {
+        const row = el("button", { className: "studio-browse-row" })
+        row.append(
+          el("strong", { textContent: f.title }),
+          el("span", { className: "studio-muted", textContent: f.dir || "(top level)" }),
+        )
+        row.onclick = guard(() => { closeModal(); gotoWhenReady("/" + f.slug) })
+        list.append(row)
+      }
+    }
+    search.addEventListener("input", render)
+    search.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); $(".studio-browse-row", list)?.click() }
+    })
+    render()
+
+    openModal("Go to a page", el("div", {}, search, list), [{ label: "Home", onClick: () => gotoWhenReady("/") }, { label: "Close" }])
+    setTimeout(() => search.focus(), 50)
+  }
+
   // ------------------------------------------------------------ publish
 
-  function openPublish() {
-    const log = el("pre", { className: "studio-log", textContent: "" })
-    const status = el("p", { className: "studio-muted", textContent: `${state.dirtyCount} file(s) changed since your last publish.` })
+  const KIND_LABEL = { added: "New page", modified: "Edited", deleted: "Deleted", renamed: "Moved" }
+
+  /**
+   * The one place every unpublished action lives: see it, open it, undo it, or
+   * leave it in the batch and publish. Replaces the old bare "N files changed"
+   * counter, which told you something had happened but never what.
+   */
+  async function openPublish() {
+    const { changes } = await api("/changes")
+    state.dirtyCount = changes.length
+    refreshBadge()
+
+    const log = el("pre", { className: "studio-log", textContent: "", hidden: true })
+    const list = el("div", { className: "studio-changes" })
+    const status = el("p", { className: "studio-muted" })
+
+    const renderList = () => {
+      list.textContent = ""
+      if (!changes.length) {
+        list.append(
+          el("p", { className: "studio-empty", textContent: "Nothing to publish — the live site already matches what's here." }),
+          el("p", {
+            className: "studio-muted",
+            textContent:
+              "If you added a page and then deleted it again, that cancels out: there's no net change to send.",
+          }),
+        )
+        return
+      }
+      for (const c of changes) {
+        const row = el("div", { className: "studio-change" })
+        row.append(el("span", { className: `studio-kind studio-kind--${c.kind}`, textContent: KIND_LABEL[c.kind] }))
+        row.append(
+          el(
+            "span",
+            { className: "studio-change-name" },
+            el("strong", { textContent: c.title }),
+            el("span", { className: "studio-muted", textContent: c.oldPath ? `${c.oldPath} → ${c.path}` : c.path }),
+          ),
+        )
+
+        const actions = el("span", { className: "studio-change-actions" })
+        if (c.url) {
+          const open = el("button", { className: "studio-btn studio-sm", textContent: "Open" })
+          open.onclick = guard(() => { closeModal(); gotoWhenReady(c.url) })
+          actions.append(open)
+        }
+        const undo = el("button", { className: "studio-btn studio-btn--danger studio-sm", textContent: "Undo" })
+        undo.onclick = guard(async () => {
+          if (undo.dataset.armed !== "1") {
+            undo.dataset.armed = "1"
+            undo.textContent = "Sure?"
+            return
+          }
+          undo.disabled = true
+          const r = await api("/revert", { method: "POST", body: JSON.stringify({ path: c.path }) })
+          toast(r.message, "ok", 5000)
+          changes.splice(changes.indexOf(c), 1)
+          state.dirtyCount = changes.length
+          refreshBadge()
+          renderList()
+          syncPublishButton()
+        })
+        actions.append(undo)
+        row.append(actions)
+        list.append(row)
+      }
+    }
+
+    const syncPublishButton = () => {
+      const btn = $("#studio-publish-now")
+      if (!btn) return
+      btn.disabled = changes.length === 0
+      btn.title = changes.length ? "" : "There's nothing new to send to the live site."
+      status.textContent = changes.length
+        ? `${changes.length} change${changes.length === 1 ? "" : "s"} waiting to go to the live site.`
+        : "Everything here is already published."
+    }
 
     openModal(
-      "Publish to the live site",
-      el("div", {}, status, log),
+      "Changes & publish",
+      el(
+        "div",
+        {},
+        status,
+        list,
+        el("hr", { className: "studio-hr" }),
+        el(
+          "p",
+          { className: "studio-muted studio-folders" },
+          "Safety nets: ",
+          folderLink("View deleted pages", openTrash),
+          " · ",
+          folderLink("Open the backups folder", () => api("/reveal", { method: "POST", body: JSON.stringify({ what: "backups" }) })),
+        ),
+        log,
+      ),
       [
         {
           label: "Publish now",
           primary: true,
           keep: true,
+          id: "studio-publish-now",
           onClick: (btn) => {
             btn.disabled = true
             btn.textContent = "Publishing…"
+            log.hidden = false
             log.textContent = ""
             fetch(`${API}/publish`, { method: "POST" }).then(async (res) => {
               const reader = res.body.getReader()
@@ -569,14 +779,21 @@
                     log.scrollTop = log.scrollHeight
                   } else if (ev === "done") {
                     const code = JSON.parse(data).code
-                    btn.disabled = false
                     btn.textContent = "Publish now"
                     if (code === 0) {
+                      // Everything just went out, so there is nothing left to
+                      // send: clear the list and keep the button disabled until
+                      // a real new change shows up.
+                      changes.length = 0
+                      state.dirtyCount = 0
+                      refreshBadge()
+                      renderList()
+                      syncPublishButton()
                       status.innerHTML =
                         'Published. The live site rebuilds in about 5 minutes — <a href="https://barkernotbob.github.io" target="_blank" rel="noopener">barkernotbob.github.io</a>'
                       toast("Published", "ok")
-                      refreshDirty()
                     } else {
+                      btn.disabled = false
                       status.textContent = "Publish failed — see the log above."
                       toast("Publish failed", "error", 6000)
                     }
@@ -586,6 +803,74 @@
             })
           },
         },
+        { label: "Close" },
+      ],
+    )
+    renderList()
+    syncPublishButton()
+  }
+
+  // --------------------------------------------------------------- trash
+
+  const folderLink = (label, onClick) => {
+    const a = el("button", { className: "studio-link", textContent: label })
+    a.onclick = guard(onClick)
+    return a
+  }
+
+  /** Trash from before the manifest existed has no reliable timestamp. */
+  const when = (iso) => {
+    const d = new Date(iso)
+    return iso && !isNaN(d) ? d.toLocaleString() : ""
+  }
+
+  async function openTrash() {
+    const { items } = await api("/trash")
+    const list = el("div", { className: "studio-changes" })
+
+    const render = () => {
+      list.textContent = ""
+      if (!items.length) {
+        list.append(el("p", { className: "studio-empty", textContent: "The trash is empty — you haven't deleted anything." }))
+        return
+      }
+      for (const it of items) {
+        const row = el("div", { className: "studio-change" })
+        row.append(el("span", { className: "studio-kind studio-kind--deleted", textContent: "Deleted" }))
+        row.append(
+          el(
+            "span",
+            { className: "studio-change-name" },
+            el("strong", { textContent: it.title }),
+            el("span", { className: "studio-muted", textContent: [it.original, when(it.at)].filter(Boolean).join(" · ") }),
+          ),
+        )
+        const put = el("button", { className: "studio-btn studio-sm", textContent: "Put it back" })
+        put.onclick = guard(async () => {
+          put.disabled = true
+          const r = await api("/restore", { method: "POST", body: JSON.stringify({ name: it.name }) })
+          items.splice(items.indexOf(it), 1)
+          render()
+          refreshDirty()
+          toast(`Restored to ${r.original}`, "ok", 5000)
+          if (r.url) { closeModal(); gotoWhenReady(r.url) }
+        })
+        row.append(el("span", { className: "studio-change-actions" }, put))
+        list.append(row)
+      }
+    }
+    render()
+
+    openModal(
+      "Deleted pages",
+      el(
+        "div",
+        {},
+        el("p", { className: "studio-muted", textContent: "Deleting a page moves it here. Nothing is ever erased, and you can put any of it back." }),
+        list,
+      ),
+      [
+        { label: "Open the folder in Finder", onClick: () => api("/reveal", { method: "POST", body: JSON.stringify({ what: "trash" }) }), keep: true },
         { label: "Close" },
       ],
     )
@@ -603,6 +888,7 @@
       const b = el("button", {
         className: `studio-btn ${a.primary ? "studio-btn--primary" : ""} ${a.danger ? "studio-btn--danger" : ""}`,
         textContent: a.label,
+        ...(a.id ? { id: a.id } : {}),
       })
       b.onclick = a.onClick ? guard(() => a.onClick(b)) : () => closeModal()
       if (!a.onClick || !a.keep) b.addEventListener("click", () => !a.keep && closeModal())
@@ -636,6 +922,9 @@
 
   async function init() {
     buildChrome()
+    // A pending "open that page once it's built" survives Quartz's live-reload
+    // by living in sessionStorage — pick it back up on every load.
+    pumpGoto()
     // Editing can't be entered until we know which file backs this page,
     // otherwise a fast click lands before the source arrives and silently
     // reports the page as uneditable.

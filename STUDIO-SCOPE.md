@@ -67,7 +67,7 @@ Do these in order. Each step says what you should see. If any step doesn't match
 
 1. In Finder, open your website folder and double-click **`Edit Website.command`**. A black Terminal window opens and prints some setup lines.
 2. Wait for it to print `✅ Your website editor is open at http://localhost:8081`. Your browser opens by itself to your site. *(First run can take up to a minute. If the page says "starting up", leave it — it refreshes itself.)*
-3. The site should look **exactly** like the real one, plus a small dark toolbar in the bottom-right corner with **Edit / Page / New / Publish**.
+3. The site should look **exactly** like the real one, plus a small dark toolbar in the bottom-right corner with **Edit / Page / New / Go to / Publish**.
 
 **Editing a paragraph**
 
@@ -92,28 +92,41 @@ Do these in order. Each step says what you should see. If any step doesn't match
 16. Click **New**. Type a title, pick a folder, click **Create**.
 17. You land on the brand-new empty page. Click **Edit**, click the body, type a sentence, **Save**.
 
-**Deleting a page**
+**Deleting a page, and getting it back**
 
-18. On that new page, click **Page** → **Delete page**. Confirm. You're sent back to the home page and the page is gone from the file list.
-19. *(Safety check.)* In Finder, open your website folder and look for a folder called `.studio-trash` — your deleted page is in there, not destroyed. *(If you can't see it, press `Command + Shift + .` in Finder to show hidden folders. Press again to hide.)*
+18. On that new page, click **Page** → **Delete page**. Confirm. Studio **moves you off the page by itself** (to the folder it was in, or home) — you should never be left sitting on a page that no longer exists.
+19. Try to visit the deleted page's address directly. You should get a "not found" page, not the old copy.
+20. Click **Publish** → **View deleted pages**. Your page is listed there with the date. Click **Put it back** — the page is restored and Studio opens it.
+21. Delete it again (you'll create and remove things in the next section anyway).
 
-**Static pages**
+**Undoing things before they go live**
 
-20. Visit one of your HTML pages (Hexchain, Grocery, etc.). Click **Edit**. You should get a message saying this page edits its **HTML source** directly, with a button to open that source. You are **not** expected to edit these day-to-day — this step just confirms Studio tells you the truth instead of silently doing nothing.
+22. Click **Publish**. Every unpublished action is listed: **New page / Edited / Moved / Deleted**, with the page name.
+23. Pick one and click **Open** — it takes you to that page. Come back with **Publish**.
+24. Pick one and click **Undo**, then **Sure?** to confirm. It disappears from the list and the change is reversed. *(A copy of the file before the undo is kept in the backups folder, so an undo can itself be undone.)*
+25. Undo everything in the list. The panel should say "Nothing to publish", and **Publish now** should be greyed out and unclickable.
 
-**The undo net**
+**Games and their landing pages**
 
-21. In Finder, open the `.studio-backups` folder (same hidden-folder trick as step 19). It contains dated copies of every file you changed today. Nothing you did above is unrecoverable.
+26. Click **Go to** (or press `G`), type part of a game's name, and pick it. You land on that game's **landing page** — the short note that normally forwards visitors to the game. A message explains Studio kept you there on purpose, with an **Open the app** button.
+27. Click **Edit** and change a word on that landing page to prove it's editable. Undo it afterwards via **Publish → Undo**.
+28. Click **Open the app** to go into the game itself. From inside the game, click **Go to** again — that's your way back out. *(Games are full-screen and have no link back to the site, so this is the only exit besides the browser's Back button.)*
+29. While inside a game, click **Edit**. You get a message that this page edits its **HTML source** directly. You're **not** expected to do this day-to-day — the step just confirms Studio tells you the truth instead of silently doing nothing.
+
+**The backups net**
+
+30. Click **Publish → Open the backups folder**. Finder opens `.studio-backups`, holding dated copies of every file you changed today. Nothing you did above is unrecoverable.
 
 **Publishing**
 
-22. Click **Publish**. A window opens showing the live progress log, the same text the old Publish script showed.
-23. Wait for it to finish and say it succeeded. This normally takes under a minute for the push; the live site then rebuilds itself over about 5–6 minutes.
-24. After ~6 minutes, open **https://barkernotbob.github.io** in a normal browser tab and confirm your edit from step 7 is live.
+31. Make one small real edit you actually want to keep, then click **Publish**. Check that the change list describes exactly that edit and nothing else.
+32. Click **Publish now**. The live progress log appears — the same text the old Publish script showed.
+33. When it finishes, the list empties and **Publish now** goes grey. It should **not** be clickable again until you make a new change.
+34. After about 5–6 minutes, open **https://barkernotbob.github.io** in a normal browser tab and confirm your edit is live.
 
 **Shutting down**
 
-25. Go back to the Terminal window and close it (or press `Control + C`). The editor stops. Your real site is unaffected — it only changes when you press Publish.
+35. Go back to the Terminal window and close it (or press `Control + C`). The editor stops. Your real site is unaffected — it only changes when you press Publish.
 
 **What must never happen** (if you see any of these, it's a bug, report it):
 
@@ -121,3 +134,6 @@ Do these in order. Each step says what you should see. If any step doesn't match
 - A click making the page shift, resize, or jump.
 - Text you didn't touch changing after a save.
 - A save appearing to work but the change being gone after a refresh.
+- Being left sitting on a page you just deleted, or not landing on a page you just created.
+- A deleted page still loading at its old address.
+- The publish count saying something changed without the list saying *what*.

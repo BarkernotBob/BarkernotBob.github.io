@@ -89,7 +89,7 @@ function backupDest(abs: string): { dir: string; base: string } {
   return { dir, base: path.basename(rel) }
 }
 
-function backup(abs: string) {
+export function backup(abs: string) {
   if (!fs.existsSync(abs)) return
   const { dir, base: bname } = backupDest(abs)
   fs.mkdirSync(dir, { recursive: true })
@@ -226,11 +226,63 @@ export function spliceBlock(src: string, start: number, end: number, text: strin
 
 // ---------------------------------------------------------------- trash
 
+/**
+ * Soft delete. The flat file name is only for humans reading the folder in
+ * Finder; the authoritative "where did this come from" lives in a sidecar
+ * manifest, so restoring never has to un-mangle a file name.
+ */
 export function trashPath(abs: string): string {
   const rel = path.relative(REPO, abs)
   const stamp = new Date().toISOString().replace(/[:.]/g, "-")
-  const dest = path.join(TRASH, `${stamp}__${rel.replace(/[/\\]/g, "__")}`)
+  const name = `${stamp}__${rel.replace(/[/\\]/g, "__")}`
   fs.mkdirSync(TRASH, { recursive: true })
-  fs.renameSync(abs, dest)
-  return path.relative(REPO, dest)
+  fs.renameSync(abs, path.join(TRASH, name))
+  fs.writeFileSync(
+    path.join(TRASH, `${name}.studio.json`),
+    JSON.stringify({ original: rel, at: new Date().toISOString() }, null, 2),
+  )
+  return path.relative(REPO, path.join(TRASH, name))
+}
+
+export type TrashItem = { name: string; original: string; at: string; title: string }
+
+export function listTrash(): TrashItem[] {
+  if (!fs.existsSync(TRASH)) return []
+  const out: TrashItem[] = []
+  for (const name of fs.readdirSync(TRASH)) {
+    if (name.endsWith(".studio.json")) continue
+    let original = ""
+    let at = ""
+    try {
+      const m = JSON.parse(fs.readFileSync(path.join(TRASH, `${name}.studio.json`), "utf8"))
+      original = String(m.original ?? "")
+      at = String(m.at ?? "")
+    } catch {
+      // Pre-manifest trash (or a hand-dropped file): fall back to the name,
+      // which is an ISO stamp with every ":" and "." swapped for "-".
+      const [stamp, ...rest] = name.split("__")
+      original = rest.join("/")
+      const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/.exec(stamp)
+      at = m ? `${m[1]}T${m[2]}:${m[3]}:${m[4]}.${m[5]}Z` : ""
+    }
+    out.push({ name, original, at, title: path.basename(original || name).replace(/\.md$/, "") })
+  }
+  return out.sort((a, b) => b.name.localeCompare(a.name))
+}
+
+/** Put a trashed file back where it came from. Refuses to overwrite. */
+export function restoreFromTrash(name: string): string {
+  if (name.includes("/") || name.includes("\\") || name.includes("\0")) throw new HttpError(400, "bad trash name")
+  const src = path.join(TRASH, name)
+  if (!fs.existsSync(src)) throw new HttpError(404, "that item is no longer in the trash")
+
+  const item = listTrash().find((t) => t.name === name)
+  if (!item?.original) throw new HttpError(400, "can't tell where this file came from")
+
+  const dest = safeResolve(item.original, [CONTENT, STATIC])
+  if (fs.existsSync(dest)) throw new HttpError(409, `a file already exists at ${item.original}`)
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.renameSync(src, dest)
+  fs.rmSync(`${src}.studio.json`, { force: true })
+  return item.original
 }

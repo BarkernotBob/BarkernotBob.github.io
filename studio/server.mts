@@ -16,10 +16,11 @@ import path from "path"
 import { spawn } from "child_process"
 import { slugifyFilePath } from "../quartz/util/path"
 import {
-  REPO, CONTENT, STATIC, HttpError,
-  safeResolve, readFile, writeFile, hashOf,
+  REPO, CONTENT, STATIC, TRASH, BACKUPS, HttpError,
+  safeResolve, readFile, writeFile, backup,
   splitFrontmatter, applyFrontmatter,
-  parseBlocks, spliceBlock, EXPECTED_TAGS, trashPath,
+  parseBlocks, spliceBlock, EXPECTED_TAGS,
+  trashPath, listTrash, restoreFromTrash,
 } from "./lib.mjs"
 
 const STUDIO_PORT = Number(process.env.STUDIO_PORT ?? 8081)
@@ -120,6 +121,127 @@ const git = (args: string[]) =>
     p.on("close", (code) => resolve({ code: code ?? 1, out }))
   })
 
+// --------------------------------------------------------- pending changes
+
+type Change = {
+  path: string
+  oldPath?: string
+  kind: "added" | "modified" | "deleted" | "renamed"
+  title: string
+  /** site URL, when this file is a page you can actually visit */
+  url: string | null
+  /** false for the rename/delete cases where there's nothing to open */
+  content: boolean
+}
+
+const slugForContentFile = (rel: string): string | null => {
+  if (!rel.startsWith("content/") || !rel.endsWith(".md")) return null
+  return slugifyFilePath(path.relative("content", rel) as any)
+}
+
+const titleFor = (rel: string): string => {
+  const abs = path.join(REPO, rel)
+  if (rel.endsWith(".md") && fs.existsSync(abs)) {
+    const t = splitFrontmatter(fs.readFileSync(abs, "utf8")).data.title
+    if (t) return String(t)
+  }
+  return path.basename(rel).replace(/\.md$/, "")
+}
+
+/**
+ * Everything that would go out on the next Publish, as discrete actions.
+ *
+ * Uses `-z` so paths with spaces or quotes survive intact, and so renames
+ * arrive as an explicit new/old pair rather than a parsed-out arrow.
+ */
+async function pendingChanges(): Promise<Change[]> {
+  const { out } = await git(["status", "--porcelain", "-z"])
+  const parts = out.split("\0")
+  const changes: Change[] = []
+
+  for (let i = 0; i < parts.length; i++) {
+    const entry = parts[i]
+    if (!entry || entry.length < 4) continue
+    const code = entry.slice(0, 2)
+    const p = entry.slice(3)
+
+    let kind: Change["kind"]
+    let oldPath: string | undefined
+    if (code.startsWith("R")) {
+      kind = "renamed"
+      oldPath = parts[++i] // -z emits the old path as the very next record
+    } else if (code === "??" || code.includes("A")) kind = "added"
+    else if (code.includes("D")) kind = "deleted"
+    else kind = "modified"
+
+    const slug = slugForContentFile(p)
+    changes.push({
+      path: p,
+      oldPath,
+      kind,
+      title: titleFor(p),
+      url: slug && kind !== "deleted" ? `/${slug}` : null,
+      content: p.startsWith("content/"),
+    })
+  }
+  // Pages first — they're what Isaiah actually recognises.
+  return changes.sort((a, b) => Number(b.content) - Number(a.content) || a.path.localeCompare(b.path))
+}
+
+/**
+ * Undo one pending change, restoring the state as of the last publish.
+ *
+ * Reverting is the one destructive thing Studio does, so the current file is
+ * always copied into .studio-backups first — "undo" can itself be undone.
+ */
+async function revertChange(target: string): Promise<string> {
+  const changes = await pendingChanges()
+  const c = changes.find((x) => x.path === target)
+  if (!c) throw new HttpError(404, "that change is no longer pending")
+
+  const abs = path.join(REPO, c.path)
+  if (fs.existsSync(abs)) backup(abs)
+
+  if (c.kind === "added") {
+    // Never tracked, so git can't restore it — trash it instead of destroying it.
+    trashPath(abs)
+    dropBuilt(c.path)
+    return `Removed the new page (kept in .studio-trash)`
+  }
+
+  if (c.kind === "renamed" && c.oldPath) {
+    // Undo just the move. Any text edits made along with it stay, and show up
+    // as their own "edited" change that can be undone separately.
+    const from = path.join(REPO, c.path)
+    const to = path.join(REPO, c.oldPath)
+    if (fs.existsSync(to)) throw new HttpError(409, "something already sits at the original location")
+    fs.mkdirSync(path.dirname(to), { recursive: true })
+    const r = await git(["mv", c.path, c.oldPath])
+    if (r.code !== 0) fs.renameSync(from, to)
+    dropBuilt(c.path)
+    return `Moved back to ${c.oldPath}`
+  }
+
+  const r = await git(["checkout", "HEAD", "--", c.path])
+  if (r.code !== 0) throw new HttpError(500, `couldn't undo that change: ${r.out.trim()}`)
+  dropBuilt(c.path)
+  return c.kind === "deleted" ? "Page restored" : "Edits undone"
+}
+
+/**
+ * Delete a page's built HTML from public/.
+ *
+ * Quartz's dev server rebuilds changed pages but doesn't sweep output for files
+ * whose source disappeared, so a deleted or moved note keeps serving from its
+ * old URL until the next full build. public/ is generated and gitignored, so
+ * removing a stale page from it is always safe.
+ */
+function dropBuilt(rel: string) {
+  const slug = slugForContentFile(rel)
+  if (!slug) return
+  fs.rmSync(path.join(REPO, "public", `${slug}.html`), { force: true })
+}
+
 // ------------------------------------------------------------- API
 
 async function handleApi(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
@@ -152,9 +274,41 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse, ur
   if (route === "tree" && req.method === "GET") return json(res, 200, { files: contentTree(), tags: allTags() })
 
   if (route === "status" && req.method === "GET") {
-    const { out } = await git(["status", "--porcelain"])
-    const lines = out.split("\n").filter(Boolean)
-    return json(res, 200, { dirty: lines.length, files: lines.slice(0, 50) })
+    const changes = await pendingChanges()
+    return json(res, 200, { dirty: changes.length })
+  }
+
+  // ---- everything waiting to be published, as undoable actions
+  if (route === "changes" && req.method === "GET") {
+    return json(res, 200, { changes: await pendingChanges() })
+  }
+
+  if (route === "revert" && req.method === "POST") {
+    const b = await readBody(req)
+    const message = await revertChange(String(b.path ?? ""))
+    slugIndexAt = 0
+    return json(res, 200, { ok: true, message })
+  }
+
+  // ---- trash: what was deleted, and putting it back
+  if (route === "trash" && req.method === "GET") return json(res, 200, { items: listTrash() })
+
+  if (route === "restore" && req.method === "POST") {
+    const b = await readBody(req)
+    const original = restoreFromTrash(String(b.name ?? ""))
+    slugIndexAt = 0
+    const slug = slugForContentFile(original)
+    return json(res, 200, { ok: true, original, url: slug ? `/${slug}` : null })
+  }
+
+  // ---- open a local folder in Finder (the only way to "link" to one from a page)
+  if (route === "reveal" && req.method === "POST") {
+    const b = await readBody(req)
+    const dir = { trash: TRASH, backups: BACKUPS }[String(b.what ?? "")]
+    if (!dir) throw new HttpError(400, "unknown folder")
+    fs.mkdirSync(dir, { recursive: true })
+    spawn("open", [dir], { detached: true }).unref()
+    return json(res, 200, { ok: true, path: path.relative(REPO, dir) })
   }
 
   // ---- write a single block (the core edit path)
@@ -213,6 +367,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse, ur
     fs.mkdirSync(path.dirname(to), { recursive: true })
     const r = await git(["mv", path.relative(REPO, from), path.relative(REPO, to)])
     if (r.code !== 0) fs.renameSync(from, to) // untracked file: plain rename
+    dropBuilt(path.relative(REPO, from)) // stop serving the old URL
     slugIndexAt = 0
     return json(res, 200, {
       ok: true,
@@ -226,6 +381,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse, ur
     const abs = safeResolve(b.path, [CONTENT])
     if (!fs.existsSync(abs)) throw new HttpError(404, "page not found")
     const dest = trashPath(abs)
+    dropBuilt(path.relative(REPO, abs)) // otherwise the old page keeps serving
     slugIndexAt = 0
     return json(res, 200, { ok: true, trashedTo: dest })
   }
@@ -303,6 +459,14 @@ const server = http.createServer(async (req, res) => {
 
     if (type.includes("text/html")) {
       let html = await upstream.text()
+
+      // The game/app landing notes are stubs that bounce straight to
+      // /static/<app>.html, so in a browser you can never actually sit on one
+      // to edit it. Quartz's redirect script looks for [data-static-redirect];
+      // renaming the attribute defuses it for Studio only. The overlay spots
+      // the renamed attribute and offers a button to open the app on purpose.
+      html = html.replace(/data-static-redirect=/g, "data-studio-redirect=")
+
       // Inject before </body>; fall back to appending so we never silently no-op.
       html = html.includes("</body>") ? html.replace("</body>", `${INJECT}</body>`) : html + INJECT
       headers["cache-control"] = "no-store"

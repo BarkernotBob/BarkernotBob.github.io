@@ -1,0 +1,322 @@
+/* Studio overlay chrome.
+   Namespaced under .studio-* and pinned to high z-indexes so it never inherits
+   or disturbs the site's own layout. The site underneath must keep looking
+   exactly like the published site. */
+
+:root {
+  --studio-bg: #16181d;
+  --studio-fg: #e8eaed;
+  --studio-muted: #9aa1ab;
+  --studio-line: #2c313a;
+  --studio-accent: #4c8bf5;
+  --studio-ok: #35a06a;
+  --studio-warn: #c9932b;
+  --studio-danger: #d0453c;
+  --studio-radius: 10px;
+  --studio-font: ui-sans-serif, -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --studio-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ------------------------------------------------------------ toolbar */
+
+#studio-bar {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  background: var(--studio-bg);
+  border: 1px solid var(--studio-line);
+  border-radius: 14px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
+  font-family: var(--studio-font);
+}
+
+.studio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* fixed height + min-width so label/state swaps never resize the bar */
+  height: 34px;
+  min-width: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #23262d;
+  color: var(--studio-fg);
+  font: 500 13px/1 var(--studio-font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+.studio-btn:hover { background: #2e323a; }
+.studio-btn:active { background: #363b44; }
+.studio-btn--primary { background: var(--studio-accent); color: #fff; }
+.studio-btn--primary:hover { background: #3f7ce6; }
+.studio-btn--publish { background: var(--studio-ok); color: #fff; }
+.studio-btn--publish:hover { background: #2d8b5b; }
+.studio-btn--danger { background: transparent; color: var(--studio-danger); border-color: var(--studio-danger); }
+.studio-btn--danger:hover { background: rgba(208, 69, 60, 0.12); }
+.studio-btn.is-on { background: var(--studio-accent); color: #fff; }
+.studio-btn:disabled { opacity: 0.55; cursor: default; }
+.studio-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.studio-ic { font-size: 14px; line-height: 1; }
+/* Reserve label width so "Edit"->"Editing" doesn't shift neighbours. */
+.studio-label { display: inline-block; min-width: 3.6em; text-align: left; }
+.studio-btn--publish .studio-label { min-width: 4.2em; }
+.studio-sep { width: 1px; height: 22px; background: var(--studio-line); margin: 0 2px; }
+
+.studio-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font: 600 11px/18px var(--studio-font);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ banner */
+
+.studio-banner {
+  position: fixed;
+  /* left-anchored, with the right edge held clear of the toolbar so the two
+     never overlap at any window width */
+  left: 18px;
+  right: auto;
+  bottom: 18px;
+  z-index: 2147482900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(660px, calc(100vw - 460px));
+  padding: 9px 14px;
+  background: var(--studio-bg);
+  color: var(--studio-fg);
+  border: 1px solid var(--studio-line);
+  border-radius: 11px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3);
+  font: 13px/1.45 var(--studio-font);
+}
+
+/* ------------------------------------------------- editable blocks */
+
+body.studio-editing .studio-block {
+  position: relative;
+  cursor: text;
+  border-radius: 5px;
+  /* outline (not border) so highlighting never changes layout metrics */
+  outline: 1px dashed rgba(76, 139, 245, 0.35);
+  outline-offset: 4px;
+  transition: outline-color 0.12s ease, background 0.12s ease;
+}
+body.studio-editing .studio-block:hover {
+  outline: 1px solid var(--studio-accent);
+  background: rgba(76, 139, 245, 0.07);
+}
+
+/* The editor must occupy as close to the original block's footprint as
+   possible, so nothing below it jumps when you click (repo rule: clicking
+   must never reflow the UI). That means:
+     - no margin (margins sit outside offsetHeight)
+     - no padding/border on the wrapper itself
+     - controls positioned absolutely so they cost zero layout height */
+.studio-block-editor {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.studio-editor-controls {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 5px;
+  z-index: 2;
+}
+.studio-editor-controls .studio-btn {
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18);
+}
+
+.studio-ta {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--studio-line);
+  border-radius: 8px;
+  background: #fbfbfc;
+  color: #16181d;
+  font: 14px/1.65 var(--studio-mono);
+  resize: vertical;
+  tab-size: 2;
+}
+.studio-ta:focus { outline: 2px solid var(--studio-accent); outline-offset: -1px; }
+
+/* In-place block editor: tight vertical padding (padding adds height, which
+   would shift the page) and a wide right gutter so the first line never runs
+   under the floating Save/Cancel buttons. */
+.studio-block-editor .studio-ta {
+  padding: 5px 160px 5px 10px;
+  border-color: var(--studio-accent);
+  background: rgba(76, 139, 245, 0.045);
+  color: inherit;
+  font-size: 13.5px;
+  line-height: 1.62;
+}
+@media (prefers-color-scheme: dark) {
+  .studio-block-editor .studio-ta { background: rgba(76, 139, 245, 0.1); }
+}
+.studio-ta--modal { min-height: 220px; margin-top: 8px; }
+.studio-ta--tall { min-height: min(56vh, 520px); }
+
+@media (prefers-color-scheme: dark) {
+  .studio-ta { background: #101216; color: var(--studio-fg); }
+}
+
+/* ------------------------------------------------------------ modal */
+
+.studio-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 10, 14, 0.55);
+  backdrop-filter: blur(3px);
+  font-family: var(--studio-font);
+}
+.studio-modal-card {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: 88vh;
+  background: var(--studio-bg);
+  color: var(--studio-fg);
+  border: 1px solid var(--studio-line);
+  border-radius: 15px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.studio-modal-head { padding: 16px 20px; border-bottom: 1px solid var(--studio-line); }
+.studio-modal-head h2 { margin: 0; font: 600 16px/1.3 var(--studio-font); color: var(--studio-fg); }
+.studio-modal-body { padding: 18px 20px; overflow: auto; font-size: 14px; line-height: 1.55; }
+.studio-modal-body p { margin: 0 0 10px; }
+.studio-modal-foot {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 13px 20px;
+  border-top: 1px solid var(--studio-line);
+  background: #12141a;
+}
+.studio-modal-foot .studio-btn--danger { margin-right: auto; }
+
+.studio-muted { color: var(--studio-muted); font-size: 12px; word-break: break-all; }
+.studio-hr { border: 0; border-top: 1px solid var(--studio-line); margin: 16px 0; }
+
+.studio-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.studio-row-label { color: var(--studio-muted); font-size: 13px; }
+.studio-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 11px;
+  border: 1px solid var(--studio-line);
+  border-radius: 8px;
+  background: #101216;
+  color: var(--studio-fg);
+  font: 14px var(--studio-font);
+}
+.studio-input:focus { outline: 2px solid var(--studio-accent); outline-offset: -1px; }
+input[type="checkbox"].studio-input,
+.studio-row input[type="checkbox"] { width: 18px; height: 18px; justify-self: start; }
+
+.studio-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 26px; }
+.studio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px 3px 10px;
+  border-radius: 20px;
+  background: #262a32;
+  font-size: 12px;
+}
+.studio-chip-x {
+  border: 0;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--studio-fg);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.studio-chip-x:hover { background: var(--studio-danger); color: #fff; }
+
+.studio-log {
+  margin: 0;
+  padding: 12px;
+  min-height: 200px;
+  max-height: 42vh;
+  overflow: auto;
+  border-radius: 9px;
+  background: #0c0e12;
+  color: #cbd2dc;
+  font: 12px/1.55 var(--studio-mono);
+  white-space: pre-wrap;
+}
+
+/* ------------------------------------------------------------ toasts */
+
+#studio-toasts {
+  position: fixed;
+  right: 18px;
+  bottom: 70px;
+  z-index: 2147483200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.studio-toast {
+  max-width: 380px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--studio-bg);
+  color: var(--studio-fg);
+  border-left: 3px solid var(--studio-muted);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  font: 13px/1.45 var(--studio-font);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.studio-toast.in { opacity: 1; transform: translateY(0); }
+.studio-toast--ok { border-left-color: var(--studio-ok); }
+.studio-toast--warn { border-left-color: var(--studio-warn); }
+.studio-toast--error { border-left-color: var(--studio-danger); }
+
+/* Narrow windows: the site's own layout already collapses here; keep the
+   toolbar reachable without covering content. */
+@media (max-width: 800px) {
+  #studio-bar { right: 10px; bottom: 10px; }
+  .studio-label { display: none; }
+  .studio-btn { padding: 0 10px; min-width: 38px; }
+  /* Narrow: the toolbar collapses to icons, so stack the banner above it. */
+  .studio-banner { max-width: calc(100vw - 20px); left: 10px; right: 10px; bottom: 66px; }
+}

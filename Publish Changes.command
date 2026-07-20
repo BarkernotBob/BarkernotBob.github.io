@@ -5,6 +5,15 @@
 
 cd "$(dirname "$0")" || exit 1
 
+# When Studio runs this script it has no terminal to wait on, so the
+# "Press Return to close" pauses are skipped. Double-clicking still pauses.
+pause() {
+  if [ -z "$STUDIO" ]; then
+    echo "Press Return to close this window."
+    read
+  fi
+}
+
 echo "Publishing your changes to the website..."
 echo ""
 
@@ -89,8 +98,7 @@ if ! git pull --rebase; then
   echo "    This can happen if the same note was edited in two places."
   echo "    Don't worry — nothing is lost. Ask Claude for help to sort it out."
   echo ""
-  echo "Press Return to close this window."
-  read
+  pause
   exit 1
 fi
 
@@ -111,8 +119,10 @@ else
   echo "        gh auth login -h github.com -p https -w"
   echo ""
   echo "    After logging in, just run this Publish file again. Or ask Claude."
+  echo ""
+  pause
+  exit 1
 fi
 
 echo ""
-echo "Press Return to close this window."
-read
+pause

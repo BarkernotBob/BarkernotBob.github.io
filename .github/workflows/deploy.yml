@@ -57,6 +57,28 @@ jobs:
         with:
           path: public
 
+  # ---- Studio editor safety gate -----------------------------------------------
+  # Studio (the local "Edit Website" editor) never runs in CI and never touches
+  # the build above — but its safety invariants are checked against the REAL
+  # files in content/. So a content file that gains syntax Studio can't map
+  # byte-for-byte fails here, before it can corrupt a page on a later edit.
+  # Pure Node, no browser: ~seconds.
+  studio_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - run: npm ci
+      - name: Run Studio safety suite
+        run: npx tsx --test studio/studio.test.mts
+
   # ---- Grocery Tracker regression gate (PRD S0) --------------------------------
   # GitHub Actions has no per-job `paths` filter, so a change-detection job decides
   # whether the Playwright suite must run. Only commits touching the grocery app,
@@ -130,9 +152,9 @@ jobs:
     # was skipped — a skipped `needs` would otherwise skip `deploy` too. Requiring
     # `changes` to have succeeded keeps the gate fail-CLOSED: if change-detection
     # itself errors, `test` is skipped but the deploy is blocked rather than
-    # shipping untested.
-    needs: [build, changes, test]
-    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.result == 'success' && needs.test.result != 'failure' }}
+    # shipping untested. `studio_test` always runs, so it must be a plain success.
+    needs: [build, changes, test, studio_test]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.result == 'success' && needs.test.result != 'failure' && needs.studio_test.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

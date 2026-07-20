@@ -7,12 +7,14 @@ aliases:
   - Single Factor Analysis
 updated: 2025-06-26T15:45:04.057-04:00
 edited_seconds: 419
+title: Correlation does not equal causation
+publish: true
 ---
 [Wiki:](https://en.wikipedia.org/wiki/Correlation_does_not_imply_causation) 
 
 `[!!info|I think this is what people usually mean when they say "Single Factor Analysis"|var(--color-blue-rgb)]` 
 
-This is simply the fact that 2 variables which correlate (coincide, one thing seeming to rise or fall with the other) are not necessarily related in any specific way based simply on the correlation.
+This is simply the fact that 2 variables which correlate (coincide, one thing seeming to rise or fall with the other) are not necessarily related in any specific way based on the correlation.
 
 To give some credit, it is certainly true in practical life that unproven correlation is often strong evidence of causation. The most important thing is to ensure that:
 1. We are wary of our self bias that will see preferred correlation as proof and disliked correlation as irrelevant. 

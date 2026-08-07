@@ -180,10 +180,10 @@ Claude subscription — no paid service. Two ways it happens:
 
 ## Publishing (making the app go live)
 
-Your website is built from the **`v5`** branch. The grocery app files were added on a
+Your website is built from the **`main`** branch. The grocery app files were added on a
 working branch called `claude/grocery-tracking-tool-0tep34`. To make the app live at
 `https://barkernotbob.github.io/static/grocery/`, those changes need to be merged
-into `v5` (your live branch). I can walk you through that, or do it when you say so.
+into `main` (your live branch). I can walk you through that, or do it when you say so.
 Until then, nothing is public and no data is exposed.
 
 ---

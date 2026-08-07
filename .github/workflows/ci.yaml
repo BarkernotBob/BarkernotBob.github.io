@@ -3,10 +3,10 @@ name: Build and Test
 on:
   pull_request:
     branches:
-      - v5
+      - main
   push:
     branches:
-      - v5
+      - main
   workflow_dispatch:
 
 jobs:

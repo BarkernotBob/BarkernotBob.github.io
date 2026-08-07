@@ -97,9 +97,9 @@ quotes.)*
 
 ## Step 5 — Publish the app (make it go live)
 
-Your website is built from the **`v5`** branch. These files were added on a working
+Your website is built from the **`main`** branch. These files were added on a working
 branch. To make the app live at `https://barkernotbob.github.io/static/pool/`, the
-branch needs to be **merged into `v5`**. I'll open a pull request and walk you
+branch needs to be **merged into `main`**. I'll open a pull request and walk you
 through the merge — just say the word. (GitHub Pages takes ~5 minutes to rebuild.)
 
 ---

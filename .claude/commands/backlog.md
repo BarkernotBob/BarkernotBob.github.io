@@ -1,0 +1,42 @@
+---
+description: Show everything planned, in progress, blocked and recently done across all projects
+argument-hint: "[project name, to show just one]"
+allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh repo view:*), Bash(command -v:*), Read, Glob, mcp__github__list_issues, mcp__github__issue_read, mcp__github__search_issues
+---
+
+Show the backlog.
+
+## Reading and writing GitHub
+
+There are two ways to reach GitHub and only one works in any given session:
+
+- On Isaiah's Mac, the `gh` CLI is installed — use it.
+- In a cloud session there is no `gh` — use the GitHub MCP tools (`mcp__github__*`).
+
+Run `command -v gh` once at the start, pick the one that's there, and stick to
+it. Every `gh ...` example below has a direct MCP equivalent.
+
+Scope: $ARGUMENTS — if that's empty, show every project. If it names a project,
+show only that one (match loosely against the repo names).
+
+1. Read the repo list. Look for `backlog/repos.txt` in the current repo; if it
+   isn't there, look in `~/BarkernotBob.github.io/backlog/repos.txt`. If neither
+   exists, fall back to `gh repo list --limit 100 --json nameWithOwner`.
+2. For each repo in scope, run
+   `gh issue list --repo <repo> --state open --limit 200 --json number,title,url,labels,createdAt,updatedAt`
+   and one more pass with `--state closed` for the last 30 days.
+3. Bucket each issue by its labels, highest precedence first:
+   `blocked` → `in-progress` → `planned`. Closed with any of those = **Done**.
+   Ignore open issues that carry none of them — they aren't part of the system.
+
+Then print, and nothing else:
+
+- A summary table: one row per project, columns Planned / In progress / Blocked
+  / Done (last 30d). Skip projects with zero of everything.
+- Per project with anything in it, a short section listing the items as
+  `#<number> <title>` with the age in days, marking `needs-grilling` items and
+  any item missing `nightly-ok`.
+- End with a one-line read on where attention is needed — the oldest planned
+  item, anything blocked, anything in-progress that hasn't moved in a week.
+
+Keep it terse. No preamble.

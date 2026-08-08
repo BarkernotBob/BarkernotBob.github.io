@@ -1,0 +1,55 @@
+name: Backlog system checks
+
+# Guards the backlog tooling: the issue forms have to keep matching the labels
+# the board and the nightly routine read, and BACKLOG.md has to keep bucketing
+# issues correctly. Both are silent failures otherwise - items just quietly stop
+# showing up.
+
+on:
+  pull_request:
+    paths:
+      - "backlog/**"
+      - ".claude/commands/backlog*.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/backlog-checks.yml"
+      - "Backlog.command"
+      - "Install Backlog System.command"
+  push:
+    branches:
+      - main
+    # Kept in step with the pull_request list above - Actions doesn't support
+    # YAML anchors, so this has to be duplicated by hand.
+    paths:
+      - "backlog/**"
+      - ".claude/commands/backlog*.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/backlog-checks.yml"
+      - "Backlog.command"
+      - "Install Backlog System.command"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Shell scripts parse
+        run: |
+          sh -n backlog/install.sh
+          sh -n Backlog.command
+          sh -n "Install Backlog System.command"
+
+      - name: Python parses
+        run: python3 -m py_compile backlog/backlog.py
+
+      - name: Regression tests
+        run: npx tsx --test backlog/backlog.test.mts

@@ -1,0 +1,26 @@
+# Repos the backlog system covers.
+#
+# One "owner/repo" per line. Lines starting with # are ignored, and so are
+# blank lines. Add a repo here and re-run "Install Backlog System.command"
+# to give it the planned-change form and the status labels.
+#
+# The nightly routine ONLY touches repos listed here.
+
+BarkernotBob/BarkernotBob.github.io
+BarkernotBob/bank-bonuses
+BarkernotBob/tax-modeling
+BarkernotBob/pool-data
+BarkernotBob/grocery-data
+BarkernotBob/logos-notes
+BarkernotBob/obsidian-ytfree
+BarkernotBob/obsidian-passage-backlinks
+BarkernotBob/obsidian-home-launch
+BarkernotBob/obsidian-settings-pane
+BarkernotBob/obsidian-smart-asterisk
+BarkernotBob/esv-hover
+BarkernotBob/command-center
+BarkernotBob/claude-setup
+BarkernotBob/tiller-budget
+BarkernotBob/KnoxLox
+BarkernotBob/TRMNL
+BarkernotBob/feeds

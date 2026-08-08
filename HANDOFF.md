@@ -21,6 +21,12 @@ failure mode produces a job with no steps and no logs.
 
 ## What just changed
 
+- 2026-08-08 — **backlog system.** Planned changes are now GitHub issues in each
+  project's own repo, filed from the phone through two issue forms, tracked by
+  five labels, and worked by `/backlog-work` or an overnight Routine that builds
+  and merges. `BACKLOG_GUIDE.md` is the user-facing doc, `backlog/README.md` the
+  maintainer's. Run `Install Backlog System.command` once to push the forms and
+  labels out to every repo in `backlog/repos.txt`.
 - 2026-08-08 — **branch cleanup.** 10 abandoned branches dropped after verifying each
   against `main` (most had already landed by another route; one,
   `calendar-dd-events-missing-5z0fi0`, would have *reverted* the bank-bonus redesign).

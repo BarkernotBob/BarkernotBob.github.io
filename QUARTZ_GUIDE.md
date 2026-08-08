@@ -216,6 +216,13 @@ If you have the **Obsidian Web Clipper** browser extension set up:
 3. The note lands in `content/youtube/recommended` automatically.
 4. Double-click **Publish Changes.command** — done.
 
+> **Haven't set the clipper up yet?** There's a ready-made template you can import in one
+> click: `Website Setup/YouTube Web Clipper Template.json`. Install the extension from
+> https://obsidian.md/clipper, then clipper icon → ⚙️ Settings → Templates → **Import** →
+> pick that file. It fills in the title, the `publish` flag, the embed, and the
+> `youtube/recommended` path for you, and auto-selects itself on any YouTube page.
+> Setup notes and a field-by-field breakdown: [`Website Setup/README.md`](Website%20Setup/README.md).
+
 ### Option B — by hand in Obsidian
 
 1. In Obsidian, open the Website vault and navigate to the **`youtube`** folder (inside

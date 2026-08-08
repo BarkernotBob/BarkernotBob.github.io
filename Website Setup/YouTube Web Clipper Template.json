@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "YouTube → Individual videos",
+  "behavior": "create",
+  "noteNameFormat": "{{title|replace:\" - YouTube\":\"\"|safe_name}}",
+  "path": "youtube/recommended",
+  "noteContentFormat": "![]({{url}})\n\n**Why it's worth a look:** \n",
+  "properties": [
+    { "name": "title", "value": "{{title|replace:\" - YouTube\":\"\"}}", "type": "text" },
+    { "name": "publish", "value": "true", "type": "checkbox" }
+  ],
+  "triggers": [
+    "https://www.youtube.com/watch",
+    "https://youtu.be/",
+    "https://m.youtube.com/watch"
+  ],
+  "context": ""
+}

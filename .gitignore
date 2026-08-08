@@ -12,7 +12,13 @@ replit.nix
 .quartz/
 quartz/cli/tui/dist/
 content/private/
-.claude/
+# Local Claude state stays out, but the backlog commands are the system's
+# guardrails (what the nightly routine may merge, what it must never touch) and
+# have to be versioned.
+.claude/*
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/backlog*.md
 
 # Obsidian "Smart Connections" data — contains private note paths/metadata.
 # Must never be published. (Removed from the repo during the security review.)
@@ -28,3 +34,7 @@ tests/grocery/playwright-report/
 # Studio local editor: safety net copies + soft-deleted pages. Never published.
 .studio-backups/
 .studio-trash/
+
+# Generated snapshot of the GitHub backlog (Backlog.command). Not source.
+BACKLOG.md
+backlog/__pycache__/

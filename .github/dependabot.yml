@@ -1,20 +1,70 @@
+# Dependabot: the robot that proposes updates to the outside software this site
+# is built from. It only ever opens proposals (PRs) — it never changes anything
+# on its own.
+#
+# The point of the grouping below is to make each proposal easy to answer:
+#   - routine updates arrive batched, and are safe to accept without reading
+#   - breaking updates arrive one at a time, so a single bad one is easy to say
+#     no to without also rejecting everything else
+#   - security fixes arrive on their own, so they're never buried in a big batch
+#
+# Anything NOT matched by a group gets its own separate proposal. That is
+# deliberate — see the note under each ecosystem.
+
 version: 2
 updates:
+  # ─────────────────────────────────────────────────────────────────────────
+  # npm — the pieces the SITE ITSELF is built from (page builder, styling,
+  # search, etc.)
+  # ─────────────────────────────────────────────────────────────────────────
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
     groups:
-      production-dependencies:
-        applies-to: "version-updates"
+      # Security fixes. Own proposal, never mixed in with feature updates, so
+      # an urgent fix is never gated behind reviewing something risky.
+      npm-security:
+        applies-to: "security-updates"
         patterns:
           - "*"
+      # Routine updates: bug fixes and backwards-compatible improvements.
+      # These are the boring ones. Batched on purpose — accept as a unit.
+      npm-routine:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "*"
+    # NOTE: major-version updates are intentionally left UNGROUPED. Ungrouped
+    # updates get one proposal each, which is exactly what we want for the
+    # breaking ones — a TypeScript 5 -> 7 jump should be its own yes/no, not
+    # one line in a batch of 26. (That batch was PR #88, closed 2026-08-08.)
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # GitHub Actions — the tools that BUILD AND PUBLISH the site when
+  # `Publish Changes.command` runs.
+  # ─────────────────────────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
     groups:
-      ci-dependencies:
-        applies-to: "version-updates"
+      ci-security:
+        applies-to: "security-updates"
         patterns:
           - "*"
+      ci-routine:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "*"
+    # Same rule as above: major bumps arrive individually. This matters more
+    # here than for npm — a bad `actions/deploy-pages` bump takes the live site
+    # down, and you want to be able to reject that one without also rejecting
+    # the four harmless ones next to it.

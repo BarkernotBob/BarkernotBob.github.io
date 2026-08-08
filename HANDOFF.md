@@ -49,8 +49,13 @@ Nothing in the repo currently records that status — that's the gap to close fi
   `deploy.yml` must carry the same patches or local ≠ live.
 - The explorer "drawer at all widths" patch is **load-bearing** — removing it
   breaks the home page splash.
-- `deploy-v5.yaml` and `docker-build-push.yaml` are upstream Quartz files gated to
-  `jackyzha0/quartz`. They are inert here; their `v5` references are not bugs.
+- `deploy-v5.yaml` and `docker-build-push.yaml` were upstream Quartz files gated to
+  `jackyzha0/quartz` — inert here, every run in their history was `skipped`.
+  **Deleted 2026-08-08.** They were the reason dependabot kept proposing docker/
+  cosign action bumps for tooling this site never used. `Dockerfile` (320 B) is now
+  orphaned — nothing builds it; delete it too if you never want a container image.
+  `build-preview.yaml` / `deploy-preview.yaml` (the Cloudflare preview pair) were
+  left alone deliberately — they are not gated the same way and need a closer look.
 - Junk in the working tree: `node_modules 2` (11 MB), `node_modules 3`,
   `node_modules 4` (both empty) — iCloud-era duplicates, gitignored, safe to delete.
 

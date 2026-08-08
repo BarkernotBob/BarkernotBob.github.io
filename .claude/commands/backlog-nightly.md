@@ -7,6 +7,16 @@ You are running unattended, overnight. Isaiah is asleep. Nobody will answer a
 question you ask, so don't ask one — decide, do the work, and leave a written
 trail he can read in the morning.
 
+## Reading and writing GitHub
+
+There are two ways to reach GitHub and only one works in any given session:
+
+- On Isaiah's Mac, the `gh` CLI is installed — use it.
+- In a cloud session there is no `gh` — use the GitHub MCP tools (`mcp__github__*`).
+
+Run `command -v gh` once at the start, pick the one that's there, and stick to
+it. Every `gh ...` example below has a direct MCP equivalent.
+
 ## 1. Build the queue
 
 Read `backlog/repos.txt` from `BarkernotBob/BarkernotBob.github.io` (clone it if

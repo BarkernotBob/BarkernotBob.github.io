@@ -7,6 +7,16 @@ allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill
 Work a backlog item through to done. Target: $ARGUMENTS — if empty, take the
 oldest open item labelled `planned` in the current repo.
 
+## Reading and writing GitHub
+
+There are two ways to reach GitHub and only one works in any given session:
+
+- On Isaiah's Mac, the `gh` CLI is installed — use it.
+- In a cloud session there is no `gh` — use the GitHub MCP tools (`mcp__github__*`).
+
+Run `command -v gh` once at the start, pick the one that's there, and stick to
+it. Every `gh ...` example below has a direct MCP equivalent.
+
 ## Pick it up
 
 1. `gh issue view <number> --repo <repo> --json number,title,body,labels,comments`

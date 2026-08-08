@@ -48,6 +48,11 @@ filing time.
   and a hard exclusion list covering workflows, secrets and branch settings.
 - **`install.sh` is POSIX `sh`, on purpose**, so it can be parsed and exercised in
   CI. The `.command` wrappers stay zsh to match the other launchers.
+- **There is no `gh` in a cloud session.** Local Claude Code has the CLI; the
+  overnight Routine runs in Anthropic's cloud environment, which has the GitHub
+  MCP tools instead. Every command file says so up front and every `gh` example
+  in them has an MCP equivalent. Anything new that shells out to `gh` has to
+  carry the same fallback or it will only ever work on the Mac.
 
 ## Adding a repo
 

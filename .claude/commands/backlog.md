@@ -1,10 +1,20 @@
 ---
 description: Show everything planned, in progress, blocked and recently done across all projects
 argument-hint: "[project name, to show just one]"
-allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh repo view:*), Bash(cat:*), Read, Glob
+allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh repo view:*), Bash(command -v:*), Read, Glob, mcp__github__list_issues, mcp__github__issue_read, mcp__github__search_issues
 ---
 
 Show the backlog.
+
+## Reading and writing GitHub
+
+There are two ways to reach GitHub and only one works in any given session:
+
+- On Isaiah's Mac, the `gh` CLI is installed — use it.
+- In a cloud session there is no `gh` — use the GitHub MCP tools (`mcp__github__*`).
+
+Run `command -v gh` once at the start, pick the one that's there, and stick to
+it. Every `gh ...` example below has a direct MCP equivalent.
 
 Scope: $ARGUMENTS — if that's empty, show every project. If it names a project,
 show only that one (match loosely against the repo names).

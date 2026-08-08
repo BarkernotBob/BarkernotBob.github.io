@@ -1,6 +1,6 @@
 # HANDOFF — barkernotbob.github.io (Quartz v5 site)
 
-_Last updated: 2026-08-06_
+_Last updated: 2026-08-08_
 
 ## Current status
 
@@ -21,6 +21,14 @@ failure mode produces a job with no steps and no logs.
 
 ## What just changed
 
+- 2026-08-08 — **branch cleanup.** 10 abandoned branches dropped after verifying each
+  against `main` (most had already landed by another route; one,
+  `calendar-dd-events-missing-5z0fi0`, would have *reverted* the bank-bonus redesign).
+  Before dropping, the one unique artifact was salvaged: the Obsidian Web Clipper
+  template at `Website Setup/YouTube Web Clipper Template.json`. **5 branches survive
+  and still need your decision** — see `grocery-tool/BRANCH-REVIEW-abandoned-work.md`
+  (3 grocery branches), plus `claude/nifty-darwin-7y442n` (tax modeler) and
+  `claude/bank-bonus-pwa-iphone-bm1wwk`, both documented in their own repos.
 - 2026-08-06 — branch rename `v5` → `main` + the three fixes above.
 - 2026-07-19 — **Studio** landed: edit-in-place layer over the real site with a
   Publish button (undoable change list, working navigation, reachable landing

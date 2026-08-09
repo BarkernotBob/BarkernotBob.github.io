@@ -30,15 +30,21 @@ DEFAULT_DONE_DAYS = 30
 PAGE_LIMIT = 500
 
 # Highest precedence first: an issue carrying several status labels is filed
-# under the most urgent one rather than appearing twice.
-STATUS_ORDER = ["blocked", "in-progress", "planned"]
+# under the most urgent one rather than appearing twice. An open issue with
+# none of these labels is a planned item — that is the whole point, filing
+# something must never require remembering to tag it.
+STATUS_ORDER = ["blocked", "hold", "in-progress"]
 
 SECTION_TITLES = {
     "planned": "Planned",
     "in-progress": "In progress",
     "blocked": "Blocked",
+    "hold": "On hold",
     "done": "Done",
 }
+
+# The order sections are printed in, most-needs-attention first.
+SECTION_ORDER = ["blocked", "in-progress", "planned", "hold", "done"]
 
 
 class GhError(RuntimeError):
@@ -72,7 +78,7 @@ def gh_json(args: list[str]) -> list[dict]:
 
 def fetch_issues(repo: str, done_since: datetime) -> dict[str, list[dict]]:
     """Return the repo's issues bucketed by status."""
-    fields = "number,title,url,labels,createdAt,updatedAt,closedAt,comments"
+    fields = "number,title,url,labels,createdAt,updatedAt,closedAt,comments,stateReason"
 
     # Everything open is fetched in one call and bucketed by label below, so
     # this keeps working in repos where the labels haven't been created yet.
@@ -93,17 +99,16 @@ def fetch_issues(repo: str, done_since: datetime) -> dict[str, list[dict]]:
 
     for issue in open_issues:
         names = {label["name"] for label in issue["labels"]}
-        for status in STATUS_ORDER:
-            if status in names:
-                buckets[status].append(issue)
-                break
+        bucket = next((s for s in STATUS_ORDER if s in names), "planned")
+        buckets[bucket].append(issue)
 
     for issue in closed_issues:
-        names = {label["name"] for label in issue["labels"]}
-        if not names & set(STATUS_ORDER):
-            continue
         closed_at = issue.get("closedAt")
         if not closed_at:
+            continue
+        # "Closed as not planned" means abandoned, not shipped. Ticking those
+        # off under Done would overstate what actually got built.
+        if (issue.get("stateReason") or "").upper() == "NOT_PLANNED":
             continue
         if parse_time(closed_at) >= done_since:
             buckets["done"].append(issue)
@@ -124,10 +129,6 @@ def format_issue(issue: dict, status: str, now: datetime) -> str:
     tags = []
     if "needs-grilling" in names:
         tags.append("needs a conversation first")
-    # Only Planned items are picked from by the nightly routine — in-progress
-    # work gets resumed regardless, so the warning would be wrong there.
-    if status == "planned" and not names & {"nightly-ok", "needs-grilling"}:
-        tags.append("nightly routine will not touch this")
 
     if status == "done":
         stamp = f"closed {age_in_days(issue['closedAt'], now)}d ago"
@@ -169,23 +170,17 @@ def render(results: dict[str, dict[str, list[dict]]], now: datetime,
 
     lines.append("## Everything at a glance")
     lines.append("")
-    lines.append("| Project | Planned | In progress | Blocked | Done |")
-    lines.append("|---|---:|---:|---:|---:|")
+    columns = ["planned", "in-progress", "blocked", "hold", "done"]
+    lines.append("| Project | " + " | ".join(SECTION_TITLES[c] for c in columns) + " |")
+    lines.append("|---" + "|---:" * len(columns) + "|")
     for repo, buckets in results.items():
         if not any(buckets.values()):
             continue
         name = repo.split("/", 1)[1]
-        lines.append(
-            f"| [{name}](https://github.com/{repo}/issues) "
-            f"| {len(buckets['planned'])} "
-            f"| {len(buckets['in-progress'])} "
-            f"| {len(buckets['blocked'])} "
-            f"| {len(buckets['done'])} |"
-        )
-    lines.append(
-        f"| **Total** | **{totals['planned']}** | **{totals['in-progress']}** "
-        f"| **{totals['blocked']}** | **{totals['done']}** |"
-    )
+        counts = " | ".join(str(len(buckets[c])) for c in columns)
+        lines.append(f"| [{name}](https://github.com/{repo}/issues) | {counts} |")
+    totals_row = " | ".join(f"**{totals[c]}**" for c in columns)
+    lines.append(f"| **Total** | {totals_row} |")
     lines.append("")
     lines.append(f"Done counts cover the last {done_days} days.")
     lines.append("")
@@ -197,7 +192,7 @@ def render(results: dict[str, dict[str, list[dict]]], now: datetime,
         lines.append("")
         lines.append(f"## {repo.split('/', 1)[1]}")
         lines.append("")
-        for key in ["blocked", "in-progress", "planned", "done"]:
+        for key in SECTION_ORDER:
             issues = buckets[key]
             if not issues:
                 continue

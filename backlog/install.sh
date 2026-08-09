@@ -98,6 +98,19 @@ install_labels() {
   done < "$work/labels.tsv"
 }
 
+# Labels the system used to need and no longer does. An open issue with no
+# status label is now a planned item, so `planned` and `nightly-ok` are just
+# noise on the filing screen - and noise on that screen is what made items get
+# filed wrong in the first place.
+remove_stale_labels() {
+  repo="$1"
+  for stale in planned nightly-ok; do
+    if gh label delete "$stale" --repo "$repo" --yes >/dev/null 2>&1; then
+      echo "    label: $stale - removed, no longer used"
+    fi
+  done
+}
+
 install_forms() {
   repo="$1"
   for template in "$TEMPLATE_DIR"/*.yml; do
@@ -127,6 +140,7 @@ else
     fi
 
     install_labels "$repo"
+    remove_stale_labels "$repo"
 
     if [ "$repo" = "$SELF_REPO" ]; then
       echo "    forms: skipped (this repo keeps its own customised copies)"

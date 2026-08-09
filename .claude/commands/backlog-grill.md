@@ -54,8 +54,9 @@ or define it on the spot.
 1. Rewrite the issue body in the shape of the **Planned change** form: what and
    why, `Done when...` as a checkable list, size, notes. Keep the original text
    at the bottom under `### Original idea`.
-2. `gh issue edit <number> --repo <repo> --remove-label needs-grilling --add-label nightly-ok`.
-   It keeps `planned`, so the nightly routine picks it up next run.
+2. `gh issue edit <number> --repo <repo> --remove-label needs-grilling`. With
+   that label gone it is a plain open issue again, which is all the nightly
+   routine needs to pick it up next run.
 3. Say plainly: it's ready, and it gets built tonight.
 
 If the grilling shows the idea isn't worth doing, say so, and close the issue

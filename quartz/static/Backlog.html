@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Backlog" />
+<meta name="theme-color" content="#1f5d52" />
+<title>Add to backlog</title>
+
+<!--
+  Manual backup for filing backlog items. The main path is dictating a list to
+  Claude; this is for when that isn't to hand.
+
+  This is a static page on a PUBLIC site, so it holds no token and no project
+  names. The project list is pasted in once and lives only in this browser's
+  localStorage. Filing works by opening GitHub's own "new issue" screen with the
+  fields pre-filled — GitHub's session does the authenticating, not this page.
+-->
+
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f4eee2; --panel:#fdfaf4; --panel2:#efe6d4; --line:#d8cab1;
+    --txt:#1f1a14; --muted:#6a6151; --accent:#1f5d52; --on-accent:#fdfaf4;
+    --ok:#17795c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      color-scheme: dark;
+      --bg:#161310; --panel:#221d17; --panel2:#2c251d; --line:#41372b;
+      --txt:#f0e8dc; --muted:#a2957f; --accent:#4fbfa5; --on-accent:#161310;
+      --ok:#4fbfa5;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; touch-action:manipulation; }
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    font-size:17px; line-height:1.45;
+    padding:16px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .wrap{ max-width:34rem; margin:0 auto; }
+
+  h1{ font-size:1.35rem; margin:.2rem 0 .1rem; }
+  .sub{ color:var(--muted); font-size:.92rem; margin:0 0 1.1rem; }
+
+  label{ display:block; font-weight:600; font-size:.92rem; margin:0 0 .35rem; }
+  .hint{ color:var(--muted); font-weight:400; font-size:.85rem; }
+
+  select, textarea, input[type=text]{
+    width:100%; padding:.7rem .8rem; border-radius:10px;
+    border:1px solid var(--line); background:var(--panel); color:var(--txt);
+    /* 17px keeps iOS from zooming the page when a field is focused. */
+    font:inherit; font-size:17px;
+  }
+  textarea{ resize:vertical; min-height:7.5rem; }
+  .field{ margin:0 0 1rem; }
+
+  .row{ display:flex; gap:.6rem; align-items:center; }
+
+  button{
+    font:inherit; font-weight:600; font-size:17px;
+    padding:.7rem 1rem; border-radius:10px; border:1px solid transparent;
+    background:var(--accent); color:var(--on-accent); cursor:pointer;
+    /* Fixed height so pressing a button never resizes anything around it. */
+    min-height:2.9rem;
+  }
+  button.ghost{ background:transparent; color:var(--txt); border-color:var(--line); }
+  button:disabled{ opacity:.45; cursor:default; }
+
+  .check{ display:flex; align-items:center; gap:.55rem; font-weight:400; }
+  .check input{ width:1.15rem; height:1.15rem; }
+
+  ul.queue{ list-style:none; padding:0; margin:1rem 0 0; }
+  ul.queue li{
+    display:flex; align-items:center; gap:.7rem;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:.7rem .8rem; margin:0 0 .6rem;
+    /* Reserved so the "filed" tick appearing can't shift the row. */
+    min-height:3.4rem;
+  }
+  ul.queue .text{ flex:1; min-width:0; word-break:break-word; }
+  ul.queue .tick{
+    color:var(--ok); font-weight:700; width:1.4rem; text-align:center;
+    /* Hidden rather than removed, so the row keeps its width either way. */
+    visibility:hidden;
+  }
+  ul.queue li.filed .tick{ visibility:visible; }
+  ul.queue li.filed .text{ color:var(--muted); text-decoration:line-through; }
+  ul.queue button{ padding:.45rem .8rem; min-height:2.4rem; font-size:15px; }
+
+  .links{ margin-top:2rem; padding-top:1rem; border-top:1px solid var(--line); font-size:.92rem; }
+  .links a{ color:var(--accent); display:inline-block; margin-right:1rem; }
+
+  /* Screens swap by hiding one entirely; only one is ever in the layout, so
+     there is nothing beside them to shift. */
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="setup" hidden>
+    <h1>One-time setup</h1>
+    <p class="sub">Paste your project list. It's stored in this browser only —
+      nothing is sent anywhere, and it never leaves your phone.</p>
+    <div class="field">
+      <label for="projects">Projects<span class="hint"> — one <code>owner/repo</code> per line</span></label>
+      <textarea id="projects" autocapitalize="off" autocorrect="off" spellcheck="false"
+        placeholder="your-name/first-project&#10;your-name/second-project"></textarea>
+    </div>
+    <button id="saveProjects">Save</button>
+    <p id="setupError" class="sub" style="visibility:hidden;margin:.8rem 0 0">
+      None of those look like a project. Use <code>owner/repo</code>, one per line.</p>
+  </section>
+
+  <section id="main" hidden>
+    <h1>Add to backlog</h1>
+    <p class="sub">One item per line. Each one becomes an issue you'll confirm on GitHub.</p>
+
+    <div class="field">
+      <label for="project">Project</label>
+      <select id="project"></select>
+    </div>
+
+    <div class="field">
+      <label for="items">What do you want changed?</label>
+      <textarea id="items" placeholder="Chlorine dose should show one decimal place&#10;Pantry list jumps to the top when I tick something"></textarea>
+    </div>
+
+    <div class="field check">
+      <input type="checkbox" id="vague" />
+      <label for="vague" style="margin:0;font-weight:400">I haven't thought these through — ask me about them first</label>
+    </div>
+
+    <div class="row">
+      <button id="start">Add these</button>
+      <button id="editProjects" class="ghost">Projects</button>
+    </div>
+
+    <ul id="queue" class="queue"></ul>
+
+    <div class="links">
+      <a id="linkPlanned" href="#">Planned</a>
+      <a id="linkProgress" href="#">In progress</a>
+      <a id="linkDone" href="#">Done</a>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE = "backlog.projects";
+
+  var el = function (id) { return document.getElementById(id); };
+
+  function loadProjects() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveProjects(list) {
+    localStorage.setItem(STORE, JSON.stringify(list));
+  }
+
+  // "owner/some-project" -> "some-project", for the dropdown.
+  function shortName(repo) {
+    var slash = repo.indexOf("/");
+    return slash === -1 ? repo : repo.slice(slash + 1);
+  }
+
+  // Accepts "owner/repo" and full GitHub URLs, since pasting a repo's address
+  // straight from the browser is the obvious thing to try.
+  function parseProjects(text) {
+    return text
+      .split("\n")
+      .map(function (line) {
+        return line.trim()
+          .replace(/^https?:\/\/(?:www\.)?github\.com\//i, "")
+          .replace(/[/?#].*$/, function (tail) {
+            // Keep the one slash between owner and repo, drop anything after.
+            var parts = tail.split("/");
+            return parts.length > 1 ? "/" + parts[1].replace(/[?#].*$/, "") : "";
+          })
+          .replace(/\.git$/, "");
+      })
+      .filter(function (line) { return /^[\w.-]+\/[\w.-]+$/.test(line); });
+  }
+
+  // One item per non-empty line. Leading bullets and numbering are stripped so
+  // a pasted list works as-is.
+  function parseItems(text) {
+    return text
+      .split("\n")
+      .map(function (line) { return line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim(); })
+      .filter(Boolean);
+  }
+
+  // Builds GitHub's own "new issue" URL with the fields pre-filled. Exported on
+  // window so the regression test can check the encoding without a browser.
+  function buildIssueUrl(repo, title, vague) {
+    var url = "https://github.com/" + repo + "/issues/new"
+      + "?title=" + encodeURIComponent(title)
+      + "&body=" + encodeURIComponent("**What you asked for**\n\n" + title + "\n");
+    if (vague) url += "&labels=" + encodeURIComponent("needs-grilling");
+    return url;
+  }
+  window.buildIssueUrl = buildIssueUrl;
+
+  function boardUrl(query) {
+    return "https://github.com/search?q=" + encodeURIComponent(query) + "&type=issues";
+  }
+
+  function showSetup(existing) {
+    el("projects").value = existing.join("\n");
+    el("main").hidden = true;
+    el("setup").hidden = false;
+  }
+
+  function showMain(list) {
+    var select = el("project");
+    select.innerHTML = "";
+    list.forEach(function (repo) {
+      var option = document.createElement("option");
+      option.value = repo;
+      option.textContent = shortName(repo);
+      select.appendChild(option);
+    });
+
+    var owner = list.length ? list[0].split("/")[0] : "";
+    el("linkPlanned").href = boardUrl(
+      "user:" + owner + " is:issue is:open -label:in-progress -label:blocked -label:hold");
+    el("linkProgress").href = boardUrl("user:" + owner + " is:issue is:open label:in-progress");
+    el("linkDone").href = boardUrl("user:" + owner + " is:issue is:closed");
+
+    el("setup").hidden = true;
+    el("main").hidden = false;
+  }
+
+  function addToQueue(repo, title, vague) {
+    var li = document.createElement("li");
+
+    var tick = document.createElement("span");
+    tick.className = "tick";
+    tick.textContent = "✓";
+
+    var text = document.createElement("span");
+    text.className = "text";
+    text.textContent = title;
+
+    var button = document.createElement("button");
+    button.textContent = "File it";
+    button.addEventListener("click", function () {
+      // A blocked pop-up returns null. Striking the row through then would
+      // claim the item was filed when GitHub never opened.
+      var opened = window.open(buildIssueUrl(repo, title, vague), "_blank", "noopener");
+      if (opened) li.className = "filed";
+    });
+
+    li.appendChild(tick);
+    li.appendChild(text);
+    li.appendChild(button);
+    el("queue").appendChild(li);
+  }
+
+  el("saveProjects").addEventListener("click", function () {
+    var list = parseProjects(el("projects").value);
+    if (!list.length) {
+      // visibility, not display: the message must not shove the button around.
+      el("setupError").style.visibility = "visible";
+      el("projects").focus();
+      return;
+    }
+    el("setupError").style.visibility = "hidden";
+    saveProjects(list);
+    showMain(list);
+  });
+
+  el("editProjects").addEventListener("click", function () {
+    showSetup(loadProjects());
+  });
+
+  el("start").addEventListener("click", function () {
+    var titles = parseItems(el("items").value);
+    if (!titles.length) {
+      el("items").focus();
+      return;
+    }
+    var repo = el("project").value;
+    var vague = el("vague").checked;
+    titles.forEach(function (title) { addToQueue(repo, title, vague); });
+    el("items").value = "";
+  });
+
+  var projects = loadProjects();
+  if (projects.length) showMain(projects); else showSetup([]);
+})();
+</script>
+</body>
+</html>

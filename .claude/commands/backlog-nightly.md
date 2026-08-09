@@ -22,26 +22,37 @@ it. Every `gh ...` example below has a direct MCP equivalent.
 Read `backlog/repos.txt` from `BarkernotBob/BarkernotBob.github.io` (clone it if
 this session doesn't already have it). Only repos listed there are in scope.
 
-For each one, list the open issues. Sort the work into:
+For each one, list the open issues. **An open issue with no label is work to
+do** — filing something must never require remembering to tag it. Sort into:
 
+Check Skip first — `blocked` and `hold` outrank everything, so an item that is
+both `in-progress` and `blocked` is skipped, not resumed.
+
+- **Skip** — labelled `blocked` or `hold`. Leave these completely alone.
 - **Resume** — labelled `in-progress`, untouched for over a day. These come
-  first; something stalled.
-- **Build** — labelled `planned` **and** `nightly-ok`.
+  next; something stalled.
 - **Grill** — labelled `needs-grilling`.
-- **Skip** — labelled `blocked`, or labelled `planned` without `nightly-ok`.
-  Leave these completely alone.
+- **Build** — everything else that's open. This is the normal case and most
+  items will land here.
 
 Within Build, oldest first, except that anything sized "Quick" jumps ahead of
 anything sized "Big".
+
+Because nothing has to be tagged to qualify, some items will be thin — a single
+dictated sentence with no acceptance criteria. That is expected, and step 2 says
+what to do about it. Thin is not the same as unbuildable; judge each one on
+whether you could state what "done" looks like without guessing at his intent.
 
 ## 2. Work the queue
 
 Follow `/backlog-work` for each item, with these differences because nobody is
 watching:
 
-- **Never ask.** If an item is ambiguous enough that you'd want to ask, it was
-  mislabelled. Move it to `needs-grilling`, drop `nightly-ok`, comment saying
-  which specific question blocked you, and go to the next item.
+- **Never ask.** If an item is ambiguous enough that you'd want to ask, it isn't
+  ready. Move it to `needs-grilling`, comment saying which specific question
+  blocked you, and go to the next item. This is the safety valve that lets
+  everything default to buildable — use it rather than guessing at intent.
+  Building the wrong thing costs more than waiting a day.
 - **Merge your own work** once CI is green. That is the standing instruction.
   Squash-merge, delete the branch.
 - **Never merge on red CI.** Fix it, or if you can't, leave the PR open, label

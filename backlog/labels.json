@@ -1,10 +1,5 @@
 [
   {
-    "name": "planned",
-    "color": "FBCA04",
-    "description": "A change you want made, not started yet"
-  },
-  {
     "name": "in-progress",
     "color": "1D76DB",
     "description": "Being worked on right now"
@@ -20,8 +15,8 @@
     "description": "Too vague to build - needs a spec conversation first"
   },
   {
-    "name": "nightly-ok",
-    "color": "0E8A16",
-    "description": "The nightly routine may build and merge this unattended"
+    "name": "hold",
+    "color": "E4E669",
+    "description": "Parked on purpose - the nightly routine leaves this alone"
   }
 ]

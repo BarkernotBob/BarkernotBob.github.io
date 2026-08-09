@@ -44,8 +44,17 @@ describe("labels.json", () => {
   })
 
   test("every status the tooling reads is defined", () => {
-    for (const status of ["planned", "in-progress", "blocked", "needs-grilling", "nightly-ok"]) {
+    for (const status of ["in-progress", "blocked", "needs-grilling", "hold"]) {
       assert.ok(labelNames.has(status), `missing label: ${status}`)
+    }
+  })
+
+  test("does not define a label that filing would have to remember to set", () => {
+    // An unlabelled open issue is a planned item. Reintroducing `planned` or
+    // `nightly-ok` would put a required tap back on the filing screen, which is
+    // what made items silently vanish before.
+    for (const retired of ["planned", "nightly-ok"]) {
+      assert.ok(!labelNames.has(retired), `${retired} is retired, drop it again`)
     }
   })
 })
@@ -62,18 +71,21 @@ describe("issue forms", () => {
     })
 
     test(`${name} applies only labels that exist`, () => {
-      assert.ok(Array.isArray(form.labels), "needs auto-applied labels")
-      for (const label of form.labels) {
+      // Labels are optional now — a form with none is the normal case.
+      for (const label of form.labels ?? []) {
         assert.ok(labelNames.has(label), `${name} applies unknown label: ${label}`)
       }
-      assert.ok(form.labels.includes("planned"), `${name} must land on the planned list`)
     })
 
-    test(`${name} sets exactly one build-readiness label`, () => {
-      const readiness = form.labels.filter((label: string) =>
-        ["nightly-ok", "needs-grilling"].includes(label),
-      )
-      assert.strictEqual(readiness.length, 1, `got ${JSON.stringify(readiness)}`)
+    test(`${name} never makes visibility depend on a label`, () => {
+      // GitHub silently drops labels it doesn't know, and the phone app skips
+      // forms entirely — so nothing may be required to reach the board.
+      for (const label of form.labels ?? []) {
+        assert.ok(
+          ["needs-grilling", "hold"].includes(label),
+          `${name} applies ${label}, which the board would have to filter on`,
+        )
+      }
     })
 
     test(`${name} dropdown defaults point at a real option`, () => {
@@ -131,20 +143,20 @@ describe("backlog.py", () => {
   })
 
   const openIssues = [
-    issue(1, "Planned and ready", ["planned", "nightly-ok"]),
+    // The case that matters most: filed from the phone, no labels at all.
+    issue(1, "Bare issue from the phone", []),
     issue(2, "Being worked", ["in-progress"]),
     issue(3, "Stuck", ["blocked"]),
-    // Carries two statuses: blocked outranks planned, so it must appear once.
-    issue(4, "Planned but stuck", ["planned", "blocked"]),
-    issue(5, "Not part of the system", ["documentation"]),
-    issue(6, "Rough idea", ["planned", "needs-grilling"]),
-    issue(10, "Planned, held back by hand", ["planned"]),
+    // Carries two statuses; blocked outranks in-progress, so it appears once.
+    issue(4, "Stuck mid-build", ["in-progress", "blocked"]),
+    issue(5, "Parked on purpose", ["hold"]),
+    issue(6, "Rough idea", ["needs-grilling"]),
+    issue(10, "Labelled with something unrelated", ["documentation"]),
   ]
 
   const closedIssues = [
-    issue(7, "Shipped recently", ["planned"], { closedAt: daysAgo(5) }),
-    issue(8, "Shipped ages ago", ["planned"], { closedAt: daysAgo(100) }),
-    issue(9, "Closed, never tracked", [], { closedAt: daysAgo(5) }),
+    issue(7, "Shipped recently", [], { closedAt: daysAgo(5) }),
+    issue(8, "Shipped ages ago", [], { closedAt: daysAgo(100) }),
   ]
 
   // A stand-in for the real `gh`, so the test never touches the network.
@@ -183,8 +195,25 @@ describe("backlog.py", () => {
     return fs.readFileSync(out, "utf8")
   })
 
-  test("counts each status once, with blocked outranking planned", () => {
-    assert.match(output, /\| \[demo\]\(\S+\) \| 3 \| 1 \| 2 \| 1 \|/)
+  test("counts each status once, with blocked outranking in-progress", () => {
+    // planned 3 (#1, #6, #10) | in-progress 1 | blocked 2 | hold 1 | done 1
+    assert.match(output, /\| \[demo\]\(\S+\) \| 3 \| 1 \| 2 \| 1 \| 1 \|/)
+  })
+
+  test("an unlabelled open issue lands on the board as Planned", () => {
+    const planned = output.slice(output.indexOf("### Planned"))
+    assert.match(planned, /Bare issue from the phone/)
+  })
+
+  test("an issue labelled with something unrelated still counts as Planned", () => {
+    const planned = output.slice(output.indexOf("### Planned"))
+    assert.match(planned, /Labelled with something unrelated/)
+  })
+
+  test("parked items are held out of Planned", () => {
+    const planned = output.slice(output.indexOf("### Planned"), output.indexOf("### On hold"))
+    assert.ok(!planned.includes("Parked on purpose"), planned)
+    assert.match(output, /### On hold \(1\)/)
   })
 
   test("drops closed items older than the reporting window", () => {
@@ -192,26 +221,10 @@ describe("backlog.py", () => {
     assert.ok(!output.includes("Shipped ages ago"))
   })
 
-  test("ignores issues carrying no status label", () => {
-    assert.ok(!output.includes("Not part of the system"))
-    assert.ok(!output.includes("Closed, never tracked"))
-  })
-
   test("flags items the nightly routine must not build", () => {
     const roughIdea = output.split("\n").find((line) => line.includes("Rough idea"))
     const context = output.slice(output.indexOf(roughIdea!))
     assert.match(context, /needs a conversation first/)
-  })
-
-  test("warns only on planned items the nightly routine would never pick up", () => {
-    const warned = output
-      .split("\n")
-      .filter((line) => line.includes("nightly routine will not touch this"))
-    assert.strictEqual(warned.length, 1, output)
-
-    // The warning belongs to #10, which sits directly above it.
-    const lines = output.split("\n")
-    assert.match(lines[lines.indexOf(warned[0]) - 1], /Planned, held back by hand/)
   })
 
   test("links every item back to its issue", () => {

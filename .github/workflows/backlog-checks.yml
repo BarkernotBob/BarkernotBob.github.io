@@ -9,6 +9,7 @@ on:
   pull_request:
     paths:
       - "backlog/**"
+      - "quartz/static/Backlog.html"
       - ".claude/commands/backlog*.md"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/workflows/backlog-checks.yml"
@@ -21,6 +22,7 @@ on:
     # YAML anchors, so this has to be duplicated by hand.
     paths:
       - "backlog/**"
+      - "quartz/static/Backlog.html"
       - ".claude/commands/backlog*.md"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/workflows/backlog-checks.yml"
@@ -52,4 +54,4 @@ jobs:
         run: python3 -m py_compile backlog/backlog.py
 
       - name: Regression tests
-        run: npx tsx --test backlog/backlog.test.mts
+        run: npx tsx --test backlog/backlog.test.mts backlog/capture-page.test.mts

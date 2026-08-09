@@ -5,7 +5,8 @@ allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill
 ---
 
 Work a backlog item through to done. Target: $ARGUMENTS — if empty, take the
-oldest open item labelled `planned` in the current repo.
+oldest open issue in the current repo that isn't already `in-progress`,
+`blocked` or `hold`.
 
 ## Reading and writing GitHub
 
@@ -24,7 +25,7 @@ it. Every `gh ...` example below has a direct MCP equivalent.
    what's already been tried.
 2. If it's labelled `needs-grilling`, stop and run `/backlog-grill <number>`
    instead. It isn't ready to build.
-3. Move it: `gh issue edit <number> --repo <repo> --remove-label planned --add-label in-progress`.
+3. Move it: `gh issue edit <number> --repo <repo> --add-label in-progress`.
 4. Comment with the plan before writing code — the approach in a few sentences,
    the files you expect to touch, and anything in the issue you had to interpret.
 

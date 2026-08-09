@@ -21,6 +21,14 @@ failure mode produces a job with no steps and no logs.
 
 ## What just changed
 
+- 2026-08-09 — **backlog: labels no longer gate visibility.** The first cut needed
+  a `planned` label to appear on the board, and the GitHub phone app can't apply
+  labels through issue forms — so phone-filed items silently vanished. Now **any
+  open issue is a planned item**; labels only subtract (`in-progress`, `blocked`,
+  `hold`, plus the `needs-grilling` flag). `planned` and `nightly-ok` are
+  retired and `install.sh` deletes them. New: `/backlog-add` (dictate a list,
+  get issues) and `quartz/static/Backlog.html`, an unlinked capture page —
+  no token, no repo names, project list in localStorage.
 - 2026-08-08 — **backlog system.** Planned changes are now GitHub issues in each
   project's own repo, filed from the phone through two issue forms, tracked by
   five labels, and worked by `/backlog-work` or an overnight Routine that builds

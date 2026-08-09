@@ -41,8 +41,8 @@ Beginner with Git, GitHub, and CLI. For any action I must take:
 - When a repo has no remote, create one: `gh repo create <name> --private` then `git remote add origin https://github.com/BarkernotBob/<name>.git && git push -u origin main`. (Don't use `gh repo create --source=.` — gh doesn't recognize the `.git` pointer-file layout.) Push after checkpoint commits.
 
 # Backlog & prototyping
-- **The backlog is GitHub issues, in each project's own repo.** Status = labels (`planned`, `in-progress`, `blocked`, `needs-grilling`, `nightly-ok`); done = closed. Precedence when several are set: `blocked` > `in-progress` > `planned`. Machinery and gotchas: `backlog/README.md`. User-facing: `BACKLOG_GUIDE.md`.
-- Commands: `/backlog` (see everything), `/backlog-work <n>` (build it), `/backlog-grill <n>` (pin down a rough idea), `/backlog-nightly` (the unattended pass).
+- **The backlog is GitHub issues, in each project's own repo.** **Any open issue is a planned item** — never make visibility depend on a label, that's how phone-filed items vanished. Labels only subtract: `in-progress`, `blocked`, `hold`, plus the `needs-grilling` flag. Done = closed. Precedence: `blocked` > `hold` > `in-progress` > nothing. Machinery and gotchas: `backlog/README.md`. User-facing: `BACKLOG_GUIDE.md`.
+- Commands: `/backlog-add` (file items from a dictated list), `/backlog` (see everything), `/backlog-work <n>` (build it), `/backlog-grill <n>` (pin down a rough idea), `/backlog-nightly` (the unattended pass).
 - Every issue file must contain acceptance criteria AND a "Manual test (for Isaiah)" section: numbered plain-English steps a non-developer can follow. Write it when the issue is completed, not before.
 - Autonomous runs go through /ralph or the nightly backlog Routine (`/backlog-nightly`) — never improvise an unattended loop outside those two.
 - Prototype code (prototype/* branches, prototypes/ folders) never merges to main. Promoting a prototype = re-implementing through the normal pipeline (/grill-me → /to-prd → /to-issues). If feature requests start piling onto a prototype, flag it and offer promotion.

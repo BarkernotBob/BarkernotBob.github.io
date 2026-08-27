@@ -21,22 +21,38 @@ failure mode produces a job with no steps and no logs.
 
 ## What just changed
 
-- 2026-08-27 — **the nightly backlog was never actually working, and now is.**
-  Its Routine prompt still required the `planned` + `nightly-ok` labels, which
-  were retired and deleted on 2026-08-09. So every night it woke, looked for
-  labels that cannot exist, concluded "no work", and stopped — a two-minute run
-  reported as a success. The prompt now matches the current model (any open
-  issue is work; labels only subtract) and it must report counts even on an
-  empty night, so a silent no-op can't hide as an empty backlog again.
-  Two things it still needs from a human: the other 17 repos in
-  `backlog/repos.txt` must be granted to Claude at
-  https://claude.ai/admin-settings/claude-tag, and its stored tool grants
-  predate the GitHub MCP tools it now depends on.
+- 2026-08-27 — **the nightly backlog has never been able to reach GitHub, and
+  still can't.** The Routine fires, clones this repo, reads the protocol, and
+  then stops: the session it fires has no `gh` CLI, no GitHub MCP tools, and no
+  `add_repo`, so it cannot list a single issue in any repo — including this one.
+  It reports this correctly and sends a notification; the run "succeeds" because
+  the agent stops cleanly, which is why it looked healthy from the outside.
+
+  **Root cause:** a Routine freezes its tool grants at creation time. This one
+  was created 2026-08-08 from a session that held no MCP tools, and its stored
+  list is built-ins only — no `mcp__github__*`, no `add_repo`. Neither
+  `update_trigger` (no such parameter) nor `create_trigger` (writes the same
+  default list regardless of the calling session) can change it.
+
+  **Not the cause, though both were suspected:** repo authorization is fine —
+  `add_repo` on `BarkernotBob/bank-bonuses` succeeds from a normal session, so
+  the account-level GitHub grants already cover the other repos. And the stale
+  `planned` + `nightly-ok` labels in the Routine's prompt were real but never
+  reached — the run dies before the queue is built. That prompt is fixed anyway,
+  and it now has to report counts on every run, empty nights included.
+
+  **The fix is in the UI, not in this repo:** delete and recreate the Routine
+  from https://claude.ai — Settings → Routines — so it is provisioned with the
+  tools a normal session gets. The same defect applies to the new
+  `Monthly branch sweep` Routine (`trig_018KFdmKDquYi7UWRup93cGT`), created the
+  same way; it will fail identically on 1 September until recreated.
+
   Also new: `.claude/settings.json` pre-approves the GitHub and git operations
-  the routine needs and *denies* the things it must never do (workflow files,
-  `.quartz/plugins/`, force-push, rebase) — the rules that were prose-only
-  before. And `/branch-sweep`, run monthly by a Routine, deletes branches whose
-  work already landed and files one issue about the ones that need a decision.
+  the routine needs and *denies* what it must never do (workflow files,
+  `.quartz/plugins/`, force-push, rebase) — rules that were prose-only before.
+  That governs prompting, not tool availability, so it does not by itself
+  unblock the nightly. And `/branch-sweep`, meant to run monthly, deletes
+  branches whose work already landed and files one issue about the rest.
 - 2026-08-27 — **the July audit is now a backlog.** All eight findings in
   `AUDIT-GAPS.md` became issues #108–#115 (W8 deliberately excepted). Nothing in
   that document had moved in six weeks, and GAP-W4 had got *worse* — bank-bonus

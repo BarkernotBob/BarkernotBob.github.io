@@ -41,11 +41,18 @@ failure mode produces a job with no steps and no logs.
   reached — the run dies before the queue is built. That prompt is fixed anyway,
   and it now has to report counts on every run, empty nights included.
 
-  **The fix is in the UI, not in this repo:** delete and recreate the Routine
-  from https://claude.ai — Settings → Routines — so it is provisioned with the
-  tools a normal session gets. The same defect applies to the new
-  `Monthly branch sweep` Routine (`trig_018KFdmKDquYi7UWRup93cGT`), created the
-  same way; it will fail identically on 1 September until recreated.
+  **The fix:** `backlog/routines/SETUP.md` — start a chat at
+  https://claude.ai/code with this repo attached, paste the prompt in that file,
+  and it deletes both broken Routines and creates working ones bound to itself.
+  It verifies a spawned worker really inherits the GitHub tools *before* creating
+  anything, so this can't be rebuilt broken. The same defect applies to the
+  `Monthly branch sweep` Routine (`trig_018KFdmKDquYi7UWRup93cGT`); it will fail
+  identically on 1 September until that setup is run.
+
+  The new design keeps the bound chat as a dispatcher only — each firing spawns a
+  fresh worker via `create_session` and stops — so the transcript the Routine
+  resumes stays small instead of accumulating a month of runs. Worker briefings
+  are versioned in `backlog/routines/`.
 
   Also new: `.claude/settings.json` pre-approves the GitHub and git operations
   the routine needs and *denies* what it must never do (workflow files,

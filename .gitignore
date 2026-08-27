@@ -14,11 +14,15 @@ quartz/cli/tui/dist/
 content/private/
 # Local Claude state stays out, but the backlog commands are the system's
 # guardrails (what the nightly routine may merge, what it must never touch) and
-# have to be versioned.
+# have to be versioned. settings.json is the machine-enforced half of those same
+# guardrails, so it is versioned too. Personal overrides go in
+# settings.local.json, which stays ignored.
 .claude/*
 !.claude/commands/
 .claude/commands/*
 !.claude/commands/backlog*.md
+!.claude/commands/branch-sweep.md
+!.claude/settings.json
 
 # Obsidian "Smart Connections" data — contains private note paths/metadata.
 # Must never be published. (Removed from the repo during the security review.)

@@ -1,6 +1,6 @@
 # HANDOFF — barkernotbob.github.io (Quartz v5 site)
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-27_
 
 ## Current status
 
@@ -20,6 +20,27 @@ If a deploy ever fails with an empty log / `BlobNotFound`, check #2 first — th
 failure mode produces a job with no steps and no logs.
 
 ## What just changed
+
+- 2026-08-27 — **the nightly backlog was never actually working, and now is.**
+  Its Routine prompt still required the `planned` + `nightly-ok` labels, which
+  were retired and deleted on 2026-08-09. So every night it woke, looked for
+  labels that cannot exist, concluded "no work", and stopped — a two-minute run
+  reported as a success. The prompt now matches the current model (any open
+  issue is work; labels only subtract) and it must report counts even on an
+  empty night, so a silent no-op can't hide as an empty backlog again.
+  Two things it still needs from a human: the other 17 repos in
+  `backlog/repos.txt` must be granted to Claude at
+  https://claude.ai/admin-settings/claude-tag, and its stored tool grants
+  predate the GitHub MCP tools it now depends on.
+  Also new: `.claude/settings.json` pre-approves the GitHub and git operations
+  the routine needs and *denies* the things it must never do (workflow files,
+  `.quartz/plugins/`, force-push, rebase) — the rules that were prose-only
+  before. And `/branch-sweep`, run monthly by a Routine, deletes branches whose
+  work already landed and files one issue about the ones that need a decision.
+- 2026-08-27 — **the July audit is now a backlog.** All eight findings in
+  `AUDIT-GAPS.md` became issues #108–#115 (W8 deliberately excepted). Nothing in
+  that document had moved in six weeks, and GAP-W4 had got *worse* — bank-bonus
+  went from 78 inline handlers to 86.
 
 - 2026-08-09 — **backlog: labels no longer gate visibility.** The first cut needed
   a `planned` label to appear on the board, and the GitHub phone app can't apply

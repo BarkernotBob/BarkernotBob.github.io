@@ -2,6 +2,31 @@
 
 **Date:** 2026-07-12. Source: independent senior-level code audit covering the grocery app (`quartz/static/grocery/`, ~1,900 LOC ES modules), `pool/index.html` (1,421 LOC), `vehicle/index.html` (1,232 LOC), `bank-bonus/index.html` (2,398 LOC), the Cloudflare OAuth worker, the Playwright suite (`tests/grocery/`), `quartz/styles/custom.scss`, and the build/patch machinery. Grades: Architecture B+, Code quality B, Testing B−, Robustness B+, Maintainability B−.
 
+## Status — filed as issues 2026-08-27
+
+These are no longer just a document. Every gap below is an open GitHub issue, so
+`/backlog-work` and the nightly routine can see them:
+
+| Gap | Issue | Notes |
+| --- | --- | --- |
+| GAP-W1 | [#108](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/108) | `hold` — edits `deploy.yml`, needs an attended session |
+| GAP-W2 | [#109](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/109) | the load-bearing one; one session per app |
+| GAP-W2b | [#110](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/110) | `hold` — wires the suites into the deploy gate |
+| GAP-W5 | [#111](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/111) | shared data layer |
+| GAP-W4 | [#112](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/112) | **regressed since the audit**: 78 → 86 inline handlers |
+| GAP-W3 | [#113](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/113) | OAuth scope |
+| GAP-W6 | [#114](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/114) | `Quick` — vehicle PWA parity |
+| GAP-W7 | [#115](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/115) | `hold` — adds a CI lint job |
+
+GAP-W8 deliberately has no issue; the audit's own advice is to fix it
+opportunistically, not as a project.
+
+Nothing here had moved in the six weeks after the audit was written. That is the
+whole reason for the table: a finding that isn't an issue is a finding nothing
+will ever pick up.
+
+---
+
 **The core finding:** a pronounced quality gradient. The grocery app is the flagship (modular, XSS-hardened, race-safe data layer, adversarial test suite, fail-closed deploy gate). Pool, vehicle, and bank-bonus are earlier single-file monoliths that copy-pasted grocery's data layer WITHOUT its hardening or tests. The job below is mostly "retrofit every app to the bar grocery already proves the author can hit."
 
 **Instructions for the agent picking this up:** work in priority order (P1 → P3). Follow CLAUDE.md: issue files with acceptance criteria (+ "Manual test (for Isaiah)" on completion), small checkpoint commits, medium code-review per diff, never call a UI fix done without a screenshot, keep the local-script vs deploy.yml patch parity intact at every step. Grocery's Playwright suite (`tests/grocery/`) must stay green; it is the template for the new suites.

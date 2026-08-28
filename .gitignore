@@ -30,6 +30,8 @@ content/.smart-env/
 tests/grocery/screenshots/
 tests/grocery/test-results/
 tests/grocery/playwright-report/
+tests/install-checks/test-results/
+tests/install-checks/playwright-report/
 
 # Studio local editor: safety net copies + soft-deleted pages. Never published.
 .studio-backups/

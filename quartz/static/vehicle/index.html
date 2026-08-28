@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#14494B" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="description" content="Model long-term vehicle ownership costs and compare cars side by side." />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <title>Driveline — Vehicle Cost Calculator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,6 +36,7 @@ body{
   line-height:1.45; letter-spacing:-.005em;
   padding-bottom:calc(76px + var(--safe-b));
   overflow-x:hidden;
+  touch-action:manipulation;
 }
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 h1,h2,h3{margin:0;font-weight:600}
@@ -202,13 +206,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .dt-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--faint);font-weight:600;
   padding:0 2px 7px;position:sticky}
 .dt-row{padding:4px 0}
-.dt-row input{width:100%;padding:8px 7px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;
+.dt-row input{width:100%;padding:8px 7px;border:1px solid var(--line);border-radius:8px;font-size:16px;
   background:#fff;font-variant-numeric:tabular-nums;text-align:right}
 .dt-row input.yr{text-align:center;font-weight:600;background:var(--surface2)}
 .dt-row input:focus{outline:none;border-color:var(--primary)}
 .dt-del{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:18px;line-height:1;padding:4px}
 .dt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.dt-inner{min-width:420px}
+.dt-inner{min-width:470px}
 
 /* ---------- Compare ---------- */
 .selrow{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
@@ -960,7 +964,7 @@ function renderAddVehicle(){
         <li>Come back, tap the box below and <b>paste</b>.</li>
       </ol>
       </div>
-      <textarea id="ceText" rows="4" placeholder="Paste the copied CarEdge page here — or the one-click button's data, or plain CSV rows:&#10;year,price,maintenance,insurance,registration" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;line-height:1.5"></textarea>
+      <textarea id="ceText" rows="4" placeholder="Paste the copied CarEdge page here — or the one-click button's data, or plain CSV rows:&#10;year,price,maintenance,insurance,registration" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-size:16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;line-height:1.5"></textarea>
       <div class="field" style="margin-top:10px"><label class="lbl">Name this car <span style="font-weight:400;color:var(--faint)">(optional)</span></label>
         <input class="inp" id="ceName" placeholder="e.g. Honda CR-V"></div>
       <button class="btn sm" id="ceAdd">Add vehicle</button>
@@ -1226,6 +1230,9 @@ function showModelInfo(){
 
 /* boot */
 render();
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
 window.addEventListener("resize",()=>{ if(route.view==="vehicle"&&vehTab==="overview"){const v=vehicleById(route.id);if(v)drawValueChart(v,state.settings,Eng.model(v,state.settings));} else if(route.view==="compare"){/* redraw on next render */} });
 </script>
 </body>

@@ -462,7 +462,7 @@ function currentTab(){
   const s = document.querySelector('.section.active');
   return s ? s.id.replace('section-','') : '';
 }
-function modalOpen(){ return !!document.querySelector('.modal-ov'); }
+function modalOpen(){ return !!document.querySelector('.modal-ov:not([data-closing])'); }
 
 // --------- Keyboard shortcuts ---------
 const TAB_KEYS = {'t':'today','a':'active','p':'planned','o':'offers','c':'calendar','r':'reports','s':'settings'};
@@ -486,7 +486,7 @@ document.addEventListener('keydown', e => {
   // Escape: blur focused input first; if nothing focused, close modal or go back.
   if(e.key === 'Escape'){
     if(inInput && !modalOpen()){ document.activeElement.blur(); return; }
-    if(modalOpen()){ const o = document.querySelector('.modal-ov'); if(o && o._esc) o._esc(); return; }
+    if(modalOpen()){ const o = document.querySelector('.modal-ov:not([data-closing])'); if(o && o._esc) o._esc(); return; }
     if(currentTab() === 'detail'){ backFromDetail(); }
     return;
   }
@@ -516,7 +516,24 @@ function modal(innerHtml){
   return new Promise(resolve => {
     const o = el('div', {class:'modal-ov'});
     o.innerHTML = `<div class="modal-card">${innerHtml}</div>`;
-    const close = (val) => { if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    // Detach AFTER the caller has resumed, not before. Callers that collect
+    // input (addAccount, addOffer) read their fields on the line after
+    // `await modal(...)`; removing the overlay here left them reading `.value`
+    // off null, which threw and silently created nothing. Hide it now so the
+    // UI still responds instantly, resolve (the caller resumes as a microtask,
+    // fields still attached), then remove on the next macrotask.
+    const close = (val) => {
+      if(o._done) return;
+      o._done = true;
+      o.style.visibility = 'hidden';
+      o.style.pointerEvents = 'none';
+      // It stays in the DOM for one macrotask (above), so mark it: modalOpen()
+      // and the Esc handler must not find this closed overlay and treat a
+      // chained modal's Escape as already handled.
+      o.setAttribute('data-closing', '');
+      resolve(val);
+      setTimeout(() => o.remove(), 0);
+    };
     o._esc = () => close(null);   // let the global Esc handler cancel this modal
     o.addEventListener('click', e => { if(e.target===o) close(null); });
     document.body.appendChild(o);

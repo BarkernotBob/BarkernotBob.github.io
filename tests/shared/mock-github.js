@@ -1,5 +1,13 @@
-// Mocks the GitHub API the grocery app talks to, using SYNTHETIC fixture db
-// files (never real data — this is a public repo).
+// Mocks the GitHub API the apps talk to, using SYNTHETIC fixture db files
+// (never real data — this is a public repo).
+//
+// SHARED by every app suite (GAP-W2). It used to live in tests/grocery/support/,
+// which is why the git-object-store fidelity below is shaped by grocery's needs:
+// grocery moved onto the Git Data API, so the mock has to model it properly.
+// Apps still on the plain Contents API (bank-bonus) use only the Contents
+// section at the bottom, which reads through the same object store.
+//
+// Callers pass their own `fixturesDir`; nothing about a specific app is baked in.
 //
 // S1 moved the app onto the **Git Data API**: reads go ref → commit → tree →
 // blob (no 1 MB ceiling) and writes are atomic batched commits (blobs → tree on
@@ -22,7 +30,6 @@ const fs = require('fs')
 const path = require('path')
 
 const BRANCH = 'main'
-const FIXturesDir = path.join(__dirname, '..', 'fixtures', 'db')
 
 // A 1x1 transparent PNG, enough for viewPhoto() to build a data URL.
 const TINY_IMG_B64 =
@@ -42,16 +49,20 @@ function hash(s) {
   return h.toString(16)
 }
 
-function readFixture(relPath) {
+function readFixture(fixturesDir, relPath) {
   if (!relPath.startsWith('db/')) return null
-  const file = path.join(FIXturesDir, relPath.slice(3))
+  const file = path.join(fixturesDir, relPath.slice(3))
   if (!fs.existsSync(file)) return null
   return fs.readFileSync(file, 'utf8')
 }
 
-// Install on a Playwright page. `opts.oversizeItems` inflates items.json past the
-// 1 MB Contents ceiling (served via blobs) to prove the ceiling is gone.
+// Install on a Playwright page.
+//   opts.fixturesDir  (required) directory of *.json seeded as db/<name>
+//   opts.seedImages   paths to seed with a 1x1 PNG, for apps that store photos
+//   opts.oversizeItems / opts.truncateTree  grocery-specific Git Data scenarios
 async function installGitHubMock(page, opts = {}) {
+  const fixturesDir = opts.fixturesDir
+  if (!fixturesDir) throw new Error('installGitHubMock: opts.fixturesDir is required')
   // ---- in-memory git object store ----
   const git = { blobs: {}, trees: {}, commits: {}, head: null }
   let counter = 0
@@ -86,9 +97,9 @@ async function installGitHubMock(page, opts = {}) {
 
   // ---- seed the initial commit from the fixtures ----
   const seedMap = {}
-  for (const name of fs.readdirSync(FIXturesDir)) {
+  for (const name of fs.readdirSync(fixturesDir)) {
     if (!name.endsWith('.json')) continue
-    let text = fs.readFileSync(path.join(FIXturesDir, name), 'utf8')
+    let text = fs.readFileSync(path.join(fixturesDir, name), 'utf8')
     if (name === 'items.json' && opts.oversizeItems) {
       const arr = JSON.parse(text)
       const base = arr[0]
@@ -105,11 +116,12 @@ async function installGitHubMock(page, opts = {}) {
     }
     seedMap['db/' + name] = putBlob(b64(text))
   }
-  // A couple of image paths the fixtures reference, so getImageDataUrl resolves
-  // through the tree/blob path.
-  const imgSha = putBlob(TINY_IMG_B64)
-  seedMap['receipts/r_pub_0001.jpg'] = imgSha
-  seedMap['inbox/r_pub_0002.jpg'] = imgSha
+  // Image paths a caller's fixtures reference, so an image lookup resolves
+  // through the tree/blob path rather than 404ing.
+  if ((opts.seedImages || []).length) {
+    const imgSha = putBlob(TINY_IMG_B64)
+    for (const imgPath of opts.seedImages) seedMap[imgPath] = imgSha
+  }
   const seedTree = putTree(seedMap)
   const seedCommit = putCommit(seedTree, [])
   git.head = { commitSha: seedCommit, etag: '"' + seedCommit + '"' }
@@ -290,12 +302,30 @@ async function installGitHubMock(page, opts = {}) {
         // Oversize items.json would error via Contents (the ceiling the app avoids).
         if (filePath === 'db/items.json' && opts.oversizeItems)
           return route.fulfill({ status: 403, json: { message: 'This API returns blobs up to 1 MB in size. Use the Git Data API instead.' } })
-        const raw = readFixture(filePath)
+        // Committed state first — otherwise a PUT would never be visible to
+        // the app that just made it. The store is seeded from the fixtures, so
+        // this matches the fixture until something is written. Served straight
+        // from the stored blob: decoding to text and re-encoding would corrupt
+        // any binary path (an image) that has been committed.
+        const committedSha = headTreeMap()[filePath]
+        if (committedSha != null) {
+          const stored = git.blobs[committedSha]
+          return json(route, {
+            name: filePath.split('/').pop(),
+            path: filePath,
+            sha: committedSha,
+            size: Buffer.from(stored, 'base64').length,
+            encoding: 'base64',
+            content: stored,
+            download_url: 'https://raw.example/' + filePath,
+          })
+        }
+        const raw = readFixture(fixturesDir, filePath)
         if (raw != null)
           return json(route, {
             name: filePath.split('/').pop(),
             path: filePath,
-            sha: 'sha-' + filePath.replace(/\W/g, '-'),
+            sha: 'sha-' + hash(raw),
             size: raw.length,
             encoding: 'base64',
             content: b64(raw),

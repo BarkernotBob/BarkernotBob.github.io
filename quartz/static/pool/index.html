@@ -35,6 +35,7 @@
   body{
     font-family:var(--font-body);
     background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
     padding-bottom:calc(74px + env(safe-area-inset-bottom)); line-height:1.5; font-size:15px;
     letter-spacing:-.003em; font-variant-numeric:tabular-nums;
   }
@@ -651,7 +652,7 @@ async function fillInferences(){
 /* ---- copyable text modal (clipboard from closure; textarea for manual copy) ---- */
 function copyModal(title, text){
   return modal(`<h2>${esc(title)}</h2><p class="small muted" style="margin:0 0 6px">Tap Copy, then paste wherever you need it.</p>
-    <textarea readonly rows="14" style="font-size:12px;width:100%">${esc(text)}</textarea>
+    <textarea readonly rows="14" style="font-size:16px;width:100%">${esc(text)}</textarea>
     <div class="row" style="margin-top:10px"><button class="sec" data-mcancel>Close</button><button data-mval="copy">Copy</button></div>`)
     .then(async v=>{ if(v==='copy'){ try{ await navigator.clipboard.writeText(text); toast('Copied ✓'); }catch(e){ toast('Select the text above and copy manually'); } } });
 }

@@ -3,12 +3,12 @@
    fresh in the background so the next open always has the latest version.
    GitHub API calls always go to the network. */
 
-const CACHE = 'bb-v4';
+const CACHE = 'bb-v5';
 const SHELL = [
   '/static/bank-bonus/',
   '/static/bank-bonus/index.html',
   '/static/bank-bonus/starter-offers.js',
-  '/static/bank-bonus/manifest.json',
+  '/static/bank-bonus/manifest.webmanifest',
   '/static/bank-bonus/icon-192.png',
   '/static/bank-bonus/icon-512.png',
   '/static/bank-bonus/apple-touch-icon.png',

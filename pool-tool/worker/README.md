@@ -29,3 +29,24 @@ wrangler deploy worker.js --name pool-auth
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
 ```
+
+---
+
+## Note on scope (GAP-W3, 2026-08-28)
+
+The authorize URL this Worker serves still requests `scope=repo`, which is full
+read/write to **every** private repository on the account. That is not an oversight
+and it is not fixable here: the sign-in is a **classic GitHub OAuth App**, and classic
+OAuth Apps offer only `public_repo` (useless for private data repos) and `repo`
+(everything). There is no per-repository scope to downgrade to.
+
+So the apps no longer steer people to this route. Their setup screens now recommend a
+**fine-grained personal access token restricted to the one data repo**, and present
+"Sign in with GitHub" as a clearly-labelled fallback that says what it asks for.
+
+The Worker itself was deliberately left alone — the audit found it well built (the
+client secret stays server-side, the origin is locked down, nothing is stored). The
+problem was never the Worker; it was the breadth of what was being asked for.
+
+Full reasoning, including what moving to a GitHub App would take:
+[`DECISION-github-access-scope.md`](../../DECISION-github-access-scope.md).

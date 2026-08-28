@@ -436,7 +436,7 @@ function getMe(){ return LS.me; }
 function appRedirect(){ return location.origin + location.pathname; }
 
 function signInWithGitHub(){
-  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use “paste a token” below for now.'); return; }
+  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use the key fields above for now.'); return; }
   // The redirect navigates away, so capture the name/device first.
   const me = $('#su_me') ? $('#su_me').value.trim() : LS.me;
   const device = $('#su_device') ? $('#su_device').value.trim() : LS.device;
@@ -493,15 +493,21 @@ function renderSetup(){
     <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Me'?'selected':''}>Me</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
     <label>This device's name (so your phone and computer can both stay signed in)</label>
     <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
-    <button data-action="signIn">🔐 Sign in with GitHub</button>
-    <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until OAuth is configured.'}</p>
-    <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
-      <label>Private data repository (<code>owner/name</code>)</label>
-      <input id="su_repo" placeholder="BarkernotBob/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-      <label>Access key (your private token — like a house key)</label>
-      <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-      <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
-      <button class="sec" data-action="saveSetup">Connect with token</button>
+    <label>Private data repository (<code>owner/name</code>)</label>
+    <input id="su_repo" placeholder="BarkernotBob/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label>Access key (your private token — like a house key)</label>
+    <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <p class="small muted">Make the key at <b>github.com/settings/tokens?type=beta</b> and give it access to
+    <b>only</b> your <code>grocery-data</code> repository — Step 3 of the SETUP guide. It is saved only in this
+    browser and sent nowhere except GitHub.</p>
+    <button data-action="saveSetup">Connect</button>
+    <details style="margin-top:14px"><summary>Other way in: Sign in with GitHub</summary>
+      <p class="small muted">One tap instead of making a key — but it asks GitHub for access to
+      <b>every</b> private repository you own, not just this one, because that is the only thing
+      the old-style sign-in can ask for. The key above is the safer route; use this if you'd
+      rather not make one.</p>
+      <button class="sec" data-action="signIn">🔐 Sign in with GitHub</button>
+      <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the key above until OAuth is configured.'}</p>
     </details>
   </div>`;
 }

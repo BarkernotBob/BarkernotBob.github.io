@@ -805,7 +805,7 @@ function oauthReady(){ return OAUTH.clientId && OAUTH.workerUrl; }
 function appRedirect(){ return location.origin + location.pathname; }
 
 function signInWithGitHub(){
-  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use “paste a token” below for now.'); return; }
+  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use the token fields above for now.'); return; }
   const state = uid('s'); localStorage.setItem('pl_oauth_state', state);
   const u = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(OAUTH.clientId)}`
           + `&scope=repo&redirect_uri=${encodeURIComponent(appRedirect())}&state=${encodeURIComponent(state)}`;
@@ -858,17 +858,23 @@ function renderSetup(){
     <h2>Welcome to Pool Care 🏊</h2>
     <p class="small muted">A one-time sign-in on this phone/computer. Your pool data is saved in your own
     <b>private</b> GitHub repository — see the <b>SETUP guide</b> in your website repo (pool-tool/SETUP.md).</p>
-    <button onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
-    <p class="small muted" style="margin-top:6px">${oauthReady()?'Approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until the Cloudflare step is done.'}</p>
-    <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
-      <label>Private data repository (<code>owner/name</code>)</label>
-      <input id="su_repo" placeholder="BarkernotBob/pool-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-      <label>Access token (<code>github_pat_…</code>)</label>
-      <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-      <label>This device's name (optional)</label>
-      <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words"/>
-      <p class="small muted">The token is saved only in this browser, sent only to GitHub.</p>
-      <button class="sec" onclick="saveTokenSetup()">Connect with token</button>
+    <label>Private data repository (<code>owner/name</code>)</label>
+    <input id="su_repo" placeholder="BarkernotBob/pool-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label>Access token (<code>github_pat_…</code>)</label>
+    <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label>This device's name (optional)</label>
+    <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words"/>
+    <p class="small muted">Make the token at <b>github.com/settings/tokens?type=beta</b> and give it access to
+    <b>only</b> your <code>pool-data</code> repository — Step 3 of the SETUP guide. It is saved only in this
+    browser and sent nowhere except GitHub.</p>
+    <button onclick="saveTokenSetup()">Connect</button>
+    <details style="margin-top:14px"><summary>Other way in: Sign in with GitHub</summary>
+      <p class="small muted">One tap instead of making a token — but it asks GitHub for access to
+      <b>every</b> private repository you own, not just this one, because that is the only thing
+      the old-style sign-in can ask for. The token above is the safer route; use this if you'd
+      rather not make one.</p>
+      <button class="sec" onclick="signInWithGitHub()">🔐 Sign in with GitHub</button>
+      <p class="small muted" style="margin-top:6px">${oauthReady()?'Approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token above until the Cloudflare step is done.'}</p>
     </details>
   </div>`;
 }

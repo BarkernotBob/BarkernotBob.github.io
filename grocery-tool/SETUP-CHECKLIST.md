@@ -12,9 +12,14 @@ are already filled in. Plain-language version of `SETUP.md`.
 > the app is **published** — tell Claude **"publish it"** and it'll handle that.
 > You can do Steps 1–3 first and publish anytime.
 
-> ⭐ **New easy sign-in:** the app now has a **🔐 Sign in with GitHub** button (the
-> same one your Pool app uses). With it you can **skip Steps 2 and 3 (the token)** —
-> just do Step 1, then the one-time tweak below, then tap the button in Step 4.
+> ⭐ **Do Steps 2 and 3 — they are the recommended path.** They cut a key that opens
+> **only** your grocery folder, and nothing else on your account.
+>
+> There is also a one-tap **🔐 Sign in with GitHub** button, under "Other way in" on
+> the app's setup screen. It skips Steps 2–3 (do Step 1, the one-time tweak below,
+> then tap the button in Step 4) — but it asks GitHub for access to **every** private
+> repository you own, because that older style of sign-in has no way to ask for just
+> one. Quicker; hands over much more. See "Why the key…" in `SETUP.md`.
 >
 > **One-time tweak (do once):** GitHub → **Settings → Developer settings → OAuth Apps**
 > → open **Pool Care** → change **Authorization callback URL** from

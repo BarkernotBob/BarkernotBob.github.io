@@ -8,38 +8,26 @@ A quick map of the words you'll see:
   your stuff). You already have one for your website. We'll make a *second, private*
   one just for grocery data.
 - **Private** = only people you invite can see it. (Your website repo is public.)
+- **Token** = a long secret password you make on GitHub and save on your phone.
+  Think of it as a house key. This is the **recommended** way to connect the app,
+  because you can cut the key to open **only** the grocery folder and nothing else.
 - **Sign in with GitHub** = a one-tap button (the same kind you've used on other
-  sites). This is the easy, recommended way to connect the app — no keys to copy.
-- **Token** = a long secret password the app *can* use instead, if you prefer the
-  manual route. Think of it as a house key you save on your phone. It's now the
-  **fallback**, not the main path.
+  sites). Easier, but it asks GitHub for access to **every** private repo you own —
+  see the note at the end. It's the **fallback**, not the main path.
 - **The app** = the web page you open on your phone to snap receipts and see reports.
 
 ---
 
-## ⭐ The easy way: "Sign in with GitHub" (shared with your Pool app)
+## ⭐ Do the four steps below, in order
 
-The grocery app now has a **🔐 Sign in with GitHub** button — the same sign-in your
-**Pool** app already uses. Because it's shared, there's **nothing new to set up in
-Cloudflare** and **no token to copy**. You only do **one** small one-time thing so
-GitHub will allow the same sign-in to work on the grocery (and bank) pages too:
+Steps 1–4 make a private folder, cut a key that opens **only that folder**, and
+connect the app with it. That is the recommended path, and it is what the app's
+setup screen now asks for.
 
-**One-time: widen the Pool sign-in to cover all your apps**
-1. Go to **https://github.com/settings/developers** → **OAuth Apps** → open the one
-   you made for Pool (it's named **Pool Care**).
-2. Find **Authorization callback URL**. It currently says
-   `https://barkernotbob.github.io/static/pool/`.
-3. Change it to the parent folder so it covers every app:
-   **`https://barkernotbob.github.io/static/`**
-   *(just delete the `pool/` at the end — keep the trailing slash)*
-4. Click **Update application.**
-
-That's it. Pool keeps working exactly as before, and now Grocery and Bank can use the
-**same** one-tap sign-in. (The Client ID and Worker URL are already baked into the
-app — they're public, not secrets.)
-
-Then go to **Step 4** below and use the **🔐 Sign in with GitHub** button. You only
-need the token Steps (2–3) if you ever want the manual fallback.
+There is also a one-tap **🔐 Sign in with GitHub** button, tucked under
+*"Other way in"* on that screen. It's quicker, but read
+**["Why the key, and not the one-tap button?"](#why-the-key-and-not-the-one-tap-button)**
+at the end before choosing it — it hands over more than this app needs.
 
 ---
 
@@ -106,9 +94,10 @@ This is the fiddliest step. Go slowly.
    - Tap **🔐 Sign in with GitHub** → approve on GitHub → you land back in the app,
      signed in. The first time, it automatically creates the data files inside your
      `grocery-data` folder. Done!
-4. *(Fallback only)* If you'd rather use a token, open **"Advanced: paste a token
-   instead,"** type `your-username/grocery-data` and paste the token from Step 3,
-   then tap **Connect with token.**
+4. Type `your-username/grocery-data` into **Private data repository**, paste the
+   token from Step 3 into **Access key**, and tap **Connect.**
+   *(If you'd rather use the one-tap button instead, it's under "Other way in" —
+   but read the note at the end of this guide first.)*
 
 Repeat Step 4 on **your wife's phone**, choosing **Wife** as the name and tapping the
 same **Sign in with GitHub** button (she approves with her own GitHub account).
@@ -195,3 +184,28 @@ Until then, nothing is public and no data is exposed.
 - **Wife can't see data:** make sure she accepted the collaborator invite (Step 2) and
   used the correct repository name.
 - Stuck? Open a Claude session and describe what you see — I'll help.
+
+---
+
+## Why the key, and not the one-tap button?
+
+Short version: **the key can be cut to open one door. The button can't.**
+
+The **🔐 Sign in with GitHub** button uses an older style of GitHub sign-in that has
+only one setting for repositories — and that setting is *all of them*. There is no
+way to tell it "just the grocery folder." So approving it hands the app access to
+**every private repository on your account**, which is far more than it needs, and
+far more than you'd want loose if a phone were ever lost or a page were ever tampered
+with.
+
+The **fine-grained token** in Step 3 is the opposite: you tick exactly one
+repository, and that's all the key ever opens. Same app, same convenience after the
+first minute, much less handed over.
+
+The button still works and is still there — it's just no longer the recommended
+route, and the app now says plainly what it's asking for before you tap it.
+
+**If you already signed in with the button:** nothing is broken and you don't have to
+redo anything. When you have a spare two minutes, do Step 3, then Settings →
+disconnect → connect again with the key. And you can withdraw the old access any time
+at **https://github.com/settings/applications** → find the app → **Revoke**.

@@ -1,7 +1,8 @@
 // Shared test bootstrap: seed localStorage so isConfigured() is true (skips the
 // setup screen), install the GitHub mock, then navigate. Collects console errors
 // and page errors so every test can assert a clean console (§13 class 1).
-const { installGitHubMock } = require('./mock-github')
+const path = require('path')
+const { installGitHubMock } = require('../../shared/mock-github')
 
 const APP_URL = '/grocery/index.html'
 
@@ -31,7 +32,12 @@ async function bootApp(page, { viewport = VIEWPORTS.mobile, mock: mockOpts = {} 
     localStorage.setItem('gt_method', 'token')
   })
 
-  const mock = await installGitHubMock(page, mockOpts)
+  const mock = await installGitHubMock(page, {
+    fixturesDir: path.join(__dirname, '..', 'fixtures', 'db'),
+    // The two image paths grocery's receipt fixtures reference.
+    seedImages: ['receipts/r_pub_0001.jpg', 'inbox/r_pub_0002.jpg'],
+    ...mockOpts,
+  })
   await page.goto(APP_URL)
   // Boot lands on Today (S4) and runs loadAll(); wait for that first render to
   // settle before navigating, so a test's nav click doesn't race the boot's

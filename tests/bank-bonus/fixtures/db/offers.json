@@ -1,0 +1,18 @@
+[
+  {
+    "id": "seed_test_01", "person": null, "institution": "Fixture Federal Credit Union",
+    "bonus": 300, "referralValue": 50, "directDepositTotal": 1000,
+    "requiresMultipleDeposits": false, "nbDeposits": null, "minBalance": null, "minBalDays": null,
+    "additionalRequirements": "", "daysToCompleteReq": 90,
+    "bonusTiming": "End of month after DD posts", "avoidFees": "No Fees",
+    "churnable": true, "monthsTillReopen": 12, "notes": "", "status": "backlog"
+  },
+  {
+    "id": "seed_test_02", "person": null, "institution": "Testbank & Trust",
+    "bonus": 500, "referralValue": null, "directDepositTotal": 2500,
+    "requiresMultipleDeposits": true, "nbDeposits": 2, "minBalance": 1500, "minBalDays": 60,
+    "additionalRequirements": "Enroll in eStatements", "daysToCompleteReq": 60,
+    "bonusTiming": "60 days after requirements met", "avoidFees": "$1,500 balance",
+    "churnable": false, "monthsTillReopen": null, "notes": "", "status": "backlog"
+  }
+]

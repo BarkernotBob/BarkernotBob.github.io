@@ -1,5 +1,7 @@
 import { $, el, money, esc, todayISO, uid, b64encode, b64decode, norm } from './core/domain.js';
 import { toast, modal, confirmModal, fixInputAttrs } from './ui/components.js';
+import { createStore } from '../shared/storage.js';
+import { GITHUB_API, OAUTH, oauthReady, ghHeaders as githubHeaders } from '../shared/github.js';
 import { renderToday, todayActions } from './views/today.js';
 import { renderPantry, pantryActions, pantryInputs } from './views/pantry.js';
 import { renderTrips, tripsActions } from './views/trips.js';
@@ -16,31 +18,24 @@ import { renderSettings, settingsActions } from './views/settings.js';
    this browser only (localStorage).
    ========================================================================= */
 
-/* ---- App-wide sign-in config. Shared with the Pool app: one GitHub OAuth App
-        + one Cloudflare Worker cover all of barkernotbob.github.io/static/*.
-        These two values are PUBLIC (not secrets). The token-paste fallback works
-        even before OAuth is set. ---- */
-const OAUTH = {
-  clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
-  workerUrl: 'https://pool-auth.barkernotbob.workers.dev'  // Cloudflare Worker base URL
-};
+/* ---- App-wide sign-in config. The OAuth App id and Worker URL are shared with
+        the Pool app and now live in one place, shared/github.js (GAP-W5) — they
+        used to be duplicated here and in pool/index.html. Both values are
+        PUBLIC, not secrets; the token-paste fallback works even before OAuth is
+        set up. ---- */
 
-const LS = {
-  get repo(){ return localStorage.getItem('gt_repo') || '' },        // "owner/name"
-  set repo(v){ localStorage.setItem('gt_repo', v) },
-  get token(){ return localStorage.getItem('gt_token') || '' },
-  set token(v){ localStorage.setItem('gt_token', v) },
-  get me(){ return localStorage.getItem('gt_me') || '' },            // "Me" / "Wife"
-  set me(v){ localStorage.setItem('gt_me', v) },
-  get device(){ return localStorage.getItem('gt_device') || '' },    // "My iPhone" — names THIS device's sign-in
-  set device(v){ localStorage.setItem('gt_device', v) },
-  get login(){ return localStorage.getItem('gt_login') || '' },      // GitHub username (from OAuth)
-  set login(v){ localStorage.setItem('gt_login', v) },
-  get method(){ return localStorage.getItem('gt_method') || '' },    // 'oauth' | 'token'
-  set method(v){ localStorage.setItem('gt_method', v) },
-  get theme(){ return localStorage.getItem('gt_theme') || 'system' }, // 'system' | 'light' | 'dark'
-  set theme(v){ if(v==='system') localStorage.removeItem('gt_theme'); else localStorage.setItem('gt_theme', v) },
-};
+/* Settings for THIS browser. Keys are gt_-prefixed; theme writes 'system' by
+   removing the key, so the OS preference takes over again rather than being
+   pinned. */
+const LS = createStore('gt_', {
+  repo: '',                                  // "owner/name"
+  token: '',
+  me: '',                                    // "Me" / "Wife"
+  device: '',                                // "My iPhone" — names THIS device's sign-in
+  login: '',                                 // GitHub username (from OAuth)
+  method: '',                                // 'oauth' | 'token'
+  theme: { default: 'system', clearOn: 'system' }, // 'system' | 'light' | 'dark'
+});
 
 /* Apply the chosen theme (§9.2). 'system' clears data-theme so the OS preference
    (prefers-color-scheme) drives tokens.css; 'light'/'dark' stamp <html data-theme>
@@ -56,7 +51,7 @@ function applyTheme(){
 }
 function setTheme(v){ LS.theme = v; applyTheme(); if(CUR==='settings') renderSettings(); }
 
-const API = 'https://api.github.com';
+const API = GITHUB_API;
 const DB = {}; // in-memory read cache: { 'db/items.json': {value, sha:<blobSha>}, ... }
 
 
@@ -112,7 +107,10 @@ document.addEventListener('change', e=>{
    Contents API is kept only for repo-existence checks, first-run seeding, and
    an image fallback for paths not in the cached tree. -------------------------*/
 const BRANCH = 'main';
-function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
+/* shared/github.js builds the headers; the token is passed in so that module
+   never has to know grocery's gt_ key prefix. Kept under the original name so
+   the 13 call sites (and views/settings.js) are unchanged. */
+function ghHeaders(){ return githubHeaders(LS.token); }
 async function ghContents(path){
   const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
   if(r.status===404) return null;
@@ -434,7 +432,7 @@ function getMe(){ return LS.me; }
 /* =========================================================================
    SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
    ========================================================================= */
-function oauthReady(){ return OAUTH.clientId && OAUTH.workerUrl; }
+
 function appRedirect(){ return location.origin + location.pathname; }
 
 function signInWithGitHub(){

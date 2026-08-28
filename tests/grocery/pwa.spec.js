@@ -93,3 +93,51 @@ test('no input is smaller than 16px anywhere (prevents iOS zoom-on-focus)', asyn
     expect(tooSmall, `${tab}: ${JSON.stringify(tooSmall)}`).toEqual([])
   }
 })
+
+/* GAP-W5: the helper modules now live at /shared/, one directory ABOVE the app
+   and therefore outside its service-worker scope. Scope decides which pages a
+   worker controls, not which URLs it may intercept — so a controlled page's
+   request for /shared/*.js still reaches the fetch handler and can be served
+   from cache. That is load-bearing and easy to break, hence a test rather than
+   a comment: get the shell cached, pull the network, and cold-start. */
+test('the shared modules are precached and the app still launches offline', async ({ page, context }) => {
+  await bootApp(page)
+  await page.evaluate(() => navigator.serviceWorker.ready)
+
+  // Compared by filename, not path — the prefix depends on how the rig serves
+  // the tree, and that is not what this test is about.
+  const cachedShared = () =>
+    page.evaluate(async () => {
+      const key = (await caches.keys()).find((k) => k.startsWith('gt-shell'))
+      if (!key) return []
+      const c = await caches.open(key)
+      return (await c.keys())
+        .map((r) => new URL(r.url).pathname)
+        .filter((p) => p.includes('/shared/'))
+        .map((p) => p.split('/').pop())
+        .sort()
+    })
+
+  await expect.poll(cachedShared, { timeout: 15000 }).toEqual([
+    'dates.js',
+    'dom.js',
+    'github.js',
+    'ids.js',
+    'storage.js',
+    'text.js',
+    'ui.js',
+  ])
+
+  await context.setOffline(true)
+  try {
+    await page.reload()
+    // The nav only exists if app.js and its whole import graph resolved, so this
+    // is the assertion that the out-of-scope modules were served from cache.
+    await expect(page.locator('nav [data-tab="today"]')).toBeVisible({ timeout: 15000 })
+    // And the helpers themselves actually ran: the header is rendered by code
+    // that imports from /shared/.
+    await expect(page.locator('header')).toContainText('Grocery Tracker')
+  } finally {
+    await context.setOffline(false)
+  }
+})

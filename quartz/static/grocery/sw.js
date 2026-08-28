@@ -4,7 +4,7 @@
    IndexedDB snapshot (data layer v2, S1). It deliberately does NOT touch
    api.github.com — those requests pass straight through, and when offline the app
    falls back to its IDB snapshot on its own. */
-const VERSION = 'gt-shell-v4'
+const VERSION = 'gt-shell-v5'
 const SHELL = [
   'index.html',
   'manifest.webmanifest',
@@ -23,6 +23,17 @@ const SHELL = [
   'views/review.js',
   'views/table.js',
   'views/settings.js',
+  // The shared helper modules (GAP-W5). They live outside this SW's scope, at
+  // /static/shared/, but scope only decides which PAGES this worker controls —
+  // a controlled page's request for any same-origin URL still reaches the fetch
+  // handler below, so precaching them here keeps the app launching offline.
+  '../shared/dom.js',
+  '../shared/text.js',
+  '../shared/dates.js',
+  '../shared/ids.js',
+  '../shared/storage.js',
+  '../shared/github.js',
+  '../shared/ui.js',
   'fonts/archivo-400-700.woff2',
   'fonts/fraunces-600.woff2',
   'fonts/ibm-plex-mono-400.woff2',

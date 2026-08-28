@@ -1,0 +1,10 @@
+{
+  "owner": "Me",
+  "people": ["Me", "Sam"],
+  "paycheck": { "amount": 2000, "firstDate": "2026-01-02", "intervalDays": 14, "ddClearDays": 21 },
+  "taxRate": 0.1675,
+  "laborHours": { "open": 0.35, "adjustDD": 0.15, "requirements": 0.5, "close": 0.5 },
+  "notify": [],
+  "timezone": "America/New_York",
+  "rssEnabled": false
+}

@@ -1,5 +1,7 @@
 import { $, el, money, esc, todayISO, uid, b64encode, b64decode, norm } from './core/domain.js';
 import { toast, modal, confirmModal, fixInputAttrs } from './ui/components.js';
+import { createStore } from '../shared/storage.js';
+import { GITHUB_API, OAUTH, oauthReady, ghHeaders as githubHeaders } from '../shared/github.js';
 import { renderToday, todayActions } from './views/today.js';
 import { renderPantry, pantryActions, pantryInputs } from './views/pantry.js';
 import { renderTrips, tripsActions } from './views/trips.js';
@@ -16,31 +18,24 @@ import { renderSettings, settingsActions } from './views/settings.js';
    this browser only (localStorage).
    ========================================================================= */
 
-/* ---- App-wide sign-in config. Shared with the Pool app: one GitHub OAuth App
-        + one Cloudflare Worker cover all of barkernotbob.github.io/static/*.
-        These two values are PUBLIC (not secrets). The token-paste fallback works
-        even before OAuth is set. ---- */
-const OAUTH = {
-  clientId:  'Ov23lirmVUCJFsZgphQC',                       // GitHub OAuth App "Client ID"
-  workerUrl: 'https://pool-auth.barkernotbob.workers.dev'  // Cloudflare Worker base URL
-};
+/* ---- App-wide sign-in config. The OAuth App id and Worker URL are shared with
+        the Pool app and now live in one place, shared/github.js (GAP-W5) — they
+        used to be duplicated here and in pool/index.html. Both values are
+        PUBLIC, not secrets; the token-paste fallback works even before OAuth is
+        set up. ---- */
 
-const LS = {
-  get repo(){ return localStorage.getItem('gt_repo') || '' },        // "owner/name"
-  set repo(v){ localStorage.setItem('gt_repo', v) },
-  get token(){ return localStorage.getItem('gt_token') || '' },
-  set token(v){ localStorage.setItem('gt_token', v) },
-  get me(){ return localStorage.getItem('gt_me') || '' },            // "Me" / "Wife"
-  set me(v){ localStorage.setItem('gt_me', v) },
-  get device(){ return localStorage.getItem('gt_device') || '' },    // "My iPhone" — names THIS device's sign-in
-  set device(v){ localStorage.setItem('gt_device', v) },
-  get login(){ return localStorage.getItem('gt_login') || '' },      // GitHub username (from OAuth)
-  set login(v){ localStorage.setItem('gt_login', v) },
-  get method(){ return localStorage.getItem('gt_method') || '' },    // 'oauth' | 'token'
-  set method(v){ localStorage.setItem('gt_method', v) },
-  get theme(){ return localStorage.getItem('gt_theme') || 'system' }, // 'system' | 'light' | 'dark'
-  set theme(v){ if(v==='system') localStorage.removeItem('gt_theme'); else localStorage.setItem('gt_theme', v) },
-};
+/* Settings for THIS browser. Keys are gt_-prefixed; theme writes 'system' by
+   removing the key, so the OS preference takes over again rather than being
+   pinned. */
+const LS = createStore('gt_', {
+  repo: '',                                  // "owner/name"
+  token: '',
+  me: '',                                    // "Me" / "Wife"
+  device: '',                                // "My iPhone" — names THIS device's sign-in
+  login: '',                                 // GitHub username (from OAuth)
+  method: '',                                // 'oauth' | 'token'
+  theme: { default: 'system', clearOn: 'system' }, // 'system' | 'light' | 'dark'
+});
 
 /* Apply the chosen theme (§9.2). 'system' clears data-theme so the OS preference
    (prefers-color-scheme) drives tokens.css; 'light'/'dark' stamp <html data-theme>
@@ -56,7 +51,7 @@ function applyTheme(){
 }
 function setTheme(v){ LS.theme = v; applyTheme(); if(CUR==='settings') renderSettings(); }
 
-const API = 'https://api.github.com';
+const API = GITHUB_API;
 const DB = {}; // in-memory read cache: { 'db/items.json': {value, sha:<blobSha>}, ... }
 
 
@@ -112,7 +107,10 @@ document.addEventListener('change', e=>{
    Contents API is kept only for repo-existence checks, first-run seeding, and
    an image fallback for paths not in the cached tree. -------------------------*/
 const BRANCH = 'main';
-function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
+/* shared/github.js builds the headers; the token is passed in so that module
+   never has to know grocery's gt_ key prefix. Kept under the original name so
+   the 13 call sites (and views/settings.js) are unchanged. */
+function ghHeaders(){ return githubHeaders(LS.token); }
 async function ghContents(path){
   const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
   if(r.status===404) return null;
@@ -434,11 +432,11 @@ function getMe(){ return LS.me; }
 /* =========================================================================
    SIGN-IN  (GitHub OAuth via Cloudflare Worker, with token-paste fallback)
    ========================================================================= */
-function oauthReady(){ return OAUTH.clientId && OAUTH.workerUrl; }
+
 function appRedirect(){ return location.origin + location.pathname; }
 
 function signInWithGitHub(){
-  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use “paste a token” below for now.'); return; }
+  if(!oauthReady()){ toast('GitHub sign-in isn\'t set up yet — use the key fields above for now.'); return; }
   // The redirect navigates away, so capture the name/device first.
   const me = $('#su_me') ? $('#su_me').value.trim() : LS.me;
   const device = $('#su_device') ? $('#su_device').value.trim() : LS.device;
@@ -495,15 +493,21 @@ function renderSetup(){
     <select id="su_me"><option value="">Choose…</option><option ${LS.me==='Me'?'selected':''}>Me</option><option ${LS.me==='Wife'?'selected':''}>Wife</option></select>
     <label>This device's name (so your phone and computer can both stay signed in)</label>
     <input id="su_device" placeholder="e.g. My iPhone" value="${esc(LS.device)}" autocapitalize="words" autocorrect="off" spellcheck="false"/>
-    <button data-action="signIn">🔐 Sign in with GitHub</button>
-    <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token option below until OAuth is configured.'}</p>
-    <details style="margin-top:10px"><summary>Advanced: paste a token instead</summary>
-      <label>Private data repository (<code>owner/name</code>)</label>
-      <input id="su_repo" placeholder="BarkernotBob/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-      <label>Access key (your private token — like a house key)</label>
-      <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-      <p class="small muted">The key is saved only in this browser, never sent anywhere except GitHub.</p>
-      <button class="sec" data-action="saveSetup">Connect with token</button>
+    <label>Private data repository (<code>owner/name</code>)</label>
+    <input id="su_repo" placeholder="BarkernotBob/grocery-data" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label>Access key (your private token — like a house key)</label>
+    <input id="su_token" type="password" placeholder="github_pat_…" value="${esc(LS.token)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <p class="small muted">Make the key at <b>github.com/settings/tokens?type=beta</b> and give it access to
+    <b>only</b> your <code>grocery-data</code> repository — Step 3 of the SETUP guide. It is saved only in this
+    browser and sent nowhere except GitHub.</p>
+    <button data-action="saveSetup">Connect</button>
+    <details style="margin-top:14px"><summary>Other way in: Sign in with GitHub</summary>
+      <p class="small muted">One tap instead of making a key — but it asks GitHub for access to
+      <b>every</b> private repository you own, not just this one, because that is the only thing
+      the old-style sign-in can ask for. The key above is the safer route; use this if you'd
+      rather not make one.</p>
+      <button class="sec" data-action="signIn">🔐 Sign in with GitHub</button>
+      <p class="small muted" style="margin-top:6px">${oauthReady()?'Pick your name above, then approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the key above until OAuth is configured.'}</p>
     </details>
   </div>`;
 }

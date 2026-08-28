@@ -1,0 +1,14 @@
+{
+  "name": "bank-bonus-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright regression rig for the Bank Bonus Tracker (GAP-W2).",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

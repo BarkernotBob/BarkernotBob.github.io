@@ -11,9 +11,10 @@ A quick map of the words you'll see:
 - **Cloudflare Worker** = a tiny free helper that does the secure half of sign-in.
 - **The app** = the page you open on your phone: `https://barkernotbob.github.io/static/pool/`
 
-> You can start using the app **before** finishing the Cloudflare steps, using the
-> "paste a token" fallback (see the end). The sign-in button just won't work until
-> Steps 2–4 are done.
+> **The token is the recommended way in** (see "Make your token" near the end), and
+> it needs none of the Cloudflare steps. Steps 2–4 only set up the one-tap
+> **Sign in with GitHub** button, which is the fallback — it asks GitHub for access
+> to every private repo you own, so read "Why the token…" at the end first.
 
 ---
 
@@ -108,7 +109,10 @@ through the merge — just say the word. (GitHub Pages takes ~5 minutes to rebui
 
 1. On your phone, open **https://barkernotbob.github.io/static/pool/**
 2. Browser menu → **Add to Home Screen** so it feels like a real app.
-3. Tap **🔐 Sign in with GitHub** → approve. You'll land back in the app, signed in.
+3. Enter `your-username/pool-data` and the token you made below, then tap **Connect.**
+   *(The one-tap **🔐 Sign in with GitHub** button is under "Other way in" — read
+   ["Why the token, and not the one-tap button?"](#why-the-token-and-not-the-one-tap-button)
+   before choosing it.)*
 4. First time, it creates the data files in your `pool-data` folder automatically.
 
 To use a second device (laptop, tablet), just sign in there too — there's no limit.
@@ -139,15 +143,15 @@ To use a second device (laptop, tablet), just sign in there too — there's no l
 
 ---
 
-## The "paste a token" fallback (use the app before Cloudflare is ready)
+## Make your token (the recommended way in)
 
 If you want to use the app today, before Steps 2–4:
 1. Make a fine-grained token: **https://github.com/settings/tokens?type=beta** →
    **Generate new token** → name `pool app`, longest expiration, **Only select
    repositories → pool-data**, **Permissions → Contents → Read and write** →
    **Generate token** → copy it.
-2. In the app's setup screen, open **"Advanced: paste a token instead,"** enter
-   `your-username/pool-data` and the token, tap **Connect with token.**
+2. In the app's setup screen, enter `your-username/pool-data` and the token, then
+   tap **Connect.**
 
 Everything works the same; you just typed a key instead of clicking a button.
 Once Cloudflare is set up, you can switch to the button anytime (Settings → Sign
@@ -164,3 +168,26 @@ out → Sign in with GitHub).
 - **"Could not open that repository":** check the `owner/name` spelling in
   Settings matches your `pool-data` repo exactly.
 - Stuck? Open a Claude session and describe what you see — I'll help.
+
+---
+
+## Why the token, and not the one-tap button?
+
+Short version: **the token can be cut to open one door. The button can't.**
+
+The **🔐 Sign in with GitHub** button uses an older style of GitHub sign-in whose only
+repository setting is *all of them*. There is no way to tell it "just the pool
+folder", so approving it hands the app access to **every private repository on your
+account** — far more than it needs.
+
+The fine-grained token above is the opposite: you tick exactly one repository, and
+that is all it ever opens. Same app, same convenience after the first minute.
+
+The button still works and is still there under **"Other way in"** — it is just no
+longer the recommended route, and the app now says plainly what it is asking for
+before you tap it.
+
+**Already signed in with the button?** Nothing is broken and you don't have to redo
+anything. When you have two spare minutes, make a token, then disconnect and
+reconnect with it. You can withdraw the old access at
+**https://github.com/settings/applications** → find the app → **Revoke**.

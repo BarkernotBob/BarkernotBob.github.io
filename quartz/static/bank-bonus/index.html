@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Bank Bonus Tracker</title>
 
   <!-- PWA manifest -->
-  <link rel="manifest" href="/static/bank-bonus/manifest.json">
+  <link rel="manifest" href="/static/bank-bonus/manifest.webmanifest">
 
   <!-- iOS / iPhone PWA support -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Bank Bonus">
@@ -170,7 +171,7 @@
       input[type="date"] { -webkit-appearance: none; appearance: none; }
     }
     /* Compact inline date pickers used inside list-card value cells. */
-    input.date-quick { min-height: 34px; padding: 4px 7px; font-size: 13px; font-weight: 600; width: 100%; border-radius: 6px; }
+    input.date-quick { min-height: 34px; padding: 4px 7px; font-size: 16px; font-weight: 600; width: 100%; border-radius: 6px; }
     /* Keyboard shortcut button is useless on touch-only devices. */
     @media (pointer: coarse) { .kbd-help-btn { display: none; } }
     /* Progress bar (calendar paycheck usage) */
@@ -461,7 +462,7 @@ function currentTab(){
   const s = document.querySelector('.section.active');
   return s ? s.id.replace('section-','') : '';
 }
-function modalOpen(){ return !!document.querySelector('.modal-ov'); }
+function modalOpen(){ return !!document.querySelector('.modal-ov:not([data-closing])'); }
 
 // --------- Keyboard shortcuts ---------
 const TAB_KEYS = {'t':'today','a':'active','p':'planned','o':'offers','c':'calendar','r':'reports','s':'settings'};
@@ -485,7 +486,7 @@ document.addEventListener('keydown', e => {
   // Escape: blur focused input first; if nothing focused, close modal or go back.
   if(e.key === 'Escape'){
     if(inInput && !modalOpen()){ document.activeElement.blur(); return; }
-    if(modalOpen()){ const o = document.querySelector('.modal-ov'); if(o && o._esc) o._esc(); return; }
+    if(modalOpen()){ const o = document.querySelector('.modal-ov:not([data-closing])'); if(o && o._esc) o._esc(); return; }
     if(currentTab() === 'detail'){ backFromDetail(); }
     return;
   }
@@ -515,7 +516,24 @@ function modal(innerHtml){
   return new Promise(resolve => {
     const o = el('div', {class:'modal-ov'});
     o.innerHTML = `<div class="modal-card">${innerHtml}</div>`;
-    const close = (val) => { if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    // Detach AFTER the caller has resumed, not before. Callers that collect
+    // input (addAccount, addOffer) read their fields on the line after
+    // `await modal(...)`; removing the overlay here left them reading `.value`
+    // off null, which threw and silently created nothing. Hide it now so the
+    // UI still responds instantly, resolve (the caller resumes as a microtask,
+    // fields still attached), then remove on the next macrotask.
+    const close = (val) => {
+      if(o._done) return;
+      o._done = true;
+      o.style.visibility = 'hidden';
+      o.style.pointerEvents = 'none';
+      // It stays in the DOM for one macrotask (above), so mark it: modalOpen()
+      // and the Esc handler must not find this closed overlay and treat a
+      // chained modal's Escape as already handled.
+      o.setAttribute('data-closing', '');
+      resolve(val);
+      setTimeout(() => o.remove(), 0);
+    };
     o._esc = () => close(null);   // let the global Esc handler cancel this modal
     o.addEventListener('click', e => { if(e.target===o) close(null); });
     document.body.appendChild(o);
@@ -1797,7 +1815,7 @@ function render_settings(){
     ${rssEnabled && rssUrl ? `<div class="row" style="align-items:flex-end">
       <div class="row-item">
         <div class="label">RSS feed URL (paste into your RSS reader)</div>
-        <input type="text" readonly value="${esc(rssUrl)}" onclick="this.select()" style="font-size:12px;color:var(--muted)">
+        <input type="text" readonly value="${esc(rssUrl)}" onclick="this.select()" style="font-size:16px;color:var(--muted)">
       </div>
       <button class="sec" onclick="saveRSS().then(()=>toast('RSS updated ✓')).catch(e=>toast('Error: '+e.message))">Refresh</button>
     </div>

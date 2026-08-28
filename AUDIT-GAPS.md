@@ -49,6 +49,7 @@ Only grocery (1 of 5 apps) has tests. Pool, vehicle, and bank-bonus — 5,000+ c
 The authorize URL requests `&scope=repo` (`quartz/static/grocery/app.js:447`, `pool/index.html:810`) — full read/write to EVERY private repo, when each app only needs its one data repo. Biggest single security finding.
 **Fix (pick one, document the decision):** (a) migrate to a GitHub App with per-repo installation — least privilege, more moving parts; or (b) keep OAuth but have SETUP docs walk Isaiah through a fine-grained PAT restricted to the data repo as the recommended path, demoting broad OAuth to fallback. Update the Cloudflare worker docs (`pool-tool/worker/`) accordingly.
 **AC:** default setup path grants access to only the data repo(s); SETUP.md / SETUP-CHECKLIST.md updated with plain-English steps; existing users' flow still works.
+**RESOLVED 2026-08-28 — option (b).** Rationale, and why the scope itself cannot simply be narrowed (a classic OAuth App has no per-repo scope, so narrowing *is* option (a)): [`DECISION-github-access-scope.md`](DECISION-github-access-scope.md).
 
 ## P2 — Security hardening parity
 

@@ -1,0 +1,6 @@
+{
+  "name": "test-shared",
+  "private": true,
+  "type": "commonjs",
+  "description": "Helpers shared by every app test suite. The repo root declares \"type\": \"module\", and this directory has no package.json of its own otherwise — so these CommonJS helpers would be parsed as ESM by any runner that isn't Playwright. This file pins them."
+}

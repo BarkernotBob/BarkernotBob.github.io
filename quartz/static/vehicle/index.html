@@ -602,7 +602,7 @@ function renderGarage(){
     let o,P;
     try{ ensurePurchase(v); P=v.purchase; const M=Eng.model(v,S);
       o=M.ownership(M.refYear-P.modelYear,P.holdYears,{startOdo:P.startMiles,price:P.priceOverride}); }catch(e){ o=null; }
-    h+=`<button class="vcard" data-veh="${v.id}">
+    h+=`<button class="vcard" data-veh="${esc(v.id)}">
       <span class="accentbar" style="background:${color}"></span>
       <div class="vc-top">
         <div style="min-width:0">
@@ -870,7 +870,7 @@ function renderCompare(){
     <div class="selrow">`;
   state.vehicles.forEach((v,i)=>{
     const on=state.compare.includes(v.id); const color=PALETTE[i%PALETTE.length];
-    h+=`<button class="selchip ${on?"on":""}" data-sel="${v.id}"><span class="sw" style="background:${on?color:"var(--faint)"}"></span>${esc(v.name)}</button>`;
+    h+=`<button class="selchip ${on?"on":""}" data-sel="${esc(v.id)}"><span class="sw" style="background:${on?color:"var(--faint)"}"></span>${esc(v.name)}</button>`;
   });
   h+=`</div>`;
   // shared controls

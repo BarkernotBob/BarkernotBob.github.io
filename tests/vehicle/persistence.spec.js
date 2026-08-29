@@ -190,8 +190,44 @@ test('a vehicle whose rows are all unusable still opens', async ({ page }) => {
   await page.locator('.vcard').first().click()
   await expect(page.locator('#app .view')).toBeVisible()
   await expect(page.locator('#abTitle')).toHaveText('Testa Voltage')
+
+  // Rendering is not enough. Eng.prep() and ensurePurchase() have to agree on
+  // what counts as a year, or the purchase point resolves against a different
+  // reference year than the model does: the screen came up reading "A 0 at
+  // 30,000 mi" and "Typical for a 0: ~27,337,500 mi", with a model-year
+  // dropdown the user could not correct because ensurePurchase() re-clamps on
+  // every render.
+  await expect(page.locator('#app')).not.toContainText('A 0 ')
+  await expect(page.locator('#app')).not.toContainText('Typical for a 0')
+  const years = await page.locator('#pyMY option').allTextContents()
+  for (const y of years) expect(Number(y)).toBeGreaterThan(2000)
+  const saved = await stored(page)
+  expect(saved.vehicles[0].purchase.modelYear).toBeGreaterThan(2000)
+
   await page.locator('[data-vt="data"]').click()
   await expect(page.locator('#app .view')).toBeVisible()
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('an out-of-range assumption is clamped when typed, not silently on reload', async ({
+  page,
+}) => {
+  // The bounds only used to exist on the load path. Typing 150 into Inflation
+  // stored 1.5 and displayed "150.0%", and the next launch quietly rewrote it
+  // to 100.0% — a number the user never chose appearing out of nowhere, with
+  // every projection built on it in between.
+  const { errors } = await bootApp(page)
+
+  page.once('dialog', (d) => d.accept('150'))
+  await page.locator('[data-assume="inflation"]').click()
+
+  await expect.poll(async () => (await stored(page)).settings.inflation).toBe(1)
+  await expect(page.locator('[data-assume="inflation"]')).toContainText('100.0%')
+
+  // And the reload changes nothing — the value on screen is the value stored.
+  await page.reload()
+  await expect(page.locator('[data-assume="inflation"]')).toContainText('100.0%')
+  expect((await stored(page)).settings.inflation).toBe(1)
   expect(errors, errors.join('\n')).toEqual([])
 })
 

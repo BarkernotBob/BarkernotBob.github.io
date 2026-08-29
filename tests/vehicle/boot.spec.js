@@ -30,10 +30,12 @@ test('every tab renders and the console stays clean', async ({ page }) => {
   expect(errors, errors.join('\n')).toEqual([])
 })
 
-test('the app talks to nothing at all', async ({ page }) => {
-  // This is vehicle's defining property and the reason it needs no mock: no
-  // token, no sync, no API. If a network call ever appears here it should be a
-  // deliberate decision, and this is what forces that conversation.
+test('the app sends no data anywhere', async ({ page }) => {
+  // Vehicle's defining property, and the reason it needs no mock: no token, no
+  // sync, no API. The one thing it does fetch is Google Fonts, a <link> in the
+  // head — the rig stubs those two hosts, so what this asserts is that nothing
+  // ELSE is contacted. If a call ever appears here it should be a deliberate
+  // decision, and this is what forces that conversation.
   const { external, errors } = await bootApp(page)
   for (const tab of TABS) await goTab(page, tab)
   // Back to the garage — the loop ends on settings, which has no cards — and

@@ -326,10 +326,7 @@ const Eng = (() => {
     // Blank and null both coerce to 0, which would pass isFinite and invent a
     // year 0 row — that alone pushed maxAge to 2025 and made every render do
     // ~40k ownership() passes. A year has to actually be written down.
-    const usable=(rows||[]).filter(r=>{
-      const y=r&&r[0];
-      return y!=null && String(y).trim()!=="" && isFinite(+y);
-    });
+    const usable=(rows||[]).filter(r=>isYear(r&&r[0]));
     // 2025 matches the fallback ensurePurchase() already uses for a rowless
     // vehicle. Deliberately a literal: this app contains no date lookup at all,
     // which is what makes its figures reproducible from one year to the next.
@@ -472,10 +469,17 @@ function freshVehicle(seed,i){
   ensurePurchase(v);
   return v;
 }
+/* One definition of "this row has a real year", shared by Eng.prep() and
+   ensurePurchase(). They MUST agree: blank and null both coerce to 0, so a
+   filter of just isFinite(+y) invents a year-zero row. When only one of the two
+   did that they disagreed about refYear (2025 vs 0), and a vehicle with no
+   readable years rendered "A 0 at 30,000 mi" with a model-year dropdown the
+   user could not correct. */
+function isYear(y){ return y!=null && String(y).trim()!=="" && isFinite(+y); }
 /* Each vehicle stores the actual buy point the user is modelling. modelYear+startMiles
    set where the projection begins; priceOverride (null=auto) lets them force a paid price. */
 function ensurePurchase(v){
-  const years=(v.rows||[]).map(r=>+r[0]).filter(isFinite);
+  const years=(v.rows||[]).filter(r=>isYear(r&&r[0])).map(r=>+r[0]);
   const refYear=years.length?Math.max(...years):2025;
   const minYear=years.length?Math.min(...years):refYear;
   const p=v.purchase&&typeof v.purchase==="object"?v.purchase:{};
@@ -689,7 +693,12 @@ function editAssumption(key){
   const val=prompt(m[0]+"\n\n"+m[1],cur);
   if(val===null) return;
   const n=parseFloat(val); if(!isFinite(n)){toast("Enter a number");return;}
-  S[key]=m[3](n); save(); render();
+  S[key]=m[3](n);
+  // Clamp exactly as a reload would. Without this, typing 150 into Inflation
+  // stored 1.5, displayed "150.0%", and then silently became 100.0% the next
+  // time the app opened — a value that never existed being quietly rewritten.
+  state.settings=sanitizeSettings(S);
+  save(); render();
 }
 
 /* ============================================================ *

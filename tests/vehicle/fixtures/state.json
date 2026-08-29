@@ -1,0 +1,90 @@
+{
+  "settings": {
+    "annualMiles": 12000,
+    "fuelPrice": 3.5,
+    "salesTax": 0.07,
+    "inflation": 0.03,
+    "baselineMiles": 13500,
+    "mileWeight": 0.5,
+    "valuePerMile": null,
+    "maxHold": 20
+  },
+  "vehicles": [
+    {
+      "id": "vfixt001",
+      "name": "Testa Voltage",
+      "make": "Testa",
+      "model": "Voltage",
+      "pt": "ev",
+      "mpg": 100,
+      "fuelPriceOverride": null,
+      "loanYears": 5,
+      "rate": 0.06,
+      "down": 10000,
+      "rows": [
+        [2025, 20000, 130, 550, 500],
+        [2024, 17000, 155, 540, 495],
+        [2023, 16500, 175, 530, 490],
+        [2022, 13500, 200, 520, 485],
+        [2021, 13300, 220, 510, 480],
+        [2020, 12600, 265, 500, 475],
+        [2019, 12000, 310, 490, 470],
+        [2018, 9200, 355, 480, 466],
+        [2017, 8700, 395, 470, 461],
+        [2016, 8000, 440, 461, 456]
+      ],
+      "purchase": { "modelYear": 2022, "startMiles": 30000, "priceOverride": null, "holdYears": 10 }
+    },
+    {
+      "id": "vfixt002",
+      "name": "Foobar Commuter",
+      "make": "Foobar",
+      "model": "Commuter",
+      "pt": "gas",
+      "mpg": 30,
+      "fuelPriceOverride": null,
+      "loanYears": 5,
+      "rate": 0.06,
+      "down": 8000,
+      "rows": [
+        [2025, 22000, 260, 556, 300],
+        [2024, 21000, 300, 545, 297],
+        [2023, 19500, 375, 534, 294],
+        [2022, 18500, 475, 523, 291],
+        [2021, 18000, 575, 513, 288],
+        [2020, 17500, 750, 503, 285],
+        [2019, 13500, 830, 493, 282],
+        [2018, 12500, 870, 483, 280],
+        [2017, 12000, 905, 473, 277],
+        [2016, 11300, 940, 464, 274]
+      ],
+      "purchase": { "modelYear": 2021, "startMiles": 45000, "priceOverride": null, "holdYears": 10 }
+    },
+    {
+      "id": "vfixt003",
+      "name": "Testa Hybrid Wagon",
+      "make": "Testa",
+      "model": "Hybrid Wagon",
+      "pt": "hybrid",
+      "mpg": 50,
+      "fuelPriceOverride": null,
+      "loanYears": 5,
+      "rate": 0.05,
+      "down": 9000,
+      "rows": [
+        [2025, 31000, 200, 556, 370],
+        [2024, 30000, 230, 545, 366],
+        [2023, 26000, 280, 534, 363],
+        [2022, 23600, 340, 523, 359],
+        [2021, 23100, 400, 513, 355],
+        [2020, 22600, 520, 503, 352],
+        [2019, 21200, 570, 493, 348],
+        [2018, 20100, 590, 483, 345],
+        [2017, 18700, 610, 473, 341],
+        [2016, 18700, 640, 464, 338]
+      ],
+      "purchase": { "modelYear": 2023, "startMiles": 20000, "priceOverride": null, "holdYears": 10 }
+    }
+  ],
+  "compare": []
+}

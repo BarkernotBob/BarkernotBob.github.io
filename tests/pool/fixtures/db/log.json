@@ -1,0 +1,5 @@
+[
+  { "id": "l_fixture_1", "at": "2026-07-08T14:06:00.000Z", "kind": "task", "task": "test", "title": "Test the water (strips)", "by": "testuser" },
+  { "id": "l_fixture_2", "at": "2026-07-10T16:20:00.000Z", "kind": "task", "task": "basket", "title": "Check & clean the basket", "by": "testuser" },
+  { "id": "l_fixture_3", "at": "2026-07-12T18:00:00.000Z", "kind": "swim", "title": "Swam 2 h", "by": "testuser" }
+]

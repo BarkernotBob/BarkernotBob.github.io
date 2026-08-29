@@ -1,0 +1,22 @@
+[
+  {
+    "id": "t_fixture_1",
+    "date": "2026-07-08",
+    "at": "2026-07-08T14:05:00.000Z",
+    "by": "testuser",
+    "mode": "qual",
+    "levels": { "fc": "low", "ph": "normal", "ta": "normal" },
+    "nums": {},
+    "notes": "Water a little cloudy after the weekend."
+  },
+  {
+    "id": "t_fixture_2",
+    "date": "2026-07-14",
+    "at": "2026-07-14T13:30:00.000Z",
+    "by": "testuser",
+    "mode": "num",
+    "levels": {},
+    "nums": { "fc": 0.6, "ph": 7.5, "ta": 95, "cya": 40, "ch": 250, "po4": 250 },
+    "notes": "Numeric panel."
+  }
+]

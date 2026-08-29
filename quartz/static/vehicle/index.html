@@ -317,8 +317,22 @@ const Eng = (() => {
     const m=(n*sxy-sx*sy)/d; return {m,b:(sy-m*sx)/n};
   }
   function prep(rows){
-    const refYear=Math.max(...rows.map(r=>+r[0]));
-    const pts=rows.map(r=>({age:refYear-(+r[0]),price:num(r[1]),maint:num(r[2]),ins:num(r[3]),reg:num(r[4])}));
+    // Only rows with a real year can be modelled. The data tab deliberately
+    // keeps whatever you type in the Year box when it isn't a number yet, so a
+    // half-typed year survives a re-render — but one of those reaching here
+    // made refYear NaN, which made maxAge NaN, which made optimal() return null
+    // and threw the whole vehicle screen away on `opt.buyAge`. An imported file
+    // could do the same with no typing at all.
+    // Blank and null both coerce to 0, which would pass isFinite and invent a
+    // year 0 row — that alone pushed maxAge to 2025 and made every render do
+    // ~40k ownership() passes. A year has to actually be written down.
+    const usable=(rows||[]).filter(r=>isYear(r&&r[0]));
+    // 2025 matches the fallback ensurePurchase() already uses for a rowless
+    // vehicle. Deliberately a literal: this app contains no date lookup at all,
+    // which is what makes its figures reproducible from one year to the next.
+    if(!usable.length) return {refYear:2025,pts:[]};
+    const refYear=Math.max(...usable.map(r=>+r[0]));
+    const pts=usable.map(r=>({age:refYear-(+r[0]),price:num(r[1]),maint:num(r[2]),ins:num(r[3]),reg:num(r[4])}));
     return {refYear,pts};
   }
   function num(x){ const v=parseFloat(x); return isFinite(v)?v:null; }
@@ -360,7 +374,9 @@ const Eng = (() => {
     const maintFn=fitTrend(pts,'maint',{floorFrac:0,capMul:3,dropZero:true});
     const insFn=fitTrend(pts,'ins',{floorFrac:0.3,capMul:1.5});
     const regFn=fitTrend(pts,'reg',{floorFrac:0.2,capMul:1.5});
-    const maxAge=Math.max(...pts.map(p=>p.age));
+    // Math.max() of an empty list is -Infinity, which makes optimal()'s loop
+    // never run and return null — the same crash prep() guards against above.
+    const maxAge=pts.length?Math.max(...pts.map(p=>p.age)):0;
     const base=Math.max(S.baselineMiles,1), w=Math.min(Math.max(S.mileWeight,0),1);
     const fuelPrice=vehicle.fuelPriceOverride!=null&&vehicle.fuelPriceOverride!==''?+vehicle.fuelPriceOverride:S.fuelPrice;
     const mpg=Math.max(+vehicle.mpg||1,1);
@@ -398,11 +414,17 @@ const Eng = (() => {
         salesTax,interest,maint,fuel,ins,reg,operating,total,perYear:total/H,perMile:total/(H*M)};
     }
     function optimal(M,maxBuyAge){
-      M=M||S.annualMiles; const maxBA=maxBuyAge!=null?maxBuyAge:maxAge; let best=null;
-      for(let ba=0;ba<=maxBA;ba++)for(let H=1;H<=S.maxHold;H++){
+      M=M||S.annualMiles;
+      // Both bounds are clamped: maxAge can be 0 and maxHold arrives from an
+      // imported file, so either could leave these loops never running and
+      // return null — which callers read .buyAge off, killing the screen.
+      const maxBA=Math.max(0,maxBuyAge!=null?maxBuyAge:maxAge);
+      const maxH=Math.max(1,Math.floor(S.maxHold)||1);
+      let best=null;
+      for(let ba=0;ba<=maxBA;ba++)for(let H=1;H<=maxH;H++){
         const o=ownership(ba,H,{M}); if(!best||o.perYear<best.perYear) best=o;  // hypothetical buys assume typical miles
       }
-      return best;
+      return best||ownership(0,1,{M});
     }
     function cumulative(buyAge,H,opts){
       const {M,startOdo,purchase}=resolve(buyAge,opts);
@@ -447,10 +469,17 @@ function freshVehicle(seed,i){
   ensurePurchase(v);
   return v;
 }
+/* One definition of "this row has a real year", shared by Eng.prep() and
+   ensurePurchase(). They MUST agree: blank and null both coerce to 0, so a
+   filter of just isFinite(+y) invents a year-zero row. When only one of the two
+   did that they disagreed about refYear (2025 vs 0), and a vehicle with no
+   readable years rendered "A 0 at 30,000 mi" with a model-year dropdown the
+   user could not correct. */
+function isYear(y){ return y!=null && String(y).trim()!=="" && isFinite(+y); }
 /* Each vehicle stores the actual buy point the user is modelling. modelYear+startMiles
    set where the projection begins; priceOverride (null=auto) lets them force a paid price. */
 function ensurePurchase(v){
-  const years=(v.rows||[]).map(r=>+r[0]).filter(isFinite);
+  const years=(v.rows||[]).filter(r=>isYear(r&&r[0])).map(r=>+r[0]);
   const refYear=years.length?Math.max(...years):2025;
   const minYear=years.length?Math.min(...years):refYear;
   const p=v.purchase&&typeof v.purchase==="object"?v.purchase:{};
@@ -471,13 +500,30 @@ function defaultState(){
     compare:[]
   };
 }
+/* Settings reach us from localStorage or an imported file, so every number here
+   is untrusted. One unreadable value poisons the whole model — a NaN renders as
+   "$NaN" everywhere, and a bad maxHold made optimal() return null and threw the
+   vehicle screen away. Clamped to sane bounds; anything unreadable falls back to
+   the default rather than propagating. */
+function sanitizeSettings(raw){
+  const D=Eng.DEFAULTS, out=Object.assign({},D,raw||{});
+  const bounds={ annualMiles:[1,1000000], fuelPrice:[0,1000], salesTax:[0,1],
+    inflation:[-1,1], baselineMiles:[1,1000000], mileWeight:[0,1], maxHold:[1,50] };
+  for(const k in bounds){
+    const n=parseFloat(out[k]);
+    out[k]=isFinite(n)?Math.min(Math.max(n,bounds[k][0]),bounds[k][1]):D[k];
+  }
+  const vpm=parseFloat(out.valuePerMile);
+  out.valuePerMile=isFinite(vpm)?vpm:null;
+  return out;
+}
 function load(){
   try{
     const raw=localStorage.getItem(KEY);
     if(!raw) return defaultState();
     const s=JSON.parse(raw);
     if(!s.settings||!s.vehicles) return defaultState();
-    s.settings=Object.assign({},Eng.DEFAULTS,s.settings);
+    s.settings=sanitizeSettings(s.settings);
     s.compare=s.compare||[];
     s.vehicles.forEach(ensurePurchase);
     return s;
@@ -602,14 +648,14 @@ function renderGarage(){
     let o,P;
     try{ ensurePurchase(v); P=v.purchase; const M=Eng.model(v,S);
       o=M.ownership(M.refYear-P.modelYear,P.holdYears,{startOdo:P.startMiles,price:P.priceOverride}); }catch(e){ o=null; }
-    h+=`<button class="vcard" data-veh="${v.id}">
+    h+=`<button class="vcard" data-veh="${esc(v.id)}">
       <span class="accentbar" style="background:${color}"></span>
       <div class="vc-top">
         <div style="min-width:0">
           <div class="vc-name">${esc(v.name)}</div>
           <div class="vc-meta">
-            <span class="badge ${v.pt}">${ptLabel(v.pt)}</span>
-            <span class="badge">${v.pt==="ev"?v.mpg+" MPGe":v.mpg+" MPG"}</span>
+            <span class="badge ${esc(v.pt)}">${ptLabel(v.pt)}</span>
+            <span class="badge">${esc(v.pt==="ev"?v.mpg+" MPGe":v.mpg+" MPG")}</span>
           </div>
         </div>
         <div class="vc-head-num">
@@ -647,7 +693,12 @@ function editAssumption(key){
   const val=prompt(m[0]+"\n\n"+m[1],cur);
   if(val===null) return;
   const n=parseFloat(val); if(!isFinite(n)){toast("Enter a number");return;}
-  S[key]=m[3](n); save(); render();
+  S[key]=m[3](n);
+  // Clamp exactly as a reload would. Without this, typing 150 into Inflation
+  // stored 1.5, displayed "150.0%", and then silently became 100.0% the next
+  // time the app opened — a value that never existed being quietly rewritten.
+  state.settings=sanitizeSettings(S);
+  save(); render();
 }
 
 /* ============================================================ *
@@ -699,7 +750,7 @@ function renderVehicle(id){
       </div>
       <div class="slider-wrap" style="margin-top:6px">
         <div class="slider-top"><label class="lbl" style="margin:0">Years you'll own it</label><span class="v num" id="hyVal">${H}</span></div>
-        <input type="range" id="holdR" min="1" max="${S.maxHold}" step="1" value="${H}">
+        <input type="range" id="holdR" min="1" max="${esc(S.maxHold)}" step="1" value="${esc(H)}">
       </div>
     </div>`;
     // optimizer — secondary insight
@@ -742,16 +793,16 @@ function renderVehicle(id){
             <option value="hybrid"${v.pt==="hybrid"?" selected":""}>Hybrid</option>
             <option value="ev"${v.pt==="ev"?" selected":""}>Electric</option>
           </select></div>
-        <div class="field"><label class="lbl">${v.pt==="ev"?"MPGe":"MPG"}</label><input class="inp num" id="f_mpg" inputmode="decimal" value="${v.mpg}"></div>
+        <div class="field"><label class="lbl">${v.pt==="ev"?"MPGe":"MPG"}</label><input class="inp num" id="f_mpg" inputmode="decimal" value="${esc(v.mpg)}"></div>
       </div>
       <div class="field"><label class="lbl">Fuel price override <span style="font-weight:400;color:var(--faint)">(blank = use ${money2(S.fuelPrice)} global)</span></label>
-        <div class="inp-group"><span class="pre">$</span><input id="f_fuel" inputmode="decimal" placeholder="${(+S.fuelPrice).toFixed(2)}" value="${v.fuelPriceOverride!=null&&v.fuelPriceOverride!==""?v.fuelPriceOverride:""}"><span class="suf">/gal-eq</span></div></div>
+        <div class="inp-group"><span class="pre">$</span><input id="f_fuel" inputmode="decimal" placeholder="${(+S.fuelPrice).toFixed(2)}" value="${esc(v.fuelPriceOverride!=null&&v.fuelPriceOverride!==""?v.fuelPriceOverride:"")}"><span class="suf">/gal-eq</span></div></div>
     </div>`;
     h+=`<div class="card"><h2>Financing</h2>
       <div class="grid3">
-        <div class="field"><label class="lbl">Loan years</label><input class="inp num" id="f_loanYears" inputmode="numeric" value="${v.loanYears}"></div>
+        <div class="field"><label class="lbl">Loan years</label><input class="inp num" id="f_loanYears" inputmode="numeric" value="${esc(v.loanYears)}"></div>
         <div class="field"><label class="lbl">Rate %</label><input class="inp num" id="f_rate" inputmode="decimal" value="${(v.rate*100).toFixed(2)}"></div>
-        <div class="field"><label class="lbl">Down $</label><input class="inp num" id="f_down" inputmode="numeric" value="${v.down}"></div>
+        <div class="field"><label class="lbl">Down $</label><input class="inp num" id="f_down" inputmode="numeric" value="${esc(v.down)}"></div>
       </div>
       <p class="note">Interest is charged only on the financed amount (price − down). Cheaper used cars under the down payment carry no interest.</p>
     </div>`;
@@ -787,11 +838,11 @@ function renderVehicle(id){
 function styleRange(r){ const pct=(r.value-r.min)/(r.max-r.min)*100; r.style.setProperty("--p",pct+"%"); }
 function dataRowHTML(r,i){
   return `<div class="dt-row" data-i="${i}">
-    <input class="yr" data-c="0" inputmode="numeric" value="${r[0]??""}">
-    <input data-c="1" inputmode="numeric" value="${r[1]??""}">
-    <input data-c="2" inputmode="numeric" value="${r[2]??""}">
-    <input data-c="3" inputmode="numeric" value="${r[3]??""}">
-    <input data-c="4" inputmode="numeric" value="${r[4]??""}">
+    <input class="yr" data-c="0" inputmode="numeric" value="${esc(r[0]??"")}">
+    <input data-c="1" inputmode="numeric" value="${esc(r[1]??"")}">
+    <input data-c="2" inputmode="numeric" value="${esc(r[2]??"")}">
+    <input data-c="3" inputmode="numeric" value="${esc(r[3]??"")}">
+    <input data-c="4" inputmode="numeric" value="${esc(r[4]??"")}">
     <button class="dt-del" data-del="${i}" aria-label="Remove">×</button>
   </div>`;
 }
@@ -870,7 +921,7 @@ function renderCompare(){
     <div class="selrow">`;
   state.vehicles.forEach((v,i)=>{
     const on=state.compare.includes(v.id); const color=PALETTE[i%PALETTE.length];
-    h+=`<button class="selchip ${on?"on":""}" data-sel="${v.id}"><span class="sw" style="background:${on?color:"var(--faint)"}"></span>${esc(v.name)}</button>`;
+    h+=`<button class="selchip ${on?"on":""}" data-sel="${esc(v.id)}"><span class="sw" style="background:${on?color:"var(--faint)"}"></span>${esc(v.name)}</button>`;
   });
   h+=`</div>`;
   // shared controls
@@ -1001,7 +1052,7 @@ function renderSettings(){
         <div class="inp-group"><input id="s_base" class="num" inputmode="numeric" value="${+S.baselineMiles}"><span class="suf">mi/yr</span></div></div>
       <p class="note" style="margin:-4px 0 12px">CarEdge assumes this much driving. Maintenance &amp; resale scale from it to your actual miles.</p>
       <div class="field"><label class="lbl">Mileage value weight: <span class="num">${(S.mileWeight*100).toFixed(0)}%</span></label>
-        <input type="range" id="s_mw" min="0" max="1" step="0.05" value="${S.mileWeight}"></div>
+        <input type="range" id="s_mw" min="0" max="1" step="0.05" value="${esc(S.mileWeight)}"></div>
       <p class="note" style="margin-top:-2px">How strongly lower-than-typical mileage lifts resale value. 0% = ignore odometer, 100% = full effect.</p>
     </div>`;
   h+=`<div class="card"><h2>Your data</h2>
@@ -1040,7 +1091,7 @@ function importData(e){
   r.onload=()=>{ try{
     const s=JSON.parse(r.result);
     if(!s.vehicles||!Array.isArray(s.vehicles)) throw 0;
-    s.settings=Object.assign({},Eng.DEFAULTS,s.settings||{}); s.compare=s.compare||[];
+    s.settings=sanitizeSettings(s.settings); s.compare=s.compare||[];
     s.vehicles.forEach(ensurePurchase);
     state=s; save(); toast("Imported "+s.vehicles.length+" vehicles"); go("garage");
   }catch(err){ toast("Couldn't read that file"); } };

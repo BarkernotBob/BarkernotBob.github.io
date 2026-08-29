@@ -38,6 +38,10 @@ tests/install-checks/test-results/
 tests/install-checks/playwright-report/
 tests/bank-bonus/test-results/
 tests/bank-bonus/playwright-report/
+tests/pool/test-results/
+tests/pool/playwright-report/
+tests/vehicle/test-results/
+tests/vehicle/playwright-report/
 
 # Studio local editor: safety net copies + soft-deleted pages. Never published.
 .studio-backups/

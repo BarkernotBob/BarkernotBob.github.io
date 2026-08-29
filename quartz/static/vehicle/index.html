@@ -323,7 +323,13 @@ const Eng = (() => {
     // made refYear NaN, which made maxAge NaN, which made optimal() return null
     // and threw the whole vehicle screen away on `opt.buyAge`. An imported file
     // could do the same with no typing at all.
-    const usable=(rows||[]).filter(r=>isFinite(+r[0]));
+    // Blank and null both coerce to 0, which would pass isFinite and invent a
+    // year 0 row — that alone pushed maxAge to 2025 and made every render do
+    // ~40k ownership() passes. A year has to actually be written down.
+    const usable=(rows||[]).filter(r=>{
+      const y=r&&r[0];
+      return y!=null && String(y).trim()!=="" && isFinite(+y);
+    });
     // 2025 matches the fallback ensurePurchase() already uses for a rowless
     // vehicle. Deliberately a literal: this app contains no date lookup at all,
     // which is what makes its figures reproducible from one year to the next.
@@ -411,11 +417,17 @@ const Eng = (() => {
         salesTax,interest,maint,fuel,ins,reg,operating,total,perYear:total/H,perMile:total/(H*M)};
     }
     function optimal(M,maxBuyAge){
-      M=M||S.annualMiles; const maxBA=maxBuyAge!=null?maxBuyAge:maxAge; let best=null;
-      for(let ba=0;ba<=maxBA;ba++)for(let H=1;H<=S.maxHold;H++){
+      M=M||S.annualMiles;
+      // Both bounds are clamped: maxAge can be 0 and maxHold arrives from an
+      // imported file, so either could leave these loops never running and
+      // return null — which callers read .buyAge off, killing the screen.
+      const maxBA=Math.max(0,maxBuyAge!=null?maxBuyAge:maxAge);
+      const maxH=Math.max(1,Math.floor(S.maxHold)||1);
+      let best=null;
+      for(let ba=0;ba<=maxBA;ba++)for(let H=1;H<=maxH;H++){
         const o=ownership(ba,H,{M}); if(!best||o.perYear<best.perYear) best=o;  // hypothetical buys assume typical miles
       }
-      return best;
+      return best||ownership(0,1,{M});
     }
     function cumulative(buyAge,H,opts){
       const {M,startOdo,purchase}=resolve(buyAge,opts);
@@ -484,13 +496,30 @@ function defaultState(){
     compare:[]
   };
 }
+/* Settings reach us from localStorage or an imported file, so every number here
+   is untrusted. One unreadable value poisons the whole model — a NaN renders as
+   "$NaN" everywhere, and a bad maxHold made optimal() return null and threw the
+   vehicle screen away. Clamped to sane bounds; anything unreadable falls back to
+   the default rather than propagating. */
+function sanitizeSettings(raw){
+  const D=Eng.DEFAULTS, out=Object.assign({},D,raw||{});
+  const bounds={ annualMiles:[1,1000000], fuelPrice:[0,1000], salesTax:[0,1],
+    inflation:[-1,1], baselineMiles:[1,1000000], mileWeight:[0,1], maxHold:[1,50] };
+  for(const k in bounds){
+    const n=parseFloat(out[k]);
+    out[k]=isFinite(n)?Math.min(Math.max(n,bounds[k][0]),bounds[k][1]):D[k];
+  }
+  const vpm=parseFloat(out.valuePerMile);
+  out.valuePerMile=isFinite(vpm)?vpm:null;
+  return out;
+}
 function load(){
   try{
     const raw=localStorage.getItem(KEY);
     if(!raw) return defaultState();
     const s=JSON.parse(raw);
     if(!s.settings||!s.vehicles) return defaultState();
-    s.settings=Object.assign({},Eng.DEFAULTS,s.settings);
+    s.settings=sanitizeSettings(s.settings);
     s.compare=s.compare||[];
     s.vehicles.forEach(ensurePurchase);
     return s;
@@ -712,7 +741,7 @@ function renderVehicle(id){
       </div>
       <div class="slider-wrap" style="margin-top:6px">
         <div class="slider-top"><label class="lbl" style="margin:0">Years you'll own it</label><span class="v num" id="hyVal">${H}</span></div>
-        <input type="range" id="holdR" min="1" max="${S.maxHold}" step="1" value="${H}">
+        <input type="range" id="holdR" min="1" max="${esc(S.maxHold)}" step="1" value="${esc(H)}">
       </div>
     </div>`;
     // optimizer — secondary insight
@@ -1014,7 +1043,7 @@ function renderSettings(){
         <div class="inp-group"><input id="s_base" class="num" inputmode="numeric" value="${+S.baselineMiles}"><span class="suf">mi/yr</span></div></div>
       <p class="note" style="margin:-4px 0 12px">CarEdge assumes this much driving. Maintenance &amp; resale scale from it to your actual miles.</p>
       <div class="field"><label class="lbl">Mileage value weight: <span class="num">${(S.mileWeight*100).toFixed(0)}%</span></label>
-        <input type="range" id="s_mw" min="0" max="1" step="0.05" value="${S.mileWeight}"></div>
+        <input type="range" id="s_mw" min="0" max="1" step="0.05" value="${esc(S.mileWeight)}"></div>
       <p class="note" style="margin-top:-2px">How strongly lower-than-typical mileage lifts resale value. 0% = ignore odometer, 100% = full effect.</p>
     </div>`;
   h+=`<div class="card"><h2>Your data</h2>
@@ -1053,7 +1082,7 @@ function importData(e){
   r.onload=()=>{ try{
     const s=JSON.parse(r.result);
     if(!s.vehicles||!Array.isArray(s.vehicles)) throw 0;
-    s.settings=Object.assign({},Eng.DEFAULTS,s.settings||{}); s.compare=s.compare||[];
+    s.settings=sanitizeSettings(s.settings); s.compare=s.compare||[];
     s.vehicles.forEach(ensurePurchase);
     state=s; save(); toast("Imported "+s.vehicles.length+" vehicles"); go("garage");
   }catch(err){ toast("Couldn't read that file"); } };

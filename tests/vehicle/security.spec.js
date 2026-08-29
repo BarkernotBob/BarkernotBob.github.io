@@ -190,6 +190,73 @@ test('a breakout typed into the Year field cannot arm itself', async ({ page }) 
   expect(errors, errors.join('\n')).toEqual([])
 })
 
+test('hostile settings from an imported file stay inert', async ({ page }) => {
+  // Settings are interpolated too — maxHold into the hold-length slider's max=
+  // and mileWeight into the settings slider's value= — and importData merged
+  // them straight in without coercing anything. Escaping alone would leave the
+  // model poisoned, so these are also clamped to numbers on the way in.
+  const { errors } = await bootApp(page)
+  await goTab(page, 'settings')
+
+  const evil = {
+    settings: {
+      maxHold: ATTR_BREAKOUT,
+      mileWeight: ATTR_BREAKOUT,
+      annualMiles: HOSTILE,
+      fuelPrice: 'nonsense',
+      inflation: 'nonsense',
+    },
+    vehicles: [
+      {
+        id: 'v1',
+        name: 'Ordinary Car',
+        make: 'x',
+        model: 'x',
+        pt: 'gas',
+        mpg: 30,
+        loanYears: 5,
+        rate: 0.06,
+        down: 5000,
+        rows: [
+          [2025, 20000, 250, 550, 300],
+          [2024, 18000, 300, 540, 297],
+        ],
+      },
+    ],
+    compare: [],
+  }
+
+  await page.locator('#importFile').setInputFiles({
+    name: 'driveline-vehicles.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(evil)),
+  })
+
+  await expect.poll(async () => (await stored(page)).vehicles.length).toBe(1)
+
+  // Coerced back to the defaults rather than carried through as strings.
+  const saved = await stored(page)
+  expect(saved.settings.maxHold).toBe(20)
+  expect(saved.settings.mileWeight).toBe(0.5)
+  expect(saved.settings.annualMiles).toBe(10000)
+  expect(saved.settings.fuelPrice).toBe(3.5)
+
+  await goTab(page, 'garage')
+  await page.locator('.vcard').first().click()
+  await page.locator('#app').hover()
+  await goTab(page, 'settings')
+  await page.locator('#app').hover()
+
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll('*')].filter((e) => e.hasAttribute('onmouseover')).length
+    ),
+    'a setting created a real event-handler attribute'
+  ).toBe(0)
+  await expectInert(page)
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
 test('a hostile value typed into the app is stored and re-rendered inert', async ({ page }) => {
   const { errors } = await bootApp(page)
 

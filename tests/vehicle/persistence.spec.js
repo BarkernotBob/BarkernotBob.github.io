@@ -152,10 +152,32 @@ test('a half-typed year does not throw the vehicle screen away', async ({ page }
   expect(errors, errors.join('\n')).toEqual([])
 })
 
+test('a cleared year row is ignored, not treated as year zero', async ({ page }) => {
+  // Blank and null both coerce to 0, so a naive isFinite() check invents a year
+  // zero: refYear stays 2025 while maxAge jumps to 2025, which gives a nonsense
+  // model-year dropdown and ~40,000 ownership() passes on every single render.
+  const { errors } = await bootApp(page, {
+    mutate: (s) => {
+      s.vehicles[0].rows[3][0] = null
+      s.vehicles[0].rows[4][0] = ''
+    },
+  })
+
+  await page.locator('.vcard').first().click()
+  await expect(page.locator('#app .view')).toBeVisible()
+
+  // The dropdown should still only offer the years actually in the data.
+  const years = await page.locator('#pyMY option').allTextContents()
+  expect(years.length).toBeLessThan(15)
+  for (const y of years) expect(Number(y)).toBeGreaterThan(2000)
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
 test('a vehicle whose rows are all unusable still opens', async ({ page }) => {
   // The degenerate end of the same case — every year unreadable, which an
   // imported file can produce wholesale. It should render something empty and
-  // harmless, never throw.
+  // harmless, never throw. This is the case that reaches prep()'s no-usable-
+  // rows fallback, so keep every year here genuinely unreadable.
   const { errors } = await bootApp(page, {
     mutate: (s) => {
       s.vehicles[0].rows = [

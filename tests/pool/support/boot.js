@@ -131,7 +131,17 @@ async function ready(page) {
   await page.locator('#main .card').first().waitFor({ state: 'visible' })
   await page.waitForFunction(() => {
     const m = document.querySelector('#main')
-    return m && !m.querySelector('.spin')
+    if (!m || m.querySelector('.spin')) return false
+    // The render returns before its data does: Today fills #rainToday and
+    // #inferToday, Weather fills four panels and History its rainfall chart,
+    // all from a later fetch. Measuring width or taking a screenshot before
+    // those land silently misses the widest content on the page — which is
+    // exactly the content most likely to overflow. Every one of them leaves
+    // the same placeholder behind until it is filled.
+    return ![...m.querySelectorAll('p')].some((p) => {
+      const t = (p.textContent || '').trim()
+      return t === 'Loading…' || t === 'Checking…'
+    })
   })
 }
 

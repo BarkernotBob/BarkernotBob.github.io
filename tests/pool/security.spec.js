@@ -1,5 +1,17 @@
+const fs = require('fs')
+const path = require('path')
 const { test, expect } = require('@playwright/test')
 const { bootApp, goTab, fixture } = require('./support/boot')
+
+// The app's own <script> tags, counted from the file on disk rather than from
+// the live page. Counting the live page AFTER the hostile fixture has already
+// rendered would fold an injected script into the baseline, and the assertion
+// could never fail — which is worse than not making it.
+const APP_HTML = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'quartz', 'static', 'pool', 'index.html'),
+  'utf8'
+)
+const APP_SCRIPTS = (APP_HTML.match(/<script\b/g) || []).length
 
 // GAP-W2 class 3, the safety net GAP-W4 (#112) needs before it rewrites how
 // every button in this app is wired.
@@ -40,13 +52,19 @@ function configWith(mutate) {
 
 // The three checks that together mean "inert": it did not run, it did not
 // become a real element, and it did not add a script tag.
-async function expectInert(page, baselineScripts) {
+async function expectInert(page) {
   expect(await page.evaluate(() => window.__pwned), 'payload executed').toBeFalsy()
   expect(await page.locator('img[src="x"]').count(), 'payload became a real element').toBe(0)
   expect(
     await page.evaluate(() => document.querySelectorAll('script').length),
     'payload added a script tag'
-  ).toBe(baselineScripts)
+  ).toBe(APP_SCRIPTS)
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll('script')].some((s) => (s.textContent || '').includes('__pwned'))
+    ),
+    'payload landed inside a script tag'
+  ).toBe(false)
 }
 
 test('a hostile pool name and location render as text', async ({ page }) => {
@@ -58,10 +76,9 @@ test('a hostile pool name and location render as text', async ({ page }) => {
       }),
     },
   })
-  const baseline = await page.evaluate(() => document.querySelectorAll('script').length)
 
   for (const tab of TABS) await goTab(page, tab)
-  await expectInert(page, baseline)
+  await expectInert(page)
 
   // And it is genuinely on screen — inert, not silently swallowed, which would
   // hide the value from the person looking at it.
@@ -79,11 +96,10 @@ test('a hostile task title and detail render as text', async ({ page }) => {
       }),
     },
   })
-  const baseline = await page.evaluate(() => document.querySelectorAll('script').length)
 
   // Task text reaches both the Today due-list and the Schedule routine list.
   for (const tab of TABS) await goTab(page, tab)
-  await expectInert(page, baseline)
+  await expectInert(page)
 
   await goTab(page, 'schedule')
   await expect(page.locator('#main')).toContainText('<img src=x onerror=')
@@ -99,10 +115,9 @@ test('a hostile checklist step renders as text', async ({ page }) => {
       }),
     },
   })
-  const baseline = await page.evaluate(() => document.querySelectorAll('script').length)
 
   await goTab(page, 'schedule')
-  await expectInert(page, baseline)
+  await expectInert(page)
   await expect(page.locator('#main')).toContainText('<img src=x onerror=')
   expect(errors, errors.join('\n')).toEqual([])
 })
@@ -120,10 +135,9 @@ test('a hostile insight rule renders as text', async ({ page }) => {
       }),
     },
   })
-  const baseline = await page.evaluate(() => document.querySelectorAll('script').length)
 
   for (const tab of TABS) await goTab(page, tab)
-  await expectInert(page, baseline)
+  await expectInert(page)
   await goTab(page, 'settings')
   await expect(page.locator('#main')).toContainText('<img src=x onerror=')
   expect(errors, errors.join('\n')).toEqual([])
@@ -133,10 +147,9 @@ test('a hostile test note renders as text', async ({ page }) => {
   const tests = JSON.parse(fixture('tests.json'))
   tests[1].notes = HOSTILE
   const { errors } = await bootApp(page, { db: { 'tests.json': JSON.stringify(tests) } })
-  const baseline = await page.evaluate(() => document.querySelectorAll('script').length)
 
   for (const tab of TABS) await goTab(page, tab)
-  await expectInert(page, baseline)
+  await expectInert(page)
   expect(errors, errors.join('\n')).toEqual([])
 })
 
@@ -145,7 +158,6 @@ test('a hostile value typed into the app is stored and re-rendered inert', async
   // it back on a fresh load.
   const { mock, errors } = await bootApp(page)
   await goTab(page, 'settings')
-  const baseline = await page.evaluate(() => document.querySelectorAll('script').length)
 
   await page.fill('#s_name', HOSTILE)
   await page.getByRole('button', { name: 'Save pool' }).click()
@@ -158,7 +170,7 @@ test('a hostile value typed into the app is stored and re-rendered inert', async
   await page.locator('#main .card').first().waitFor({ state: 'visible' })
   await goTab(page, 'today')
 
-  await expectInert(page, baseline)
+  await expectInert(page)
   await expect(page.locator('#main')).toContainText('<img src=x onerror=')
   expect(errors, errors.join('\n')).toEqual([])
 })

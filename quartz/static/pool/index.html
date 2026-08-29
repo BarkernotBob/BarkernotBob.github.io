@@ -1446,7 +1446,15 @@ window.addEventListener('load', async ()=>{
     await loadAll();
     READINGS.forEach(r=>{ if(D.config.targets[r.key]) r.numRange=D.config.targets[r.key].range; });
     updateBadges();
-  }catch(e){}
+  }catch(e){
+    // Leave nothing half-loaded. loadAll() reads the four files in turn, so a
+    // failure on the third still leaves D.config set — and show() skips its own
+    // retry when D.config is truthy, rendering a normal-looking Today over
+    // missing D.log/D.swim. The next tap would then throw out of markTask()'s
+    // reach and do nothing. Clearing D forces show() to retry and surface the
+    // error card instead.
+    D={};
+  }
   await show('today');
 });
 

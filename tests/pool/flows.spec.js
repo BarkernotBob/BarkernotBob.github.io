@@ -219,3 +219,24 @@ test('a GitHub failure surfaces instead of failing silently', async ({ page }) =
   const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
   expect(appErrors, appErrors.join('\n')).toEqual([])
 })
+
+test('a partial load failure surfaces too, rather than half-rendering', async ({ page }) => {
+  // The nastier shape of the same failure: loadAll() reads the four files in
+  // turn, so a 403 on the third leaves D.config set but D.log missing. A boot
+  // that shrugs that off renders a normal-looking Today over half a dataset,
+  // and the next "Done" tap throws somewhere nothing catches it and silently
+  // does nothing — the worst version, because it looks like it worked.
+  const { errors } = await bootApp(page)
+
+  await page.route('**/contents/db/log.json', (route, req) => {
+    if (req.method() === 'GET')
+      return route.fulfill({ status: 403, contentType: 'application/json', body: '{"message":"Forbidden"}' })
+    return route.fallback()
+  })
+  await page.reload()
+
+  await expect(page.locator('#main')).toContainText('Something went wrong')
+  await expect(page.locator('#main')).not.toContainText('Due now')
+  const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
+  expect(appErrors, appErrors.join('\n')).toEqual([])
+})

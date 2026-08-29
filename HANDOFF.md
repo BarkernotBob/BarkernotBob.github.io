@@ -1,6 +1,6 @@
 # HANDOFF — barkernotbob.github.io (Quartz v5 site)
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-27_
 
 ## Current status
 
@@ -20,6 +20,50 @@ If a deploy ever fails with an empty log / `BlobNotFound`, check #2 first — th
 failure mode produces a job with no steps and no logs.
 
 ## What just changed
+
+- 2026-08-27 — **the nightly backlog has never been able to reach GitHub, and
+  still can't.** The Routine fires, clones this repo, reads the protocol, and
+  then stops: the session it fires has no `gh` CLI, no GitHub MCP tools, and no
+  `add_repo`, so it cannot list a single issue in any repo — including this one.
+  It reports this correctly and sends a notification; the run "succeeds" because
+  the agent stops cleanly, which is why it looked healthy from the outside.
+
+  **Root cause:** a Routine freezes its tool grants at creation time. This one
+  was created 2026-08-08 from a session that held no MCP tools, and its stored
+  list is built-ins only — no `mcp__github__*`, no `add_repo`. Neither
+  `update_trigger` (no such parameter) nor `create_trigger` (writes the same
+  default list regardless of the calling session) can change it.
+
+  **Not the cause, though both were suspected:** repo authorization is fine —
+  `add_repo` on `BarkernotBob/bank-bonuses` succeeds from a normal session, so
+  the account-level GitHub grants already cover the other repos. And the stale
+  `planned` + `nightly-ok` labels in the Routine's prompt were real but never
+  reached — the run dies before the queue is built. That prompt is fixed anyway,
+  and it now has to report counts on every run, empty nights included.
+
+  **The fix:** `backlog/routines/SETUP.md` — start a chat at
+  https://claude.ai/code with this repo attached, paste the prompt in that file,
+  and it deletes both broken Routines and creates working ones bound to itself.
+  It verifies a spawned worker really inherits the GitHub tools *before* creating
+  anything, so this can't be rebuilt broken. The same defect applies to the
+  `Monthly branch sweep` Routine (`trig_018KFdmKDquYi7UWRup93cGT`); it will fail
+  identically on 1 September until that setup is run.
+
+  The new design keeps the bound chat as a dispatcher only — each firing spawns a
+  fresh worker via `create_session` and stops — so the transcript the Routine
+  resumes stays small instead of accumulating a month of runs. Worker briefings
+  are versioned in `backlog/routines/`.
+
+  Also new: `.claude/settings.json` pre-approves the GitHub and git operations
+  the routine needs and *denies* what it must never do (workflow files,
+  `.quartz/plugins/`, force-push, rebase) — rules that were prose-only before.
+  That governs prompting, not tool availability, so it does not by itself
+  unblock the nightly. And `/branch-sweep`, meant to run monthly, deletes
+  branches whose work already landed and files one issue about the rest.
+- 2026-08-27 — **the July audit is now a backlog.** All eight findings in
+  `AUDIT-GAPS.md` became issues #108–#115 (W8 deliberately excepted). Nothing in
+  that document had moved in six weeks, and GAP-W4 had got *worse* — bank-bonus
+  went from 78 inline handlers to 86.
 
 - 2026-08-09 — **backlog: labels no longer gate visibility.** The first cut needed
   a `planned` label to appear on the board, and the GitHub phone app can't apply

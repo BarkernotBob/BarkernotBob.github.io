@@ -28,9 +28,23 @@ its own, was the cheapest way to steal the other three's.
 
 **Unlike the inline-handler breakouts pinned in bank-bonus and pool, this one is
 genuinely fixed by escaping**, because it lands in an attribute value rather than
-inside JavaScript: `esc()`'s `"` → `&quot;` closes it completely. Both sites now
-use `esc()`, and there were only those two — enumerated, not sampled.
-`security.spec.js` covers it seeded and imported.
+inside JavaScript: `esc()`'s `"` → `&quot;` closes it completely.
+`security.spec.js` covers it seeded, imported and typed.
+
+The first attempt at that fix escaped only `id` and `name`, and `/code-review`
+caught that it was incomplete: `pt`, `mpg`, `fuelPriceOverride`, `loanYears`,
+`down` and all five depreciation-row columns were interpolated raw too, and
+`importData()` coerces none of them to numbers. The worst of those needed no
+import at all — the Year box keeps whatever you type while it isn't yet a number
+(so clearing it to retype doesn't destroy the row), and that value went straight
+back into `value="…"` on the next render. **Every** interpolated field now goes
+through `esc()`, and the hostile-import fixture carries a payload in every field
+rather than in the two that were already fixed.
+
+It also found a second, non-security bug on the same path: a year that isn't a
+number made `refYear` NaN → `maxAge` NaN → `optimal()` return `null`, and the
+whole vehicle screen died on `opt.buyAge`. `prep()` now models only rows with a
+real year, and `maxAge` no longer collapses to `-Infinity` on an empty set.
 
 ## What's here
 

@@ -133,6 +133,46 @@ test('an import missing settings still gets sane defaults', async ({ page }) => 
   expect(errors, errors.join('\n')).toEqual([])
 })
 
+test('a half-typed year does not throw the vehicle screen away', async ({ page }) => {
+  // The Year box keeps whatever you type while it is not yet a number, so that
+  // clearing it to retype does not destroy the row. One of those reaching the
+  // model made refYear NaN → maxAge NaN → optimal() null, and the detail view
+  // died on `opt.buyAge`. Typing, not importing: no file needed.
+  const { errors } = await bootApp(page)
+
+  await page.locator('.vcard').first().click()
+  await page.locator('[data-vt="data"]').click()
+  const year = page.locator('.dt-row').first().locator('input[data-c="0"]')
+  await year.fill('20x5')
+  await year.blur()
+
+  await page.locator('[data-vt="overview"]').click()
+  await expect(page.locator('#app .view')).toBeVisible()
+  await expect(page.locator('#app')).not.toContainText('NaN')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('a vehicle whose rows are all unusable still opens', async ({ page }) => {
+  // The degenerate end of the same case — every year unreadable, which an
+  // imported file can produce wholesale. It should render something empty and
+  // harmless, never throw.
+  const { errors } = await bootApp(page, {
+    mutate: (s) => {
+      s.vehicles[0].rows = [
+        ['', 0, 0, 0, 0],
+        ['not a year', 0, 0, 0, 0],
+      ]
+    },
+  })
+
+  await page.locator('.vcard').first().click()
+  await expect(page.locator('#app .view')).toBeVisible()
+  await expect(page.locator('#abTitle')).toHaveText('Testa Voltage')
+  await page.locator('[data-vt="data"]').click()
+  await expect(page.locator('#app .view')).toBeVisible()
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
 test('no rendered figure is ever NaN', async ({ page }) => {
   // A single NaN leaking into the model shows up as "$NaN" across the screen
   // and is the most likely visible symptom of a maths regression.

@@ -317,8 +317,19 @@ const Eng = (() => {
     const m=(n*sxy-sx*sy)/d; return {m,b:(sy-m*sx)/n};
   }
   function prep(rows){
-    const refYear=Math.max(...rows.map(r=>+r[0]));
-    const pts=rows.map(r=>({age:refYear-(+r[0]),price:num(r[1]),maint:num(r[2]),ins:num(r[3]),reg:num(r[4])}));
+    // Only rows with a real year can be modelled. The data tab deliberately
+    // keeps whatever you type in the Year box when it isn't a number yet, so a
+    // half-typed year survives a re-render — but one of those reaching here
+    // made refYear NaN, which made maxAge NaN, which made optimal() return null
+    // and threw the whole vehicle screen away on `opt.buyAge`. An imported file
+    // could do the same with no typing at all.
+    const usable=(rows||[]).filter(r=>isFinite(+r[0]));
+    // 2025 matches the fallback ensurePurchase() already uses for a rowless
+    // vehicle. Deliberately a literal: this app contains no date lookup at all,
+    // which is what makes its figures reproducible from one year to the next.
+    if(!usable.length) return {refYear:2025,pts:[]};
+    const refYear=Math.max(...usable.map(r=>+r[0]));
+    const pts=usable.map(r=>({age:refYear-(+r[0]),price:num(r[1]),maint:num(r[2]),ins:num(r[3]),reg:num(r[4])}));
     return {refYear,pts};
   }
   function num(x){ const v=parseFloat(x); return isFinite(v)?v:null; }
@@ -360,7 +371,9 @@ const Eng = (() => {
     const maintFn=fitTrend(pts,'maint',{floorFrac:0,capMul:3,dropZero:true});
     const insFn=fitTrend(pts,'ins',{floorFrac:0.3,capMul:1.5});
     const regFn=fitTrend(pts,'reg',{floorFrac:0.2,capMul:1.5});
-    const maxAge=Math.max(...pts.map(p=>p.age));
+    // Math.max() of an empty list is -Infinity, which makes optimal()'s loop
+    // never run and return null — the same crash prep() guards against above.
+    const maxAge=pts.length?Math.max(...pts.map(p=>p.age)):0;
     const base=Math.max(S.baselineMiles,1), w=Math.min(Math.max(S.mileWeight,0),1);
     const fuelPrice=vehicle.fuelPriceOverride!=null&&vehicle.fuelPriceOverride!==''?+vehicle.fuelPriceOverride:S.fuelPrice;
     const mpg=Math.max(+vehicle.mpg||1,1);
@@ -608,8 +621,8 @@ function renderGarage(){
         <div style="min-width:0">
           <div class="vc-name">${esc(v.name)}</div>
           <div class="vc-meta">
-            <span class="badge ${v.pt}">${ptLabel(v.pt)}</span>
-            <span class="badge">${v.pt==="ev"?v.mpg+" MPGe":v.mpg+" MPG"}</span>
+            <span class="badge ${esc(v.pt)}">${ptLabel(v.pt)}</span>
+            <span class="badge">${esc(v.pt==="ev"?v.mpg+" MPGe":v.mpg+" MPG")}</span>
           </div>
         </div>
         <div class="vc-head-num">
@@ -742,16 +755,16 @@ function renderVehicle(id){
             <option value="hybrid"${v.pt==="hybrid"?" selected":""}>Hybrid</option>
             <option value="ev"${v.pt==="ev"?" selected":""}>Electric</option>
           </select></div>
-        <div class="field"><label class="lbl">${v.pt==="ev"?"MPGe":"MPG"}</label><input class="inp num" id="f_mpg" inputmode="decimal" value="${v.mpg}"></div>
+        <div class="field"><label class="lbl">${v.pt==="ev"?"MPGe":"MPG"}</label><input class="inp num" id="f_mpg" inputmode="decimal" value="${esc(v.mpg)}"></div>
       </div>
       <div class="field"><label class="lbl">Fuel price override <span style="font-weight:400;color:var(--faint)">(blank = use ${money2(S.fuelPrice)} global)</span></label>
-        <div class="inp-group"><span class="pre">$</span><input id="f_fuel" inputmode="decimal" placeholder="${(+S.fuelPrice).toFixed(2)}" value="${v.fuelPriceOverride!=null&&v.fuelPriceOverride!==""?v.fuelPriceOverride:""}"><span class="suf">/gal-eq</span></div></div>
+        <div class="inp-group"><span class="pre">$</span><input id="f_fuel" inputmode="decimal" placeholder="${(+S.fuelPrice).toFixed(2)}" value="${esc(v.fuelPriceOverride!=null&&v.fuelPriceOverride!==""?v.fuelPriceOverride:"")}"><span class="suf">/gal-eq</span></div></div>
     </div>`;
     h+=`<div class="card"><h2>Financing</h2>
       <div class="grid3">
-        <div class="field"><label class="lbl">Loan years</label><input class="inp num" id="f_loanYears" inputmode="numeric" value="${v.loanYears}"></div>
+        <div class="field"><label class="lbl">Loan years</label><input class="inp num" id="f_loanYears" inputmode="numeric" value="${esc(v.loanYears)}"></div>
         <div class="field"><label class="lbl">Rate %</label><input class="inp num" id="f_rate" inputmode="decimal" value="${(v.rate*100).toFixed(2)}"></div>
-        <div class="field"><label class="lbl">Down $</label><input class="inp num" id="f_down" inputmode="numeric" value="${v.down}"></div>
+        <div class="field"><label class="lbl">Down $</label><input class="inp num" id="f_down" inputmode="numeric" value="${esc(v.down)}"></div>
       </div>
       <p class="note">Interest is charged only on the financed amount (price − down). Cheaper used cars under the down payment carry no interest.</p>
     </div>`;
@@ -787,11 +800,11 @@ function renderVehicle(id){
 function styleRange(r){ const pct=(r.value-r.min)/(r.max-r.min)*100; r.style.setProperty("--p",pct+"%"); }
 function dataRowHTML(r,i){
   return `<div class="dt-row" data-i="${i}">
-    <input class="yr" data-c="0" inputmode="numeric" value="${r[0]??""}">
-    <input data-c="1" inputmode="numeric" value="${r[1]??""}">
-    <input data-c="2" inputmode="numeric" value="${r[2]??""}">
-    <input data-c="3" inputmode="numeric" value="${r[3]??""}">
-    <input data-c="4" inputmode="numeric" value="${r[4]??""}">
+    <input class="yr" data-c="0" inputmode="numeric" value="${esc(r[0]??"")}">
+    <input data-c="1" inputmode="numeric" value="${esc(r[1]??"")}">
+    <input data-c="2" inputmode="numeric" value="${esc(r[2]??"")}">
+    <input data-c="3" inputmode="numeric" value="${esc(r[3]??"")}">
+    <input data-c="4" inputmode="numeric" value="${esc(r[4]??"")}">
     <button class="dt-del" data-del="${i}" aria-label="Remove">×</button>
   </div>`;
 }

@@ -107,20 +107,26 @@ test('an imported file with a hostile id stays inert', async ({ page }) => {
   const { errors } = await bootApp(page)
   await goTab(page, 'settings')
 
+  // Every field the file controls carries a payload, not just id and name.
+  // A fixture that puts hostile values only in the two fields already fixed
+  // passes while the app is still injectable everywhere else — false assurance
+  // on exactly the property this test exists to guarantee. importData coerces
+  // none of these to numbers, so a "number" field can be any string at all.
   const evil = {
     settings: {},
     vehicles: [
       {
         id: ATTR_BREAKOUT,
         name: HOSTILE,
-        make: 'x',
-        model: 'x',
-        pt: 'gas',
-        mpg: 30,
-        loanYears: 5,
+        make: HOSTILE,
+        model: HOSTILE,
+        pt: ATTR_BREAKOUT,
+        mpg: HOSTILE,
+        fuelPriceOverride: ATTR_BREAKOUT,
+        loanYears: ATTR_BREAKOUT,
+        down: ATTR_BREAKOUT,
         rate: 0.06,
-        down: 5000,
-        rows: [[2025, 20000, 250, 550, 300]],
+        rows: [[ATTR_BREAKOUT, ATTR_BREAKOUT, ATTR_BREAKOUT, ATTR_BREAKOUT, ATTR_BREAKOUT]],
       },
     ],
     compare: [],
@@ -133,13 +139,52 @@ test('an imported file with a hostile id stays inert', async ({ page }) => {
   })
 
   await expect.poll(async () => (await stored(page)).vehicles.length).toBe(1)
+
+  // Walk every screen the imported values reach: the garage card, both detail
+  // tabs (where the numeric fields and the depreciation rows are rendered as
+  // input values) and compare.
   await goTab(page, 'garage')
   await page.locator('.vcard').first().hover()
+  await page.locator('.vcard').first().click()
+  await page.locator('[data-vt="data"]').click()
+  await page.locator('#f_mpg').hover()
+  await page.locator('.dt-row').first().hover()
+  await page.locator('[data-vt="overview"]').click()
 
   expect(
     await page.evaluate(() =>
       [...document.querySelectorAll('*')].filter((e) => e.hasAttribute('onmouseover')).length
-    )
+    ),
+    'an imported value created a real event-handler attribute'
+  ).toBe(0)
+  await expectInert(page)
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('a breakout typed into the Year field cannot arm itself', async ({ page }) => {
+  // No import needed for this one, which makes it the worst of the set. The
+  // year column keeps whatever you type when it is not a number (deliberately,
+  // so a half-typed year is not destroyed), and that value is rendered straight
+  // back into the input's value attribute on the next render.
+  const { errors } = await bootApp(page)
+
+  await page.locator('.vcard').first().click()
+  await page.locator('[data-vt="data"]').click()
+
+  const year = page.locator('.dt-row').first().locator('input[data-c="0"]')
+  await year.fill(ATTR_BREAKOUT)
+  await year.blur()
+
+  // Force the re-render that puts the stored value back into the markup.
+  await page.locator('[data-vt="overview"]').click()
+  await page.locator('[data-vt="data"]').click()
+  await page.locator('.dt-row').first().hover()
+
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll('*')].filter((e) => e.hasAttribute('onmouseover')).length
+    ),
+    'a typed year created a real event-handler attribute'
   ).toBe(0)
   await expectInert(page)
   expect(errors, errors.join('\n')).toEqual([])

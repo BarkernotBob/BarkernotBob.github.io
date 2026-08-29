@@ -83,7 +83,11 @@
   button.link{background:none;color:var(--brand);width:auto;padding:8px 0;font-weight:600;letter-spacing:0}
   button.link:hover{filter:none;text-decoration:underline}
   button:disabled{opacity:.5;pointer-events:none}
-  .row{display:flex;gap:10px} .row>*{flex:1}
+  /* min-width:0 matters: a flex item defaults to min-width:auto, so it refuses
+     to shrink below its content's intrinsic width. Two date inputs in one .row
+     (Settings → Season) each claim ~178px in Chrome and pushed the page 11px
+     wider than a 390px phone, scrolling the whole app sideways. */
+  .row{display:flex;gap:10px} .row>*{flex:1;min-width:0}
   .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.02em;font-family:var(--font-body)}
   .pill.warn{background:#f6ead4;color:#8a5418}
   .pill.ok{background:#d9efe4;color:#1f6048}
@@ -231,7 +235,21 @@ function modal(innerHtml){
   return new Promise(resolve=>{
     const o=el('div',{class:'modal-ov'});
     o.innerHTML=`<div class="modal-card">${innerHtml}</div>`;
-    const close=(val)=>{ if(o._done) return; o._done=true; o.remove(); resolve(val); };
+    // Detach AFTER the caller has resumed, not before. editChecklist() reads
+    // #cl_steps on the line after `await modal(...)`; removing the overlay here
+    // left it reading `.value` off null, which threw and silently saved
+    // nothing — editing the opening or closing checklist did no work at all.
+    // Hide it now so the UI still responds instantly, resolve (the caller
+    // resumes as a microtask, fields still attached), then remove on the next
+    // macrotask. Same fix as bank-bonus, which had this bug in two flows.
+    const close=(val)=>{
+      if(o._done) return;
+      o._done=true;
+      o.style.visibility='hidden';
+      o.style.pointerEvents='none';
+      resolve(val);
+      setTimeout(()=>o.remove(), 0);
+    };
     o.addEventListener('click', e=>{ if(e.target===o) close(null); });
     document.body.appendChild(o);
     o.querySelectorAll('[data-mval]').forEach(b=> b.addEventListener('click', ()=>close(b.getAttribute('data-mval'))));
@@ -1413,10 +1431,23 @@ window.addEventListener('load', async ()=>{
   // sync target ranges from any saved config happens after load; first handle OAuth return.
   const came = await handleOAuthRedirect();
   if(came) return;
-  show(isConfigured()?'today':'settings');
-  if(isConfigured()){
-    try{ await loadAll(); READINGS.forEach(r=>{ if(D.config.targets[r.key]) r.numRange=D.config.targets[r.key].range; }); updateBadges(); }catch(e){}
-  } else renderSetup();
+  if(!isConfigured()){ show('settings'); return; }
+  // Load BEFORE the first render, and only once. show() was previously kicked
+  // off un-awaited and then loadAll() ran again alongside it, so every cold
+  // start fetched all four data files twice — eight GitHub calls for four
+  // files' worth of data, on a phone, before anything appeared. Loading first
+  // also means the saved target ranges are applied to READINGS before the
+  // first render uses them, instead of racing it.
+  // Everything that reads D.config stays inside the try: on a failed load
+  // (expired token, deleted repo) D.config is undefined, and updateBadges()
+  // walks D.config.tasks. show() below re-attempts the load and renders the
+  // error card either way.
+  try{
+    await loadAll();
+    READINGS.forEach(r=>{ if(D.config.targets[r.key]) r.numRange=D.config.targets[r.key].range; });
+    updateBadges();
+  }catch(e){}
+  await show('today');
 });
 
 /* ---------- PWA: register the service worker (offline app shell) ---------- */

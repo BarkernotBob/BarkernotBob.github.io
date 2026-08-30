@@ -229,7 +229,7 @@ test('a hostile task id cannot reach an executable position', async ({ page }) =
 
   // The id must still arrive intact as DATA. Asserting only "nothing executed"
   // would also pass if the rewrite had simply dropped the button.
-  const btn = page.locator(`[data-act="markTask"][data-a1=${JSON.stringify(HANDLER_BREAKOUT)}]`)
+  const btn = page.locator(`[data-action="markTask"][data-a1=${JSON.stringify(HANDLER_BREAKOUT)}]`)
   expect(await btn.count(), 'the hostile id should still render a working button').toBeGreaterThan(0)
 
   // Dispatched in-page: a real click can be intercepted at a narrow viewport,
@@ -243,9 +243,16 @@ test('a hostile task id cannot reach an executable position', async ({ page }) =
 // hardened the same way and stayed that way because a test said so; pool had
 // ~39 handlers precisely because nothing was watching.
 test('the app declares no inline event handlers', () => {
-  const inline = (APP_HTML.match(/\son[a-z]+\s*=\s*"/gi) || []).filter(
-    (m) => !/\scontent\s*=/i.test(m)
-  )
+  // Named events rather than `on[a-z]+`: quoting is not what makes a handler
+  // dangerous, so this catches onclick="…", onclick='…' and unquoted alike.
+  // A looser `on\w+=` matches ordinary JavaScript in the same file — `onHand
+  // = {}` is a variable here, not an attribute — and a guard that cries wolf
+  // gets deleted, which is how the handlers accumulated in the first place.
+  const EVENTS =
+    'click|dblclick|change|input|blur|focus|submit|reset|select|keydown|keyup|keypress|' +
+    'mouse[a-z]+|touch[a-z]+|pointer[a-z]+|drag[a-z]*|drop|paste|copy|cut|wheel|scroll|' +
+    'contextmenu|load|error|toggle|animationend|transitionend'
+  const inline = APP_HTML.match(new RegExp(`\\son(${EVENTS})\\s*=`, 'gi')) || []
   expect(inline, `inline handlers found: ${inline.join(', ')}`).toEqual([])
 })
 

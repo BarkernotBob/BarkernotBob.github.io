@@ -280,19 +280,19 @@
   <div class="appbar-title">🏦 Bank Bonus Tracker</div>
   <div class="appbar-right">
     <span id="appbar-user"></span>
-    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light / dark">🌙</button>
-    <button class="icon-btn kbd-help-btn" onclick="showShortcuts()" title="Keyboard shortcuts (press ?)">⌨</button>
+    <button class="icon-btn" id="themeBtn" data-action="toggleTheme" title="Toggle light / dark">🌙</button>
+    <button class="icon-btn kbd-help-btn" data-action="showShortcuts" title="Keyboard shortcuts (press ?)">⌨</button>
   </div>
 </header>
 
 <nav id="nav">
-  <button data-tab="today" class="nav-btn active" onclick="show('today')" title="Today (T)"><span class="ic">🗓</span><u>T</u>oday</button>
-  <button data-tab="active" class="nav-btn" onclick="show('active')" title="Active (A)"><span class="ic">📂</span><u>A</u>ctive</button>
-  <button data-tab="planned" class="nav-btn" onclick="show('planned')" title="Planned (P)"><span class="ic">🗒</span><u>P</u>lanned</button>
-  <button data-tab="offers" class="nav-btn" onclick="show('offers')" title="Offers (O)"><span class="ic">🧰</span><u>O</u>ffers</button>
-  <button data-tab="calendar" class="nav-btn" onclick="show('calendar')" title="Calendar (C)"><span class="ic">📅</span><u>C</u>alendar</button>
-  <button data-tab="reports" class="nav-btn" onclick="show('reports')" title="Reports (R)"><span class="ic">📊</span><u>R</u>eports</button>
-  <button data-tab="settings" class="nav-btn" onclick="show('settings')" title="Settings (S)"><span class="ic">⚙︎</span><u>S</u>ettings</button>
+  <button data-tab="today" class="nav-btn active" data-action="show" data-a1="today" title="Today (T)"><span class="ic">🗓</span><u>T</u>oday</button>
+  <button data-tab="active" class="nav-btn" data-action="show" data-a1="active" title="Active (A)"><span class="ic">📂</span><u>A</u>ctive</button>
+  <button data-tab="planned" class="nav-btn" data-action="show" data-a1="planned" title="Planned (P)"><span class="ic">🗒</span><u>P</u>lanned</button>
+  <button data-tab="offers" class="nav-btn" data-action="show" data-a1="offers" title="Offers (O)"><span class="ic">🧰</span><u>O</u>ffers</button>
+  <button data-tab="calendar" class="nav-btn" data-action="show" data-a1="calendar" title="Calendar (C)"><span class="ic">📅</span><u>C</u>alendar</button>
+  <button data-tab="reports" class="nav-btn" data-action="show" data-a1="reports" title="Reports (R)"><span class="ic">📊</span><u>R</u>eports</button>
+  <button data-tab="settings" class="nav-btn" data-action="show" data-a1="settings" title="Settings (S)"><span class="ic">⚙︎</span><u>S</u>ettings</button>
 </nav>
 
 <main id="main"></main>
@@ -908,9 +908,9 @@ function render_today(){
           <div class="stat"><div class="stat-label">Closed</div><div class="stat-value">${c}</div></div>
         </div>
         <div class="action-bar" style="margin:0">
-          <button onclick="show('active')">View Active</button>
-          <button class="sec" onclick="show('reports')">Reports</button>
-          <button class="sec" onclick="show('calendar')">Calendar</button>
+          <button data-action="show" data-a1="active">View Active</button>
+          <button class="sec" data-action="show" data-a1="reports">Reports</button>
+          <button class="sec" data-action="show" data-a1="calendar">Calendar</button>
         </div>
       </div>`;
     }
@@ -918,7 +918,7 @@ function render_today(){
     if(toOpen.length) {
       html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';
       toOpen.forEach(a => {
-        html += `<div class="list-item clickable" onclick="editAccount('${a.id}')"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -926,7 +926,7 @@ function render_today(){
     if(toClose.length) {
       html += '<div class="card"><div class="card-header">🔒 Accounts to Close</div>';
       toClose.forEach(a => {
-        html += `<div class="list-item clickable" onclick="editAccount('${a.id}')"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -934,7 +934,7 @@ function render_today(){
     if(reminders.length) {
       html += '<div class="card"><div class="card-header">⏰ Reminders</div>';
       reminders.forEach(r => {
-        html += `<div class="list-item clickable" onclick="editAccount('${esc(r.accountId)}')"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" onclick="event.stopPropagation();markReminderDone('${esc(r.accountId)}','${esc(r.id)}')">Done</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(r.accountId)}"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" data-stop="1" data-action="markReminderDone" data-a1="${esc(r.accountId)}" data-a2="${esc(r.id)}">Done</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
       });
       html += '</div>';
     }
@@ -942,7 +942,7 @@ function render_today(){
     if(ddCleared.length) {
       html += '<div class="card"><div class="card-header">✅ First DD Cleared (Yesterday)</div>';
       ddCleared.forEach(a => {
-        html += `<div class="list-item clickable" onclick="editAccount('${a.id}')"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -979,19 +979,19 @@ const acctFilter = { active: {person:'all', q:'', status:'open'}, planned: {pers
 function filterBarHTML(tab){
   const f = acctFilter[tab];
   const personChips = ['all', ...(config.people || [])].map(p =>
-    `<button class="chip ${f.person===p?'active':''}" onclick="setPersonFilter('${tab}','${esc(p)}')">${p==='all'?'Everyone':esc(p)}</button>`).join('');
+    `<button class="chip ${f.person===p?'active':''}" data-action="setPersonFilter" data-a1="${esc(tab)}" data-a2="${esc(p)}">${p==='all'?'Everyone':esc(p)}</button>`).join('');
   const addLabel = tab==='active' ? '+ Add Account' : '+ Add Planned';
   const addStatus = tab==='active' ? 'open' : 'planned';
   const statusChips = tab === 'active' ? `<div class="chips">
-      <button class="chip ${(f.status||'open')==='open'?'active':''}" onclick="setStatusFilter('open')">Open</button>
-      <button class="chip ${(f.status||'open')==='closed'?'active':''}" onclick="setStatusFilter('closed')">Closed</button>
+      <button class="chip ${(f.status||'open')==='open'?'active':''}" data-action="setStatusFilter" data-a1="open">Open</button>
+      <button class="chip ${(f.status||'open')==='closed'?'active':''}" data-action="setStatusFilter" data-a1="closed">Closed</button>
     </div>` : '';
   return `<div class="filter-bar">
       ${statusChips}
       <div class="chips">${personChips}</div>
       <input class="search-input" type="search" placeholder="Search institution… ( / )" value="${esc(f.q)}"
-        oninput="setSearchFilter('${tab}', this.value)">
-      <button onclick="addAccount('${addStatus}')">${addLabel}</button>
+        data-input="setSearchFilter" data-a1="${esc(tab)}">
+      <button data-action="addAccount" data-a1="${esc(addStatus)}">${addLabel}</button>
     </div>`;
 }
 function setPersonFilter(tab, person){ acctFilter[tab].person = person; window['render_'+tab](); }
@@ -1012,7 +1012,7 @@ function render_active(){
 
   if(accounts.filter(a => a.status === sf).length === 0){
     const emptyMsg = sf === 'closed' ? 'No closed accounts yet.' : 'No active accounts yet.';
-    const cta = sf === 'closed' ? '' : `<div class="empty-cta"><button onclick="addAccount('open')">+ Add Account</button></div>`;
+    const cta = sf === 'closed' ? '' : `<div class="empty-cta"><button data-action="addAccount" data-a1="open">+ Add Account</button></div>`;
     section.innerHTML = `<div class="empty">${emptyMsg}${cta}</div>`;
     return;
   }
@@ -1021,7 +1021,7 @@ function render_active(){
 
   if(sf === 'closed'){
     visible.forEach(a => {
-      html += `<div class="card clickable st-closed" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
+      html += `<div class="card clickable st-closed" data-inst="${esc((a.institution||'').toLowerCase())}" data-action="editAccount" data-a1="${esc(a.id)}">
         <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('closed')}</div>
         <div class="row">
           <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
@@ -1033,13 +1033,13 @@ function render_active(){
     });
   } else {
     visible.forEach(a => {
-      html += `<div class="card clickable st-open" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
+      html += `<div class="card clickable st-open" data-inst="${esc((a.institution||'').toLowerCase())}" data-action="editAccount" data-a1="${esc(a.id)}">
         <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('open')}</div>
         <div class="row">
           <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
           <div class="row-item"><div class="label">DD Total</div><div class="value money">${money(a.directDepositTotal)}</div></div>
-          <div class="row-item"><div class="label">Opened</div><input type="date" class="date-quick" value="${esc(a.dates.opened||'')}" title="Opened date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','opened',this.value)"></div>
-          <div class="row-item"><div class="label">First DD</div><input type="date" class="date-quick" value="${esc(a.dates.firstDD||'')}" title="First DD date" onclick="event.stopPropagation()" onchange="quickUpdateDate('${a.id}','firstDD',this.value)"></div>
+          <div class="row-item"><div class="label">Opened</div><input type="date" class="date-quick" value="${esc(a.dates.opened||'')}" title="Opened date" data-stop="1" data-change="quickUpdateDate" data-a1="${esc(a.id)}" data-a2="opened"></div>
+          <div class="row-item"><div class="label">First DD</div><input type="date" class="date-quick" value="${esc(a.dates.firstDD||'')}" title="First DD date" data-stop="1" data-change="quickUpdateDate" data-a1="${esc(a.id)}" data-a2="firstDD"></div>
         </div>
       </div>`;
     });
@@ -1056,22 +1056,22 @@ function render_planned(){
 
   if(accounts.filter(a => a.status === 'planned').length === 0) {
     section.innerHTML = `<div class="empty">No planned accounts yet.
-      <div class="empty-cta"><button onclick="addAccount('planned')">+ Add Planned</button></div></div>`;
+      <div class="empty-cta"><button data-action="addAccount" data-a1="planned">+ Add Planned</button></div></div>`;
     return;
   }
 
   let html = filterBarHTML('planned');
   planned.forEach(a => {
-    html += `<div class="card st-planned clickable" data-inst="${esc((a.institution||'').toLowerCase())}" onclick="editAccount('${a.id}')">
+    html += `<div class="card st-planned clickable" data-inst="${esc((a.institution||'').toLowerCase())}" data-action="editAccount" data-a1="${esc(a.id)}">
       <div class="card-header"><span class="card-title">${esc(a.institution)} ${personChip(a.person)}</span>${statusPill('planned')}</div>
       <div class="row">
         <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(a.bonus)}</div></div>
         <div class="row-item"><div class="label">DD Req</div><div class="value money">${money(a.directDepositTotal)}</div></div>
-        <div class="row-item"><div class="label">Planned Open</div><input type="date" class="date-quick" value="${esc(a.dates.plannedOpen||'')}" title="Planned open date" onclick="event.stopPropagation()" onchange="event.stopPropagation();quickUpdateDate('${a.id}','plannedOpen',this.value)"></div>
+        <div class="row-item"><div class="label">Planned Open</div><input type="date" class="date-quick" value="${esc(a.dates.plannedOpen||'')}" title="Planned open date" data-stop="1" data-change="quickUpdateDate" data-a1="${esc(a.id)}" data-a2="plannedOpen"></div>
       </div>
       <div class="action-bar" style="margin-top:0">
-        <button onclick="event.stopPropagation();openPlanned('${a.id}')">Mark as opened</button>
-        <button class="sec" onclick="event.stopPropagation();editAccount('${a.id}')">Edit</button>
+        <button data-stop="1" data-action="openPlanned" data-a1="${esc(a.id)}">Mark as opened</button>
+        <button class="sec" data-stop="1" data-action="editAccount" data-a1="${esc(a.id)}">Edit</button>
       </div>
     </div>`;
   });
@@ -1101,8 +1101,8 @@ async function addAccount(defaultStatus='planned'){
       <div class="row-item"><div class="label">Status</div><select id="na_status">${statusOpts}</select></div>
     </div>
     <div class="row">
-      <div class="row-item"><div class="label">Bonus</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="na_bonus" placeholder="0" onblur="reformatMoney(this)"></div></div>
-      <div class="row-item"><div class="label">DD required</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="na_dd" placeholder="0" onblur="reformatMoney(this)"></div></div>
+      <div class="row-item"><div class="label">Bonus</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="na_bonus" placeholder="0" data-blur="reformatMoney"></div></div>
+      <div class="row-item"><div class="label">DD required</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="na_dd" placeholder="0" data-blur="reformatMoney"></div></div>
     </div>
     <div class="row" style="justify-content:flex-end"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Add</button></div>`);
   if(r !== 'save') return;
@@ -1147,11 +1147,11 @@ function render_offers(){
 
   // Cards (not a table) so there's no horizontal scroll on phones and the
   // action buttons get full, non-overlapping tap targets.
-  let html = `<div class="filter-bar"><button onclick="addOffer()">+ Add Offer</button></div>`;
+  let html = `<div class="filter-bar"><button data-action="addOffer">+ Add Offer</button></div>`;
 
   if(backlog.length === 0) {
     html += `<div class="empty">No offers in your backlog yet.
-      <div class="empty-cta"><button onclick="addOffer()">+ Add Offer</button></div></div>`;
+      <div class="empty-cta"><button data-action="addOffer">+ Add Offer</button></div></div>`;
   } else {
     backlog.forEach(o => {
       html += `<div class="card">
@@ -1161,9 +1161,9 @@ function render_offers(){
           <div class="row-item"><div class="label">DD Required</div><div class="value money">${money(o.directDepositTotal)}</div></div>
         </div>
         <div class="action-bar">
-          <button onclick="promoteOffer('${o.id}','planned')">Move to Planned</button>
-          <button class="sec" onclick="promoteOffer('${o.id}','open')">Open now</button>
-          <button class="danger" onclick="deleteOffer('${o.id}')">Delete</button>
+          <button data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="planned">Move to Planned</button>
+          <button class="sec" data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="open">Open now</button>
+          <button class="danger" data-action="deleteOffer" data-a1="${esc(o.id)}">Delete</button>
         </div>
       </div>`;
     });
@@ -1177,8 +1177,8 @@ async function addOffer(){
     <p><strong>Add a new offer to backlog</strong></p>
     <input type="text" id="off_inst" placeholder="Institution name" autofocus>
     <div class="row">
-      <div class="row-item"><div class="label">Bonus</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="off_bonus" placeholder="0" onblur="reformatMoney(this)"></div></div>
-      <div class="row-item"><div class="label">DD required</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="off_dd" placeholder="0" onblur="reformatMoney(this)"></div></div>
+      <div class="row-item"><div class="label">Bonus</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="off_bonus" placeholder="0" data-blur="reformatMoney"></div></div>
+      <div class="row-item"><div class="label">DD required</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="off_dd" placeholder="0" data-blur="reformatMoney"></div></div>
     </div>
     <div class="row" style="justify-content:flex-end">
       <button class="sec" data-mcancel>Cancel</button>
@@ -1225,7 +1225,12 @@ async function promoteOffer(offerId, toStatus){
   if(!offer) return;
 
   // Ask which person
-  const personList = config.people.map(p => `<button data-mval="${p}">${p}</button>`).join('');
+  // esc() on both: the attribute (which a hostile name would otherwise close)
+  // and the label (which would otherwise inject markup). The rewrite above took
+  // names out of executable positions; this keeps them out of markup too.
+  const personList = config.people
+    .map(p => `<button data-mval="${esc(p)}">${esc(p)}</button>`)
+    .join('');
   const result = await modal(`
     <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
     <div class="row">${personList}</div>
@@ -1361,7 +1366,7 @@ function calMonthGrid(ym, allocByDate, today){
       const fill = st === 'over' ? 'var(--danger)' : st === 'full' ? 'var(--open)' : 'var(--warn)';
       inner += `<div class="cal-amt">${money(alloc)}</div><div class="cal-bar"><i style="width:${pct}%;background:${fill}"></i></div><span class="cal-dot"></span>`;
     }
-    cells += `<div class="${cls}" onclick="calDay('${iso}')">${inner}</div>`;
+    cells += `<div class="${cls}" data-action="calDay" data-a1="${esc(iso)}">${inner}</div>`;
   }
   // Pad trailing cells out to a full 6 rows (42 cells) for constant height.
   const filled = startDow + daysInMonth;
@@ -1531,9 +1536,9 @@ function render_calendar(){
   // The nav uses a FIXED grid and an always-present Today button + subtitle line,
   // so stepping between months never moves the arrows or resizes the controls.
   let html = `<div class="summary-strip">
-      <div class="stat clickable" onclick="showCalTotalDD()" style="cursor:pointer"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} payday(s) · tap for breakdown</div></div>
-      <div class="stat clickable" onclick="calJumpUpcoming()" style="cursor:pointer"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">payday(s) ahead · tap to jump</div></div>
-      <div class="stat clickable" onclick="showOverAllocated()" style="cursor:pointer;${overCount>0?'border-left:3px solid var(--danger)':''}"><div class="stat-label">Over-allocated</div><div class="stat-value" style="${overCount>0?'color:var(--danger)':''}">${overCount}</div><div class="stat-sub">${overCount>0?'tap to fix':'all good'}</div></div>
+      <div class="stat clickable" data-action="showCalTotalDD" style="cursor:pointer"><div class="stat-label">Total planned DD</div><div class="stat-value">${money(totalPlanned)}</div><div class="stat-sub">${dates.length} payday(s) · tap for breakdown</div></div>
+      <div class="stat clickable" data-action="calJumpUpcoming" style="cursor:pointer"><div class="stat-label">Upcoming</div><div class="stat-value">${upcoming}</div><div class="stat-sub">payday(s) ahead · tap to jump</div></div>
+      <div class="stat clickable" data-action="showOverAllocated" style="cursor:pointer;${overCount>0?'border-left:3px solid var(--danger)':''}"><div class="stat-label">Over-allocated</div><div class="stat-value" style="${overCount>0?'color:var(--danger)':''}">${overCount}</div><div class="stat-sub">${overCount>0?'tap to fix':'all good'}</div></div>
     </div>
     <div class="cal-legend">
       <span><i style="background:var(--open-bg)"></i> Full</span>
@@ -1543,13 +1548,13 @@ function render_calendar(){
     </div>
     <div class="card">
       <div class="cal-nav">
-        <button class="sec cal-arrow" onclick="calNav(-1)" aria-label="Previous month">‹</button>
+        <button class="sec cal-arrow" data-action="calNav" data-a1="-1" aria-label="Previous month">‹</button>
         <div class="cal-month">
           <div class="cal-month-name">${esc(monthName)}</div>
           <div class="cal-month-sub">${monthTotal > 0 ? money(monthTotal) + ' planned' : 'No deposits this month'}</div>
         </div>
-        <button class="sec cal-arrow" onclick="calNav(1)" aria-label="Next month">›</button>
-        <button class="sec cal-today-btn" onclick="calToday()">Today</button>
+        <button class="sec cal-arrow" data-action="calNav" data-a1="1" aria-label="Next month">›</button>
+        <button class="sec cal-today-btn" data-action="calToday">Today</button>
       </div>
       ${calMonthGrid(calMonth, allocByDate, today)}
       <p class="cal-hint">Tap any day to see what's planned.</p>
@@ -1614,7 +1619,7 @@ function render_reports(){
 
   // All-accounts table, filterable by person.
   const personChips = ['all', ...(config.people || [])].map(p =>
-    `<button class="chip ${reportPerson===p?'active':''}" onclick="setReportPerson('${esc(p)}')">${p==='all'?'Everyone':esc(p)}</button>`).join('');
+    `<button class="chip ${reportPerson===p?'active':''}" data-action="setReportPerson" data-a1="${esc(p)}">${p==='all'?'Everyone':esc(p)}</button>`).join('');
   const rows = accounts.filter(a => reportPerson==='all' || a.person===reportPerson);
 
   html += '<div class="card" style="padding:0"><div class="card-header" style="padding:16px 16px 0">All accounts</div>';
@@ -1649,19 +1654,19 @@ function render_settings(){
   html += `<div class="card">
     <div class="card-header">Your data &amp; sync</div>`;
   if(synced){
-    html += `<p class="small" style="margin:0 0 10px">☁️ <b>Synced to GitHub</b> — repo <code>${esc(LS.repo)}</code>${LS.login?(' · @'+esc(LS.login)):''}. Saved on every change; open on any device by connecting the same repo. <a href="#" onclick="disconnectGitHub();return false">Disconnect</a></p>`;
+    html += `<p class="small" style="margin:0 0 10px">☁️ <b>Synced to GitHub</b> — repo <code>${esc(LS.repo)}</code>${LS.login?(' · @'+esc(LS.login)):''}. Saved on every change; open on any device by connecting the same repo. <a href="#" data-prevent="1" data-action="disconnectGitHub">Disconnect</a></p>`;
   } else {
     html += `<p class="small" style="margin:0 0 10px">📱 <b>Saved on this device only.</b> Your data lives in this browser and is never sent anywhere. Clearing the browser erases it — back it up with <b>Export</b>, or turn on optional GitHub sync below.</p>`;
   }
   // Local backup / restore — works in either mode.
   html += `<div class="action-bar" style="margin:4px 0 6px">
-      <button class="sec" onclick="exportData()">⬇︎ Export backup</button>
-      <button class="sec" onclick="document.getElementById('importFile').click()">⬆︎ Import backup</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(this)">
+      <button class="sec" data-action="exportData">⬇︎ Export backup</button>
+      <button class="sec" data-action="openImportPicker">⬆︎ Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" data-change="importData">
     </div>`;
   html += `<div class="row"><div class="row-item">
       <div class="label">Your name (on this device)</div>
-      <select id="set_me" onchange="saveMe(this.value)">`;
+      <select id="set_me" data-change="saveMe">`;
   (config.people || []).forEach(p => {
     html += `<option value="${esc(p)}" ${p === LS.me ? 'selected' : ''}>${esc(p)}</option>`;
   });
@@ -1684,7 +1689,7 @@ function render_settings(){
         <div class="label">GitHub token (stored only on this device)</div>
         <input type="password" id="set_token" value="" placeholder="github_pat_...">
       </div></div>
-      <button style="margin-top:10px" onclick="saveSettings()">Connect &amp; sync</button>
+      <button style="margin-top:10px" data-action="saveSettings">Connect &amp; sync</button>
     </details>`;
   }
   html += `</div>`;
@@ -1732,13 +1737,13 @@ function render_settings(){
     <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">Who you track accounts for. These fill the <b>Person</b> dropdowns everywhere.</p>
     <div class="people-list">`;
   (config.people || []).forEach(p => {
-    html += `<span class="person-tag">${personChip(p)}<button class="person-x" onclick="removePerson('${esc(p)}')" aria-label="Remove ${esc(p)}">×</button></span>`;
+    html += `<span class="person-tag">${personChip(p)}<button class="person-x" data-action="removePerson" data-a1="${esc(p)}" aria-label="Remove ${esc(p)}">×</button></span>`;
   });
   if(!(config.people || []).length) html += `<span style="color:var(--muted);font-size:13px">No people yet.</span>`;
   html += `</div>
     <div class="row" style="margin-top:12px">
-      <input type="text" id="new_person" placeholder="Add a person…" style="flex:1" onkeydown="if(event.key==='Enter')addPerson()">
-      <button onclick="addPerson()">Add</button>
+      <input type="text" id="new_person" placeholder="Add a person…" style="flex:1" data-enter="addPerson">
+      <button data-action="addPerson">Add</button>
     </div>
   </div>`;
 
@@ -1748,7 +1753,7 @@ function render_settings(){
   amts.forEach((e, i) => {
     amtsHtml += `<div class="reminder-item">
       <div><strong>${money(e.amount)}</strong> <span class="reminder-date">from ${esc(fmtDate(e.from))}</span></div>
-      ${amts.length > 1 ? `<button class="danger" style="font-size:12px;padding:2px 10px" onclick="removePaycheckAmount(${i})">×</button>` : ''}
+      ${amts.length > 1 ? `<button class="danger" style="font-size:12px;padding:2px 10px" data-action="removePaycheckAmount" data-a1="${i}">×</button>` : ''}
     </div>`;
   });
   html += `<div class="card">
@@ -1758,8 +1763,8 @@ function render_settings(){
     <div class="reminder-list" style="margin-top:6px">${amtsHtml}</div>
     <div class="row" style="margin-top:8px">
       <input type="date" id="pa_from" aria-label="Effective from date">
-      <div class="money-field" style="flex:1;min-width:120px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="pa_amount" placeholder="New amount" onblur="reformatMoney(this)"></div>
-      <button onclick="addPaycheckAmount()">Add</button>
+      <div class="money-field" style="flex:1;min-width:120px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="pa_amount" placeholder="New amount" data-blur="reformatMoney"></div>
+      <button data-action="addPaycheckAmount">Add</button>
     </div>
     <p style="margin:6px 0 16px;color:var(--muted);font-size:12px">Add a row when your take-home changes (e.g. a raise). For any payday, the amount with the latest date on/before it is used.</p>
     <div class="row">
@@ -1778,7 +1783,7 @@ function render_settings(){
         <input type="number" id="set_ddclear" inputmode="numeric" value="${config.paycheck?.ddClearDays || 21}">
       </div>
     </div>
-    <button onclick="savePaycheckSettings()">Save</button>
+    <button data-action="savePaycheckSettings">Save</button>
   </div>`;
 
   // Notifications — email + RSS. These ride on a GitHub Action in the data
@@ -1803,21 +1808,21 @@ function render_settings(){
       <input type="email" id="set_email" value="${esc(notifyEmail)}">
     </div></div>
     <div class="action-bar" style="margin-top:4px">
-      <button onclick="saveNotifyEmail()">Save email</button>
-      <button class="sec" onclick="testNotification()">📧 Send test email</button>
+      <button data-action="saveNotifyEmail">Save email</button>
+      <button class="sec" data-action="testNotification">📧 Send test email</button>
     </div>
     <p style="margin:8px 0 12px;color:var(--muted);font-size:12px">Test runs the email workflow now and sends a sample to the address above (requires the mail secrets set in your data repo).</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:0 0 12px">
     <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:10px">
-      <input type="checkbox" class="checkbox" id="set_rss" ${rssEnabled?'checked':''} onchange="toggleRSS(this.checked)">
+      <input type="checkbox" class="checkbox" id="set_rss" ${rssEnabled?'checked':''} data-change="toggleRSS">
       <span><strong>Enable RSS feed</strong> — subscribe in any RSS reader</span>
     </label>
     ${rssEnabled && rssUrl ? `<div class="row" style="align-items:flex-end">
       <div class="row-item">
         <div class="label">RSS feed URL (paste into your RSS reader)</div>
-        <input type="text" readonly value="${esc(rssUrl)}" onclick="this.select()" style="font-size:16px;color:var(--muted)">
+        <input type="text" readonly value="${esc(rssUrl)}" data-action="selectAll" style="font-size:16px;color:var(--muted)">
       </div>
-      <button class="sec" onclick="saveRSS().then(()=>toast('RSS updated ✓')).catch(e=>toast('Error: '+e.message))">Refresh</button>
+      <button class="sec" data-action="refreshRSS">Refresh</button>
     </div>
     <p style="margin:4px 0 0;color:var(--faint);font-size:11px">Requires your data repo to be public, or use a reader that supports private GitHub raw URLs.</p>` : ''}
   </div>`;
@@ -1862,7 +1867,7 @@ function notifButtonHTML(){
     return `<p style="margin:0;color:var(--muted);font-size:13px">✅ Notifications are on. You'll get a nudge for anything due when you open the app.</p>`;
   if(Notification.permission === 'denied')
     return `<p style="margin:0;color:var(--muted);font-size:13px">🔕 Notifications are blocked in your browser/site settings. Re-allow them for this site to get nudges.</p>`;
-  return `<button onclick="enableNotifications()">🔔 Turn on notifications</button>`;
+  return `<button data-action="enableNotifications">🔔 Turn on notifications</button>`;
 }
 async function enableNotifications(){
   if(!('Notification' in window)){ toast('Notifications not supported here'); return; }
@@ -2048,7 +2053,7 @@ function render_detail(){
   const dat = (id, label, val) =>
     `<div class="row-item"><div class="label">${label}</div><input type="date" id="${id}" value="${esc(val || '')}"></div>`;
   const mon = (id, label, val) =>
-    `<div class="row-item"><div class="label">${label}</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="${id}" value="${fmtMoneyInput(val)}" onblur="reformatMoney(this)"></div></div>`;
+    `<div class="row-item"><div class="label">${label}</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="${id}" value="${fmtMoneyInput(val)}" data-blur="reformatMoney"></div></div>`;
 
   let backLabel = '← Back';
   if(calReturnMonth) backLabel = '← Calendar';
@@ -2056,16 +2061,16 @@ function render_detail(){
   else if(lastTab === 'today') backLabel = '← Today';
   else if(lastTab === 'active') backLabel = '← Active';
   else if(lastTab === 'planned') backLabel = '← Planned';
-  const backFn = calReturnMonth ? 'backToCalendar()' : 'backFromDetail()';
+  const backFn = calReturnMonth ? 'backToCalendar' : 'backFromDetail';
 
   let html = `
     <div class="detail-back-bar">
-      <button class="sec" onclick="${backFn}">${backLabel}</button>
+      <button class="sec" data-action="${backFn}">${backLabel}</button>
     </div>
     <div class="card">
       <div class="row">${txt('d_institution','Institution', a.institution)}
         <div class="row-item"><div class="label">Person</div><select id="d_person">${peopleOpts}</select></div>
-        <div class="row-item"><div class="label">Status</div><select id="d_status" onchange="onStatusSelectChange(this)">${statusOpts}</select></div>
+        <div class="row-item"><div class="label">Status</div><select id="d_status" data-change="onStatusSelectChange">${statusOpts}</select></div>
       </div>
       <div class="row">${mon('d_bonus','Bonus', a.bonus)}${mon('d_referralValue','Referral', a.referralValue)}${mon('d_directDepositTotal','DD Total', a.directDepositTotal)}</div>
       <div class="row">${num('d_nbDeposits','# Deposits', a.nbDeposits)}${mon('d_minBalance','Min Balance', a.minBalance)}${num('d_minBalDays','Min Bal Days', a.minBalDays)}</div>
@@ -2086,7 +2091,7 @@ function render_detail(){
 
   const taskDefs = [['estatements','E-Statements'],['alerts','Account alerts'],['ddSetup','DD setup'],['documented','Notes/fees documented'],['reminders','Reminders added'],['referrals','Referrals sent']];
   taskDefs.forEach(([key,label]) => {
-    html += `<label style="display:block;margin-bottom:6px"><input type="checkbox" class="checkbox" ${a.tasks[key] ? 'checked' : ''} onchange="toggleTask('${key}')"> ${label}</label>`;
+    html += `<label style="display:block;margin-bottom:6px"><input type="checkbox" class="checkbox" ${a.tasks[key] ? 'checked' : ''} data-change="toggleTask" data-a1="${esc(key)}"> ${label}</label>`;
   });
   html += `</div>`;
 
@@ -2097,17 +2102,17 @@ function render_detail(){
   } else {
     a.reminders.forEach(r => {
       html += `<div class="reminder-item">
-        <div><input type="checkbox" class="checkbox" ${r.done ? 'checked' : ''} onchange="toggleReminderDetail('${r.id}')">
+        <div><input type="checkbox" class="checkbox" ${r.done ? 'checked' : ''} data-change="toggleReminderDetail" data-a1="${esc(r.id)}">
         <span style="${r.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(r.note)}</span>
         <span class="reminder-date"> — ${esc(fmtDate(r.date))}</span></div>
-        <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteReminder('${r.id}')">×</button>
+        <button class="danger" style="font-size:12px;padding:2px 8px" data-action="deleteReminder" data-a1="${esc(r.id)}">×</button>
       </div>`;
     });
   }
   html += `<div class="row" style="margin-top:8px">
       <input type="date" id="d_new_rem_date">
       <input type="text" id="d_new_rem_note" placeholder="Reminder note" style="flex:1">
-      <button onclick="addReminder()">Add</button>
+      <button data-action="addReminder">Add</button>
     </div></div>`;
 
   // DD Plan
@@ -2118,27 +2123,27 @@ function render_detail(){
     a.ddPlan.forEach((dd, i) => {
       html += `<div class="reminder-item">
         <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(fmtDate(dd.payrollDate))}</span></div>
-        <button class="danger" style="font-size:12px;padding:2px 8px" onclick="deleteDD(${i})">×</button>
+        <button class="danger" style="font-size:12px;padding:2px 8px" data-action="deleteDD" data-a1="${i}">×</button>
       </div>`;
     });
   }
   html += `<div class="action-bar" style="margin-top:4px">
-      <button class="sec" onclick="suggestDD()">⚡ Auto-suggest</button>
+      <button class="sec" data-action="suggestDD">⚡ Auto-suggest</button>
     </div>
     <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Auto-suggest schedules from the planned/open date. If <b># Deposits</b> is set, it splits the DD total into that many equal deposits (e.g. 12 × $10); otherwise it fills each payday up to your paycheck amount.</div>
     <div class="row" style="margin-top:8px">
       <input type="date" id="d_new_dd_date">
-      <div class="money-field" style="flex:1;min-width:120px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="d_new_dd_amount" placeholder="Amount" onblur="reformatMoney(this)"></div>
-      <button onclick="addDD()">Add</button>
+      <div class="money-field" style="flex:1;min-width:120px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="d_new_dd_amount" placeholder="Amount" data-blur="reformatMoney"></div>
+      <button data-action="addDD">Add</button>
     </div></div>`;
 
   // Actions
   html += `<div class="card">
     <div class="action-bar">
-      <button onclick="saveAccountDetail()">Save Changes</button>
-      <button class="sec" onclick="closeAccountDetail()">Close Account</button>
-      <button class="sec" onclick="moveToOffers()">Move to Offers</button>
-      <button class="danger" onclick="deleteAccountDetail()">Delete</button>
+      <button data-action="saveAccountDetail">Save Changes</button>
+      <button class="sec" data-action="closeAccountDetail">Close Account</button>
+      <button class="sec" data-action="moveToOffers">Move to Offers</button>
+      <button class="danger" data-action="deleteAccountDetail">Delete</button>
     </div>
   </div>`;
 
@@ -2403,6 +2408,117 @@ async function toggleRSS(enabled){
   await init();
   nudgeOnOpen();
 })();
+
+/* ---------- Click dispatch: why there are no inline handlers here ----------
+   Every control's behaviour is bound here rather than in an on* attribute.
+
+   A browser HTML-decodes an event-handler attribute BEFORE parsing its
+   contents as JavaScript, so escaping a value on its way into one cannot make
+   it safe: turn ' into &#39; and the decode turns it back into a quote, and a
+   person name or account id that closes the quote and adds a comma expression
+   runs on click. All five apps are served from one origin and share one
+   localStorage, so a value that reaches script here also hands over grocery's
+   and pool's GitHub tokens.
+
+   In a data-* attribute esc() genuinely does close the hole, because the value
+   stays data and is never parsed as code. Action names resolve through the
+   fixed table below rather than off `window`, so even a data-action carrying a
+   hostile name can only reach something listed here.
+
+   Every action is called as (el, a1, a2). Taking the element as the first
+   argument is what replaces `this`, and it keeps one shape for all of them. */
+const ACTIONS = {
+  // Values arrive as text, so anything numeric is coerced. calNav matters
+  // most: shiftMonth does `m += delta`, and "7" + "1" is "71", not 8.
+  calNav: (el, delta) => calNav(Number(delta)),
+  deleteDD: (el, i) => deleteDD(Number(i)),
+  removePaycheckAmount: (el, i) => removePaycheckAmount(Number(i)),
+
+  // Read off the element, where the attribute used to say `this`.
+  reformatMoney: (el) => reformatMoney(el),
+  importData: (el) => importData(el),
+  saveMe: (el) => saveMe(el.value),
+  toggleRSS: (el) => toggleRSS(el.checked),
+  onStatusSelectChange: (el) => onStatusSelectChange(el),
+  selectAll: (el) => el.select(),
+  setSearchFilter: (el, tab) => setSearchFilter(tab, el.value),
+  quickUpdateDate: (el, id, field) => quickUpdateDate(id, field, el.value),
+
+  // Were multi-statement or expression handlers; now each has a name.
+  openImportPicker: () => document.getElementById('importFile').click(),
+  refreshRSS: () =>
+    saveRSS()
+      .then(() => toast('RSS updated ✓'))
+      .catch((e) => toast('Error: ' + e.message)),
+
+  show: (el, tab) => show(tab),
+  editAccount: (el, id) => editAccount(id),
+  addAccount: (el, status) => addAccount(status),
+  openPlanned: (el, id) => openPlanned(id),
+  promoteOffer: (el, id, status) => promoteOffer(id, status),
+  deleteOffer: (el, id) => deleteOffer(id),
+  markReminderDone: (el, accountId, id) => markReminderDone(accountId, id),
+  setPersonFilter: (el, tab, person) => setPersonFilter(tab, person),
+  setStatusFilter: (el, status) => setStatusFilter(status),
+  setReportPerson: (el, person) => setReportPerson(person),
+  removePerson: (el, person) => removePerson(person),
+  calDay: (el, iso) => calDay(iso),
+  toggleTask: (el, key) => toggleTask(key),
+  toggleReminderDetail: (el, id) => toggleReminderDetail(id),
+  deleteReminder: (el, id) => deleteReminder(id),
+
+  addOffer: () => addOffer(),
+  addPerson: () => addPerson(),
+  addReminder: () => addReminder(),
+  addDD: () => addDD(),
+  addPaycheckAmount: () => addPaycheckAmount(),
+  suggestDD: () => suggestDD(),
+  saveAccountDetail: () => saveAccountDetail(),
+  closeAccountDetail: () => closeAccountDetail(),
+  deleteAccountDetail: () => deleteAccountDetail(),
+  moveToOffers: () => moveToOffers(),
+  saveSettings: () => saveSettings(),
+  savePaycheckSettings: () => savePaycheckSettings(),
+  saveNotifyEmail: () => saveNotifyEmail(),
+  testNotification: () => testNotification(),
+  enableNotifications: () => enableNotifications(),
+  exportData: () => exportData(),
+  disconnectGitHub: () => disconnectGitHub(),
+  toggleTheme: () => toggleTheme(),
+  showShortcuts: () => showShortcuts(),
+  showCalTotalDD: () => showCalTotalDD(),
+  showOverAllocated: () => showOverAllocated(),
+  calJumpUpcoming: () => calJumpUpcoming(),
+  calToday: () => calToday(),
+  backToCalendar: () => backToCalendar(),
+  backFromDetail: () => backFromDetail(),
+};
+
+// One listener per event type the markup uses. `data-stop` and `data-prevent`
+// carry what the old compound handlers did before their call.
+function dispatch(attr, e) {
+  // closest(), not e.target: several controls wrap an icon or a <span>, so the
+  // event lands on a child and a target-only check would silently do nothing.
+  const el = e.target.closest('[' + attr + '], [data-stop], [data-prevent]');
+  if (!el) return;
+  if (el.hasAttribute('data-stop')) e.stopPropagation();
+  if (el.hasAttribute('data-prevent')) e.preventDefault();
+  const name = el.getAttribute(attr);
+  if (!name) return;
+  const fn = ACTIONS[name];
+  if (typeof fn !== 'function') return;
+  fn(el, el.getAttribute('data-a1'), el.getAttribute('data-a2'));
+}
+
+document.addEventListener('click', (e) => dispatch('data-action', e));
+document.addEventListener('change', (e) => dispatch('data-change', e));
+document.addEventListener('input', (e) => dispatch('data-input', e));
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  dispatch('data-enter', e);
+});
+// blur does not bubble; its capturing phase does.
+document.addEventListener('blur', (e) => dispatch('data-blur', e), true);
 </script>
 
 <script>

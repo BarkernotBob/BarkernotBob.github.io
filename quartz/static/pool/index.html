@@ -161,18 +161,18 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7c3.6 4.2 6 7.2 6 10.3a6 6 0 0 1-12 0c0-3.1 2.4-6.1 6-10.3z"/></svg>
     <div><h1>Pool Care</h1><div class="who" id="whoami"></div></div>
   </div>
-  <button class="iconbtn" data-act="show" data-a1="settings" aria-label="Settings">⚙</button>
+  <button class="iconbtn" data-action="show" data-a1="settings" aria-label="Settings">⚙</button>
 </header>
 
 <main id="main"></main>
 
 <nav id="nav">
-  <button data-tab="today"    data-act="show" data-a1="today"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg></span>Today<span id="todayBadge" class="badge hidden">0</span></button>
-  <button data-tab="test"     data-act="show" data-a1="test"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5h6M10 2.5v6.2L5.4 16.8A2 2 0 0 0 7.1 20h9.8a2 2 0 0 0 1.7-3.2L14 8.7V2.5"/><path d="M7.5 14.5h9"/></svg></span>Test</button>
-  <button data-tab="schedule" data-act="show" data-a1="schedule"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.2 1.2L7.2 4.7M3.5 12l1.2 1.2 2.5-2.5M3.5 18l1.2 1.2 2.5-2.5"/></svg></span>Schedule</button>
-  <button data-tab="weather"  data-act="show" data-a1="weather"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4.5V3M18 7l1-1M19.5 12H21M6.5 9.2A4 4 0 0 1 14.4 9"/><circle cx="13" cy="11" r="2.6"/><path d="M6.5 19h9a3.2 3.2 0 0 0 .2-6.4A4.3 4.3 0 0 0 7.6 12 3.3 3.3 0 0 0 6.5 19z"/></svg></span>Weather</button>
-  <button data-tab="history"  data-act="show" data-a1="history"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v15.5a.5.5 0 0 0 .5.5H20"/><path d="M7.5 14.5l3.5-4 3 2.6 4.5-6"/></svg></span>History</button>
-  <button data-tab="settings" data-act="show" data-a1="settings"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M4 12h5M4 17h11"/><circle cx="17" cy="7" r="2.3"/><circle cx="13" cy="12" r="2.3"/><circle cx="19" cy="17" r="2.3"/></svg></span>Settings</button>
+  <button data-tab="today"    data-action="show" data-a1="today"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg></span>Today<span id="todayBadge" class="badge hidden">0</span></button>
+  <button data-tab="test"     data-action="show" data-a1="test"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5h6M10 2.5v6.2L5.4 16.8A2 2 0 0 0 7.1 20h9.8a2 2 0 0 0 1.7-3.2L14 8.7V2.5"/><path d="M7.5 14.5h9"/></svg></span>Test</button>
+  <button data-tab="schedule" data-action="show" data-a1="schedule"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.2 1.2L7.2 4.7M3.5 12l1.2 1.2 2.5-2.5M3.5 18l1.2 1.2 2.5-2.5"/></svg></span>Schedule</button>
+  <button data-tab="weather"  data-action="show" data-a1="weather"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4.5V3M18 7l1-1M19.5 12H21M6.5 9.2A4 4 0 0 1 14.4 9"/><circle cx="13" cy="11" r="2.6"/><path d="M6.5 19h9a3.2 3.2 0 0 0 .2-6.4A4.3 4.3 0 0 0 7.6 12 3.3 3.3 0 0 0 6.5 19z"/></svg></span>Weather</button>
+  <button data-tab="history"  data-action="show" data-a1="history"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v15.5a.5.5 0 0 0 .5.5H20"/><path d="M7.5 14.5l3.5-4 3 2.6 4.5-6"/></svg></span>History</button>
+  <button data-tab="settings" data-action="show" data-a1="settings"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M4 12h5M4 17h11"/><circle cx="17" cy="7" r="2.3"/><circle cx="13" cy="12" r="2.3"/><circle cx="19" cy="17" r="2.3"/></svg></span>Settings</button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -810,7 +810,7 @@ async function show(tab){
   }catch(e){
     m.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted small">${esc(String(e))}</p>
       <p class="small">If this mentions 401/403, your sign-in may have expired. Open Settings to sign in again.</p>
-      <button class="sec" data-act="show" data-a1="settings">Open Settings</button></div>`;
+      <button class="sec" data-action="show" data-a1="settings">Open Settings</button></div>`;
   }
   $('#whoami').textContent = LS.login ? ('Signed in as '+LS.login + (LS.device?(' · '+LS.device):'')) : '';
 }
@@ -885,13 +885,13 @@ function renderSetup(){
     <p class="small muted">Make the token at <b>github.com/settings/tokens?type=beta</b> and give it access to
     <b>only</b> your <code>pool-data</code> repository — Step 3 of the SETUP guide. It is saved only in this
     browser and sent nowhere except GitHub.</p>
-    <button data-act="saveTokenSetup">Connect</button>
+    <button data-action="saveTokenSetup">Connect</button>
     <details style="margin-top:14px"><summary>Other way in: Sign in with GitHub</summary>
       <p class="small muted">One tap instead of making a token — but it asks GitHub for access to
       <b>every</b> private repository you own, not just this one, because that is the only thing
       the old-style sign-in can ask for. The token above is the safer route; use this if you'd
       rather not make one.</p>
-      <button class="sec" data-act="signInWithGitHub">🔐 Sign in with GitHub</button>
+      <button class="sec" data-action="signInWithGitHub">🔐 Sign in with GitHub</button>
       <p class="small muted" style="margin-top:6px">${oauthReady()?'Approve on GitHub and you\'ll come right back here.':'<b>Not set up yet</b> — use the token above until the Cloudflare step is done.'}</p>
     </details>
   </div>`;
@@ -921,7 +921,7 @@ function renderToday(){
   if(sp){
     html += `<div class="card"><h2>${sp.kind==='open'?'🌷 Time to open the pool':'🍂 Time to close the pool'}</h2>
       <p class="small muted">Target ${sp.kind==='open'?'opening':'closing'} around ${esc(sp.when.replace('-','/'))}. ${sp.kind==='close'?'Do it before the leaves fall.':''}</p>
-      <button class="sec" data-act="show" data-a1="schedule">Open the ${sp.kind==='open'?'opening':'closing'} checklist</button></div>`;
+      <button class="sec" data-action="show" data-a1="schedule">Open the ${sp.kind==='open'?'opening':'closing'} checklist</button></div>`;
   }
 
   html += `<div class="card"><div class="flex"><h2 style="margin:0">🔔 Due now</h2>${due.length?`<span class="pill due">${due.length}</span>`:''}</div>`;
@@ -933,7 +933,7 @@ function renderToday(){
     html += due.map(({t,d})=>`<div class="item flex">
       <div><b>${esc(t.title)}</b><div class="small muted">${esc(t.detail)}</div>
         <div class="small ${d.overdueBy>0?'sev2':'muted'}">${d.overdueBy>0?('overdue '+d.overdueBy+'d'):'due today'}</div></div>
-      <button style="width:auto;flex:0 0 auto" data-act="markTask" data-a1="${esc(t.id)}">Done</button>
+      <button style="width:auto;flex:0 0 auto" data-action="markTask" data-a1="${esc(t.id)}">Done</button>
     </div>`).join('');
   }
   html += `</div>`;
@@ -943,19 +943,19 @@ function renderToday(){
 
   // recommendations from the latest test
   html += `<div class="card"><div class="flex"><h2 style="margin:0">🧪 Latest test</h2>${lt?`<span class="small muted">${fmtDate(lt.date)}</span>`:''}</div>`;
-  if(!lt){ html += `<p class="muted small">No test logged yet. <button class="link" data-act="show" data-a1="test">Log one</button></p>`; }
+  if(!lt){ html += `<p class="muted small">No test logged yet. <button class="link" data-action="show" data-a1="test">Log one</button></p>`; }
   else {
     html += recHtml(lt);
-    html += `<button class="link" data-act="show" data-a1="test">Log a new test</button>`;
+    html += `<button class="link" data-action="show" data-a1="test">Log a new test</button>`;
   }
   html += `</div>`;
 
   html += `<div class="card"><div class="flex"><h2 style="margin:0">🏊 Swim time</h2><span class="small muted">today: ${swimForDate(todayISO())} h</span></div>
     <p class="small muted" style="margin:6px 0 0">Log time in the pool — heavier use burns chlorine faster.</p>
-    <button class="sec" style="margin-top:8px" data-act="logSwim">Log swim time</button></div>`;
+    <button class="sec" style="margin-top:8px" data-action="logSwim">Log swim time</button></div>`;
 
   html += `<div class="card"><h2>🌦️ Recent weather</h2>
-    <p class="small muted" style="margin:0 0 6px">Rain, temperature & humidity at your pool. <button class="link" data-act="show" data-a1="weather">See hourly →</button></p>
+    <p class="small muted" style="margin:0 0 6px">Rain, temperature & humidity at your pool. <button class="link" data-action="show" data-a1="weather">See hourly →</button></p>
     <div id="rainToday"><p class="muted small">Loading…</p></div></div>`;
 
   $('#main').innerHTML = html;
@@ -1040,8 +1040,8 @@ function renderTest(){
   <div class="card">
     <div class="flex"><h2 style="margin:0">🧪 Log a test</h2>
       <div class="row" style="flex:0 0 auto;gap:6px;width:auto">
-        <button class="${testMode==='qual'?'':'sec'}" style="width:auto;padding:8px 12px" data-act="setTestMode" data-a1="qual">Strips</button>
-        <button class="${testMode==='num'?'':'sec'}" style="width:auto;padding:8px 12px" data-act="setTestMode" data-a1="num">Numbers</button>
+        <button class="${testMode==='qual'?'':'sec'}" style="width:auto;padding:8px 12px" data-action="setTestMode" data-a1="qual">Strips</button>
+        <button class="${testMode==='num'?'':'sec'}" style="width:auto;padding:8px 12px" data-action="setTestMode" data-a1="num">Numbers</button>
       </div></div>
     <p class="small muted" style="margin:4px 0 0">${testMode==='qual'
       ? 'Pick what each strip pad reads. Leave any you didn\'t test blank.'
@@ -1049,7 +1049,7 @@ function renderTest(){
     <div id="testForm" style="margin-top:6px">${testMode==='qual'?qualForm():numForm()}</div>
     <label>Notes (optional)</label>
     <input id="t_notes" placeholder="e.g. water cloudy, heavy use this week"/>
-    <div class="row" style="margin-top:12px"><button class="sec" data-act="show" data-a1="today">Cancel</button><button id="t_save" data-act="saveTest">Save & get advice</button></div>
+    <div class="row" style="margin-top:12px"><button class="sec" data-action="show" data-a1="today">Cancel</button><button id="t_save" data-action="saveTest">Save & get advice</button></div>
   </div>
   ${lt?`<div class="card"><h2>Last test — ${fmtDate(lt.date)}</h2>${recHtml(lt)}</div>`:''}`;
 }
@@ -1059,7 +1059,7 @@ function qualForm(){
     <div style="margin-top:10px">
       <label style="margin:0">${esc(r.name)}</label>
       <div class="levels" data-key="${r.key}">
-        ${LEVELS.map(l=>`<button type="button" class="lv" data-l="${l}" data-act="pickLevel" data-a1="${esc(r.key)}" data-a2="${esc(l)}">${l.replace('very ','v.')}</button>`).join('')}
+        ${LEVELS.map(l=>`<button type="button" class="lv" data-l="${l}" data-action="pickLevel" data-a1="${esc(r.key)}" data-a2="${esc(l)}">${l.replace('very ','v.')}</button>`).join('')}
       </div>
     </div>`).join('');
 }
@@ -1180,8 +1180,8 @@ function renderSchedule(){
     return `<div class="item">
       <div class="flex"><div><b>${esc(t.title)}</b> <span class="small muted">· ${cadenceLabel(t)}</span></div>${status}</div>
       <div class="small muted" style="margin:2px 0 6px">${esc(t.detail)}</div>
-      <div class="row"><button class="sec" style="flex:0 0 auto;width:auto" data-act="markTask" data-a1="${esc(t.id)}">Mark done</button>
-        <button class="link" data-act="editTask" data-a1="${esc(t.id)}">Edit</button></div>
+      <div class="row"><button class="sec" style="flex:0 0 auto;width:auto" data-action="markTask" data-a1="${esc(t.id)}">Mark done</button>
+        <button class="link" data-action="editTask" data-a1="${esc(t.id)}">Edit</button></div>
     </div>`;
   }).join('');
   html += `</div>`;
@@ -1197,10 +1197,10 @@ function cadenceLabel(t){
 }
 function checklistCard(kind, obj, icon){
   return `<div class="card"><div class="flex"><h2 style="margin:0">${icon} ${esc(obj.title)}</h2>
-      <button class="link" data-act="editChecklist" data-a1="${esc(kind)}">Edit</button></div>
+      <button class="link" data-action="editChecklist" data-a1="${esc(kind)}">Edit</button></div>
     <ol style="margin:8px 0 0;padding-left:20px" class="small">${obj.steps.map(s=>`<li style="margin:4px 0">${esc(s)}</li>`).join('')}</ol>
     ${kind==='closing'?'':''}
-    <button class="sec" style="margin-top:10px" data-act="logChecklistDone" data-a1="${esc(kind)}">Mark ${kind} done for this year</button>
+    <button class="sec" style="margin-top:10px" data-action="logChecklistDone" data-a1="${esc(kind)}">Mark ${kind} done for this year</button>
   </div>`;
 }
 async function editTask(id){
@@ -1211,7 +1211,7 @@ async function editTask(id){
     <label>How often</label>
     <div id="et_cad">${opts.map(([o,lbl])=>`<button type="button" class="${t.cadence===o?'':'sec'}" data-cad="${o}" style="margin:3px 0">${lbl}</button>`).join('')}</div>
     <label style="margin-top:10px">Last done</label>
-    <input id="et_last" type="date" value="${t.last||''}" max="${todayISO()}"/>
+    <input id="et_last" type="date" value="${esc(t.last||'')}" max="${todayISO()}"/>
     <p class="small muted">Set this to an earlier date to make the task due sooner. Clear it to mark it as never done (due now).</p>
     <div class="row" style="margin-top:12px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
   // The modal removes its own DOM when it closes, so capture inputs while it's open.
@@ -1324,27 +1324,27 @@ function renderSettings(){
 
     <label style="margin-top:14px">How do you want to set your location?</label>
     <div class="row" style="gap:6px">
-      <button class="${curGeoMode()==='address'?'':'sec'}" style="margin:0" data-act="setGeoMode" data-a1="address">By address</button>
-      <button class="${curGeoMode()==='latlon'?'':'sec'}" style="margin:0" data-act="setGeoMode" data-a1="latlon">By lat/lon</button>
+      <button class="${curGeoMode()==='address'?'':'sec'}" style="margin:0" data-action="setGeoMode" data-a1="address">By address</button>
+      <button class="${curGeoMode()==='latlon'?'':'sec'}" style="margin:0" data-action="setGeoMode" data-a1="latlon">By lat/lon</button>
     </div>
 
     ${curGeoMode()==='address' ? `
       <label style="margin-top:12px">City or place name</label>
       <input id="s_addr" placeholder="e.g. Fort Wayne, IN" value="${esc(c.pool.location||'')}" autocapitalize="words"/>
-      <button class="sec" style="margin-top:8px" data-act="lookupGeo">📍 Look up coordinates</button>
+      <button class="sec" style="margin-top:8px" data-action="lookupGeo">📍 Look up coordinates</button>
       <p class="small muted" id="geoStatus" style="margin-top:8px">Using ${esc(((c.geo||{}).lat ?? 41.0793))}, ${esc(((c.geo||{}).lon ?? -85.1394))}. Type a place and tap look up to change it.</p>
     ` : `
       <div class="row" style="margin-top:6px"><div><label>Latitude</label><input id="s_lat" inputmode="decimal" value="${esc((c.geo||{}).lat ?? 41.0793)}"/></div>
         <div><label>Longitude</label><input id="s_lon" inputmode="decimal" value="${esc((c.geo||{}).lon ?? -85.1394)}"/></div></div>
       <p class="small muted" style="margin-top:6px">Don't know your lat/lon? <a href="https://www.latlong.net/" target="_blank" rel="noopener">Find it on latlong.net →</a> (search your address, then copy the Latitude &amp; Longitude it shows).</p>
     `}
-    <button style="margin-top:10px" data-act="savePool">Save pool</button>
+    <button style="margin-top:10px" data-action="savePool">Save pool</button>
   </div>
   <div class="card">
     <h2>📧 Reminder email</h2>
     <p class="small muted">Where the scheduled job emails you what's due. (The email job is set up separately — see pool-tool/SETUP.md.)</p>
     <input id="s_email" type="email" placeholder="you@example.com" value="${esc(c.email||'')}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <button style="margin-top:10px" data-act="saveEmail">Save email</button>
+    <button style="margin-top:10px" data-action="saveEmail">Save email</button>
   </div>
   <div class="card">
     <h2>🗓 Season (Fort Wayne defaults)</h2>
@@ -1353,7 +1353,7 @@ function renderSettings(){
       <div><label>Close</label><input id="s_close" type="date" value="${esc(mdToDate(c.season.close))}"/></div></div>
     <div class="row"><div><label>Peak start</label><input id="s_pstart" type="date" value="${esc(mdToDate(c.season.peakStart))}"/></div>
       <div><label>Peak end</label><input id="s_pend" type="date" value="${esc(mdToDate(c.season.peakEnd))}"/></div></div>
-    <button style="margin-top:10px" data-act="saveSeason">Save season</button>
+    <button style="margin-top:10px" data-action="saveSeason">Save season</button>
   </div>
   <div class="card">
     <h2>🎯 Target ranges</h2>
@@ -1361,22 +1361,22 @@ function renderSettings(){
     ${READINGS.map(r=>`<div class="row" style="align-items:flex-end"><div style="flex:2"><label style="margin:6px 0 2px">${esc(r.name)} ${r.numUnit?`(${r.numUnit})`:''}</label></div>
       <div><label style="margin:6px 0 2px">low</label><input class="tgt" data-key="${r.key}" data-i="0" inputmode="decimal" value="${esc(c.targets[r.key].range[0])}"/></div>
       <div><label style="margin:6px 0 2px">high</label><input class="tgt" data-key="${r.key}" data-i="1" inputmode="decimal" value="${esc(c.targets[r.key].range[1])}"/></div></div>`).join('')}
-    <button style="margin-top:10px" data-act="saveTargets">Save targets</button>
+    <button style="margin-top:10px" data-action="saveTargets">Save targets</button>
   </div>
   <div class="card">
     <h2>🧪 Chemicals on hand</h2>
     <p class="small muted">Check what you keep stocked. Recommendations prefer these; anything missing shows up as a “shopping list” note instead of telling you to dose something you don't have.</p>
     ${CHEM_KEYS.map(k=>`<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:6px 0">
       <input type="checkbox" class="chem" data-key="${k}" style="width:auto" ${((c.chemicals&&c.chemicals.onHand&&c.chemicals.onHand[k])?'checked':'')}/> ${esc(CHEMS[k])}</label>`).join('')}
-    <button style="margin-top:10px" data-act="saveChemicals">Save chemicals</button>
+    <button style="margin-top:10px" data-action="saveChemicals">Save chemicals</button>
   </div>
   <div class="card">
     <h2>🔮 AI insights & modeling</h2>
     <p class="small muted">Export your tracked data for an AI to find patterns, then paste its rules back. Rules with a trigger show up as <b>Inferences</b> on Today.</p>
-    <div class="row"><button class="sec" data-act="showAiExport">Export for AI review</button><button class="sec" data-act="importInsights">Paste rules from AI</button></div>
-    <button class="link" data-act="addInsightManual">+ Add a rule manually</button>
+    <div class="row"><button class="sec" data-action="showAiExport">Export for AI review</button><button class="sec" data-action="importInsights">Paste rules from AI</button></div>
+    <button class="link" data-action="addInsightManual">+ Add a rule manually</button>
     ${(c.insights||[]).length
-      ? (c.insights).map(x=>`<div class="item"><div class="flex"><b class="small">${esc(x.label)}</b><button class="link" style="color:#bb4a3a;flex:0 0 auto" data-act="deleteInsight" data-a1="${esc(x.id)}">delete</button></div>
+      ? (c.insights).map(x=>`<div class="item"><div class="flex"><b class="small">${esc(x.label)}</b><button class="link" style="color:#bb4a3a;flex:0 0 auto" data-action="deleteInsight" data-a1="${esc(x.id)}">delete</button></div>
           <div class="small muted">${x.trigger?`<b>when ${esc(METRIC_LABEL[x.trigger.metric]||x.trigger.metric)} ${esc(x.trigger.op)} ${esc(String(x.trigger.value))}:</b> `:''}${esc(x.advice||'')}${x.source==='ai'?' <span class="pill gray">AI</span>':''}</div></div>`).join('')
       : `<p class="muted small" style="margin-top:8px">No rules yet.</p>`}
   </div>
@@ -1386,8 +1386,8 @@ function renderSettings(){
     <div class="kv"><span>Method</span><b>${esc(LS.method||'—')}</b></div>
     <label>Device name</label><input id="s_device" value="${esc(LS.device)}" placeholder="e.g. My iPhone"/>
     <label>Data repository</label><input id="s_repo" value="${esc(LS.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
-    <div class="row" style="margin-top:10px"><button class="sec" data-act="saveDevice">Save</button>
-      <button class="danger" data-act="signOut">Sign out</button></div>
+    <div class="row" style="margin-top:10px"><button class="sec" data-action="saveDevice">Save</button>
+      <button class="danger" data-action="signOut">Sign out</button></div>
   </div>`;
 }
 async function savePool(){
@@ -1474,7 +1474,7 @@ window.addEventListener('load', async ()=>{
 
    In a data-* attribute esc() genuinely does close the hole, because the value
    stays data and is never parsed as code. Actions resolve through the fixed
-   table below rather than off `window`, so a data-act that somehow carried a
+   table below rather than off `window`, so a data-action that somehow carried a
    hostile name still can't reach anything that isn't listed. */
 const ACTIONS = {
   show, markTask, editTask, editChecklist, logChecklistDone, deleteInsight,
@@ -1487,9 +1487,9 @@ const ACTIONS = {
 document.addEventListener('click', e=>{
   // closest(), not e.target: several of these buttons wrap an <svg>, so the
   // click lands on a child and a target-only check would silently do nothing.
-  const el = e.target.closest('[data-act]');
+  const el = e.target.closest('[data-action]');
   if(!el) return;
-  const fn = ACTIONS[el.getAttribute('data-act')];
+  const fn = ACTIONS[el.getAttribute('data-action')];
   if(typeof fn !== 'function') return;
   const a1 = el.getAttribute('data-a1');
   const a2 = el.getAttribute('data-a2');

@@ -294,8 +294,11 @@ describe("nightly run reports repo coverage", () => {
   // Both files have to name it identically or the run files a duplicate.
   const coverageIssueTitle = "Nightly pass could not reach every repo"
 
-  test("the command file keeps all three ledger outcomes distinct", () => {
-    for (const outcome of ["read", "empty", "unreachable"]) {
+  test("the command file keeps all four ledger outcomes distinct", () => {
+    // `assumed` is what the search-first scan added: a repo the search spoke
+    // for but nobody opened. Collapsing it into `empty` is how a scan that
+    // cannot see a repo starts reporting that repo as clean.
+    for (const outcome of ["read", "empty", "assumed", "unreachable"]) {
       assert.match(
         nightlyCommand,
         new RegExp(`\\*\\*${outcome}\\*\\*`),
@@ -331,10 +334,16 @@ describe("nightly run reports repo coverage", () => {
 
   test("the notification carries coverage as a fraction", () => {
     // Counts only — names would leak private repos into a push notification.
-    // "reached", not "read": the ledger counts a clean repo as `empty`, so a
-    // fraction of `read` alone would render quiet repos as blind spots.
-    assert.match(nightlyCommand, /\d+\/\d+ repos reached/)
+    assert.match(nightlyCommand, /\d+\/\d+ covered/)
     assert.match(nightlyCommand, /[Dd]o not put private repo names/)
+
+    // The fraction must never travel alone. Under search-first, `covered` is
+    // ~100% every night including nights nobody opened most of those repos, so
+    // on its own it means little more than "the run finished". `opened` and
+    // `audited` are the numbers that would look wrong if the scan broke.
+    assert.match(nightlyCommand, /\*\*opened\*\*/)
+    assert.match(nightlyCommand, /\*\*audited\*\*/)
+    assert.match(nightlyCommand, /fraction alone is forbidden/i)
   })
 
   test("unreachable repos are named on a reused, held issue", () => {
@@ -354,6 +363,68 @@ describe("nightly run reports repo coverage", () => {
     // private repo names in a push notification.
     assert.match(workerBriefing, /notification carries counts only/i)
     assert.match(workerBriefing, /names of repos you were refused go on the coverage issue/i)
+  })
+
+  test("the scan searches before attaching, and attaches only what has work", () => {
+    // Eighteen add_repo calls to find work in one repo was eighteen chances for
+    // the classifier to refuse. One search replaces them.
+    // Deliberately not pinned to a repo count: repos.txt grows, and a guard
+    // that hardcodes 18 would pass while silently dropping the 19th.
+    assert.match(nightlyCommand, /[Dd]o not attach every repo/)
+    assert.match(nightlyCommand, /attach only the repos that actually have issues/i)
+    // repos.txt permits any owner; a repo no search covered must still be read.
+    assert.match(nightlyCommand, /not covered by an owner you searched/)
+    for (const [name, text] of [
+      ["command file", nightlyCommand],
+      ["worker briefing", workerBriefing],
+    ] as const) {
+      assert.match(text, /is:open is:issue user:BarkernotBob/, `${name} lost the search`)
+    }
+  })
+
+  test("the run audits repos the search called empty", () => {
+    // The search has never been observed reaching an UNATTACHED repo, because
+    // no issue has existed in one to test it with. Without this audit that
+    // stays unknown forever, and a scoped search would hide work silently.
+    assert.match(nightlyCommand, /[Aa]udit two repos the search called empty/)
+    assert.match(nightlyCommand, /fall back to attaching every repo/)
+    // Rotation must walk repos.txt itself, not "whichever repos the search
+    // called empty tonight" — that set differs nightly, so some repos would be
+    // audited repeatedly and others effectively never.
+    assert.match(nightlyCommand, /day-of-year/)
+    assert.match(nightlyCommand, /sorted, as a fixed list/)
+  })
+
+  test("readiness is defined, and thin or big alone never sends an item to grilling", () => {
+    // Without this, "err toward grilling" degrades into grilling everything and
+    // shipping nothing — the opposite failure to building the wrong thing.
+    assert.match(nightlyCommand, /Ready to build/)
+    assert.match(nightlyCommand, /NOT reasons to grill/)
+    for (const notAReason of ["Thin", "Big", "Unfamiliar code"]) {
+      assert.match(
+        nightlyCommand,
+        new RegExp(`\\*\\*${notAReason}`),
+        `"${notAReason}" is no longer listed as a non-reason to grill`,
+      )
+    }
+    // One answerable question, not a list and not a restatement.
+    // \s+ rather than a literal space: Prettier reflows this prose, and a guard
+    // that breaks on a line wrap gets deleted rather than fixed.
+    assert.match(nightlyCommand, /single\s+specific\s+question/)
+  })
+
+  test("the run is forbidden from inventing work", () => {
+    assert.match(nightlyCommand, /Never invent work/)
+    assert.match(nightlyCommand, /[Dd]o not file new work items/)
+    // An empty queue is a result, not a prompt to go looking for something.
+    assert.match(nightlyCommand, /empty\s+night\s+is\s+a\s+correct/)
+    assert.match(workerBriefing, /Never invent work/)
+  })
+
+  test("README documents the search-first scan and the readiness bar", () => {
+    assert.match(readme, /stop attaching repos that have no work/i)
+    assert.match(readme, /## What the nightly run may build/)
+    assert.match(readme, /thin is not ambiguous and big is not ambiguous/i)
   })
 
   test("README documents the limitation and the ruled-out workaround", () => {

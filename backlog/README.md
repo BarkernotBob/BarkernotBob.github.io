@@ -93,25 +93,78 @@ certain.
 multi-repo source list to correct, so runtime `add_repo` is the only route in.
 That was the most promising-sounding fix, and it is ruled out.
 
+### The fix: stop attaching repos that have no work
+
+The refusals only matter because the run was attaching all 18 repos every night
+to ask each one whether it had anything to do. It almost never did — on 30 Aug,
+17 of 18 were empty. Eighteen `add_repo` calls to find work in one repo is
+eighteen chances for the classifier to refuse.
+
+One search answers the same question without attaching anything:
+
+```
+search_issues: is:open is:issue user:BarkernotBob
+```
+
+So the run now **searches first and attaches only the repos that came back with
+open issues** — typically one or two. `list_issues` on those is still the
+authority it builds from; the search is discovery, the listing is truth.
+
+**One thing about that search is unproven.** It has never been observed
+returning an issue from a repo the session has _not_ attached, because no such
+issue has existed to test it with. On 30 Aug all 18 repos were attached and the
+search agreed exactly with per-repo enumeration — but that is agreement under
+the easy condition. If the search turns out to be scoped to attached repos, a
+repo with real work would silently never be seen.
+
+So every run **audits two repos the search called empty**, rotating by day of
+month so the list is covered over a few weeks. If either turns out to have an
+open issue, the search is unreliable: the run says so, falls back to attaching
+everything, and records it. Two extra `add_repo` calls a night is the price of
+the fast path being unable to fail silently.
+
 ### What the run must do about it
 
-Because coverage can't be guaranteed, the requirement is that a gap is never
-silent. `.claude/commands/backlog-nightly.md` is the authority; in short:
+`.claude/commands/backlog-nightly.md` is the authority; in short:
 
-|              |                                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------------- |
-| Ledger       | Every repo lands in exactly one of **read** / **empty** / **unreachable**                         |
-| Notification | Carries coverage as a fraction (`15/18 repos reached` — `read` + `empty`), every run, names never |
-| Names        | Go on a reused issue titled `Nightly pass could not reach every repo`, labelled `hold`            |
-| The rule     | **`empty` and `unreachable` must never be collapsed into one number**                             |
+|              |                                                                                         |
+| ------------ | --------------------------------------------------------------------------------------- |
+| Ledger       | Every repo lands in exactly one of **read** / **empty** / **assumed** / **unreachable** |
+| Notification | Carries coverage as a fraction (`18/18 repos covered`), every run, names never          |
+| Names        | Go on a reused issue titled `Nightly pass could not reach every repo`, labelled `hold`  |
+| The rule     | **`empty`, `assumed` and `unreachable` must never be collapsed into one number**        |
 
-That last line is the whole point. "No open issues" and "I never looked" are
-indistinguishable in a summary that only counts issues found, and they mean
-opposite things — an issue filed from a phone into a repo the run never attached
-is invisible, which is the same class of silent disappearance the retired
-`planned` label caused. The coverage issue is labelled `hold` on purpose: it is
-a platform limitation rather than buildable work, so a later pass must not pick
-it up and try to fix a classifier it doesn't control.
+That last line is the whole point. "No open issues", "probably no open issues"
+and "I never looked" are indistinguishable in a summary that only counts issues
+found, and they mean different things — an issue filed from a phone into a repo
+the run never examined is invisible, which is the same class of silent
+disappearance the retired `planned` label caused. The coverage issue is labelled
+`hold` on purpose: it is a platform limitation rather than buildable work, so a
+later pass must not pick it up and try to fix a classifier it doesn't control.
+
+## What the nightly run may build
+
+Two rules keep an unattended agent from either building the wrong thing or
+inventing something to do. Both live in full in the command file.
+
+**Ready vs needs-grilling.** Isaiah aligns with an agent in chat on exactly what
+an issue requires, then lets it build, then reviews. The nightly has no such
+conversation, so a grilling chat _is_ that conversation deferred. An item is
+ready when it names an observable behaviour, you can locate it in the code, you
+could write its "Done when…" lines and he would recognise them, and two
+developers reading it would build the same thing. It needs grilling when it
+names a feeling, has two readings, or needs a product decision.
+
+Crucially, **thin is not ambiguous and big is not ambiguous.** A one-line issue
+naming a real symptom is buildable; a large well-specified job is buildable.
+Only unclear _intent_ sends something to grilling — otherwise the safety valve
+becomes a way of never shipping.
+
+**Never invent work.** The queue is open issues in `repos.txt`. An empty night
+is a correct and complete outcome, and the run must stop rather than look for
+something to do. It may not file wishlist items, refactors or "while I was in
+here" ideas — those go as a comment on the issue being worked. The only things
+it may file are a defect it actually reproduced, and the coverage issue above.
 
 ## Adding a repo
 

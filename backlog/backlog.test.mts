@@ -277,3 +277,85 @@ describe("backlog.py survives a repo it can't read", () => {
     assert.ok(!output.includes("Nothing filed yet"), output)
   })
 })
+
+// The nightly run's coverage rules live in prose, because the thing that
+// executes them is a language model rather than a function. That makes them
+// exactly as easy to delete by accident as any other paragraph — and the
+// failure they prevent is silent by construction, so nothing else would notice.
+describe("nightly run reports repo coverage", () => {
+  const nightlyCommand = fs.readFileSync(
+    path.join(repoRoot, ".claude/commands/backlog-nightly.md"),
+    "utf8",
+  )
+  const workerBriefing = fs.readFileSync(path.join(here, "routines/nightly-backlog.md"), "utf8")
+  const readme = fs.readFileSync(path.join(here, "README.md"), "utf8")
+
+  // Reused, not re-filed, so a bad week doesn't produce seven identical issues.
+  // Both files have to name it identically or the run files a duplicate.
+  const coverageIssueTitle = "Nightly pass could not reach every repo"
+
+  test("the command file keeps all three ledger outcomes distinct", () => {
+    for (const outcome of ["read", "empty", "unreachable"]) {
+      assert.match(
+        nightlyCommand,
+        new RegExp(`\\*\\*${outcome}\\*\\*`),
+        `the coverage ledger no longer names "${outcome}"`,
+      )
+    }
+  })
+
+  test("the command file forbids collapsing empty into unreachable", () => {
+    // The whole bug: "nothing to do" and "I never looked" read identically in a
+    // summary that only counts issues found.
+    assert.match(nightlyCommand, /[Nn]ever collapse/)
+    assert.match(nightlyCommand, /blind spot/)
+  })
+
+  test("a refused add_repo is retried once", () => {
+    // Retries demonstrably succeed, so not retrying throws away coverage for
+    // free. Both files carry this one; it is the step most likely to be skipped
+    // under time pressure.
+    for (const [name, text] of [
+      ["command file", nightlyCommand],
+      ["worker briefing", workerBriefing],
+    ] as const) {
+      assert.match(text, /retry .{0,40}refusal once|[Rr]etry a refusal once/, `${name} dropped it`)
+    }
+  })
+
+  test("add_repo calls are serialized rather than batched", () => {
+    assert.match(nightlyCommand, /one .{0,10}at a time/i)
+  })
+
+  test("the notification carries coverage as a fraction", () => {
+    // Counts only — names would leak private repos into a push notification.
+    assert.match(nightlyCommand, /\d+\/\d+ repos read/)
+    assert.match(nightlyCommand, /[Dd]o not put private repo names/)
+  })
+
+  test("unreachable repos are named on a reused, held issue", () => {
+    assert.ok(
+      nightlyCommand.includes(coverageIssueTitle),
+      "the command file no longer names the coverage issue",
+    )
+    // `hold` keeps it off the board's queue: a later pass must not try to fix a
+    // classifier it doesn't control.
+    assert.match(nightlyCommand, /label it \*\*`hold`\*\*/)
+    assert.ok(labelNames.has("hold"), "the coverage issue's label must exist")
+  })
+
+  test("the worker briefing names unreachable repos rather than just counting them", () => {
+    assert.match(workerBriefing, /which ones by name/)
+  })
+
+  test("README documents the limitation and the ruled-out workaround", () => {
+    assert.match(readme, /## Repo coverage/)
+    assert.ok(
+      readme.includes(coverageIssueTitle),
+      "README must name the same coverage issue the run files, or the run files a duplicate",
+    )
+    // Seeding every repo at launch was the obvious-sounding fix. It is ruled
+    // out, and re-deriving that costs a whole run to discover.
+    assert.match(readme, /singular/)
+  })
+})

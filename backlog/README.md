@@ -63,6 +63,55 @@ building it.
   MCP tools instead. Every command file says so up front and every `gh` example
   in them has an MCP equivalent. Anything new that shells out to `gh` has to
   carry the same fallback or it will only ever work on the Mac.
+- **A cloud run cannot be guaranteed to reach all 18 repos**, and this is worked
+  around, not fixed. See "Repo coverage" below.
+
+## Repo coverage
+
+A cloud session starts holding exactly one repo and calls `add_repo` for each of
+the others. Some of those calls come back refused — **by the session's own
+auto-mode permission classifier, not by GitHub**:
+
+> Permission for this action was denied by the Claude Code auto mode classifier.
+
+The refusals are not about specific repositories. Across runs:
+
+- A repo refused on one night is reachable the next. `logos-notes` was
+  unreachable on 28 Aug and fine on 29 Aug.
+- A repo refused inside a batch often succeeds when retried on its own. Two did
+  on 29 Aug, more than one on 30 Aug.
+- Refusals cluster when several `add_repo` calls are issued together. On 30 Aug
+  a block of six produced two refusals; attaching one or two at a time went
+  through nearly every time.
+
+So it behaves like rate-limiting or a flaky classifier, and the mitigations are
+**serialize the calls** and **retry each refusal once**. Neither makes coverage
+certain.
+
+**Launching the session with every repo pre-attached does not work.**
+`create_session` takes `source_url` — singular, one string. There is no seeded
+multi-repo source list to correct, so runtime `add_repo` is the only route in.
+That was the most promising-sounding fix, and it is ruled out.
+
+### What the run must do about it
+
+Because coverage can't be guaranteed, the requirement is that a gap is never
+silent. `.claude/commands/backlog-nightly.md` is the authority; in short:
+
+|              |                                                                                        |
+| ------------ | -------------------------------------------------------------------------------------- |
+| Ledger       | Every repo lands in exactly one of **read** / **empty** / **unreachable**              |
+| Notification | Carries coverage as a fraction (`15/18 repos read`), every run, names never            |
+| Names        | Go on a reused issue titled `Nightly pass could not reach every repo`, labelled `hold` |
+| The rule     | **`empty` and `unreachable` must never be collapsed into one number**                  |
+
+That last line is the whole point. "No open issues" and "I never looked" are
+indistinguishable in a summary that only counts issues found, and they mean
+opposite things — an issue filed from a phone into a repo the run never attached
+is invisible, which is the same class of silent disappearance the retired
+`planned` label caused. The coverage issue is labelled `hold` on purpose: it is
+a platform limitation rather than buildable work, so a later pass must not pick
+it up and try to fix a classifier it doesn't control.
 
 ## Adding a repo
 

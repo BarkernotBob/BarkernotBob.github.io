@@ -22,8 +22,53 @@ it. Every `gh ...` example below has a direct MCP equivalent.
 Read `backlog/repos.txt` from `BarkernotBob/BarkernotBob.github.io` (clone it if
 this session doesn't already have it). Only repos listed there are in scope.
 
-For each one, list the open issues. **An open issue with no label is work to
-do** — filing something must never require remembering to tag it. Sort into:
+### Reaching every repo
+
+A cloud session is born holding exactly one repo and has to `add_repo` its way to
+the rest. Those calls are sometimes refused by the session's own auto-mode
+permission classifier — not by GitHub, and not per-repo. The same repo that is
+refused in one run succeeds in the next, so a refusal tells you nothing about
+that repository.
+
+Two things measurably reduce it:
+
+- **Attach one repo at a time.** Refusals cluster when several `add_repo` calls
+  go out in one block. One or two at a time gets through far more often.
+- **Retry a refusal once**, on its own. Repos refused inside a batch have gone
+  through on an individual retry on more than one run.
+
+Do not retry a second time, and do not go looking for another route in. Two
+refusals means that repo is out of reach tonight; record it and keep going. A
+single unreachable repo must never end the run.
+
+Launching the session with all the repos already attached is not available:
+`create_session` takes one `source_url`, singular. Runtime `add_repo` is the only
+route, so this limitation is worked around rather than fixed.
+
+### Keep a coverage ledger
+
+As you go, record every repo in `repos.txt` under exactly one of three outcomes.
+The third is the one that matters:
+
+| Outcome         | Meaning                                       |
+| --------------- | --------------------------------------------- |
+| **read**        | Attached, issues listed, found work           |
+| **empty**       | Attached, issues listed, nothing open to do   |
+| **unreachable** | `add_repo` refused twice — _you never looked_ |
+
+**Never collapse `empty` and `unreachable` into one number.** They look identical
+in a summary that only counts issues found, and they mean opposite things: one is
+a clean repo, the other is a blind spot. An issue filed from a phone into an
+unreachable repo is invisible, and the whole point of this system is that filing
+something never requires remembering anything.
+
+If anything ends up `unreachable`, say so **by name** before you stop — see
+step 4, which explains where the names go, since the notification can't carry
+them.
+
+For each repo you could read, list the open issues. **An open issue with no
+label is work to do** — filing something must never require remembering to tag
+it. Sort into:
 
 Check Skip first — `blocked` and `hold` outrank everything, so an item that is
 both `in-progress` and `blocked` is skipped, not resumed.
@@ -82,9 +127,47 @@ against the titles first.
 
 ## 4. Report
 
-Send one push notification, at most three lines: how many merged, how many
-blocked, how many chats are waiting. Do not put private repo names or issue
-titles in it — just counts and repo count.
+Two audiences, and the split is deliberate: the notification is counts, the
+issues carry the detail.
+
+### The notification
+
+One push notification, at most three lines: how many merged, how many blocked,
+how many chats are waiting, and **coverage as a fraction** — `15/18 repos read`.
+Do not put private repo names or issue titles in it — just counts.
+
+Always send the coverage fraction, including on a night when everything was
+reachable. `18/18` is a real result and takes one number; leaving it out when it
+is clean means its absence is the only signal anything is wrong, and absence is
+exactly what nobody notices.
+
+### If any repo was unreachable
+
+The fraction says _how many_; it can't say _which_, because names don't go in a
+notification. So the names go on an issue, where they're durable and next to the
+work:
+
+1. Look for an open issue in `BarkernotBob/BarkernotBob.github.io` titled
+   **`Nightly pass could not reach every repo`**.
+2. If one exists, add a comment: tonight's date, the repos missed by name, and
+   whether each was refused once or twice.
+3. If none exists, file it with that exact title and label it **`hold`**.
+
+`hold` is deliberate. This is a platform limitation, not buildable work — a
+later pass that picked it up would try to build a fix for a classifier it
+doesn't control. `hold` keeps it visible on the board and out of the queue.
+
+Reuse the existing issue rather than filing a new one each night, or a bad week
+produces seven issues saying the same thing.
+
+### Never report a blind spot as a quiet night
+
+A repo you could not attach has **unknown** contents, not empty ones. If the
+queue came back empty, say which of the two it was:
+
+- _"No open issues anywhere in scope"_ — only if coverage was complete.
+- _"No open issues in the 15 repos I could read; 3 unreachable, listed on the
+  coverage issue"_ — whenever it wasn't.
 
 Then end the run. Everything else you have to say goes on the issues themselves,
 where he'll find it next to the work.

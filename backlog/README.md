@@ -98,12 +98,12 @@ That was the most promising-sounding fix, and it is ruled out.
 Because coverage can't be guaranteed, the requirement is that a gap is never
 silent. `.claude/commands/backlog-nightly.md` is the authority; in short:
 
-|              |                                                                                        |
-| ------------ | -------------------------------------------------------------------------------------- |
-| Ledger       | Every repo lands in exactly one of **read** / **empty** / **unreachable**              |
-| Notification | Carries coverage as a fraction (`15/18 repos read`), every run, names never            |
-| Names        | Go on a reused issue titled `Nightly pass could not reach every repo`, labelled `hold` |
-| The rule     | **`empty` and `unreachable` must never be collapsed into one number**                  |
+|              |                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| Ledger       | Every repo lands in exactly one of **read** / **empty** / **unreachable**                         |
+| Notification | Carries coverage as a fraction (`15/18 repos reached` — `read` + `empty`), every run, names never |
+| Names        | Go on a reused issue titled `Nightly pass could not reach every repo`, labelled `hold`            |
+| The rule     | **`empty` and `unreachable` must never be collapsed into one number**                             |
 
 That last line is the whole point. "No open issues" and "I never looked" are
 indistinguishable in a summary that only counts issues found, and they mean

@@ -133,8 +133,15 @@ issues carry the detail.
 ### The notification
 
 One push notification, at most three lines: how many merged, how many blocked,
-how many chats are waiting, and **coverage as a fraction** — `15/18 repos read`.
+how many chats are waiting, and **coverage as a fraction** —
+`15/18 repos reached`.
 Do not put private repo names or issue titles in it — just counts.
+
+**Reached** means the ledger's `read` _and_ `empty` together — every repo you
+actually got to look inside. A clean repo is reached; only `unreachable`
+subtracts. Do not report the `read` count alone: a night where everything
+attached and twelve repos were quiet would render as `6/18` and look like twelve
+blind spots.
 
 Always send the coverage fraction, including on a night when everything was
 reachable. `18/18` is a real result and takes one number; leaving it out when it
@@ -166,7 +173,7 @@ A repo you could not attach has **unknown** contents, not empty ones. If the
 queue came back empty, say which of the two it was:
 
 - _"No open issues anywhere in scope"_ — only if coverage was complete.
-- _"No open issues in the 15 repos I could read; 3 unreachable, listed on the
+- _"No open issues in the 15 repos I reached; 3 unreachable, listed on the
   coverage issue"_ — whenever it wasn't.
 
 Then end the run. Everything else you have to say goes on the issues themselves,

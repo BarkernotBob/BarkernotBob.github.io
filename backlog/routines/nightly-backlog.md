@@ -33,7 +33,9 @@ If every repo in scope has no open issues except ones labelled `blocked` or `hol
 
 ## Always report the counts
 
-Before you stop, in every case including an empty night, report: how many repos you could read, how many you were refused **and which ones by name**, how many open issues you found, how many you built, and how many you skipped and why.
+Before you stop, in every case including an empty night, report: how many repos you reached, how many you were refused, how many open issues you found, how many you built, and how many you skipped and why.
+
+Mind which channel each goes in. The **notification carries counts only** — never private repo names or issue titles. The **names of repos you were refused go on the coverage issue**, per the command file's step 4.
 
 **A repo you could not attach is a blind spot, not an empty one.** Never let the two collapse into one number — "nothing to do" and "I never looked" read identically in a summary and mean opposite things. If coverage was incomplete, say so in the same breath as the empty result.
 

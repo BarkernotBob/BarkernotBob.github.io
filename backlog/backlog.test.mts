@@ -324,12 +324,16 @@ describe("nightly run reports repo coverage", () => {
   })
 
   test("add_repo calls are serialized rather than batched", () => {
-    assert.match(nightlyCommand, /one .{0,10}at a time/i)
+    // Anchored on "repo" so this can't be satisfied by the unrelated "One item
+    // at a time" rule in step 2, which is about issues, not repositories.
+    assert.match(nightlyCommand, /one repo at a time/i)
   })
 
   test("the notification carries coverage as a fraction", () => {
     // Counts only — names would leak private repos into a push notification.
-    assert.match(nightlyCommand, /\d+\/\d+ repos read/)
+    // "reached", not "read": the ledger counts a clean repo as `empty`, so a
+    // fraction of `read` alone would render quiet repos as blind spots.
+    assert.match(nightlyCommand, /\d+\/\d+ repos reached/)
     assert.match(nightlyCommand, /[Dd]o not put private repo names/)
   })
 
@@ -344,8 +348,12 @@ describe("nightly run reports repo coverage", () => {
     assert.ok(labelNames.has("hold"), "the coverage issue's label must exist")
   })
 
-  test("the worker briefing names unreachable repos rather than just counting them", () => {
-    assert.match(workerBriefing, /which ones by name/)
+  test("the worker briefing routes names and counts to the right channels", () => {
+    // Names on the coverage issue, counts in the notification. The briefing
+    // used to say "by name" without saying where, which reads as license to put
+    // private repo names in a push notification.
+    assert.match(workerBriefing, /notification carries counts only/i)
+    assert.match(workerBriefing, /names of repos you were refused go on the coverage issue/i)
   })
 
   test("README documents the limitation and the ruled-out workaround", () => {

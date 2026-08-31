@@ -7,7 +7,7 @@
      and writes must never be served stale from a cache.
    Bump CACHE on any shell change to force clients onto the new version.
    ========================================================================= */
-const CACHE = 'poolcare-v1';
+const CACHE = 'poolcare-v2';
 const FONTS = 'poolcare-fonts-v1';
 const SHELL = [
   './',
@@ -17,16 +17,29 @@ const SHELL = [
   './icon-192.png',
   './icon-512.png',
   './favicon-32.png',
+  // The shared escaper (GAP-W5). It lives outside this SW's scope, at
+  // /static/shared/, but scope only decides which PAGES this worker controls —
+  // a controlled page's request for it still reaches the fetch handler below,
+  // so precaching it keeps the app launching offline now that index.html is a
+  // module that imports it.
+  '../shared/text.js',
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
+// Delete only THIS app's own old caches. `caches` is origin-wide and all four
+// apps share barkernotbob.github.io, so an unscoped `k !== CACHE` filter
+// deletes the other three apps' shells every time this one activates — only the
+// app you opened most recently would still launch offline. Reproduced before
+// fixing: opening the apps in turn left exactly one cache each time.
+const OWNED = (k) => k.startsWith('poolcare-')
+
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== FONTS).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => OWNED(k) && k !== CACHE && k !== FONTS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

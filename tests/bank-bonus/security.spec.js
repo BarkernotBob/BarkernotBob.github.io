@@ -236,15 +236,56 @@ test('every wired action resolves in the dispatch table', async ({ page }) => {
   wired.add('backToCalendar')
   wired.add('backFromDetail')
 
-  // Bare `ACTIONS`, not window.ACTIONS: it is a top-level `const`, which lives
-  // in the global lexical scope and never becomes a window property. Reading it
-  // off window would be undefined for every name and pass vacuously.
-  const missing = await page.evaluate(
-    (names) => names.filter((n) => typeof ACTIONS[n] !== 'function'),
-    [...wired]
+  // Read the table out of the source, not off the page. The app is a module
+  // now (it imports the shared escaper, #111), so ACTIONS is module-scoped:
+  // there is no global to evaluate against, and `window.ACTIONS` would be
+  // undefined for every name and pass vacuously. bootApp() above is what still
+  // proves the module evaluates at all; this half proves the names line up.
+  const start = APP_HTML.indexOf('const ACTIONS = {')
+  expect(start, 'the ACTIONS table is gone from the source').toBeGreaterThan(-1)
+  const end = APP_HTML.indexOf('\n};', start)
+  expect(end, 'the ACTIONS table has no closing brace').toBeGreaterThan(start)
+
+  // Comments out first. A key sitting inside a /* … */ still has the two-space
+  // indent of a live entry, so leaving them in would let a commented-out action
+  // count as present and the test pass over a dead button.
+  const body = APP_HTML.slice(start, end)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+  const known = new Set(
+    [...body.matchAll(/^\s{2}([A-Za-z_$][\w$]*):/gm)].map((m) => m[1])
   )
+  const missing = [...wired].filter((n) => !known.has(n))
+
   expect(wired.size, 'no actions were found in the markup').toBeGreaterThan(40)
+  expect(known.size, 'the ACTIONS table was not parsed out of the source').toBeGreaterThan(40)
   expect(missing, `wired but not in ACTIONS: ${missing.join(', ')}`).toEqual([])
+})
+
+// #112's last open "Done when": everything that renders typed or fetched data
+// goes through the SHARED escaper (GAP-W5, #111), not a private copy. This
+// app's own esc() escaped & < > " but NOT the single quote; the shared one
+// does. A second private copy reintroduced here would silently take that fix
+// away again — which is exactly how the four apps drifted apart in the first
+// place — so pin both halves: the import is present, and no local definition
+// shadows it.
+test('the app escapes through the shared helper, not a private copy', async ({ page }) => {
+  expect(
+    APP_HTML,
+    'the shared escaper is not imported'
+  ).toMatch(/import\s*\{[^}]*\besc\b[^}]*\}\s*from\s*['"][^'"]*shared\/text\.js['"]/)
+  expect(APP_HTML, 'a local esc() came back').not.toMatch(/(?:const|let|var)\s+esc\s*=/)
+  expect(APP_HTML, 'a local esc() came back').not.toMatch(/function\s+esc\s*\(/)
+
+  // And it genuinely loads. Every esc() call in this file resolves through that
+  // import, so a 404 is a blank app rather than a slow one — worth asserting
+  // here rather than leaving it to whichever test happens to notice first.
+  const seen = []
+  page.on('response', (r) => seen.push(r))
+  await bootApp(page)
+  const shared = seen.find((r) => r.url().endsWith('/static/shared/text.js'))
+  expect(shared, 'the shared escaper was never requested').toBeTruthy()
+  expect(shared.status(), 'the shared escaper did not load').toBe(200)
 })
 
 test('no other app token is reachable from this origin in a test run', async ({ page }) => {

@@ -239,10 +239,19 @@ test('every wired action resolves in the dispatch table', async ({ page }) => {
   // Read the table out of the source, not off the page. The app is a module
   // now (it imports the shared escaper, #111), so ACTIONS is module-scoped:
   // there is no global to evaluate against, and `window.ACTIONS` would be
-  // undefined for every name and pass vacuously. One key per line, which is
-  // the shape the table is written in and which this asserts by count.
-  const table = APP_HTML.slice(APP_HTML.indexOf('const ACTIONS = {'))
-  const body = table.slice(0, table.indexOf('\n};'))
+  // undefined for every name and pass vacuously. bootApp() above is what still
+  // proves the module evaluates at all; this half proves the names line up.
+  const start = APP_HTML.indexOf('const ACTIONS = {')
+  expect(start, 'the ACTIONS table is gone from the source').toBeGreaterThan(-1)
+  const end = APP_HTML.indexOf('\n};', start)
+  expect(end, 'the ACTIONS table has no closing brace').toBeGreaterThan(start)
+
+  // Comments out first. A key sitting inside a /* … */ still has the two-space
+  // indent of a live entry, so leaving them in would let a commented-out action
+  // count as present and the test pass over a dead button.
+  const body = APP_HTML.slice(start, end)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
   const known = new Set(
     [...body.matchAll(/^\s{2}([A-Za-z_$][\w$]*):/gm)].map((m) => m[1])
   )

@@ -252,3 +252,85 @@ for (const app of APPS) {
     })
   })
 }
+
+// All four apps are served from one origin, so they share one CacheStorage.
+// Each service worker's activate step deletes stale caches; with an unscoped
+// filter it deletes the OTHER three apps' shells as well, and only the app you
+// opened most recently still launches offline. That was live until #112 —
+// reproduced by opening the four in turn and finding exactly one cache left
+// every time. Each worker now deletes only its own name prefix.
+const CACHE_PREFIXES = {
+  grocery: 'gt-',
+  pool: 'poolcare-',
+  vehicle: 'dl-',
+  'bank-bonus': 'bb-',
+}
+
+// The prefixes only separate the apps if none is a prefix of another, so say so
+// here rather than letting a future rename quietly make the guards below leak.
+test('each app owns a distinct cache-name prefix', () => {
+  const all = APPS.map((a) => CACHE_PREFIXES[a.name])
+  expect(all.filter(Boolean), 'an app has no cache prefix listed').toHaveLength(APPS.length)
+  for (const a of all) {
+    for (const b of all) {
+      if (a === b) continue
+      expect(a.startsWith(b), `cache prefixes "${a}" and "${b}" overlap`).toBe(false)
+    }
+  }
+})
+
+for (const app of APPS) {
+  test(`${app.name}'s service worker evicts only its own caches`, async ({ browser }) => {
+    // Order matters, so this cannot be one "open all four and count" test: the
+    // app that activates FIRST finds nothing to delete, and an unscoped filter
+    // there passes unnoticed. Instead each app activates last, on its own, with
+    // a decoy cache standing in for each of the other three.
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    const decoys = APPS.filter((a) => a.name !== app.name).map(
+      (a) => CACHE_PREFIXES[a.name] + 'decoy'
+    )
+
+    // Seed the decoys from /static/, which is same-origin (so it shares the one
+    // CacheStorage) but outside every app's service-worker scope, so nothing
+    // installs there. Seeding them from the app's own page instead would race:
+    // the worker registers and activates during that load, and page.route
+    // cannot hold it off — Playwright does not intercept service-worker script
+    // fetches, so an abort there silently does nothing and this test passed
+    // over a broken filter.
+    await page.goto('/static/')
+    await page.evaluate((names) => Promise.all(names.map((n) => caches.open(n))), decoys)
+    expect(
+      await page.evaluate(() => caches.keys()),
+      'the decoys were not seeded before the app loaded'
+    ).toEqual(expect.arrayContaining(decoys))
+
+    await page.goto(app.url)
+    // `ready` resolves as soon as there is an active worker, which can be mid
+    // activate — wait for the state to settle or the eviction may not have run.
+    await page.evaluate(
+      () =>
+        navigator.serviceWorker.ready.then(
+          (r) =>
+            new Promise((res) => {
+              const w = r.active
+              if (!w || w.state === 'activated') return res()
+              w.addEventListener('statechange', () => w.state === 'activated' && res())
+            })
+        )
+    )
+    await expect
+      .poll(async () => (await page.evaluate(() => caches.keys())).some((k) => k.startsWith(CACHE_PREFIXES[app.name])), {
+        message: `waiting for ${app.name} to cache its own shell`,
+      })
+      .toBe(true)
+
+    const names = await page.evaluate(() => caches.keys())
+    const evicted = decoys.filter((d) => !names.includes(d))
+    expect(
+      evicted,
+      `${app.name} deleted another app's caches: ${evicted.join(', ')} (left: ${names.join(', ')})`
+    ).toEqual([])
+    await context.close()
+  })
+}

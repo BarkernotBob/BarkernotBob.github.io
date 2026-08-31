@@ -29,10 +29,17 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
+// Delete only THIS app's own old caches. `caches` is origin-wide and all four
+// apps share barkernotbob.github.io, so an unscoped `k !== CACHE` filter
+// deletes the other three apps' shells every time this one activates — only the
+// app you opened most recently would still launch offline. Reproduced before
+// fixing: opening the apps in turn left exactly one cache each time.
+const OWNED = (k) => k.startsWith('poolcare-')
+
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== FONTS).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => OWNED(k) && k !== CACHE && k !== FONTS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

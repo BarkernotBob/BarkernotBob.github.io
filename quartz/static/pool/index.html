@@ -177,14 +177,26 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
 /* =========================================================================
-   Pool Care — single-file app.
+   Pool Care — one file, plus the shared helpers it imports.
    Stores everything in a PRIVATE GitHub repo (the "data repo") via the GitHub
    API. No pool data lives in this file. Sign-in is "Sign in with GitHub"
    (via a Cloudflare Worker) with a paste-a-token fallback. The token (however
    obtained) lives only in this browser (localStorage).
    ========================================================================= */
+
+/* ---- Shared helpers (GAP-W5, #111) ----------------------------------------
+   This is a module so it can import them. That only became possible once the
+   inline on*= handlers were gone (GAP-W4, #112): a module's top-level names
+   are not globals, so an `onclick="markTask(...)"` in the markup could not
+   have found `markTask`.
+
+   The local esc() this replaces did NOT escape the single quote; the shared
+   one does. Read shared/text.js before reaching for it in a new place — it is
+   safe for text and for quoted attribute values, and is NOT a fix for putting
+   data inside an inline handler. ---- */
+import { esc } from '../shared/text.js';
 
 /* ---- App-wide sign-in config. Filled in once the OAuth App + Worker exist.
         Until both are set, the app uses the token-paste fallback. ---- */
@@ -212,7 +224,6 @@ const DB = {}; // in-memory cache: { path:{value,sha} }
 /* ---------- tiny helpers ---------- */
 const $ = sel => document.querySelector(sel);
 const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
-const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const todayISO = () => new Date().toISOString().slice(0,10);
 const nowISO = () => new Date().toISOString();
 function addDaysISO(iso, n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }

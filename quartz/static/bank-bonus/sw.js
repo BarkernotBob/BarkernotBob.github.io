@@ -3,7 +3,7 @@
    fresh in the background so the next open always has the latest version.
    GitHub API calls always go to the network. */
 
-const CACHE = 'bb-v5';
+const CACHE = 'bb-v6';
 const SHELL = [
   '/static/bank-bonus/',
   '/static/bank-bonus/index.html',
@@ -12,6 +12,11 @@ const SHELL = [
   '/static/bank-bonus/icon-192.png',
   '/static/bank-bonus/icon-512.png',
   '/static/bank-bonus/apple-touch-icon.png',
+  // The shared escaper (GAP-W5). Outside this SW's scope, but scope only
+  // decides which PAGES it controls — a controlled page's request for it still
+  // reaches the fetch handler below. index.html is a module that imports it,
+  // so without this entry the app would not launch offline.
+  '/static/shared/text.js',
 ];
 
 self.addEventListener('install', e => {

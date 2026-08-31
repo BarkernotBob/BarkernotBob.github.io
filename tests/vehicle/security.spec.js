@@ -275,18 +275,43 @@ test('a hostile value typed into the app is stored and re-rendered inert', async
   expect(errors, errors.join('\n')).toEqual([])
 })
 
+// #112's last open "Done when": everything that renders typed or fetched data
+// goes through the SHARED escaper (GAP-W5, #111), not a private copy. This
+// app's own esc() escaped & < > " but NOT the single quote. Vehicle's real
+// injection (#123) landed in a double-quoted attribute, so the old copy did
+// close it — but the four apps drifting apart on what esc() covers is what
+// #111 exists to stop, so pin both halves: the import is present, and no
+// local definition shadows it.
+test('the app escapes through the shared helper, not a private copy', async ({ page }) => {
+  expect(
+    APP_HTML,
+    'the shared escaper is not imported'
+  ).toMatch(/import\s*\{[^}]*\besc\b[^}]*\}\s*from\s*['"][^'"]*shared\/text\.js['"]/)
+  expect(APP_HTML, 'a local esc() came back').not.toMatch(/(?:const|let|var)\s+esc\s*=/)
+  expect(APP_HTML, 'a local esc() came back').not.toMatch(/function\s+esc\s*\(/)
+
+  // And it genuinely loads. Every esc() call in this file resolves through that
+  // import, so a 404 is a blank app rather than a slow one.
+  const seen = []
+  page.on('response', (r) => seen.push(r))
+  await bootApp(page)
+  const shared = seen.find((r) => r.url().endsWith('/static/shared/text.js'))
+  expect(shared, 'the shared escaper was never requested').toBeTruthy()
+  expect(shared.status(), 'the shared escaper did not load').toBe(200)
+})
+
 test('no data-bearing inline handler exists in the source', async ({ page }) => {
   // Vehicle's structural advantage, and #112's actual goal. Every real
   // behaviour is bound in JavaScript (`el.onclick = …`), so no user or file
   // data is ever parsed as script.
   //
-  // Exactly one literal on*= remains in the file: onclick="return false" on the
-  // CarEdge bookmarklet link, which is a constant and interpolates nothing. If
-  // that count moves, someone has added an inline handler and the whole class
-  // of bug pinned in bank-bonus and pool is back on the table here.
+  // Zero literal on*= now. The last one was onclick="return false" on the
+  // CarEdge bookmarklet link — a constant that interpolated nothing, so it was
+  // never exploitable, but "zero across the four apps" is a guard with no
+  // exception to reason about, which a count of one is not. It is bound in
+  // renderAddVehicle() instead. Any on*= appearing here is a regression.
   const inline = APP_HTML.match(/\son[a-z]+=["']/g) || []
-  expect(inline, `inline handlers found: ${inline.join(', ')}`).toHaveLength(1)
-  expect(APP_HTML).toContain('onclick="return false"')
+  expect(inline, `inline handlers found: ${inline.join(', ')}`).toEqual([])
 
   // And none of them is built from a template expression.
   const interpolated = APP_HTML.match(/\son[a-z]+="[^"]*\$\{/g) || []

@@ -256,6 +256,32 @@ test('the app declares no inline event handlers', () => {
   expect(inline, `inline handlers found: ${inline.join(', ')}`).toEqual([])
 })
 
+// #112's last open "Done when": everything that renders typed or fetched data
+// goes through the SHARED escaper (GAP-W5, #111), not a private copy. This
+// app's own esc() escaped & < > " but NOT the single quote; the shared one
+// does. A second private copy reintroduced here would silently take that fix
+// away again — which is exactly how the four apps drifted apart in the first
+// place — so pin both halves: the import is present, and no local definition
+// shadows it.
+test('the app escapes through the shared helper, not a private copy', async ({ page }) => {
+  expect(
+    APP_HTML,
+    'the shared escaper is not imported'
+  ).toMatch(/import\s*\{[^}]*\besc\b[^}]*\}\s*from\s*['"][^'"]*shared\/text\.js['"]/)
+  expect(APP_HTML, 'a local esc() came back').not.toMatch(/(?:const|let|var)\s+esc\s*=/)
+  expect(APP_HTML, 'a local esc() came back').not.toMatch(/function\s+esc\s*\(/)
+
+  // And it genuinely loads. Every esc() call in this file resolves through that
+  // import, so a 404 is a blank app rather than a slow one — worth asserting
+  // here rather than leaving it to whichever test happens to notice first.
+  const seen = []
+  page.on('response', (r) => seen.push(r))
+  await bootApp(page)
+  const shared = seen.find((r) => r.url().endsWith('/static/shared/text.js'))
+  expect(shared, 'the shared escaper was never requested').toBeTruthy()
+  expect(shared.status(), 'the shared escaper did not load').toBe(200)
+})
+
 test('no other app token is reachable from this origin in a test run', async ({ page }) => {
   // Guards the assumption the suite rests on: this rig seeds only pl_* keys, so
   // a payload that did escape could not quietly exfiltrate a real gt_/bb_ token

@@ -303,12 +303,27 @@
      seeded into a fresh install so a new user starts with banks to work from. -->
 <script src="starter-offers.js"></script>
 
-<script>
+<script type="module">
 /* =========================================================================
-   Bank Bonus Tracker — single-file, local-first app.
+   Bank Bonus Tracker — one file, plus the shared helpers it imports.
    By default all data lives in this browser (localStorage). Optional GitHub
    sync stores it in the user's own private repo via their own token.
    ========================================================================= */
+
+/* ---- Shared helpers (GAP-W5, #111) ----------------------------------------
+   This is a module so it can import them. That only became possible once the
+   inline on*= handlers were gone (GAP-W4, #112): a module's top-level names
+   are not globals, so an `onclick="setPersonFilter(...)"` in the markup could
+   not have found `setPersonFilter`.
+
+   The local esc() this replaces did NOT escape the single quote; the shared
+   one does. Read shared/text.js before reaching for it in a new place — it is
+   safe for text and for quoted attribute values, and is NOT a fix for putting
+   data inside an inline handler.
+
+   starter-offers.js above stays a classic script: it is parser-blocking, so
+   its global is set before this deferred module runs. ---- */
+import { esc } from '/static/shared/text.js';
 
 /* ---- Public-safe storage model ---------------------------------------------
    This app is local-first: by default ALL data lives in this browser
@@ -389,7 +404,6 @@ function fmtMoneyInput(v){
   return n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
 }
 function reformatMoney(elm){ const n = parseMoney(elm.value); elm.value = (n == null ? '' : fmtMoneyInput(n)); }
-const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // "Today" in the user's configured timezone (not the browser/UTC day), so
 // date-based alerts don't roll over a day early/late.
 function todayISO(){
@@ -707,6 +721,22 @@ function updateAppbarUser(){
   } else u.textContent = '';
 }
 
+// Tab -> renderer. A fixed table, not window['render_'+tab]: this script is a
+// module, so its top-level functions are NOT properties of window and a
+// name-based lookup silently resolves to undefined — every tab would render
+// blank. Same reasoning as the ACTIONS table at the bottom of this file: names
+// that come from data resolve through a table we control, never off a global.
+const RENDERERS = {
+  today: render_today,
+  active: render_active,
+  planned: render_planned,
+  offers: render_offers,
+  calendar: render_calendar,
+  reports: render_reports,
+  settings: render_settings,
+  detail: render_detail,
+};
+
 function show(tab){
   $$('.section').forEach(s => s.classList.remove('active'));
   $$('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -717,7 +747,7 @@ function show(tab){
     if(navBtn){ navBtn.classList.add('active');   // detail view has no nav button
       navBtn.scrollIntoView({inline: 'center', block: 'nearest'}); }   // keep active tab visible on the scrollable mobile bar
     if(tab !== 'detail'){ lastTab = tab; localStorage.setItem('bb_tab', tab); }  // remember tab across refreshes
-    const fn = window[`render_${tab}`];
+    const fn = RENDERERS[tab];
     if(fn) fn();
   }
   updateAppbarUser();
@@ -994,7 +1024,7 @@ function filterBarHTML(tab){
       <button data-action="addAccount" data-a1="${esc(addStatus)}">${addLabel}</button>
     </div>`;
 }
-function setPersonFilter(tab, person){ acctFilter[tab].person = person; window['render_'+tab](); }
+function setPersonFilter(tab, person){ acctFilter[tab].person = person; const fn = RENDERERS[tab]; if(fn) fn(); }
 function setStatusFilter(status){ acctFilter.active.status = status; render_active(); }
 function setSearchFilter(tab, q){
   acctFilter[tab].q = q;

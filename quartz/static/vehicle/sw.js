@@ -5,7 +5,7 @@
    in localStorage, which needs no network at all. It deliberately does NOT touch
    api.github.com or any other origin — those requests pass straight through, so
    auth and data freshness can never be served from a stale cache. */
-const VERSION = 'dl-shell-v1'
+const VERSION = 'dl-shell-v2'
 const SHELL = [
   'index.html',
   'manifest.webmanifest',
@@ -13,6 +13,12 @@ const SHELL = [
   'icons/icon-512.png',
   'icons/maskable-512.png',
   'icons/apple-touch-icon.png',
+  // The shared escaper (GAP-W5). It sits outside this SW's scope, at
+  // /static/shared/, but scope only decides which PAGES this worker controls —
+  // a controlled page's request for it still reaches the fetch handler below.
+  // index.html is a module that imports it, so without this entry the app
+  // would not launch offline.
+  '../shared/text.js',
 ]
 
 self.addEventListener('install', (e) => {

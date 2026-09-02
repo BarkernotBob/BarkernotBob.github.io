@@ -1,6 +1,6 @@
 # HANDOFF — barkernotbob.github.io (Quartz v5 site)
 
-_Last updated: 2026-08-27_
+_Last updated: 2026-09-01_
 
 ## Current status
 
@@ -20,6 +20,20 @@ If a deploy ever fails with an empty log / `BlobNotFound`, check #2 first — th
 failure mode produces a job with no steps and no logs.
 
 ## What just changed
+
+- 2026-09-01 — **GAP-W2b (#110): all four app suites now gate the deploy.** Only
+  grocery was wired; pool, vehicle and bank-bonus had suites from #109 that
+  nothing ran. `changes` in `deploy.yml` now emits a JSON array of app names and
+  `test` consumes it as a dynamic matrix, so one app touched runs one suite and a
+  content publish runs none. Two paths were missing from the old grocery filter
+  and are now in: `quartz/static/shared/` (the GAP-W5 modules **all four** apps
+  import — editing it used to deploy everything untested) and `tests/shared/`
+  (the GitHub mock). New `tests/workflow/deploy-gate.test.mts` executes the
+  filter script against stubbed git output and asserts which suites it picks;
+  the `gate_test` job runs it on every push and blocks the deploy if it goes red.
+  **Next step: the PR has no CI of its own** — `deploy.yml` is push-only and the
+  paths don't match `backlog-checks.yml` — so the first real exercise of the new
+  gate is the merge itself. Watch that run.
 
 - 2026-08-27 — **the nightly backlog has never been able to reach GitHub, and
   still can't.** The Routine fires, clones this repo, reads the protocol, and

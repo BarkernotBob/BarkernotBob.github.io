@@ -79,47 +79,120 @@ jobs:
       - name: Run Studio safety suite
         run: npx tsx --test studio/studio.test.mts
 
-  # ---- Grocery Tracker regression gate (PRD S0) --------------------------------
+  # ---- The gate's own gate -----------------------------------------------------
+  # Checks that the change filter below still selects the suites it claims to.
+  # Both failure modes it guards are silent: a suite nothing selects is SKIPPED,
+  # not red, and a skipped job counts as a pass on the way to `deploy`. Pure
+  # Node, no browser: ~seconds, and it runs on every push so a filter that stops
+  # covering an app is caught here rather than by the outage.
+  gate_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - run: npm ci
+      - name: Run deploy-gate suite
+        run: npx tsx --test tests/workflow/deploy-gate.test.mts
+
+  # ---- App regression gate (GAP-W2b) -------------------------------------------
   # GitHub Actions has no per-job `paths` filter, so a change-detection job decides
-  # whether the Playwright suite must run. Only commits touching the grocery app,
-  # its tests, this workflow, or the Quartz config trigger it — so ordinary content
-  # publishes are never blocked by (or made to wait on) the browser tests.
+  # which app suites must run. Only commits touching an app, its tests, the shared
+  # browser modules, this workflow, or the Quartz config trigger them — so ordinary
+  # content publishes are never blocked by (or made to wait on) the browser tests.
+  #
+  # `filter` emits a JSON array of app names, which `test` consumes as a dynamic
+  # matrix: two apps touched produces a two-leg matrix, none produces `[]` and the
+  # whole job is skipped. Deliberately NOT one copy of the job per app — see
+  # GAP-W1 (#108) for what copy-pasted CI steps cost here. The coverage a copy
+  # would have made visible is asserted instead by tests/workflow/deploy-gate.test.mts,
+  # which fails if a suite under tests/ is missing from the filter or the app list.
   changes:
     runs-on: ubuntu-latest
     outputs:
-      grocery: ${{ steps.filter.outputs.grocery }}
+      apps: ${{ steps.filter.outputs.apps }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - id: filter
-        name: Detect grocery-related changes
+        name: Detect which app suites need to run
         run: |
+          set -eu
+
+          # Keep in step with tests/workflow/deploy-gate.test.mts, which asserts
+          # this list covers every suite directory under tests/.
+          ALL='grocery bank-bonus pool vehicle'
+
+          emit() {
+            if [ -z "${1:-}" ]; then
+              echo 'apps=[]' >> "$GITHUB_OUTPUT"
+              echo "Suites to run: none"
+            else
+              list=$(printf '"%s",' $1)
+              printf 'apps=[%s]\n' "${list%,}" >> "$GITHUB_OUTPUT"
+              echo "Suites to run: $1"
+            fi
+          }
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "grocery=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "Manual run — running every suite."
+            emit "$ALL"; exit 0
           fi
+
           BASE="${{ github.event.before }}"
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             # Base commit unreachable (force-push, rebase, or new branch): we
-            # can't reliably scope the diff, so fail CLOSED and run the suite.
-            echo "Base commit unavailable — running grocery suite to be safe."
-            echo "grocery=true" >> "$GITHUB_OUTPUT"; exit 0
+            # can't reliably scope the diff, so fail CLOSED and run everything.
+            echo "Base commit unavailable — running every suite to be safe."
+            emit "$ALL"; exit 0
           fi
+
           CHANGED=$(git diff --name-only "$BASE" HEAD || true)
           echo "Changed files:"; echo "$CHANGED"
-          if echo "$CHANGED" | grep -qE '^(quartz/static/grocery/|tests/grocery/|\.github/workflows/deploy\.yml|quartz\.config\.default\.yaml)'; then
-            echo "grocery=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "grocery=false" >> "$GITHUB_OUTPUT"
+
+          # Paths that force every suite. quartz/static/shared/ is the shared
+          # browser code from GAP-W5 (#111) — all four apps import from it at
+          # runtime, so an edit there can break any of them.
+          if echo "$CHANGED" | grep -qE '^(quartz/static/shared/|\.github/workflows/deploy\.yml|quartz\.config\.default\.yaml)'; then
+            echo "A shared path changed — running every suite."
+            emit "$ALL"; exit 0
           fi
+
+          # Per-app paths. tests/shared/ holds the GitHub API mock used by
+          # grocery, bank-bonus and pool; an edit there must not let those
+          # suites skip, because a skipped job counts as a pass.
+          SELECTED=''
+          for app in $ALL; do
+            case "$app" in
+              vehicle) extra='' ;;                    # no mock: vehicle makes no network calls
+              *)       extra='|^tests/shared/' ;;
+            esac
+            if echo "$CHANGED" | grep -qE "^quartz/static/$app/|^tests/$app/$extra"; then
+              SELECTED="$SELECTED $app"
+            fi
+          done
+          emit "$(echo $SELECTED)"
 
   test:
     needs: changes
-    if: ${{ needs.changes.outputs.grocery == 'true' }}
+    if: ${{ needs.changes.outputs.apps != '[]' }}
     runs-on: ubuntu-latest
+    strategy:
+      # One red app must not cancel the others — a run should report every
+      # failure it found, not just the first.
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.changes.outputs.apps) }}
     defaults:
       run:
-        working-directory: tests/grocery
+        working-directory: tests/${{ matrix.app }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -127,34 +200,38 @@ jobs:
           node-version: 22
       - name: Install test dependencies
         run: npm ci
+      # Per-suite, not once globally: the suites pin different Playwright
+      # versions and each needs its own matching browser build.
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: Run grocery regression suite
+      - name: Run ${{ matrix.app }} regression suite
         run: npm test
       - name: Upload screenshot gallery (visual-verification record)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: grocery-screenshots
-          path: tests/grocery/screenshots/
+          name: ${{ matrix.app }}-screenshots
+          path: tests/${{ matrix.app }}/screenshots/
           if-no-files-found: warn
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: grocery-playwright-report
-          path: tests/grocery/playwright-report/
+          name: ${{ matrix.app }}-playwright-report
+          path: tests/${{ matrix.app }}/playwright-report/
           if-no-files-found: ignore
 
   deploy:
-    # A skipped `test` (non-grocery commit) counts as pass; a failed `test` blocks
-    # the deploy so red never ships. `!cancelled()` lets this run even when `test`
-    # was skipped — a skipped `needs` would otherwise skip `deploy` too. Requiring
-    # `changes` to have succeeded keeps the gate fail-CLOSED: if change-detection
-    # itself errors, `test` is skipped but the deploy is blocked rather than
-    # shipping untested. `studio_test` always runs, so it must be a plain success.
-    needs: [build, changes, test, studio_test]
-    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.result == 'success' && needs.test.result != 'failure' && needs.studio_test.result == 'success' }}
+    # A skipped `test` (a commit touching no app) counts as pass; a failed `test`
+    # blocks the deploy so red never ships. With the matrix, "failed" means any
+    # leg failed. `!cancelled()` lets this run even when `test` was skipped — a
+    # skipped `needs` would otherwise skip `deploy` too. Requiring `changes` to
+    # have succeeded keeps the gate fail-CLOSED: if change-detection itself
+    # errors, `test` is skipped but the deploy is blocked rather than shipping
+    # untested. `studio_test` and `gate_test` always run, so both must be a
+    # plain success.
+    needs: [build, changes, test, studio_test, gate_test]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.changes.result == 'success' && needs.test.result != 'failure' && needs.studio_test.result == 'success' && needs.gate_test.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

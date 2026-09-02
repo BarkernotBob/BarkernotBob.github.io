@@ -208,14 +208,14 @@ jobs:
         run: npm test
       - name: Upload screenshot gallery (visual-verification record)
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.app }}-screenshots
           path: tests/${{ matrix.app }}/screenshots/
           if-no-files-found: warn
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.app }}-playwright-report
           path: tests/${{ matrix.app }}/playwright-report/

@@ -35,6 +35,7 @@ On its first run this suite found three things:
 | `boot.spec.js` | Boots with a clean console, every tab renders, only GitHub and Open-Meteo are contacted, signed-out shows setup and calls nothing, reload keeps the session, the PWA files parse |
 | `flows.spec.js` | One smoke test per main flow — mark a task done, log a strip test and a numeric test, log swim time, edit a task, mark a seasonal checklist done, pool and season settings, history, weather, and a GitHub failure surfacing |
 | `modals.spec.js` | The dialog contract: fields readable when the promise resolves, no overlay left behind on any close path, the sign-out confirm gating both ways |
+| `chemistry.spec.js` | The seven pads on Isaiah's strip and the six chemicals in his shed — the strip form's pads and order, phosphates as a lab-only extra, advice naming a chlorine he owns, hardness steering cal-hypo vs. liquid, high pH becoming a shopping note, chloramines dosed once (but never confused with a routine top-up), bromine never counted as off target or drawn red in history, an emptied shed staying empty, and an older config migrating its chemical keys and gaining the new target ranges |
 | `security.spec.js` | A hostile value renders as inert text, seeded across config/tests and round-tripped |
 | `screenshots.spec.js` | Every tab at 390 / 900 / 1300px, attached to the report, asserting no sideways page scroll |
 | `sync.spec.js` | The GitHub Contents API path against `tests/shared/mock-github.js` — reads, shas, the stale-sha retry, a missing file, and the sign-in screen |

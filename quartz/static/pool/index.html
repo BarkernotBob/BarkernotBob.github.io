@@ -315,43 +315,95 @@ async function saveJson(path, value, message){
 /* =========================================================================
    DEFAULTS — the whole pool "brain" lives in config so you can edit it later.
    ========================================================================= */
+/* ---- The seven pads on Isaiah's test strip, in the order they read ----
+   Total hardness · Total chlorine · Total bromine · Free chlorine · pH ·
+   Total alkalinity · Cyanuric acid.  `strip:true` = it's on the strip, so it
+   shows on the Strips form. Phosphates are NOT on the strip (Leslie's tests
+   them) so they stay available in Numbers mode only.
+   `advisory:true` = shown and stored, but never counted as "off target". */
 const READINGS = [
-  {key:'fc',  name:'Free chlorine',   numUnit:'ppm', numRange:[1,3]},
-  {key:'ph',  name:'pH',              numUnit:'',    numRange:[7.4,7.6]},
-  {key:'ta',  name:'Total alkalinity',numUnit:'ppm', numRange:[80,120]},
-  {key:'cya', name:'Cyanuric acid',   numUnit:'ppm', numRange:[30,50]},
-  {key:'ch',  name:'Calcium hardness',numUnit:'ppm', numRange:[200,400]},
-  {key:'po4', name:'Phosphates',      numUnit:'ppb', numRange:[0,100]},
+  {key:'ch',  name:'Total hardness',   numUnit:'ppm', numRange:[200,400], strip:true},
+  {key:'tc',  name:'Total chlorine',   numUnit:'ppm', numRange:[1,3],     strip:true},
+  {key:'br',  name:'Total bromine',    numUnit:'ppm', numRange:[2,4],     strip:true, advisory:true},
+  {key:'fc',  name:'Free chlorine',    numUnit:'ppm', numRange:[1,3],     strip:true},
+  {key:'ph',  name:'pH',               numUnit:'',    numRange:[7.4,7.6], strip:true},
+  {key:'ta',  name:'Total alkalinity', numUnit:'ppm', numRange:[80,120],  strip:true},
+  {key:'cya', name:'Cyanuric acid',    numUnit:'ppm', numRange:[30,50],   strip:true},
+  {key:'po4', name:'Phosphates',       numUnit:'ppb', numRange:[0,100],   strip:false},
 ];
+const STRIP_READINGS = READINGS.filter(r=>r.strip);
 const LEVELS = ['very low','low','normal','high','very high']; // index 0..4, normal=2
 function levelIdx(l){ return LEVELS.indexOf(l); }
 function severity(l){ const i=levelIdx(l); return i<0?null:Math.abs(i-2); } // 0 good,1,2
+function readingByKey(k){ return READINGS.find(r=>r.key===k); }
+function isAdvisory(k){ const r=readingByKey(k); return !!(r && r.advisory); }
 
-/* ---- Chemicals catalog + which one each fix needs (for the inventory) ---- */
+/* ---- Chemicals catalog + which one each fix needs (for the inventory) ----
+   The first six are what Isaiah actually keeps in the shed; the rest are here
+   only so a fix he *can't* do today turns into a clear shopping note. */
 const CHEMS = {
-  chlorine_granular: 'Granular chlorine (cal-hypo / dichlor)',
-  ph_up:             'pH Up (soda ash)',
-  ph_down:           'pH Down (dry acid)',
+  liquid_chlorine:   'Liquid chlorine (sodium hypochlorite)',
+  cal_hypo:          'Cal-hypo granular chlorine (calcium hypochlorite)',
+  trichlor_tabs:     '3" chlorinating tabs (trichlor, "Sanitize")',
+  phosphate_remover: 'PR-10,000 phosphate remover concentrate',
+  alkalinity_up:     'Alkalinity Up (sodium bicarbonate)',
+  soda_ash:          'Soda ash / pH Up (sodium carbonate)',
+  ph_down:           'pH Down (dry acid / sodium bisulfate)',
   muriatic_acid:     'Muriatic acid',
-  alkalinity_up:     'Baking soda (sodium bicarbonate)',
   cya:               'Stabilizer / conditioner (cyanuric acid)',
   calcium:           'Calcium chloride (hardness increaser)',
-  phosphate_remover: 'Phosphate remover',
 };
 const CHEM_KEYS = Object.keys(CHEMS);
+// What Isaiah told us he has on hand — the default inventory for a fresh config.
+const CHEMS_DEFAULT_ON_HAND = {
+  liquid_chlorine:true, cal_hypo:true, trichlor_tabs:true,
+  phosphate_remover:true, alkalinity_up:true, soda_ash:true,
+};
+// Older configs used different keys for the same two products.
+const CHEM_ALIASES = { chlorine_granular:'cal_hypo', ph_up:'soda_ash' };
+function migrateChemKeys(onHand){
+  const out={}; for(const k in (onHand||{})){ if(!onHand[k]) continue; out[CHEM_ALIASES[k]||k]=true; }
+  return out;
+}
 // per reading + direction, acceptable chemicals (first = preferred). [] = no chemical fix.
 function neededChem(key, dir){
   const map = {
-    fc:  { low:['chlorine_granular'],          high:[] },
-    ph:  { low:['ph_up'],                       high:['ph_down','muriatic_acid'] },
-    ta:  { low:['alkalinity_up'],               high:['muriatic_acid'] },
-    cya: { low:['cya'],                         high:[] },
-    ch:  { low:['calcium'],                      high:[] },
-    po4: { low:['phosphate_remover'],            high:['phosphate_remover'] },
+    fc:  { low:['liquid_chlorine','cal_hypo','trichlor_tabs'], high:[] },
+    tc:  { low:['liquid_chlorine','cal_hypo','trichlor_tabs'], high:[] },
+    br:  { low:[],                              high:[] },
+    ph:  { low:['soda_ash'],                    high:['ph_down','muriatic_acid'] },
+    ta:  { low:['alkalinity_up'],               high:['muriatic_acid','ph_down'] },
+    cya: { low:['cya','trichlor_tabs'],         high:[] },
+    ch:  { low:['calcium'],                     high:[] },
+    po4: { low:['phosphate_remover'],           high:['phosphate_remover'] },
   };
   return (map[key]||{})[dir] || [];
 }
-function chemsOnHand(){ return (D.config.chemicals && D.config.chemicals.onHand) || {}; }
+function chemsOnHand(){ return migrateChemKeys((D.config.chemicals && D.config.chemicals.onHand) || {}); }
+/* Target ranges live in config so they're editable, but the strip gained pads
+   (total chlorine, bromine) after the first configs were written — so always
+   read them through here and fall back to the built-in range. */
+function targetRange(key){
+  const r=readingByKey(key), t=D.config && D.config.targets && D.config.targets[key];
+  return (t && Array.isArray(t.range) && t.range.length===2) ? t.range : (r?r.numRange.slice():[0,0]);
+}
+function ensureTarget(key){
+  if(!D.config.targets) D.config.targets={};
+  if(!D.config.targets[key]) D.config.targets[key]={range:targetRange(key)};
+  return D.config.targets[key];
+}
+/* Bring an older saved config up to date: new strip pads get target ranges,
+   and the two renamed chemical keys become their new names. */
+function migrateConfig(){
+  if(!D.config) return;
+  READINGS.forEach(r=>ensureTarget(r.key));
+  // An empty onHand means "I'm out of everything", which is a real answer —
+  // only a config that never had the key at all gets the starting inventory.
+  const had = !!(D.config.chemicals && D.config.chemicals.onHand);
+  const on = migrateChemKeys((D.config.chemicals&&D.config.chemicals.onHand)||{});
+  D.config.chemicals={ onHand: had?on:{...CHEMS_DEFAULT_ON_HAND} };
+}
+function hasChem(k){ return !!chemsOnHand()[k]; }
 // Given a list of acceptable chemicals, decide whether the user can act now.
 function chemPlan(chemArr){
   if(!chemArr || !chemArr.length) return null; // no chemical needed (e.g. drain/dilute/wait)
@@ -367,70 +419,139 @@ function chemNoteHtml(chemArr){
     : `<div class="small" style="color:#b3742a;margin-top:4px">🛒 Not on hand — add <b>${esc(CHEMS[p.buy])}</b> to your shopping list.</div>`;
 }
 
-/* Qualitative level -> recommended action, per reading. {tone, text} */
-function recForLevel(key, level){
+/* Which chlorine to reach for, given what's on hand and the latest hardness.
+   Cal-hypo adds calcium (bad when hardness is already high); liquid adds none.
+   Tabs are the last resort because they push CYA up and pH down. */
+function chlorineChoice(ctx){
+  const hardHigh = ctx && ctx.dirOf && ctx.dirOf('ch')==='high';
+  const hardLow  = ctx && ctx.dirOf && ctx.dirOf('ch')==='low';
+  if(hardHigh && hasChem('liquid_chlorine'))
+    return {key:'liquid_chlorine', why:'your hardness is already high, so use liquid — cal-hypo would add more calcium'};
+  if(hardLow && hasChem('cal_hypo'))
+    return {key:'cal_hypo', why:'cal-hypo also nudges your low hardness up'};
+  if(hasChem('cal_hypo'))   return {key:'cal_hypo', why:''};
+  if(hasChem('liquid_chlorine')) return {key:'liquid_chlorine', why:''};
+  if(hasChem('trichlor_tabs'))   return {key:'trichlor_tabs', why:'tabs are slow — they also raise CYA and lower pH'};
+  return null;
+}
+// Dose sentence for one "step" of chlorine, in whichever product we picked.
+// Doses are for ~10,000 gal and scale with your volume.
+// Assumes 73% cal-hypo granular and 12.5% liquid chlorine — check your labels.
+function chlorineDose(strength, gallons, ctx){
+  const f=(gallons||10000)/10000, pick=chlorineChoice(ctx);
+  if(!pick) return 'You have no chlorine on hand — pick some up before dosing.';
+  const dbl = strength==='shock';
+  if(pick.key==='cal_hypo'){
+    const cups = dbl?1:0.5;
+    return `Add ${cups===1?'1 cup':'½ cup'} cal-hypo granular${f!==1?` ×${f.toFixed(1)} for your volume`:''} — mixed into a half-full 5-gal bucket of water, then poured by the pump return${pick.why?` (${pick.why})`:''}.`;
+  }
+  if(pick.key==='liquid_chlorine'){
+    const qt = dbl?2:1;
+    return `Add about ${qt===2?'2 quarts':'1 quart'} liquid chlorine (sodium hypochlorite)${f!==1?` ×${f.toFixed(1)} for your volume`:''} — pour it slowly around the pool with the pump running${pick.why?` (${pick.why})`:''}.`;
+  }
+  return `Load your 3" tabs into the floater/chlorinator${pick.why?` (${pick.why})`:''}. Tabs dissolve slowly, so for a fast correction you want liquid or cal-hypo instead.`;
+}
+
+/* Qualitative level -> recommended action, per reading. {tone, text}
+   ctx (optional) carries the rest of the test so readings can talk to each other. */
+// Only a SHOCK dose burns chloramines out. If the free-chlorine card is already
+// prescribing one, the total-chlorine card points at it instead of telling you
+// to pour twice — but a routine top-up doesn't count, so a ½-cup dose never
+// gets mistaken for the shock the chloramines actually need.
+function fcShockAlreadyDosed(ctx){
+  if(!ctx) return false;
+  const n = ctx.nums && ctx.nums.fc!=null && ctx.nums.fc!=='' ? Number(ctx.nums.fc) : null;
+  if(n!=null) return n<0.5;
+  return (ctx.levels && ctx.levels.fc)==='very low';
+}
+// A routine low-chlorine dose does cover a merely-low total chlorine, though.
+function fcAlreadyDosed(ctx){ return !!(ctx && ctx.dirOf && ctx.dirOf('fc')==='low'); }
+function recForLevel(key, level, ctx){
   const sev = severity(level);
+  const gal = (D.config && D.config.pool && D.config.pool.gallons) || 10000;
+  if(key==='br') return {tone:'ok', text:'You run a chlorine pool, not bromine — this pad is the same chemistry read on the bromine scale. Nothing to do with it; go by the chlorine pads.'};
+  if(key==='tc'){
+    const fcL = ctx && ctx.levels && ctx.levels.fc;
+    if(fcL && levelIdx(level) > levelIdx(fcL))
+      return {tone:'warn', text:'Total chlorine reads higher than free chlorine — that gap is combined chlorine (chloramines: the "pool smell", stinging eyes). '+(fcShockAlreadyDosed(ctx)?'The shock dose under free chlorine clears this too — one dose, not two.':'Shock it: '+chlorineDose('shock', gal, ctx)+' Run the pump and re-test in a few hours.')};
+    if(sev===0) return {tone:'ok', text:'In range, and it matches your free chlorine — no chloramines to burn off.'};
+    return levelIdx(level)<2
+      ? {tone:'warn', text:fcAlreadyDosed(ctx) ? 'Total chlorine low for the same reason free chlorine is — the dose above covers both.' : 'Total chlorine low. '+chlorineDose('normal', gal, ctx)+' Re-test tomorrow.'}
+      : {tone:'warn', text:'Total chlorine high. Hold off on chlorine and let it drift down before the next dose.'};
+  }
   if(sev===0) return {tone:'ok', text:'In range — nothing to do.'};
   const i = levelIdx(level), low = i<2, vv = (i===0||i===4);
   switch(key){
     case 'fc':
       return low
-        ? (vv ? {tone:'danger', text:'Chlorine very low. SHOCK: add 1 cup granular chlorine (double dose), run the pump, and keep swimmers out until it reads normal. Re-test in a few hours.'}
-              : {tone:'warn',   text:'Chlorine low. Add your usual ½ cup granular chlorine (in a bucket of water, poured by the pump return). Re-test tomorrow.'})
-        : (vv ? {tone:'danger', text:'Chlorine very high. Do NOT add more. Keep swimmers out until it drops to normal; partial fresh-water dilution speeds it up.'}
-              : {tone:'warn',   text:'Chlorine high. Hold off adding chlorine; let it drift down before the next dose.'});
+        ? (vv ? {tone:'danger', text:'Chlorine very low. SHOCK: '+chlorineDose('shock', gal, ctx)+' Keep swimmers out until it reads normal, and re-test in a few hours.'}
+              : {tone:'warn',   text:'Chlorine low. '+chlorineDose('normal', gal, ctx)+' Re-test tomorrow.'})
+        : (vv ? {tone:'danger', text:'Chlorine very high. Do NOT add more — pull any tabs out of the floater. Keep swimmers out until it drops to normal; partial fresh-water dilution speeds it up.'}
+              : {tone:'warn',   text:'Chlorine high. Hold off adding chlorine (and pull the tabs) until it drifts back down.'});
     case 'ph':
       return low
-        ? {tone:'warn', text:'pH low (acidic). Add pH Up (soda ash) per the label for ~10,000 gal, then re-test. Low pH can irritate eyes and corrode metal.'}
-        : (vv ? {tone:'danger', text:'pH very high. Add pH Down (dry acid / muriatic acid) per label, run the pump, re-test in a few hours. High pH makes chlorine sluggish.'}
-              : {tone:'warn',   text:'pH high. Add a measured dose of pH Down per label and re-test. High pH weakens chlorine.'});
+        ? {tone:'warn', text:'pH low (acidic). Add your soda ash (pH Up) per the label for ~'+gal.toLocaleString()+' gal, then re-test. Low pH stings eyes and corrodes metal. If you\'ve been running tabs, they\'re part of the reason — tabs are acidic.'}
+        : (vv ? {tone:'danger', text:'pH very high. This needs acid — pH Down (dry acid) or muriatic acid — which you don\'t keep on hand. Meanwhile switch dosing to your 3" tabs (they\'re acidic and will pull pH down slowly) and stop adding soda ash. High pH makes chlorine sluggish.'}
+              : {tone:'warn',   text:'pH high. You have no acid on hand — dose with your 3" tabs instead of cal-hypo for a while (tabs lower pH), skip the soda ash, and re-test. To fix it properly, pick up pH Down.'});
     case 'ta':
       return low
-        ? {tone:'warn', text:'Alkalinity low. Add baking soda (sodium bicarbonate) — about 1.5 lb raises ~10 ppm in 10,000 gal. Low alkalinity makes pH bounce around.'}
-        : {tone:'warn', text:'Alkalinity high. Lower it slowly with muriatic acid and aerate; re-test over a few days.'};
+        ? {tone:'warn', text:'Alkalinity low. Add your Alkalinity Up (sodium bicarbonate) — about 1.5 lb raises ~10 ppm in 10,000 gal. Low alkalinity makes pH bounce around, so fix this before chasing pH.'}
+        : {tone:'warn', text:'Alkalinity high. Lowering it takes acid (muriatic or dry acid), which you don\'t stock. Until then, stop adding Alkalinity Up, favour your 3" tabs over cal-hypo, and aerate (run the return upward) — it will drift down slowly.'};
     case 'cya':
       return low
-        ? {tone:'warn', text:'Stabilizer (CYA) low — chlorine burns off fast in sunlight. Add cyanuric acid / conditioner per label and re-test in a couple days.'}
-        : {tone:'danger', text:'Stabilizer (CYA) high — there is no chemical that lowers it. Partially drain (~⅓) and refill with fresh water, then re-test. (Often caused by chlorine tabs; you use granular, so this should creep slowly.)'};
+        ? {tone:'warn', text:'Stabilizer (CYA) low — sunlight burns your chlorine off fast. You don\'t stock straight conditioner, but your 3" tabs raise CYA as they dissolve: run tabs in the floater for a couple of weeks and re-test. For a fast fix, buy stabilizer/conditioner.'}
+        : {tone:'danger', text:'Stabilizer (CYA) high — nothing lowers it chemically. Take the 3" tabs OUT of the floater (they\'re what raises it), switch to liquid or cal-hypo, partially drain (~⅓) and refill, then re-test.'};
     case 'ch':
       return low
-        ? {tone:'warn', text:'Calcium hardness low. Add calcium chloride per label; soft water can etch plaster/grout.'}
-        : {tone:'warn', text:'Calcium hardness high. Dilute with fresh water and avoid calcium-based chlorine; watch for scaling.'};
+        ? {tone:'warn', text:'Total hardness low. Soft water etches plaster, grout and stone. Dose with your cal-hypo rather than liquid (cal-hypo adds calcium) — and for a real fix, calcium chloride hardness increaser.'}
+        : {tone:'warn', text:'Total hardness high. Switch your chlorine to liquid (sodium hypochlorite) — your cal-hypo is what keeps adding calcium. Dilute with fresh water and watch for scale.'};
     case 'po4':
       return low
-        ? {tone:'ok', text:'Phosphates fine. Keep your every-2-weeks 1 oz maintenance dose.'}
-        : (vv ? {tone:'danger', text:'Phosphates very high (algae food). Add phosphate remover per label for a heavy dose, run/filter, then re-test. Resume the 1 oz biweekly routine after.'}
-              : {tone:'warn',   text:'Phosphates high. Add a corrective dose of phosphate remover per label, then return to 1 oz every 2 weeks.'});
+        ? {tone:'ok', text:'Phosphates fine. Keep your every-2-weeks 1 oz PR-10,000 maintenance dose.'}
+        : (vv ? {tone:'danger', text:'Phosphates very high (algae food). Dose PR-10,000 per label for a heavy correction, run the filter, then re-test. Resume the 1 oz biweekly routine after.'}
+              : {tone:'warn',   text:'Phosphates high. Add a corrective dose of PR-10,000 per label, then return to 1 oz every 2 weeks.'});
   }
   return {tone:'warn', text:'Off target — adjust and re-test.'};
 }
 
 /* Numeric value -> simple dose estimate for 10,000 gal (editable volume). */
-function recForNumber(key, val, gallons){
-  const r = READINGS.find(x=>x.key===key); const [lo,hi]=r.numRange; const g=gallons||10000;
+function recForNumber(key, val, gallons, ctx){
+  const r = readingByKey(key); const [lo,hi]=r.numRange; const g=gallons||10000;
   const f = g/10000; // scale factor vs 10k gal
+  if(key==='br') return {tone:'ok', text:'You run a chlorine pool, not bromine — this pad is the same chemistry read on the bromine scale. Nothing to do with it; go by the chlorine pads.'};
+  if(key==='tc'){
+    const fcN = ctx && ctx.nums && ctx.nums.fc!=null && ctx.nums.fc!=='' ? Number(ctx.nums.fc) : null;
+    if(fcN!=null){
+      const cc = Math.round((val - fcN)*100)/100;
+      if(cc>0.5) return {tone:cc>1?'danger':'warn', text:`Combined chlorine is ${cc} ppm (total ${val} − free ${fcN}). Anything over 0.5 ppm is chloramines — the "pool smell" that stings eyes. `+(fcShockAlreadyDosed(ctx)?'The shock dose under free chlorine clears this too — one dose, not two.':`Shock it: ${chlorineDose('shock', g, ctx)} Run the pump and re-test in a few hours.`)};
+      if(val>=lo && val<=hi) return {tone:'ok', text:`In range, and combined chlorine is only ${cc<0?0:cc} ppm — nothing to burn off.`};
+    }
+    if(val>=lo && val<=hi) return {tone:'ok', text:`In range (${lo}–${hi} ppm). Enter free chlorine too and the app will work out your combined chlorine.`};
+    return val<lo ? {tone:'warn', text:fcAlreadyDosed(ctx) ? `Total chlorine below ${lo} ppm for the same reason free chlorine is — the dose above covers both.` : `Total chlorine below ${lo} ppm. `+chlorineDose('normal', g, ctx)+' Re-test in a few hours.'}
+                  : {tone:'warn', text:`Total chlorine above ${hi} ppm — skip your next dose and let it fall back.`};
+  }
   if(val>=lo && val<=hi) return {tone:'ok', text:`In range (${lo}–${hi} ${r.numUnit}). Nothing to do.`};
   switch(key){
     case 'fc':{
-      if(val<lo){ const cups = val<0.5 ? 1 : 0.5; return {tone:val<0.5?'danger':'warn', text:`Add about ${cups===1?'1 cup':'½ cup'} granular chlorine (×${f.toFixed(1)} for your volume). Re-test in a few hours.`}; }
-      return {tone:'warn', text:'Above 3 ppm — skip chlorine until it falls back into 1–3 ppm.'};
+      if(val<lo) return {tone:val<0.5?'danger':'warn', text:chlorineDose(val<0.5?'shock':'normal', g, ctx)+' Re-test in a few hours.'};
+      return {tone:'warn', text:`Above ${hi} ppm — skip chlorine and pull the tabs until it falls back into ${lo}–${hi} ppm.`};
     }
     case 'ph':
-      return val<lo ? {tone:'warn', text:'Below 7.4 — add pH Up (soda ash) per label and re-test.'}
-                    : {tone:'warn', text:'Above 7.6 — add pH Down per label and re-test in a few hours.'};
+      return val<lo ? {tone:'warn', text:`Below ${lo} — add your soda ash (pH Up) per label and re-test.`}
+                    : {tone:'warn', text:`Above ${hi} — this needs acid, which you don't stock. Dose with 3" tabs instead of cal-hypo (tabs are acidic), skip the soda ash, and buy pH Down for a proper fix.`};
     case 'ta':{
-      if(val<lo){ const lbs=(((lo+hi)/2 - val)/10*1.5*f); return {tone:'warn', text:`Add ~${lbs.toFixed(1)} lb baking soda to bring alkalinity toward ${(lo+hi)/2} ppm, then re-test.`}; }
-      return {tone:'warn', text:'Above 120 ppm — lower slowly with muriatic acid and aerate.'};
+      if(val<lo){ const lbs=(((lo+hi)/2 - val)/10*1.5*f); return {tone:'warn', text:`Add ~${lbs.toFixed(1)} lb Alkalinity Up (sodium bicarbonate) to bring alkalinity toward ${(lo+hi)/2} ppm, then re-test.`}; }
+      return {tone:'warn', text:`Above ${hi} ppm — lowering it needs acid, which you don\'t stock. Stop adding Alkalinity Up, favour tabs over cal-hypo, and aerate; it drifts down slowly.`};
     }
     case 'cya':{
-      if(val<lo){ const oz=(((lo+hi)/2 - val)*0.13*8*f); return {tone:'warn', text:`Add stabilizer to raise CYA toward ${(lo+hi)/2} ppm (~${oz.toFixed(0)} oz dry conditioner). Re-test in 2 days.`}; }
-      return {tone:'danger', text:'Above 50 ppm — no chemical lowers CYA. Partially drain & refill, then re-test.'};
+      if(val<lo) return {tone:'warn', text:`Below ${lo} ppm — your 3" tabs raise CYA as they dissolve, so run tabs in the floater for a couple of weeks and re-test. For a quick fix, buy stabilizer/conditioner.`};
+      return {tone:'danger', text:`Above ${hi} ppm — no chemical lowers CYA. Pull the 3" tabs out, switch to liquid or cal-hypo, partially drain & refill, then re-test.`};
     }
     case 'ch':
-      return val<lo ? {tone:'warn', text:'Below 200 ppm — add calcium chloride per label.'}
-                    : {tone:'warn', text:'Above 400 ppm — dilute with fresh water; avoid calcium-based products.'};
+      return val<lo ? {tone:'warn', text:`Below ${lo} ppm — dose with cal-hypo rather than liquid (it adds calcium); a calcium chloride hardness increaser is the real fix.`}
+                    : {tone:'warn', text:`Above ${hi} ppm — switch your chlorine to liquid (sodium hypochlorite) and dilute with fresh water; your cal-hypo keeps adding calcium.`};
     case 'po4':
-      return {tone:val>250?'danger':'warn', text:'Phosphates above ~100 ppb — dose phosphate remover per label, filter, then resume 1 oz every 2 weeks.'};
+      return {tone:val>250?'danger':'warn', text:`Phosphates above ~${hi} ppb — dose PR-10,000 per label, filter, then resume 1 oz every 2 weeks.`};
   }
   return {tone:'warn', text:'Out of range — adjust and re-test.'};
 }
@@ -438,13 +559,13 @@ function recForNumber(key, val, gallons){
 /* ---- Default recurring schedule (Fort Wayne, IN seasons). Editable in app. ---- */
 function defaultConfig(){
   return {
-    pool:{ name:'Our Pool', gallons:10000, location:'Fort Wayne, IN', chlorineProduct:'granular' },
+    pool:{ name:'Our Pool', gallons:10000, location:'Fort Wayne, IN', chlorineProduct:'cal_hypo' },
     geo:{ lat:41.0793, lon:-85.1394 }, // Fort Wayne, IN — used for daily rainfall
     email:'',
     season:{ open:'04-20', close:'10-05', peakStart:'06-01', peakEnd:'08-31' },
-    targets: READINGS.reduce((o,r)=>{ o[r.key]={range:r.numRange}; return o; }, {}),
+    targets: READINGS.reduce((o,r)=>{ o[r.key]={range:r.numRange.slice()}; return o; }, {}),
     // what you keep on hand — recommendations prefer these; missing ones become a shopping note
-    chemicals:{ onHand:{ chlorine_granular:true, phosphate_remover:true } },
+    chemicals:{ onHand:{...CHEMS_DEFAULT_ON_HAND} },
     insights:[],   // AI-derived correlations you paste back in (Stage 2)
     tasks: defaultTasks(),
     opening: defaultOpening(),
@@ -454,9 +575,9 @@ function defaultConfig(){
 }
 function defaultTasks(){
   return [
-    {id:'test',     title:'Test the water (strips)', detail:'Dip a test strip and log the results here.', cadence:'weekly',   season:'in',   last:null},
-    {id:'chlorine', title:'Add chlorine (½ cup)',    detail:'½ cup granular into a half-full 5-gal bucket of water; mix carefully (don\'t inhale); pour by the pump return.', cadence:'weekly', season:'in', last:null},
-    {id:'phosphate',title:'Add phosphate remover (1 oz)', detail:'1 oz phosphate remover. Check phosphates at Leslie\'s now and then.', cadence:'biweekly', season:'in', last:null},
+    {id:'test',     title:'Test the water (strips)', detail:'Dip a strip and log all seven pads: total hardness, total chlorine, total bromine, free chlorine, pH, total alkalinity, cyanuric acid.', cadence:'weekly',   season:'in',   last:null},
+    {id:'chlorine', title:'Add chlorine (½ cup cal-hypo)', detail:'½ cup cal-hypo granular into a half-full 5-gal bucket of water; mix carefully (don\'t inhale); pour by the pump return. Liquid chlorine (sodium hypochlorite) is the swap when hardness is running high — about 1 quart in place of the ½ cup.', cadence:'weekly', season:'in', last:null},
+    {id:'phosphate',title:'Add phosphate remover (1 oz)', detail:'1 oz PR-10,000 concentrate. Phosphates aren\'t on your strips — check them at Leslie\'s now and then.', cadence:'biweekly', season:'in', last:null},
     {id:'pump',     title:'Run the pump',            detail:'Off-season: ~twice a week, 2–4 hrs. Peak summer: run daily.', cadence:'pump', season:'in', last:null},
     {id:'robot',    title:'Robot vacuum',            detail:'Filter first, then run the robot ~1.5 hrs. Daily when you\'re filtering daily.', cadence:'pump', season:'in', last:null},
     {id:'basket',   title:'Check & clean the basket',detail:'Clean the bottom/strainer basket whenever you see debris (~4–6×/yr).', cadence:'monthly', season:'in', last:null},
@@ -471,15 +592,15 @@ function defaultOpening(){
     'Run the pump several hours to circulate.',
     'Test the water (or take a sample to Leslie\'s for a full panel).',
     'Balance alkalinity, then pH, then chlorine.',
-    'Shock with chlorine (about 1 cup granular for 10,000 gal); keep swimmers out until it drops to normal.',
-    'Add 1 oz phosphate remover to start the season.',
+    'Shock with chlorine (about 1 cup cal-hypo, or 2 quarts liquid, for 10,000 gal); keep swimmers out until it drops to normal.',
+    'Add 1 oz PR-10,000 phosphate remover to start the season.',
     'Run the pump daily until the water is clear, then settle into the summer routine.'
   ]};
 }
 function defaultClosing(){
   return { title:'Fall closing (before the leaves fall)', steps:[
-    'Add 6 oz phosphate remover.',
-    'Add 2 doses of chlorine (1 full cup granular).',
+    'Add 6 oz PR-10,000 phosphate remover.',
+    'Add 2 doses of chlorine (1 full cup cal-hypo, or 2 quarts liquid).',
     'Run the pump a few hours to circulate the chemicals.',
     'Lower water to the winterizing level if your setup needs it.',
     'Backwash/clean the filter.',
@@ -500,6 +621,8 @@ async function loadAll(){
   // merge any newly-added default keys into an older config (non-destructive)
   const dc = defaultConfig();
   for(const k in dc){ if(D.config[k]===undefined) D.config[k]=dc[k]; }
+  migrateConfig(); // new strip pads get target ranges; renamed chemical keys get renamed
+  READINGS.forEach(r=>{ r.numRange=targetRange(r.key); });
   updateBadges();
 }
 function swimForDate(d){ return (D.swim||[]).filter(s=>s.date===d).reduce((a,s)=>a+(+s.hours||0),0); }
@@ -692,8 +815,9 @@ async function aiExportText(){
   try{ weather=(await getWeather(30)).daily; }catch(e){}
   const onHand=chemsOnHand();
   const data={
-    pool:{ name:c.pool.name, gallons:c.pool.gallons, location:c.pool.location, sanitizer:'granular chlorine' },
-    target_ranges: READINGS.reduce((o,r)=>{ o[r.key]={name:r.name, unit:r.numUnit, range:c.targets[r.key].range}; return o; }, {}),
+    pool:{ name:c.pool.name, gallons:c.pool.gallons, location:c.pool.location,
+           sanitizer: CHEM_KEYS.filter(k=>onHand[k] && ['liquid_chlorine','cal_hypo','trichlor_tabs'].includes(k)).map(k=>CHEMS[k]).join(' + ') || 'chlorine' },
+    target_ranges: READINGS.reduce((o,r)=>{ o[r.key]={name:r.name, unit:r.numUnit, range:targetRange(r.key)}; return o; }, {}),
     chemicals_on_hand: CHEM_KEYS.filter(k=>onHand[k]).map(k=>CHEMS[k]),
     tests: (D.tests||[]).map(t=>({date:t.date, mode:t.mode, levels:t.levels||{}, nums:t.nums||{}, notes:t.notes||''})),
     tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:(l.at||'').slice(0,10), task:l.title})),
@@ -974,16 +1098,39 @@ function renderToday(){
   fillInferences();
 }
 
-/* Build per-reading recommendation list from a test record. */
+/* Build per-reading recommendation list from a test record.
+   ctx lets one reading see the others (total vs. free chlorine, and which
+   chlorine to reach for given the hardness reading). */
+function testCtx(t){
+  const levels=t.levels||{}, nums=t.nums||{};
+  return { levels, nums, dirOf(key){
+    const r=readingByKey(key); if(!r) return null;
+    const n = nums[key]!=null && nums[key]!=='' ? Number(nums[key]) : null;
+    if(n!=null){ const [lo,hi]=r.numRange; return n<lo?'low':(n>hi?'high':null); }
+    const q = levels[key]; if(!q) return null;
+    const i = levelIdx(q); return i<2?'low':(i>2?'high':null);
+  }};
+}
 function testRecs(t){
+  const ctx=testCtx(t);
   return READINGS.map(r=>{
     const q = t.levels && t.levels[r.key];
     const n = t.nums && (t.nums[r.key]!=null && t.nums[r.key]!=='') ? Number(t.nums[r.key]) : null;
     let dir=null, rec, display;
-    if(n!=null){ const [lo,hi]=r.numRange; dir = n<lo?'low':(n>hi?'high':null); rec=recForNumber(r.key, n, D.config.pool.gallons); display=n+(r.numUnit?(' '+r.numUnit):''); }
-    else if(q){ const i=levelIdx(q); dir = i<2?'low':(i>2?'high':null); rec=recForLevel(r.key, q); display=q; }
+    if(n!=null){ const [lo,hi]=r.numRange; dir = n<lo?'low':(n>hi?'high':null); rec=recForNumber(r.key, n, D.config.pool.gallons, ctx); display=n+(r.numUnit?(' '+r.numUnit):''); }
+    else if(q){ const i=levelIdx(q); dir = i<2?'low':(i>2?'high':null); rec=recForLevel(r.key, q, ctx); display=q; }
     else return null;
-    return {key:r.key, name:r.name, display, rec, dir, chem: dir?neededChem(r.key,dir):[]};
+    // Bromine is informational on a chlorine pool: never treat it as off target.
+    if(r.advisory){ dir=null; }
+    let chem = dir?neededChem(r.key,dir):[];
+    // The chlorine advice picks a product by hardness; lead the chemical list
+    // with that same one, or the "using your…" note names a different bottle
+    // than the dose sentence just told you to pour.
+    if(dir==='low' && (r.key==='fc'||r.key==='tc')){
+      const pick=chlorineChoice(ctx);
+      if(pick && chem.includes(pick.key)) chem=[pick.key, ...chem.filter(k=>k!==pick.key)];
+    }
+    return {key:r.key, name:r.name, display, rec, dir, chem};
   }).filter(Boolean);
 }
 // chemicals you'd need to buy to act on the latest test's open items
@@ -1066,18 +1213,25 @@ function renderTest(){
 }
 function setTestMode(m){ testMode=m; renderTest(); }
 function qualForm(){
-  return READINGS.map(r=>`
+  return STRIP_READINGS.map(r=>`
     <div style="margin-top:10px">
-      <label style="margin:0">${esc(r.name)}</label>
+      <label style="margin:0">${esc(r.name)}${r.advisory?' <span class="muted small">(you run chlorine — this pad is just for reference)</span>':''}</label>
       <div class="levels" data-key="${r.key}">
         ${LEVELS.map(l=>`<button type="button" class="lv" data-l="${l}" data-action="pickLevel" data-a1="${esc(r.key)}" data-a2="${esc(l)}">${l.replace('very ','v.')}</button>`).join('')}
       </div>
     </div>`).join('');
 }
-function numForm(){
-  return READINGS.map(r=>`
+function numField(r){
+  return `
     <label>${esc(r.name)} ${r.numUnit?`<span class="muted">(${r.numUnit}, ideal ${r.numRange[0]}–${r.numRange[1]})</span>`:`<span class="muted">(ideal ${r.numRange[0]}–${r.numRange[1]})</span>`}</label>
-    <input class="num" data-key="${r.key}" inputmode="decimal" placeholder="—"/>`).join('');
+    <input class="num" data-key="${r.key}" inputmode="decimal" placeholder="—"/>`;
+}
+function numForm(){
+  const extra = READINGS.filter(r=>!r.strip);
+  return STRIP_READINGS.map(numField).join('')
+    + (extra.length ? `<div style="margin-top:14px"><b class="small">Not on your strips</b>
+        <p class="small muted" style="margin:2px 0 0">Only fill these in if you had a lab panel done (e.g. at Leslie's).</p>
+        ${extra.map(numField).join('')}</div>` : '');
 }
 const picked={};
 function pickLevel(key,l,btn){
@@ -1118,12 +1272,15 @@ function ramification(key, dir){
         high:'Too much stabilizer "locks up" chlorine so it can\'t sanitize well; only draining and refilling brings it down.'},
     ch:{low:'Soft water is hungry for calcium and can etch plaster, grout and stone over time.',
         high:'Hard water scales surfaces and equipment and can cloud the water.'},
+    tc:{low:'Low total chlorine means nothing is sanitising — same risk as low free chlorine.',
+        high:'A total-chlorine reading well above free chlorine means chloramines: the harsh "pool smell", stinging eyes, and weak sanitising until you shock it out.'},
+    br:{low:'',high:''},
     po4:{low:'',high:'Phosphates are algae food — leaving them high makes green blooms much more likely between doses.'},
   };
   return ((M[key]||{})[dir])||'Leaving this off-target makes the rest of your chemistry harder to keep balanced.';
 }
 /* Split a test's recommendations into: do-now (free), needs-buy, and order them. */
-const BALANCE_ORDER=['ta','ph','fc','cya','ch','po4']; // sensible order of operations
+const BALANCE_ORDER=['ta','ph','fc','tc','cya','ch','br','po4']; // sensible order of operations
 function recPlan(t){
   const all=testRecs(t);
   const off=all.filter(r=>r.rec.tone!=='ok');
@@ -1146,7 +1303,9 @@ function overallRecHtml(t){
   return `<div class="rec ${urgent.length?'danger':'warn'}"><b>Overall — what to do</b><div class="small">${s}</div></div>`;
 }
 function recHtml(t){
-  const {all, now, buy}=recPlan(t);
+  const {all:unsorted, now, buy}=recPlan(t);
+  // Same order as the action list, or "the dose above" points at a card below.
+  const all=unsorted.slice().sort((a,b)=>BALANCE_ORDER.indexOf(a.key)-BALANCE_ORDER.indexOf(b.key));
   if(!all.length) return '<p class="muted small">No readings recorded.</p>';
   let h=overallRecHtml(t);
   // 1) what you can do without buying anything
@@ -1302,7 +1461,10 @@ function renderHistory(){
   fillRainHistory();
 }
 function qualTimeline(pts, r){
-  return `<div class="timeline">${pts.map(p=>{ const s=severity(p.q); const cls=s==null?'sx':('s'+s);
+  // Bromine is never "off target" on a chlorine pool, so its dots stay neutral
+  // rather than painting a red history the advice deliberately ignores.
+  const neutral = !!(r && r.advisory);
+  return `<div class="timeline">${pts.map(p=>{ const s=neutral?0:severity(p.q); const cls=s==null?'sx':('s'+s);
     return `<span class="dot ${cls}" title="${esc(p.date+': '+p.q)}"></span>`; }).join('')}</div>
     <div class="small muted" style="margin-top:3px">${esc(pts[0].date)} → ${esc(pts[pts.length-1].date)} · <span class="dot s0"></span> in range <span class="dot s1"></span> off <span class="dot s2"></span> far off</div>`;
 }
@@ -1370,15 +1532,21 @@ function renderSettings(){
     <h2>🎯 Target ranges</h2>
     <p class="small muted">Used by the numeric calculator and to judge what's in range. Edit if your test kit or pool pro suggests different numbers.</p>
     ${READINGS.map(r=>`<div class="row" style="align-items:flex-end"><div style="flex:2"><label style="margin:6px 0 2px">${esc(r.name)} ${r.numUnit?`(${r.numUnit})`:''}</label></div>
-      <div><label style="margin:6px 0 2px">low</label><input class="tgt" data-key="${r.key}" data-i="0" inputmode="decimal" value="${esc(c.targets[r.key].range[0])}"/></div>
-      <div><label style="margin:6px 0 2px">high</label><input class="tgt" data-key="${r.key}" data-i="1" inputmode="decimal" value="${esc(c.targets[r.key].range[1])}"/></div></div>`).join('')}
+      <div><label style="margin:6px 0 2px">low</label><input class="tgt" data-key="${r.key}" data-i="0" inputmode="decimal" value="${esc(targetRange(r.key)[0])}"/></div>
+      <div><label style="margin:6px 0 2px">high</label><input class="tgt" data-key="${r.key}" data-i="1" inputmode="decimal" value="${esc(targetRange(r.key)[1])}"/></div></div>`).join('')}
     <button style="margin-top:10px" data-action="saveTargets">Save targets</button>
   </div>
   <div class="card">
     <h2>🧪 Chemicals on hand</h2>
-    <p class="small muted">Check what you keep stocked. Recommendations prefer these; anything missing shows up as a “shopping list” note instead of telling you to dose something you don't have.</p>
-    ${CHEM_KEYS.map(k=>`<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:6px 0">
-      <input type="checkbox" class="chem" data-key="${k}" style="width:auto" ${((c.chemicals&&c.chemicals.onHand&&c.chemicals.onHand[k])?'checked':'')}/> ${esc(CHEMS[k])}</label>`).join('')}
+    <p class="small muted">Check what you keep stocked. Advice only tells you to use what's ticked; anything missing turns into a “shopping list” note instead.</p>
+    ${(()=>{ const on=chemsOnHand();
+      const row=k=>`<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:6px 0">
+        <input type="checkbox" class="chem" data-key="${k}" style="width:auto" ${on[k]?'checked':''}/> ${esc(CHEMS[k])}</label>`;
+      const mine=CHEM_KEYS.filter(k=>CHEMS_DEFAULT_ON_HAND[k]), rest=CHEM_KEYS.filter(k=>!CHEMS_DEFAULT_ON_HAND[k]);
+      return `<div><b class="small">Your shed</b>${mine.map(row).join('')}</div>
+        <div style="margin-top:10px"><b class="small">Everything else</b>
+        <p class="small muted" style="margin:2px 0 0">You don't normally keep these — tick one only if you've bought it.</p>
+        ${rest.map(row).join('')}</div>`; })()}
     <button style="margin-top:10px" data-action="saveChemicals">Save chemicals</button>
   </div>
   <div class="card">
@@ -1424,9 +1592,9 @@ async function saveSeason(){
   await saveJson(FILES.config, D.config, 'Update season dates'); toast('Saved'); updateBadges();
 }
 async function saveTargets(){
-  document.querySelectorAll('.tgt').forEach(i=>{ const k=i.dataset.key, idx=+i.dataset.i; D.config.targets[k].range[idx]=parseFloat(i.value); });
+  document.querySelectorAll('.tgt').forEach(i=>{ const k=i.dataset.key, idx=+i.dataset.i; ensureTarget(k); D.config.targets[k].range[idx]=parseFloat(i.value); });
   // keep the live READINGS ranges in sync for this session
-  READINGS.forEach(r=>{ r.numRange=D.config.targets[r.key].range; });
+  READINGS.forEach(r=>{ r.numRange=targetRange(r.key); });
   await saveJson(FILES.config, D.config, 'Update target ranges'); toast('Targets saved');
 }
 async function saveChemicals(){
@@ -1455,7 +1623,6 @@ window.addEventListener('load', async ()=>{
   // error card either way.
   try{
     await loadAll();
-    READINGS.forEach(r=>{ if(D.config.targets[r.key]) r.numRange=D.config.targets[r.key].range; });
     updateBadges();
   }catch(e){
     // Leave nothing half-loaded. loadAll() reads the four files in turn, so a

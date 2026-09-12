@@ -17,6 +17,28 @@ There are two ways to reach GitHub and only one works in any given session:
 Run `command -v gh` once at the start, pick the one that's there, and stick to
 it. Every `gh ...` example below has a direct MCP equivalent.
 
+### Prove you can reach GitHub before doing anything else
+
+Having the tool is not the same as the tool working. The MCP schemas are
+deferred: they must be loaded with `ToolSearch` before the first call, and a
+call made without loading one fails with `InputValidationError` — which reads
+like "no GitHub access" but is not.
+
+So the start of every run is one real read, not a capability guess:
+
+1. If you picked MCP, load the schemas you need first
+   (`ToolSearch` with `select:mcp__github__search_issues,mcp__github__list_issues,...`).
+2. Make one read-only call that must succeed: fetch `backlog/repos.txt` from
+   `BarkernotBob/BarkernotBob.github.io`.
+3. **If that read fails, stop the run.** Send a push notification saying the
+   nightly pass could not reach GitHub, name the route you tried (`gh` or MCP)
+   and quote the error. Then end.
+
+**Never continue past a failed probe.** A run that cannot read GitHub cannot
+tell "no open issues" from "I could not look", and reporting the first when the
+second is true is the exact silent success this whole file exists to prevent.
+An empty queue is only ever a real result *after* this probe has passed.
+
 ## 1. Build the queue
 
 `backlog/repos.txt` in `BarkernotBob/BarkernotBob.github.io` is the list of
@@ -225,9 +247,27 @@ For each `needs-grilling` item, use `create_session` to start a separate chat:
   to run the `/backlog-grill` protocol starting with the single most important
   question. Tell it to ask one question at a time and wait.
 
-It sits in the Claude app until Isaiah opens it. Don't create a second chat for
-an issue that already has one — check `list_sessions` with tag `backlog-grill`
-against the titles first.
+**Tell it to ask in plain chat text, not with the question tool.** End the
+prompt with this instruction, verbatim:
+
+> Ask your questions as ordinary chat messages — one at a time, then stop and
+> wait for the reply. Do not use the `AskUserQuestion` tool.
+
+These chats run in auto permission mode, where `AskUserQuestion` needs an
+approval nobody is awake to give. A chat that reaches for it freezes on a
+permission prompt instead of asking — it looks like it is waiting for an answer
+when it is really waiting to be allowed to speak. A plain chat message needs no
+permission and reaches him the same way.
+
+It sits in the Claude app until Isaiah opens it.
+
+**Don't create a second chat for an issue that already has one.** Match on
+title, not tags: `list_sessions` currently rejects its `tags` filter outright
+(`tags filter is not currently available`), so a tag-based check does not return
+an empty list — it errors, and an error swallowed here means a duplicate chat
+every night for the same issue. Instead list recent sessions without a filter
+and compare titles against `Grill: <issue title>`. If that exact title is
+already there, skip the item — it has been asked.
 
 ## 4. Report
 

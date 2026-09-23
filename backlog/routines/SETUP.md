@@ -15,6 +15,8 @@ Open **https://claude.ai/code/routines** → **New routine**.
 
 1. **Name:** `Nightly backlog`
 2. **Instructions:** paste the block below.
+   **Model** (the picker under the instructions box): **Opus 5.5**. The default
+   is Sonnet. Thinking is medium by default; the page has no setting for it.
 3. **Repositories:** attach every repo in `backlog/repos.txt` — the first one in
    the box under the instructions, then **+** for each of the rest.
 4. **Trigger:** Schedule → Daily → 2:00 AM.

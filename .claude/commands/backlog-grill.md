@@ -1,7 +1,7 @@
 ---
 description: Turn a rough idea on the backlog into something buildable, by asking the hard questions
 argument-hint: "<issue number, or nothing to take the oldest needs-grilling item>"
-allowed-tools: Bash, Read, Glob, Grep, Skill, AskUserQuestion
+allowed-tools: Bash, Read, Glob, Grep, Skill
 ---
 
 Grill a rough idea until it's specific enough to build. Target: $ARGUMENTS — if
@@ -29,8 +29,11 @@ most useful thing you can bring to the conversation.
 
 ## The grilling
 
-Ask one question at a time and wait. Never dump a list of six questions — this
-gets answered on a phone, in bed.
+This gets answered on a phone, so keep every message short. Ask questions that
+don't depend on each other together, as a numbered list with your recommended
+answer on each. Hold back a question only when an earlier answer could change it
+or make it moot. The list below is mostly that kind, so usually that means one or
+two at a time. Never send a wall of six questions.
 
 Cover, in this order, stopping as soon as the answer makes the rest moot:
 
@@ -45,8 +48,8 @@ Cover, in this order, stopping as soon as the answer makes the rest moot:
    something they could verify by looking at the screen.
 5. **What it must not break.** The thing they'd be annoyed to lose.
 
-Use `AskUserQuestion` when there are real options to choose between. Recommend
-one and say why. They're a beginner with Git and the command line — no jargon,
+When there are real options to choose between, give them as a short numbered
+list. Recommend one, say why, and give the honest cost of the cheaper option. They're a beginner with Git and the command line — no jargon,
 or define it on the spot.
 
 ## When it's pinned down

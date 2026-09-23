@@ -470,6 +470,34 @@ describe("nightly run reports repo coverage", () => {
   })
 })
 
+// AskUserQuestion is denied in Isaiah's settings, and in an unattended grill
+// chat it freezes on a permission prompt that looks like waiting for an answer.
+describe("grilling asks in plain chat", () => {
+  const grillCommand = fs.readFileSync(
+    path.join(repoRoot, ".claude/commands/backlog-grill.md"),
+    "utf8",
+  )
+  const nightlyCommand = fs.readFileSync(
+    path.join(repoRoot, ".claude/commands/backlog-nightly.md"),
+    "utf8",
+  )
+
+  test("backlog-grill does not allow the question tool", () => {
+    const allowed = grillCommand.match(/^allowed-tools:.*$/m)?.[0] ?? ""
+    assert.ok(!allowed.includes("AskUserQuestion"), allowed)
+  })
+
+  test("independent questions are batched, not one at a time", () => {
+    assert.match(grillCommand, /numbered\s+list/)
+    for (const [name, text] of [
+      ["backlog-grill", grillCommand],
+      ["backlog-nightly", nightlyCommand],
+    ] as const) {
+      assert.doesNotMatch(text, /one question at a time/i, `${name} still says one at a time`)
+    }
+  })
+})
+
 // install.sh pushes this into every repo's CLAUDE.md. It must add the rule
 // once, keep everything else, and never write an empty or duplicated file.
 describe("merge_rule.py", () => {

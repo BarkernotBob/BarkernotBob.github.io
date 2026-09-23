@@ -298,7 +298,8 @@ issues carry the detail.
 One push notification, at most three lines: how many merged, how many blocked,
 how many chats are waiting, and coverage as **three numbers, never one** —
 `18/18 covered · 2 opened · 2 audited`.
-Do not put private repo names or issue titles in it — just counts.
+Do not put private repo names or issue titles in it — just counts. The one
+exception is the access reminder below, which Isaiah asked for by name.
 
 - **covered** — every repo in `repos.txt` the run can account for: `read`,
   `empty` and `assumed`. Only `unreachable` subtracts.
@@ -319,6 +320,32 @@ Always send the coverage fraction, including on a night when everything was
 reachable. `18/18` is a real result and takes one number; leaving it out when it
 is clean means its absence is the only signal anything is wrong, and absence is
 exactly what nobody notices.
+
+### Remind Isaiah to add access for any repo you can't reach
+
+Only Isaiah can give a Routine access to a repo, so a new project stays
+invisible until he's told. Find every repo that needs it:
+
+1. **In `repos.txt` but refused** — every `unreachable` repo.
+2. **A new project not in `repos.txt` at all** — run `search_repositories` with
+   `user:BarkernotBob archived:false fork:false` and take any repo it returns
+   that isn't in `repos.txt`. Open a PR adding each to `repos.txt` (sorted),
+   and merge it once CI is green. It's his repo, and an issue he files there
+   must not be invisible. (Unproven: the search may only return repos this
+   Routine can already see. Case 1 is the reliable path, which is why new
+   projects get added to `repos.txt` when they are created.)
+
+For each one, add a line to the notification — this is the one place a repo
+name goes in it:
+
+```
+Add access: BarkernotBob/<repo> → https://claude.ai/code/routines/trig_01CAkWWvfRJwKKVyHFMoCGaV then Edit → + → pick the repo → Save
+```
+
+Then the same line with the monthly sweep's page,
+`https://claude.ai/code/routines/trig_017f6WzFdjz8ZxFqWmN3A6jo`. Repeat it
+every night until the repo is reachable. If there are more than three, name
+three and say how many more are on the coverage issue.
 
 ### If any repo was unreachable
 

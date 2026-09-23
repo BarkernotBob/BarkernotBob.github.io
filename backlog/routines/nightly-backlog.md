@@ -41,7 +41,7 @@ If every repo in scope has no open issues except ones labelled `blocked` or `hol
 
 Before you stop, in every case including an empty night, report: how many repos you **covered** (accounted for out of `repos.txt`), how many you **opened** (actually attached and listed), how many you **audited** (opened purely to check the search), how many you were refused, how many open issues you found, how many you built, and how many you skipped and why.
 
-Mind which channel each goes in. The **notification carries counts only** — never private repo names or issue titles. The **names of repos you were refused go on the coverage issue**, per the command file's step 4.
+Mind which channel each goes in. The **notification carries counts only** — never private repo names or issue titles. The **names of repos you were refused go on the coverage issue**, per the command file's step 4. The one exception: for every repo you can't reach, including a new project not yet in `repos.txt`, the notification carries an **Add access** line naming the repo and linking the Routine page — see "Remind Isaiah to add access" in the command file.
 
 **Never report coverage as a single number.** Under search-first most repos are never opened on any given night — that is the design, and it is fine — but it means a lone "18/18 covered" would read as "I looked at eighteen repos" on a night nobody opened sixteen of them. `opened` and `audited` are what say how much was actually seen, so they travel with the fraction every time. A repo `add_repo` refused is a blind spot, not an empty one; say so in the same breath as any empty result.
 

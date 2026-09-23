@@ -29,6 +29,7 @@ The old Claude-made Routines are **paused, not deleted**:
 
 ## What just changed
 
+- 2026-09-22 — **nightly reminds you to add access.** Any repo it can't reach (in `repos.txt` but not attached, or a new project it finds) gets an "Add access" line in the push, naming the repo and linking the Routine page. New projects are added to `repos.txt` at creation (global CLAUDE.md).
 - 2026-09-22 — **the nightly backlog can finally see GitHub.** Since 2026-08-27
   it was a Claude-made Routine resuming one long-lived chat. Claude-made Routines
   get no GitHub tools, and attaching a repo afterwards doesn't add any to that

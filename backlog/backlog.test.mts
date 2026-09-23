@@ -357,6 +357,17 @@ describe("nightly run reports repo coverage", () => {
     assert.ok(labelNames.has("hold"), "the coverage issue's label must exist")
   })
 
+  test("a repo the Routine can't reach gets an Add access reminder with a link", () => {
+    // A new project stays invisible to the nightly until Isaiah attaches it to
+    // the Routine, so the notification has to name it and link the page.
+    assert.match(
+      nightlyCommand,
+      /Add access: BarkernotBob\/<repo> → https:\/\/claude\.ai\/code\/routines\/trig_/,
+    )
+    assert.match(nightlyCommand, /search_repositories/)
+    assert.match(workerBriefing, /\*\*Add access\*\* line/)
+  })
+
   test("the worker briefing routes names and counts to the right channels", () => {
     // Names on the coverage issue, counts in the notification. The briefing
     // used to say "by name" without saying where, which reads as license to put

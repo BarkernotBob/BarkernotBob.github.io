@@ -23,9 +23,7 @@ echo ""
 #    "Preview Website.command". (Games live in ~/Projects/<repo>.)
 GAMES=(
   "$HOME/Projects/blockchain/Blockchain.standalone.html|Blockchain.html"
-  # Hexchain held 2026-09-23: fails its multiplayer test (BarkernotBob/blockchain#47). Remove the
-  # leading "# " on the next line once that issue is closed.
-  # "$HOME/Projects/blockchain/Hexchain.standalone.html|Hexchain.html"
+  "$HOME/Projects/blockchain/Hexchain.standalone.html|Hexchain.html"
   "$HOME/Projects/blockchain/BallChain.standalone.html|BallChain.html"
   "$HOME/Projects/blockchain/Dodecachain.standalone.html|Dodecachain.html"
   "$HOME/Projects/tax-modeling/Tax Modeler.html|Tax-Modeler.html"

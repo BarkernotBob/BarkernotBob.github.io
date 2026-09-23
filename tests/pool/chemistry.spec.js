@@ -1,6 +1,11 @@
 const { test, expect } = require('@playwright/test')
 const { bootApp, goTab, fixture } = require('./support/boot')
 
+// The app writes with the Contents API, so poll the mock's committed text.
+async function committed(mock, file) {
+  return JSON.parse(mock.readFile(`db/${file}`))
+}
+
 // The test form and the advice have to match the gear Isaiah actually owns:
 // the seven pads on his strip, and the six chemicals in his shed (liquid
 // chlorine, cal-hypo, 3" trichlor tabs, PR-10,000, Alkalinity Up, soda ash).
@@ -188,6 +193,64 @@ test('the new pads get target ranges an older config never had', async ({ page }
 
   await expect(page.locator('.tgt[data-key="tc"][data-i="0"]')).toHaveValue('1')
   await expect(page.locator('.tgt[data-key="br"][data-i="1"]')).toHaveValue('4')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('a blanked free-chlorine target self-heals to the built-in range and still calls for shock (#133)', async ({ page }) => {
+  // Simulates the corruption a blank Settings box used to write: a stored
+  // range of [null, 3] instead of a rejected save. targetRange() has to treat
+  // that as absent and fall back, rather than letting 0.1 < null (always
+  // false) read as "above the top of the range".
+  const c = JSON.parse(fixture('config.json'))
+  c.chemicals = {
+    onHand: {
+      liquid_chlorine: true,
+      cal_hypo: true,
+      trichlor_tabs: true,
+      phosphate_remover: true,
+      alkalinity_up: true,
+      soda_ash: true,
+    },
+  }
+  c.targets.fc = { range: [null, 3] }
+  const { errors } = await bootApp(page, { db: { 'config.json': JSON.stringify(c) } })
+  await goTab(page, 'test')
+  await page.getByRole('button', { name: 'Numbers' }).click()
+
+  await page.locator('.num[data-key="fc"]').fill('0.1')
+  await page.click('#t_save')
+
+  const modal = page.locator('.modal-ov')
+  // A shock dose is a doubled dose — "1 cup", not the normal "½ cup".
+  await expect(modal.locator('.rec.danger').filter({ hasText: 'Free chlorine — 0.1' })).toContainText('1 cup cal-hypo')
+  await expect(modal).not.toContainText('skip chlorine')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('settings rejects a blanked target box instead of writing null to config', async ({ page }) => {
+  const { mock, errors } = await bootWithShed(page)
+  await goTab(page, 'settings')
+  const before = await committed(mock, 'config.json')
+
+  await page.locator('.tgt[data-key="fc"][data-i="0"]').fill('')
+  await page.click('[data-action="saveTargets"]')
+
+  await expect(page.locator('#toast')).toContainText('Free chlorine')
+  await expect(page.locator('#toast')).toContainText('enter a number')
+  expect(await committed(mock, 'config.json')).toEqual(before)
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('settings rejects a free-chlorine top higher than the total-chlorine top', async ({ page }) => {
+  const { mock, errors } = await bootWithShed(page)
+  await goTab(page, 'settings')
+  const before = await committed(mock, 'config.json')
+
+  await page.locator('.tgt[data-key="fc"][data-i="1"]').fill('9')
+  await page.click('[data-action="saveTargets"]')
+
+  await expect(page.locator('#toast')).toContainText('cannot be higher than total chlorine')
+  expect(await committed(mock, 'config.json')).toEqual(before)
   expect(errors, errors.join('\n')).toEqual([])
 })
 

@@ -51,7 +51,7 @@ jobs:
           sh -n "Install Backlog System.command"
 
       - name: Python parses
-        run: python3 -m py_compile backlog/backlog.py
+        run: python3 -m py_compile backlog/backlog.py backlog/merge_rule.py
 
       - name: Regression tests
         run: npx tsx --test backlog/backlog.test.mts backlog/capture-page.test.mts

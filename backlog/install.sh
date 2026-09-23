@@ -3,6 +3,8 @@
 #   - the five status labels (backlog/labels.json)
 #   - the two issue forms (backlog/templates/*.yml)
 #   - the /backlog Claude commands, into ~/.claude/commands
+#   - the "merge your own PRs" rule, into each repo's CLAUDE.md and into
+#     ~/.claude/CLAUDE.md (backlog/merge_rule.py; added once, never duplicated)
 #
 # Safe to run as many times as you like. It overwrites those files and the
 # labels, and touches nothing else.
@@ -124,6 +126,46 @@ install_forms() {
   done
 }
 
+# Add the "merge your own PRs" rule to a repo's CLAUDE.md (creating the file
+# if there isn't one). Cloud chats only read the repo's own CLAUDE.md.
+install_merge_rule() {
+  repo="$1"
+  rm -f "$work/claude.in" "$work/claude.out"
+  sha=$(gh api "repos/$repo/contents/CLAUDE.md" --jq .sha 2>/dev/null)
+  if [ -n "$sha" ]; then
+    gh api "repos/$repo/contents/CLAUDE.md" --jq .content 2>/dev/null \
+      | python3 -c 'import base64, sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' \
+      > "$work/claude.in" 2>/dev/null || {
+      echo "    rule:  CLAUDE.md - FAILED (could not read it)"; failed=1; return
+    }
+    # A failed read must never turn into "overwrite CLAUDE.md with one line".
+    [ -s "$work/claude.in" ] || {
+      echo "    rule:  CLAUDE.md - FAILED (read came back empty)"; failed=1; return
+    }
+  fi
+  python3 "$HERE/merge_rule.py" "$work/claude.in" "$work/claude.out"
+  case $? in
+    2) echo "    rule:  merge-your-own-PRs - already there"; return ;;
+    0) ;;
+    *) echo "    rule:  merge-your-own-PRs - FAILED"; failed=1; return ;;
+  esac
+  content=$(base64 < "$work/claude.out" | tr -d '\n')
+  if [ -n "$sha" ]; then
+    gh api --method PUT "repos/$repo/contents/CLAUDE.md" \
+      -f "message=CLAUDE.md: Claude merges its own PRs once CI is green" \
+      -f "content=$content" -f "sha=$sha" >/dev/null 2>&1
+  else
+    gh api --method PUT "repos/$repo/contents/CLAUDE.md" \
+      -f "message=CLAUDE.md: Claude merges its own PRs once CI is green" \
+      -f "content=$content" >/dev/null 2>&1
+  fi
+  if [ $? -eq 0 ]; then
+    echo "    rule:  merge-your-own-PRs - added"
+  else
+    echo "    rule:  merge-your-own-PRs - FAILED"; failed=1
+  fi
+}
+
 # Strip comments and blank lines so the loop below sees only repo names.
 grep -v '^[[:space:]]*#' "$REPOS_FILE" | grep -v '^[[:space:]]*$' > "$work/repos.txt"
 
@@ -141,6 +183,7 @@ else
 
     install_labels "$repo"
     remove_stale_labels "$repo"
+    install_merge_rule "$repo"
 
     if [ "$repo" = "$SELF_REPO" ]; then
       echo "    forms: skipped (this repo keeps its own customised copies)"
@@ -169,6 +212,20 @@ for command_file in "$COMMANDS_SRC"/backlog*.md; do
     failed=1
   fi
 done
+
+# Local Claude chats read ~/.claude/CLAUDE.md, so the rule goes there too.
+echo "=== Your Mac's CLAUDE.md"
+GLOBAL_MD="$HOME/.claude/CLAUDE.md"
+python3 "$HERE/merge_rule.py" "$GLOBAL_MD" "$work/global.out"
+case $? in
+  2) echo "    rule:  merge-your-own-PRs - already there" ;;
+  0) if cp "$work/global.out" "$GLOBAL_MD"; then
+       echo "    rule:  merge-your-own-PRs - added"
+     else
+       echo "    rule:  merge-your-own-PRs - FAILED"; failed=1
+     fi ;;
+  *) echo "    rule:  merge-your-own-PRs - FAILED"; failed=1 ;;
+esac
 
 echo ""
 if [ "$failed" -eq 0 ]; then

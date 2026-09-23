@@ -223,7 +223,7 @@ For each `needs-grilling` item, use `create_session` to start a separate chat:
 - **prompt:** a standalone briefing — the repo and issue number, the full issue
   body, what you found when you looked at the relevant code, and the instruction
   to run the `/backlog-grill` protocol starting with the single most important
-  question. Tell it to ask one question at a time and wait.
+  question. Tell it to follow `/backlog-grill`'s question rules.
 
 It sits in the Claude app until Isaiah opens it. Don't create a second chat for
 an issue that already has one — check `list_sessions` with tag `backlog-grill`

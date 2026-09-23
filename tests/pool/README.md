@@ -37,7 +37,7 @@ On its first run this suite found three things:
 | `modals.spec.js` | The dialog contract: fields readable when the promise resolves, no overlay left behind on any close path, the sign-out confirm gating both ways |
 | `chemistry.spec.js` | The seven pads on Isaiah's strip and the six chemicals in his shed — the strip form's pads and order, phosphates as a lab-only extra, advice naming a chlorine he owns, hardness steering cal-hypo vs. liquid, high pH becoming a shopping note, chloramines dosed once (but never confused with a routine top-up), bromine never counted as off target or drawn red in history, an emptied shed staying empty, and an older config migrating its chemical keys and gaining the new target ranges |
 | `security.spec.js` | A hostile value renders as inert text, seeded across config/tests and round-tripped |
-| `screenshots.spec.js` | Every tab at 390 / 900 / 1300px, attached to the report, asserting no sideways page scroll |
+| `screenshots.spec.js` | Every tab at 390 / 900 / 1300px, attached to the report, asserting no sideways page scroll; and #144 — tapping Done on every due task at 390px moves no row, card or tab |
 | `timezone.spec.js` | Issue #136 — at 9pm Eastern (01:00 UTC next day) a task done, a test saved and the swim picker's default and `max` all use the Fort Wayne date |
 | `sync.spec.js` | The GitHub Contents API path against `tests/shared/mock-github.js` — reads, shas, the stale-sha retry, a missing file, and the sign-in screen |
 

@@ -62,3 +62,40 @@ test('the setup screen fits a phone too', async ({ page }, testInfo) => {
   })
   expect(errors, errors.join('\n')).toEqual([])
 })
+
+// Issue #144 — CLAUDE.md: clicking must never reflow the UI. Tapping Done on a
+// due task used to re-render Today, dropping the row and pulling every card
+// below it up the screen; the next Done had moved by the time you reached it.
+test('tapping Done on Today moves nothing (390px)', async ({ page }, testInfo) => {
+  const { errors } = await bootApp(page, { viewport: VIEWPORTS.mobile })
+  const box = async (loc) => {
+    const b = await loc.boundingBox()
+    return b && { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }
+  }
+  const weather = page.locator('#main .card').filter({ hasText: 'Recent weather' })
+  const due = page.locator('#main .card').filter({ hasText: 'Due now' })
+  const rows = page.locator('#main .item:has([data-action="markTask"])')
+  const n = await rows.count()
+  expect(n).toBeGreaterThan(1)
+
+  const before = { weather: await box(weather), due: await box(due), nav: await box(page.locator('nav')),
+    tabs: await Promise.all(TABS.map((t) => box(page.locator(`nav button[data-tab="${t}"]`)))),
+    rows: await Promise.all([...Array(n).keys()].map((i) => box(rows.nth(i)))) }
+
+  // Mark every due task done, one after the other — the badge ticks down to
+  // nothing on the way, and the second button must be where the first left it.
+  for (let i = 0; i < n; i++) {
+    await rows.nth(i).locator('[data-action="markTask"]').click()
+    await expect(rows.nth(i)).toHaveClass(/is-done/)
+    expect(await box(rows.nth(i))).toEqual(before.rows[i])
+  }
+  // The seasonal prompt is not a Done row, so the badge may keep a count; what
+  // matters is that nothing moved.
+  expect(await box(weather)).toEqual(before.weather)
+  expect(await box(due)).toEqual(before.due)
+  expect(await box(page.locator('nav'))).toEqual(before.nav)
+  expect(await Promise.all(TABS.map((t) => box(page.locator(`nav button[data-tab="${t}"]`))))).toEqual(before.tabs)
+
+  await testInfo.attach('mobile-today-after-done.png', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
+  expect(errors, errors.join('\n')).toEqual([])
+})

@@ -271,6 +271,25 @@ test('history shows the logged tests, swims and activity', async ({ page }) => {
   expect(errors, errors.join('\n')).toEqual([])
 })
 
+// Issue #143 — the log stores the title at the time; History shows the current one.
+test('recent activity shows a renamed task under its current title, and a deleted one under the old', async ({ page }) => {
+  const { fixture } = require('./support/boot')
+  const cfg = JSON.parse(fixture('config.json'))
+  cfg.tasks.find((t) => t.id === 'basket').title = 'Empty the skimmer basket'
+  const log = JSON.parse(fixture('log.json'))
+  log.push({ id: 'l_gone', at: '2026-07-11T15:00:00.000Z', kind: 'task', task: 'retired', title: 'Brush the steps', by: 'testuser' })
+  const { errors } = await bootApp(page, { db: { 'config.json': JSON.stringify(cfg), 'log.json': JSON.stringify(log) } })
+  await goTab(page, 'history')
+
+  const activity = page.locator('#main .card').filter({ hasText: 'Recent activity' })
+  await expect(activity).toContainText('Empty the skimmer basket')
+  await expect(activity).not.toContainText('Check & clean the basket')
+  // No task with id "retired" exists any more: fall back to the stored title.
+  await expect(activity).toContainText('Brush the steps')
+  await expect(activity).toContainText('Swam 2 h')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
 test('weather renders the mocked Open-Meteo data', async ({ page }) => {
   const { errors } = await bootApp(page)
   await goTab(page, 'weather')

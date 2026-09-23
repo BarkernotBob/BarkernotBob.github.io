@@ -639,6 +639,13 @@ async function loadAll(){
   updateBadges();
 }
 function swimForDate(d){ return (D.swim||[]).filter(s=>s.date===d).reduce((a,s)=>a+(+s.hours||0),0); }
+// A task log entry is shown under the task's CURRENT title, looked up by id,
+// so renaming a task doesn't split its history. The title stored at the time
+// stays as the fallback for a task that has since been deleted.
+function logTitle(l){
+  const t = l.kind==='task' && (D.config.tasks||[]).find(x=>x.id===l.task);
+  return (t && t.title) || l.title || '';
+}
 function lastTest(){ return (D.tests||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0]||null; }
 
 /* ---- season helpers ---- */
@@ -833,7 +840,7 @@ async function aiExportText(){
     target_ranges: READINGS.reduce((o,r)=>{ o[r.key]={name:r.name, unit:r.numUnit, range:targetRange(r.key)}; return o; }, {}),
     chemicals_on_hand: CHEM_KEYS.filter(k=>onHand[k]).map(k=>CHEMS[k]),
     tests: (D.tests||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(t=>({date:t.date, mode:t.mode, levels:t.levels||{}, nums:t.nums||{}, notes:t.notes||''})),
-    tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:dayOf(l.at), task:l.title})),
+    tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:dayOf(l.at), task:logTitle(l)})),
     swim_hours: (D.swim||[]).map(s=>({date:s.date, hours:s.hours})),
     weather_daily: weather.map(w=>({date:w.date, rain_in:w.in, temp_max:w.tmax, temp_min:w.tmin, humidity_pct:w.rhAvg})),
   };
@@ -1477,7 +1484,7 @@ function renderHistory(){
   // recent activity
   const log=(D.log||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,40);
   html += `<div class="card"><h2>🗓 Recent activity</h2>`;
-  html += log.length ? log.map(l=>`<div class="item flex"><div><b>${esc(l.title)}</b><div class="small muted">${esc(dayOf(l.at))}${l.by?(' · '+esc(l.by)):''}</div></div>
+  html += log.length ? log.map(l=>`<div class="item flex"><div><b>${esc(logTitle(l))}</b><div class="small muted">${esc(dayOf(l.at))}${l.by?(' · '+esc(l.by)):''}</div></div>
       <span class="pill gray">${esc(l.kind)}</span></div>`).join('')
     : `<p class="muted small">Nothing logged yet.</p>`;
   html += `</div>`;

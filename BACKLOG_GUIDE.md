@@ -126,8 +126,9 @@ labelled `blocked` for you to handle awake.
 `needs-grilling` and writes down the exact question that stopped it on the
 issue. Same for anything it had to label `blocked`. When the run finishes, it
 leaves a **Questions for you** list at the end of that night's "Nightly backlog"
-chat in your Claude app — tap the notification, answer, and it works through
-them one at a time. That's what makes it safe for a
+chat in your Claude app — tap the notification and every item's question is
+there at once, numbered, each with a suggested answer. Answer the ones you can
+in one reply. That's what makes it safe for a
 one-line dictated note to be fair game.
 
 You get one push notification with the counts. Everything else is written on the
@@ -141,8 +142,10 @@ In a Claude chat, in the right project:
 
 - `/backlog-work 12` — pick up issue 12 and take it to done. No number given,
   it takes the oldest one.
-- `/backlog-grill 12` — talk through a rough idea until it's buildable. One
-  question at a time. When it's pinned down, the item is ready for tonight.
+- `/backlog-grill 12` — talk through a rough idea until it's buildable.
+  Questions that don't depend on each other come together as a numbered list,
+  each with a suggested answer. When it's pinned down, the item is ready for
+  tonight.
 
 Both leave the same trail on the issue as the nightly routine does, so there's
 one history whether you did it or it did.

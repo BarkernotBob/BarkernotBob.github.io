@@ -360,15 +360,18 @@ connectors). So in the Routine, **this run's own chat is where Isaiah answers**:
    issue as a comment, label it, and keep working.
 2. After everything else is done — queue worked, report written, notification
    sent — end the run with a message titled **Questions for you**: a numbered
-   list, one line per Grill/Blocked item (repo, issue number, title), then the
-   **first** item's question in full. Ask it in plain chat text, not with
-   `AskUserQuestion`, then stop.
+   list, one entry per Grill/Blocked item (repo, issue number, title), each
+   with that item's question in full and your recommended answer. The items
+   don't depend on each other, so ask them all at once — Isaiah asked for this
+   on 2026-09-23. Ask in plain chat text, not with `AskUserQuestion`, then stop.
 3. The notification says how many questions are waiting in this chat.
 4. When Isaiah replies (it may be hours later), you are in the same chat with
-   every repo still attached. Run the `/backlog-grill` protocol on that item,
-   following its question rules, and when it is pinned down, update the issue, drop
-   the `needs-grilling`/`blocked` label, and move to the next item. Build it
-   only if he says to; otherwise the next nightly run picks it up.
+   every repo still attached. Run the `/backlog-grill` protocol on every item he
+   answered, following its question rules: any follow-ups that don't depend on
+   each other, across items too, go together in one numbered list. When an item
+   is pinned down, update the issue and drop the `needs-grilling`/`blocked`
+   label. An item he didn't answer keeps its label. Build only what he says to;
+   otherwise the next nightly run picks it up.
 
 ### Opening a grill chat
 

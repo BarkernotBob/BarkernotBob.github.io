@@ -94,6 +94,11 @@
   .pill.gray{background:#e9eeec;color:#5c6b67}
   .pill.due{background:#f7ddd6;color:#9a3b2b}
   .item{border-top:1px solid var(--line-2);padding:13px 0}
+  /* Today's Done button is a fixed width, so "Done" -> "✓ Done" can't change
+     how the title beside it wraps; a done row only fades (no reflow, #144). */
+  .donebtn{width:92px;flex:0 0 92px;padding-left:0;padding-right:0}
+  .item.is-done{opacity:.55}
+  .item.is-done b{text-decoration:line-through}
   .item:first-child{border-top:0}
   .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
   nav{
@@ -1080,7 +1085,7 @@ function renderToday(){
       <button class="sec" data-action="show" data-a1="schedule">Open the ${sp.kind==='open'?'opening':'closing'} checklist</button></div>`;
   }
 
-  html += `<div class="card"><div class="flex"><h2 style="margin:0">🔔 Due now</h2>${due.length?`<span class="pill due">${due.length}</span>`:''}</div>`;
+  html += `<div class="card"><div class="flex"><h2 style="margin:0">🔔 Due now</h2>${due.length?`<span class="pill due" id="dueCount">${due.length}</span>`:''}</div>`;
   if(!inSeason()){
     html += `<p class="muted small">Off-season — routine tasks are paused. Re-open in spring (around ${esc(D.config.season.open.replace('-','/'))}).</p>`;
   } else if(!due.length){
@@ -1089,7 +1094,7 @@ function renderToday(){
     html += due.map(({t,d})=>`<div class="item flex">
       <div><b>${esc(t.title)}</b><div class="small muted">${esc(t.detail)}</div>
         <div class="small ${d.overdueBy>0?'sev2':'muted'}">${d.overdueBy>0?('overdue '+d.overdueBy+'d'):'due today'}</div></div>
-      <button style="width:auto;flex:0 0 auto" data-action="markTask" data-a1="${esc(t.id)}">Done</button>
+      <button class="donebtn" data-action="markTask" data-a1="${esc(t.id)}">Done</button>
     </div>`).join('');
   }
   html += `</div>`;
@@ -1168,8 +1173,21 @@ async function markTask(id){
   try{
     await saveJson(FILES.config, D.config, 'Mark task done: '+t.title);
     await saveJson(FILES.log, D.log, 'Log task: '+t.title);
-    toast('Logged ✓'); updateBadges(); render(CUR);
+    toast('Logged ✓'); updateBadges();
+    if(CUR==='today') settleDoneRow(id); else render(CUR);
   }catch(e){ toast(String(e.message||e)); }
+}
+/* On Today, a task marked done stays where it is, faded and ticked, instead of
+   re-rendering the tab and pulling every card below it up under your thumb
+   (#144). The list settles to its new state on the next visit to the tab. */
+function settleDoneRow(id){
+  const btn=[...document.querySelectorAll('#main [data-action="markTask"]')].find(b=>b.getAttribute('data-a1')===id);
+  if(!btn){ render(CUR); return; }
+  btn.disabled=true; btn.textContent='✓ Done';
+  btn.closest('.item')?.classList.add('is-done');
+  const c=$('#dueCount');
+  if(c){ const n=document.querySelectorAll('#main .item:has(.donebtn):not(.is-done)').length;
+    c.textContent=n; c.style.visibility=n?'':'hidden'; }
 }
 function render(tab){ show(tab); }
 

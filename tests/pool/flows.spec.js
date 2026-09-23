@@ -29,8 +29,15 @@ test('marking a task done reschedules it and writes a log entry', async ({ page 
   await expect.poll(async () => (await committed(mock, 'log.json')).length).toBe(4)
   expect((await committed(mock, 'log.json')).at(-1)).toMatchObject({ kind: 'task', task: 'chlorine' })
 
-  // And the screen agrees: one fewer due, badge down from 3 to 2.
+  // And the screen agrees: one fewer due, badge down from 3 to 2. The row
+  // stays put, ticked, rather than vanishing under your thumb (#144)...
   await expect(page.locator('#todayBadge')).toHaveText('2')
+  const row = page.locator('#main .item').filter({ hasText: 'Add chlorine' })
+  await expect(row).toHaveClass(/is-done/)
+  await expect(row.getByRole('button', { name: '✓ Done' })).toBeDisabled()
+  // ...and the list settles on the next visit to the tab.
+  await goTab(page, 'test')
+  await goTab(page, 'today')
   await expect(page.locator('#main .item').filter({ hasText: 'Add chlorine' })).toHaveCount(0)
   expect(errors, errors.join('\n')).toEqual([])
 })

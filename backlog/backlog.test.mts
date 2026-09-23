@@ -450,10 +450,12 @@ describe("nightly run reports repo coverage", () => {
         `"${notAReason}" is no longer listed as a non-reason to grill`,
       )
     }
-    // One answerable question, not a list and not a restatement.
+    // Specific, answerable questions, not a restatement. Since 2026-09-23 every
+    // question not blocked by another goes in, as a list.
     // \s+ rather than a literal space: Prettier reflows this prose, and a guard
     // that breaks on a line wrap gets deleted rather than fixed.
-    assert.match(nightlyCommand, /single\s+specific\s+question/)
+    assert.match(nightlyCommand, /specific\s+questions\s+that\s+blocked\s+you/)
+    assert.match(nightlyCommand, /[Nn]ot\s+a\s+restatement/)
   })
 
   test("the run is forbidden from inventing work", () => {
@@ -534,6 +536,22 @@ describe("grilling asks in plain chat", () => {
     // a round trip per item.
     assert.doesNotMatch(nightlyCommand, /\*\*first\*\* item's question/)
     assert.match(nightlyCommand, /ask them all at once/)
+  })
+
+  test("no step narrows a grill to a single question", () => {
+    // Isaiah, 2026-09-23: grilling asks every question not blocked by another,
+    // together. These are the phrasings the files used before.
+    for (const [name, text] of [
+      ["backlog-grill", grillCommand],
+      ["backlog-nightly", nightlyCommand],
+    ] as const) {
+      assert.doesNotMatch(
+        text,
+        /single\s+(specific\s+|blocking\s+|most\s+important\s+)?question|the\s+one\s+question|one\s+or\s+two\s+at\s+a\s+time/i,
+        name,
+      )
+    }
+    assert.match(grillCommand, /[Gg]rill in rounds/)
   })
 })
 

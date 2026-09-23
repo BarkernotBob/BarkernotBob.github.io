@@ -29,13 +29,15 @@ most useful thing you can bring to the conversation.
 
 ## The grilling
 
-This gets answered on a phone, so keep every message short. Ask questions that
-don't depend on each other together, as a numbered list with your recommended
-answer on each. Hold back a question only when an earlier answer could change it
-or make it moot. The list below is mostly that kind, so usually that means one or
-two at a time. Never send a wall of six questions.
+Grill in rounds, not question by question. Each round asks every question
+that isn't blocked by another one still open, together, as a numbered list with
+your recommended answer on each. Hold back a question only when an answer you
+haven't heard yet could change it or make it moot; it goes in a later round.
+This gets answered on a phone, so keep each question short.
 
-Cover, in this order, stopping as soon as the answer makes the rest moot:
+Cover these, in this order. A question that can make the ones after it moot
+(like "does something already do this?") blocks them, so they wait for its
+answer:
 
 1. **The real problem.** What actually happens today that's annoying? Not the
    proposed solution — the thing that made them file it.

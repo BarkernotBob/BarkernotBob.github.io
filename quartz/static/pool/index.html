@@ -944,6 +944,7 @@ async function deleteInsight(id){
 let CUR='today';
 async function show(tab){
   CUR=tab;
+  testDate='';   // a back-date only lives while the form is open; any tab change (Cancel included) drops it
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   if(!isConfigured()){ renderSetup(); return; }
   const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:#0f6b70;border-top-color:transparent"></span> Loading…</div>';

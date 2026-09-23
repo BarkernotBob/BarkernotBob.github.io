@@ -122,6 +122,16 @@ test('a back-dated test sorts by its date, not by when it was typed in', async (
   await expect(page.locator('#main .card').first()).toContainText('3 reading(s)')
 })
 
+test('a back-date is forgotten once you leave the form', async ({ page }) => {
+  await bootApp(page)
+  await goTab(page, 'test')
+  await page.locator('#t_date').fill('2026-07-10')
+  await page.getByRole('button', { name: 'Numbers' }).click()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await goTab(page, 'test')
+  await expect(page.locator('#t_date')).toHaveValue(TODAY)
+})
+
 test('a test dated in the future is refused', async ({ page }) => {
   const { mock } = await bootApp(page)
   await goTab(page, 'test')

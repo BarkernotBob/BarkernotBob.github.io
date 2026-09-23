@@ -82,17 +82,24 @@ Obsidian vault too. That file is a snapshot — typing in it does nothing.
 
 ---
 
-## The four labels
+## The labels
 
-You never set these. Claude moves them as work happens. **No label at all is the
-normal state** and means "planned".
+You never have to set these. Claude moves them as work happens. **No label at
+all is the normal state** and means "planned".
 
-| Label            | Means                                                         |
-| ---------------- | ------------------------------------------------------------- |
-| `in-progress`    | Being worked on right now                                     |
-| `blocked`        | Stuck on something — the last comment says what               |
-| `needs-grilling` | Too vague to build; needs a conversation                      |
-| `hold`           | Parked on purpose. Still on your list, but nothing touches it |
+| Label            | Means                                                          |
+| ---------------- | -------------------------------------------------------------- |
+| `in-progress`    | Being worked on right now                                      |
+| `blocked`        | Stuck on something — the last comment says what                |
+| `needs-grilling` | Too vague to build; needs a conversation                       |
+| `hold`           | Parked on purpose. Still on your list, but nothing touches it  |
+| `urgent`         | Do this first. The only one you might set yourself — see below |
+
+**`urgent`** jumps an item to the front of the nightly queue, right after
+anything already half-built. Add it from the GitHub app: open the issue → tap
+**Labels** → pick `urgent`. When Claude files something that looks urgent, it
+will suggest the label and add it if you reply "yes". Use it sparingly — if
+everything is urgent, nothing is.
 
 **Done** isn't a label. Done means the issue is closed.
 

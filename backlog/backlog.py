@@ -76,6 +76,10 @@ def gh_json(args: list[str]) -> list[dict]:
         raise GhError("gh returned something that wasn't JSON")
 
 
+def is_urgent(issue: dict) -> bool:
+    return any(label["name"] == "urgent" for label in issue["labels"])
+
+
 def fetch_issues(repo: str, done_since: datetime) -> dict[str, list[dict]]:
     """Return the repo's issues bucketed by status."""
     fields = "number,title,url,labels,createdAt,updatedAt,closedAt,comments,stateReason"
@@ -102,6 +106,11 @@ def fetch_issues(repo: str, done_since: datetime) -> dict[str, list[dict]]:
         bucket = next((s for s in STATUS_ORDER if s in names), "planned")
         buckets[bucket].append(issue)
 
+    # `urgent` never changes the bucket, only the order within it: it adds
+    # priority, it doesn't gate visibility. Stable sort keeps the rest in order.
+    for key in buckets:
+        buckets[key].sort(key=lambda i: not is_urgent(i))
+
     for issue in closed_issues:
         closed_at = issue.get("closedAt")
         if not closed_at:
@@ -127,6 +136,8 @@ def age_in_days(value: str, now: datetime) -> int:
 def format_issue(issue: dict, status: str, now: datetime) -> str:
     names = {label["name"] for label in issue["labels"]}
     tags = []
+    if "urgent" in names and status != "done":
+        tags.append("URGENT")
     if "needs-grilling" in names:
         tags.append("needs a conversation first")
 

@@ -51,6 +51,7 @@ say so in your summary. Don't stall the whole batch on one unclear item.
   the nightly routine will pick it up. Two exceptions:
   - too vague to build as written → `needs-grilling`
   - he said not to start on it yet → `hold`
+  - he said it's urgent, ASAP, today, or "first" → `urgent`
 - Never set `in-progress` or `blocked` here. Those mean work has started.
 
 Check for an obvious duplicate in the target repo before creating each one. If
@@ -69,3 +70,17 @@ BarkernotBob.github.io #7  Home splash cards are cramped on iPhone  (needs grill
 Then one line: how many filed, and anything you had to guess at. If you flagged
 something `needs-grilling`, say which and why in half a sentence — that's the
 one thing worth his attention.
+
+### Propose `urgent` — don't ask, and don't apply it yourself
+
+If he didn't say urgent but an item plainly deserves the front of the queue,
+end with one line he can answer "yes" to:
+
+```
+Suggest urgent: pool-data #12 (dose calc is wrong, used daily) — reply "yes" to add.
+```
+
+Deserves it: something he uses is broken or giving wrong numbers, data is being
+lost, a deadline or date is named, or other filed items are waiting on it. Not:
+nice-to-haves, polish, anything big and speculative. Suggest sparingly — if
+everything is urgent, nothing is. On "yes", add the label; otherwise leave it.

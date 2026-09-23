@@ -21,6 +21,12 @@ repos attached to it. It never has `add_repo`. The briefings used to list a
 missing `add_repo` as a reason to stop, so the first run that could actually
 read GitHub (2026-09-22) stopped itself. A test now guards against that.
 
+**3. The Routine can't open new chats.** `create_session` comes from the
+Claude Code Remote connector. The web page can't attach it, and `create_trigger`
+from a chat stores no connectors (tried 2026-09-23). So grill and blocked
+questions are asked at the end of the nightly run, in its own chat — see step 3
+of the command file.
+
 ## The design
 
 Each Routine is made **from the web page** with **every repo in `repos.txt`

@@ -59,6 +59,13 @@ In a Routine session:
   can add a repo to a Routine.
 - In the ledger every repo is then `read` or `unreachable`. `opened` is the
   number read, and `audited` is 0 because nothing was assumed.
+- **If this run merges a change to `repos.txt`** (step 4 adds new projects),
+  re-read it afterwards and `list_issues` on every newly listed repo. One the
+  tools can read is in scope for the rest of this run — work it like any other.
+  One they refuse is `unreachable`. Never leave a repo out of the queue just
+  because it was added to `repos.txt` after the run started: on 2026-09-23
+  `blockchain` was attached and readable, got added mid-run, and its issues
+  still went untouched until the next night.
 
 Everything from here to the ledger applies to interactive sessions, where repos
 are attached on demand.
@@ -252,10 +259,41 @@ watching:
   If an item needs one of those, label it `blocked` with a comment saying it
   needs a human, and move on.
 - **One item at a time, start to finish.** Don't half-finish three things.
-- Stop after 5 merged items, or when the queue is empty. Five merges unreviewed
-  is already a lot to wake up to.
+- **No merge cap.** Keep going until the queue is empty or the session runs out
+  of budget (context or usage limit). Isaiah removed the old five-a-night cap on
+  2026-09-23. Because the run can be cut off mid-item, leave the issue's
+  progress comment current as you go, so an item cut off is labelled
+  `in-progress` and gets resumed the next night instead of lost.
 
-## 3. Open a grilling chat for each Grill item
+## 3. Open a chat for every question Isaiah has to answer
+
+Two kinds of item end the night waiting on Isaiah, and **each gets its own chat**:
+
+- **Grill** — every `needs-grilling` item.
+- **Blocked** — every item _this run_ labelled `blocked` because it needs a
+  decision or action from him (red CI you could not fix, a workflow/secret/
+  settings change, anything you would otherwise have asked). Title it
+  `Blocked: <issue title>`, tag `["backlog-blocked"]`, and brief it with what
+  you tried, exactly what is blocking, and the one thing you need from him.
+  Items that were already `blocked` before tonight have been asked; leave them.
+
+### Load the chat tool before deciding you can't
+
+`create_session` and `list_sessions` come from the **Claude Code Remote**
+connector, and like the GitHub tools their schemas are deferred. Load them
+first: `ToolSearch` with `select:mcp__Claude_Code_Remote__create_session,mcp__Claude_Code_Remote__list_sessions`
+(if that finds nothing, search `create_session`).
+
+**If they are still missing after loading, the Routine does not have the
+connector attached.** That is a setup problem only Isaiah can fix — not a reason
+to skip quietly:
+
+1. Still put the single blocking question on each issue as a comment, so
+   nothing is lost.
+2. Add this line to the notification, every night until it is fixed:
+   `Add connector: https://claude.ai/code/routines/trig_01CAkWWvfRJwKKVyHFMoCGaV then Edit → Connectors → add Claude Code Remote → Save — N chats could not be opened`
+
+### Opening a grill chat
 
 For each `needs-grilling` item, use `create_session` to start a separate chat:
 
@@ -280,12 +318,12 @@ permission and reaches him the same way.
 
 It sits in the Claude app until Isaiah opens it.
 
-**Don't create a second chat for an issue that already has one.** Match on
-title, not tags: `list_sessions` currently rejects its `tags` filter outright
+**Don't create a second chat for an issue that already has one** (grill or
+blocked). Match on title, not tags: `list_sessions` currently rejects its `tags` filter outright
 (`tags filter is not currently available`), so a tag-based check does not return
 an empty list — it errors, and an error swallowed here means a duplicate chat
 every night for the same issue. Instead list recent sessions without a filter
-and compare titles against `Grill: <issue title>`. If that exact title is
+and compare titles against `Grill: <issue title>` / `Blocked: <issue title>`. If that exact title is
 already there, skip the item — it has been asked.
 
 ## 4. Report

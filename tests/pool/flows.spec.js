@@ -59,6 +59,89 @@ test('logging a strip test saves it and marks the test task done', async ({ page
   expect(errors, errors.join('\n')).toEqual([])
 })
 
+// Issue #139 — tested at the pool, logged later.
+test('a back-dated test keeps its date and never drags the test task backwards', async ({ page }) => {
+  const { mock, errors } = await bootApp(page)
+  await goTab(page, 'test')
+
+  const date = page.locator('#t_date')
+  await expect(date).toHaveValue(TODAY)
+  await expect(date).toHaveAttribute('max', TODAY)
+  await expect(date).toHaveAttribute('type', 'date')
+
+  // Fixture: the test task was last done 07-14, the newest test is 07-14.
+  await date.fill('2026-07-10')
+  // Switching Strips/Numbers re-renders the form; the date must survive it.
+  await page.getByRole('button', { name: 'Numbers' }).click()
+  await page.getByRole('button', { name: 'Strips' }).click()
+  await expect(page.locator('#t_date')).toHaveValue('2026-07-10')
+
+  await page.locator('.levels[data-key="fc"] button[data-l="normal"]').click()
+  await page.click('#t_save')
+  await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
+  expect((await committed(mock, 'tests.json')).at(-1).date).toBe('2026-07-10')
+  await expect(page.locator('.modal-ov')).toContainText('07/10/26')
+
+  // 07-10 is older than 07-14, so the task keeps 07-14 rather than moving.
+  await expect.poll(async () => (await committed(mock, 'config.json')).tasks.find((t) => t.id === 'test').last)
+    .toBe('2026-07-14')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('a back-dated test newer than the task moves the task to the test date, not today', async ({ page }) => {
+  const { mock, errors } = await bootApp(page, {
+    db: { 'config.json': (() => {
+      const c = JSON.parse(require('./support/boot').fixture('config.json'))
+      c.tasks.find((t) => t.id === 'test').last = '2026-07-01'
+      return JSON.stringify(c)
+    })() },
+  })
+  await goTab(page, 'test')
+  await page.locator('#t_date').fill('2026-07-13')
+  await page.locator('.levels[data-key="ph"] button[data-l="normal"]').click()
+  await page.click('#t_save')
+  await expect.poll(async () => (await committed(mock, 'config.json')).tasks.find((t) => t.id === 'test').last)
+    .toBe('2026-07-13')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('a back-dated test sorts by its date, not by when it was typed in', async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await goTab(page, 'test')
+  await page.locator('#t_date').fill('2026-07-10')
+  await page.locator('.levels[data-key="fc"] button[data-l="high"]').click()
+  await page.click('#t_save')
+  await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
+  await page.locator('.modal-ov').click({ position: { x: 5, y: 5 } })
+
+  // Saved last, but older than the fixture's 07-14 test: Today's "Latest test"
+  // is still 07-14, and History counts it among the free-chlorine readings.
+  await goTab(page, 'today')
+  await expect(page.locator('#main .card').filter({ hasText: 'Latest test' })).toContainText('07/14/26')
+  await goTab(page, 'history')
+  await expect(page.locator('#main .card').first()).toContainText('3 reading(s)')
+})
+
+test('a back-date is forgotten once you leave the form', async ({ page }) => {
+  await bootApp(page)
+  await goTab(page, 'test')
+  await page.locator('#t_date').fill('2026-07-10')
+  await page.getByRole('button', { name: 'Numbers' }).click()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await goTab(page, 'test')
+  await expect(page.locator('#t_date')).toHaveValue(TODAY)
+})
+
+test('a test dated in the future is refused', async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await goTab(page, 'test')
+  await page.locator('#t_date').evaluate((el) => { el.removeAttribute('max'); el.value = '2026-07-20' })
+  await page.locator('.levels[data-key="fc"] button[data-l="normal"]').click()
+  await page.click('#t_save')
+  await expect(page.locator('#toast, .toast').first()).toContainText('future')
+  expect(JSON.parse(mock.readFile('db/tests.json'))).toHaveLength(2)
+})
+
 test('a numeric test saves numbers, not levels', async ({ page }) => {
   const { mock, errors } = await bootApp(page)
   await goTab(page, 'test')

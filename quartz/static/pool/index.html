@@ -832,7 +832,7 @@ async function aiExportText(){
            sanitizer: CHEM_KEYS.filter(k=>onHand[k] && ['liquid_chlorine','cal_hypo','trichlor_tabs'].includes(k)).map(k=>CHEMS[k]).join(' + ') || 'chlorine' },
     target_ranges: READINGS.reduce((o,r)=>{ o[r.key]={name:r.name, unit:r.numUnit, range:targetRange(r.key)}; return o; }, {}),
     chemicals_on_hand: CHEM_KEYS.filter(k=>onHand[k]).map(k=>CHEMS[k]),
-    tests: (D.tests||[]).map(t=>({date:t.date, mode:t.mode, levels:t.levels||{}, nums:t.nums||{}, notes:t.notes||''})),
+    tests: (D.tests||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(t=>({date:t.date, mode:t.mode, levels:t.levels||{}, nums:t.nums||{}, notes:t.notes||''})),
     tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:dayOf(l.at), task:l.title})),
     swim_hours: (D.swim||[]).map(s=>({date:s.date, hours:s.hours})),
     weather_daily: weather.map(w=>({date:w.date, rain_in:w.in, temp_max:w.tmax, temp_min:w.tmin, humidity_pct:w.rhAvg})),
@@ -944,6 +944,7 @@ async function deleteInsight(id){
 let CUR='today';
 async function show(tab){
   CUR=tab;
+  testDate='';   // a back-date only lives while the form is open; any tab change (Cancel included) drops it
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   if(!isConfigured()){ renderSetup(); return; }
   const m=$('#main'); m.innerHTML='<div class="card"><span class="spin" style="border-color:#0f6b70;border-top-color:transparent"></span> Loading…</div>';
@@ -1187,6 +1188,7 @@ async function logSwim(){
    TEST  (qualitative by default, numeric optional)
    ========================================================================= */
 let testMode='qual';
+let testDate='';   // a back-dated test keeps its date across a Strips/Numbers switch
 /* Settings location entry mode: 'address' (look up a place name) or 'latlon'. */
 let geoMode=null;
 function curGeoMode(){ return geoMode || ((D.config.geo&&D.config.geo.mode)||'latlon'); }
@@ -1218,13 +1220,15 @@ function renderTest(){
       ? 'Pick what each strip pad reads. Leave any you didn\'t test blank.'
       : 'Enter measured values from an in-depth test. Leave blanks for ones you didn\'t measure.'}</p>
     <div id="testForm" style="margin-top:6px">${testMode==='qual'?qualForm():numForm()}</div>
+    <label>Date tested</label>
+    <input id="t_date" type="date" value="${esc(testDate||todayISO())}" max="${todayISO()}"/>
     <label>Notes (optional)</label>
     <input id="t_notes" placeholder="e.g. water cloudy, heavy use this week"/>
     <div class="row" style="margin-top:12px"><button class="sec" data-action="show" data-a1="today">Cancel</button><button id="t_save" data-action="saveTest">Save & get advice</button></div>
   </div>
   ${lt?`<div class="card"><h2>Last test — ${fmtDate(lt.date)}</h2>${recHtml(lt)}</div>`:''}`;
 }
-function setTestMode(m){ testMode=m; renderTest(); }
+function setTestMode(m){ const d=($('#t_date')||{}).value||''; testDate=d===todayISO()?'':d; testMode=m; renderTest(); }
 function qualForm(){
   return STRIP_READINGS.map(r=>`
     <div style="margin-top:10px">
@@ -1252,7 +1256,11 @@ function pickLevel(key,l,btn){
   btn.parentElement.querySelectorAll('.lv').forEach(b=>b.classList.toggle('on', b===btn));
 }
 async function saveTest(){
-  const rec={ id:uid('t'), date:todayISO(), at:nowISO(), by:LS.login||LS.device||'', mode:testMode,
+  // The day the water was tested, which may be earlier than today: tested at
+  // the pool, logged that evening or the next morning.
+  const date=($('#t_date')||{}).value||todayISO();
+  if(date>todayISO()){ toast('A test can’t be dated in the future'); return; }
+  const rec={ id:uid('t'), date, at:nowISO(), by:LS.login||LS.device||'', mode:testMode,
     levels:{}, nums:{}, notes:($('#t_notes').value.trim()||'') };
   if(testMode==='qual'){
     document.querySelectorAll('#testForm .levels').forEach(g=>{ const k=g.dataset.key; if(picked[k]) rec.levels[k]=picked[k]; });
@@ -1264,10 +1272,13 @@ async function saveTest(){
   try{
     D.tests.push(rec);
     // mark the "test the water" task done
-    const tt=(D.config.tasks||[]).find(x=>x.id==='test'); if(tt) tt.last=todayISO();
+    // ...as of the test's own date — a back-dated test never moves it later
+    // than it was, or forward to a day nobody tested
+    const tt=(D.config.tasks||[]).find(x=>x.id==='test'); if(tt && (!tt.last || date>tt.last)) tt.last=date;
     await saveJson(FILES.tests, D.tests, 'Log water test '+rec.date);
     await saveJson(FILES.config, D.config, 'Mark test task done');
     for(const k in picked) delete picked[k];
+    testDate='';
     toast('Saved ✓'); updateBadges();
     showRecModal(rec);
   }catch(e){ toast(String(e.message||e)); btn.disabled=false; btn.innerHTML='Save & get advice'; }

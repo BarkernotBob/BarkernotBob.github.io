@@ -38,7 +38,9 @@ fi
 
 # Special cases: games whose source file ISN'T named "*.standalone.html".
 # Format per line: "<full path to the source file>|<Name>.html".
+# Games that moved to ~/Projects/<repo> go here too (the Obsidian folder above no longer has them).
 GAMES=(
+  "$HOME/Projects/blockchain/Blockchain.standalone.html|Blockchain.html"
   "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
 )
 for entry in "${GAMES[@]}"; do

@@ -54,7 +54,8 @@ In a Routine session:
 
 - **Skip the search-first scan and the audit below.** They exist to avoid
   `add_repo` calls, and there are none to avoid.
-- `list_issues` on **every** repo in `repos.txt`, directly.
+- `list_issues` on **every** repo in `repos.txt`, directly — **lean**: see
+  "Scan cheaply" below.
 - A repo the tools refuse is `unreachable`: it is in `repos.txt` but was never
   added to the Routine. Record it by name (step 4) and keep going — only Isaiah
   can add a repo to a Routine.
@@ -157,6 +158,20 @@ to prevent.
 If anything ends up `unreachable`, say so **by name** before you stop — step 4
 explains where the names go, since the notification can't carry them.
 
+### Scan cheaply: titles first, detail only for work you'll start
+
+Most repos have nothing open on most nights. Reading one costs context the
+build batches need, so the scan reads as little as it can:
+
+- `list_issues` with `state: OPEN` and `fields: ["number", "title", "labels",
+"created_at", "updated_at"]` — **no bodies**. That is enough to sort and to
+  rank most items.
+- Read an issue's body and comments (`issue_read`) only when it is a candidate
+  for the **next batch**, or when its title alone can't be ranked.
+- **Never clone a repo, read its `CLAUDE.md`, or open its code** during the
+  scan. That happens inside the sub-agent building an item from that repo,
+  and only then.
+
 ### Sort what you found
 
 **An open issue with no label is work to do** — filing something must never
@@ -173,8 +188,22 @@ both `in-progress` and `blocked` is skipped, not resumed.
 - **Build** — everything else that's open. This is the normal case and most
   items will land here.
 
-Within Build, oldest first, except that anything sized "Quick" jumps ahead of
-anything sized "Big".
+### Rank by impact
+
+Rank Resume + Build into one list, highest impact first:
+
+1. **Resume** — anything `in-progress`. Finish what's started before starting
+   anything new.
+2. **Broken** — something Isaiah already uses is wrong: a bug, wrong numbers,
+   lost or corrupted data, a page that doesn't load.
+3. **Unblocks** — other open issues depend on it.
+4. **Daily use** — improves an app or page he uses often (judge from the repo's
+   recent commits and issue history, not a guess).
+5. **Everything else.**
+
+Ties: "Quick" before "Big", then oldest first. Write the ranked list into this
+run's chat (not onto a public issue — titles from private repos). Grill items
+are not ranked; they go to step 3.
 
 ### Is it ready to build, or does it need grilling?
 
@@ -259,12 +288,47 @@ watching:
   `.github/` permissions, branch protection, or anything under `.quartz/plugins/`.
   If an item needs one of those, label it `blocked` with a comment saying it
   needs a human, and move on.
-- **One item at a time, start to finish.** Don't half-finish three things.
 - **No merge cap.** Keep going until the queue is empty or the session runs out
   of budget (context or usage limit). Isaiah removed the old five-a-night cap on
   2026-09-23. Because the run can be cut off mid-item, leave the issue's
   progress comment current as you go, so an item cut off is labelled
   `in-progress` and gets resumed the next night instead of lost.
+
+### Build in batches of three, one sub-agent per item
+
+**You are the coordinator. You don't write code.** Each item is built by its own
+sub-agent (the `Agent` tool), so one item's files, test output and CI logs never
+land in your context, and a long night doesn't run out of room.
+
+1. Take the **top three** from the ranked list. Prefer three different repos. Two
+   items in the same repo only if they plainly touch different files;
+   otherwise take the next item instead and leave that one for a later batch.
+2. For each, read the issue body and comments, and apply the readiness test. An
+   item that fails it goes to Grill and the next ranked item takes its slot.
+3. Launch the three sub-agents **at the same time** (all `Agent` calls in one
+   message). Each prompt must stand alone:
+   - the repo and issue number, and the one-line reason it was ranked here;
+   - "Follow `.claude/commands/backlog-work.md` from
+     BarkernotBob/BarkernotBob.github.io, plus the rules in step 2 of
+     `.claude/commands/backlog-nightly.md` (never ask, merge on green, never on
+     red, never touch workflows/secrets/`.quartz/plugins/`). The repo's own
+     `CLAUDE.md` is the authority on how to build.";
+   - "GitHub MCP schemas are deferred — load them with `ToolSearch` first.";
+   - "Work in your own checkout (`git worktree add` or a fresh clone under
+     `/tmp/nightly/<repo>-<issue>`), on branch `nightly/<issue>`. Before
+     merging, bring in the latest default branch and re-run checks.";
+   - "Keep the issue's progress comment current as you go. If you run low on
+     room, stop, leave the issue `in-progress` with a note on exactly where you
+     stopped.";
+   - "Reply in at most 10 lines: `merged <PR link>`, `blocked: <why>`,
+     `needs-grilling: <the one question>`, or `stopped: <where>`."
+4. **Wait for all three to finish before starting the next batch.** Then act on
+   each reply: a `needs-grilling` or `blocked` item gets its label and comment
+   if the sub-agent didn't add it. Then take the next three.
+
+A batch that finishes means three items shipped or cleanly parked. If the night
+ends mid-batch, at most three items are open, each with a note saying where it
+stopped. Never have more than one batch running.
 
 ## 3. Open a chat for every question Isaiah has to answer
 

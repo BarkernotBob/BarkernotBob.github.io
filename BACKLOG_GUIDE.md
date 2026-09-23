@@ -105,10 +105,12 @@ say "put a hold on that one" in a Claude chat.
 
 At 2am a Claude session starts on its own, with no one watching, and:
 
-1. Picks up anything left `in-progress` that stalled, then the oldest open
-   items, small things before big things.
-2. Builds one at a time. Comments on the issue as it goes — the plan first, then
-   decisions and dead ends, not a blow-by-blow.
+1. Ranks everything open by impact: unfinished work first, then things that are
+   broken, then things that unblock other items, then everyday improvements.
+2. Builds three at a time, each by its own helper (a "sub-agent" — a separate
+   Claude worker), and finishes all three before starting the next three. If the
+   night runs out, at most three things are left half-done. Each comments on its
+   issue as it goes — the plan first, then decisions and dead ends.
 3. Opens a pull request, waits for the automated checks, and **merges it** once
    they're green. That was your call — it ships without asking.
 4. Closes the issue with a **Manual test (for Isaiah)**: numbered plain-English

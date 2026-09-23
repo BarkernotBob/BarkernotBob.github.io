@@ -88,10 +88,20 @@ So it behaves like rate-limiting or a flaky classifier, and the mitigations are
 **serialize the calls** and **retry each refusal once**. Neither makes coverage
 certain.
 
-**Launching the session with every repo pre-attached does not work.**
-`create_session` takes `source_url` — singular, one string. There is no seeded
-multi-repo source list to correct, so runtime `add_repo` is the only route in.
-That was the most promising-sounding fix, and it is ruled out.
+**A session Claude launches can't start with every repo attached.**
+`create_session` takes `source_url` — singular, one string. So in a chat,
+runtime `add_repo` is the only route in.
+
+**The scheduled Routine sidesteps all of this.** A Routine made from the web
+page (claude.ai/code/routines → New routine) can have many repos attached, and
+every run starts with all of them readable. It has no `add_repo` at all — and
+needs none. Since 2026-09-22 the nightly Routine has every repo in `repos.txt`
+attached and simply lists each one; nothing gets refused. The rest of this
+section is about interactive sessions, which still attach on demand.
+
+**Adding a repo to `repos.txt` means adding it to the Routines too** — a repo
+that is in the list but not attached shows up as `unreachable` every night
+until someone does.
 
 ### The fix: stop attaching repos that have no work
 

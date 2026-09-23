@@ -37,12 +37,31 @@ So the start of every run is one real read, not a capability guess:
 **Never continue past a failed probe.** A run that cannot read GitHub cannot
 tell "no open issues" from "I could not look", and reporting the first when the
 second is true is the exact silent success this whole file exists to prevent.
-An empty queue is only ever a real result *after* this probe has passed.
+An empty queue is only ever a real result _after_ this probe has passed.
 
 ## 1. Build the queue
 
 `backlog/repos.txt` in `BarkernotBob/BarkernotBob.github.io` is the list of
 projects in scope. Nothing outside it is ever read from or worked on.
+
+### In a scheduled Routine: every repo is already attached
+
+The nightly Routine is created with every repo in `repos.txt` attached to it,
+and a Routine session has **no `add_repo` tool** — it can reach exactly the
+repos attached to the Routine and no others. That is expected, not a failure.
+In a Routine session:
+
+- **Skip the search-first scan and the audit below.** They exist to avoid
+  `add_repo` calls, and there are none to avoid.
+- `list_issues` on **every** repo in `repos.txt`, directly.
+- A repo the tools refuse is `unreachable`: it is in `repos.txt` but was never
+  added to the Routine. Record it by name (step 4) and keep going — only Isaiah
+  can add a repo to a Routine.
+- In the ledger every repo is then `read` or `unreachable`. `opened` is the
+  number read, and `audited` is 0 because nothing was assumed.
+
+Everything from here to the ledger applies to interactive sessions, where repos
+are attached on demand.
 
 ### Find the work before attaching anything
 
@@ -107,12 +126,12 @@ to fail silently. Pay it.
 
 Record every repo in `repos.txt` under exactly one of four outcomes:
 
-| Outcome         | Meaning                                          |
-| --------------- | ------------------------------------------------ |
-| **read**        | Search found work, repo attached, issues listed  |
-| **empty**       | Search found nothing, and the audit confirmed it |
-| **assumed**     | Search found nothing, not audited this run       |
-| **unreachable** | `add_repo` refused twice — _you never looked_    |
+| Outcome         | Meaning                                                                       |
+| --------------- | ----------------------------------------------------------------------------- |
+| **read**        | Search found work, repo attached, issues listed                               |
+| **empty**       | Search found nothing, and the audit confirmed it                              |
+| **assumed**     | Search found nothing, not audited this run                                    |
+| **unreachable** | `add_repo` refused twice, or (in a Routine) not attached — _you never looked_ |
 
 **Never collapse these into one number** — including in the notification. A
 single "covered" fraction is exactly the collapse this table exists to prevent:

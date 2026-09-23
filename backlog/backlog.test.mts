@@ -421,6 +421,25 @@ describe("nightly run reports repo coverage", () => {
     assert.match(workerBriefing, /Never invent work/)
   })
 
+  test("a Routine session with no add_repo is not treated as broken", () => {
+    // A Routine session never has add_repo — it reaches exactly the repos
+    // attached to the Routine. Both briefings listed a missing add_repo as a
+    // reason to stop, so on 2026-09-22 the first run that could actually read
+    // GitHub stopped itself and reported the backlog unreachable.
+    const sweepBriefing = fs.readFileSync(
+      path.join(here, "routines/monthly-branch-sweep.md"),
+      "utf8",
+    )
+    for (const [name, text] of [
+      ["worker briefing", workerBriefing],
+      ["sweep briefing", sweepBriefing],
+    ] as const) {
+      assert.doesNotMatch(text, /no `add_repo`, or/, `${name} stops over a missing add_repo`)
+      assert.match(text, /no `add_repo` tool is \*\*not\*\* a reason to stop/i, `${name}`)
+    }
+    assert.match(nightlyCommand, /In a scheduled Routine: every repo is already attached/)
+  })
+
   test("README documents the search-first scan and the readiness bar", () => {
     assert.match(readme, /stop attaching repos that have no work/i)
     assert.match(readme, /## What the nightly run may build/)
@@ -433,8 +452,9 @@ describe("nightly run reports repo coverage", () => {
       readme.includes(coverageIssueTitle),
       "README must name the same coverage issue the run files, or the run files a duplicate",
     )
-    // Seeding every repo at launch was the obvious-sounding fix. It is ruled
-    // out, and re-deriving that costs a whole run to discover.
+    // create_session can't seed every repo at launch — re-deriving that costs a
+    // whole run. A web-made Routine can, and the nightly depends on it.
     assert.match(readme, /singular/)
+    assert.match(readme, /adding it to the Routines too/)
   })
 })

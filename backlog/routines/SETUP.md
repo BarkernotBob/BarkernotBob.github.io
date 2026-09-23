@@ -1,91 +1,68 @@
 # Setting up the Routines
 
-You need to do two things: **start the right kind of chat**, then **paste one
-prompt into it**. The chat does the rest, including deleting the broken Routines.
+Only needed if a Routine is lost or has to be rebuilt. Both are live today — IDs
+are in `HANDOFF.md`.
 
-Total hands-on time: about a minute.
-
----
-
-## Why it has to be a new chat
-
-A Routine keeps whatever tools the chat that created it had, forever. The old
-Routines were created from a chat with no GitHub tools, so every night they woke
-up unable to see a single issue. There is no way to add tools to an existing
-Routine — it has to be created again, from a chat that has them.
-
-A chat gets GitHub tools by having this repository attached when it starts. That
-is the only step that matters.
+**Make them yourself on the web page. Don't ask Claude to create them.** A
+Routine Claude creates gets no GitHub tools, and there is no way to add them
+afterwards. That is what kept the nightly broken from August to September 2026.
 
 ---
 
-## Step 1 — start the chat
+## Nightly backlog
 
-Open **https://claude.ai/code**, then:
+Open **https://claude.ai/code/routines** → **New routine**.
 
-1. Click **New session**
-2. Under **Repository**, choose **BarkernotBob/BarkernotBob.github.io**
-3. Leave the branch as **main**
-4. Start the session
+1. **Name:** `Nightly backlog`
+2. **Instructions:** paste the block below.
+3. **Repositories:** attach every repo in `backlog/repos.txt` — the first one in
+   the box under the instructions, then **+** for each of the rest.
+4. **Trigger:** Schedule → Daily → 2:00 AM.
+5. **Connectors:** remove them all. The run only needs GitHub, which comes from
+   the repos.
+6. **Notifications:** on, with **Push notification** ticked.
+7. **Create**, then press **Run now** once and check the run reports counts.
 
-Do **not** use a plain claude.ai chat, and do not use the Routines settings page.
-Neither attaches the repository, which is the whole point.
+```
+Run tonight's backlog pass.
 
-## Step 2 — paste this
+Your briefing is `backlog/routines/nightly-backlog.md` in BarkernotBob/BarkernotBob.github.io. Make sure you are on an up-to-date `main`, open that file, and carry out everything below its first `---` divider line. It is the authority for this run.
 
-Copy everything between the lines and send it as your first message.
+How this session reaches GitHub: every repo in `backlog/repos.txt` is attached to this routine, so the GitHub MCP tools can already read and write all of them. There is no `add_repo` tool in a routine session and you do not need one — wherever the briefing says to attach a repo, just use it. A repo in `repos.txt` that the tools refuse is `unreachable`: record it on the coverage issue and keep going. Only stop the whole run if you cannot read `BarkernotBob/BarkernotBob.github.io` itself.
 
----
+The GitHub MCP tool schemas are deferred — load them with ToolSearch (e.g. `select:mcp__github__list_issues,mcp__github__search_issues,mcp__github__get_file_contents`) before the first call, or the call fails with InputValidationError. That error is not the same as having no GitHub access.
 
-You are setting up two scheduled Routines. Work through this in order and stop at the first step that fails — a Routine created without the right tools looks fine and silently does nothing, which is the exact bug we are fixing.
+If, after loading, you have no `mcp__github__*` tools, or the briefing file is missing, stop and send a push notification that starts "BROKEN: nightly backlog did not run" and names what was missing. Never report a run that could not see GitHub as a quiet night.
+```
 
-**Step 1 — check your own tools.** Confirm you have `mcp__github__*` tools, `add_repo`, `create_session`, `create_trigger` and `delete_trigger`. Then list the open issues in `BarkernotBob/BarkernotBob.github.io` and tell me how many you see. If any tool is missing or the call is refused, stop here and tell me — do not create anything.
+## Monthly branch sweep
 
-**Step 2 — prove a spawned worker inherits those tools.** This is the part that has failed before, so verify it rather than assuming.
+Same steps, except: name `Monthly branch sweep`, trigger Schedule → Custom →
+`0 7 1 * *` (the 1st at 3:00 AM Eastern — the box is in UTC), and these
+instructions:
 
-- Open a new issue in `BarkernotBob/BarkernotBob.github.io` titled `Routine plumbing check` with a one-line body saying what it is for. Label it `hold`.
-- Use `create_session` to spawn a worker, with `source_url` set to `https://github.com/BarkernotBob/BarkernotBob.github.io`, titled `Plumbing check worker`, and this as its prompt:
+```
+Run this month's branch sweep.
 
-  > Report your GitHub capability, then stop. Do not do any other work. Specifically: (a) list which of `mcp__github__*`, `add_repo` and `gh` you actually have; (b) count the open issues in `BarkernotBob/BarkernotBob.github.io`; (c) try `add_repo` on `BarkernotBob/bank-bonuses` and say whether it succeeded. Post all three answers as a single comment on issue `Routine plumbing check` in `BarkernotBob/BarkernotBob.github.io`, then stop.
+Your briefing is `backlog/routines/monthly-branch-sweep.md` in BarkernotBob/BarkernotBob.github.io. Make sure you are on an up-to-date `main`, open that file, and carry out everything below its first `---` divider line. It is the authority for this run.
 
-- Wait for that comment to appear on the issue, checking every 30 seconds for up to 5 minutes. Read it when it arrives.
-- If the worker reports it has the GitHub tools and could add the second repo, continue. If it reports it has none — the old failure — **stop and tell me**, and say specifically what it was missing. Do not create the Routines; we would just be rebuilding the same broken thing.
-- Close the `Routine plumbing check` issue either way.
+How this session reaches GitHub: every repo in `backlog/repos.txt` is attached to this routine, so the GitHub MCP tools can already read and write all of them. There is no `add_repo` tool in a routine session and you do not need one — wherever the briefing says to attach a repo, just use it. A repo in `repos.txt` that the tools refuse: skip it, note it by name, and keep going. Only stop the whole run if you cannot read `BarkernotBob/BarkernotBob.github.io` itself.
 
-**Step 3 — delete the two broken Routines.**
+The GitHub MCP tool schemas are deferred — load them with ToolSearch (e.g. `select:mcp__github__list_branches,mcp__github__get_file_contents,mcp__github__list_commits`) before the first call, or the call fails with InputValidationError. That error is not the same as having no GitHub access.
 
-- `trig_015mh7Dy3W3V42rhdWCt5X9F` — "Nightly backlog"
-- `trig_018KFdmKDquYi7UWRup93cGT` — "Monthly branch sweep"
-
-**Step 4 — create the replacements, bound to this session.** Use `create_trigger` with **no** `persistent_session_id` and **no** `create_new_session_on_fire`, so each firing resumes this chat and inherits the tools you just verified.
-
-Both Routines follow the same pattern: **this session does no work.** On each firing it spawns a fresh worker with `create_session` and stops. That keeps this chat small — a bound Routine resumes the same conversation every time, and a month of full backlog runs in one transcript is a month of context re-read on every subsequent run.
-
-Routine 1 — name `Nightly backlog`, cron `0 6 * * *`, initiation `human_request`, prompt:
-
-> Spawn tonight's backlog worker and stop. Do not do the run yourself. Read `backlog/routines/nightly-backlog.md` from `BarkernotBob/BarkernotBob.github.io` on `main`, and use `create_session` with `source_url` set to `https://github.com/BarkernotBob/BarkernotBob.github.io`, title `Nightly backlog — <today's date>`, tags `["backlog-nightly"]`, and everything below that file's `---` divider as the prompt. Then stop. If the file is missing, send a notification saying so and stop.
-
-Routine 2 — name `Monthly branch sweep`, cron `0 7 1 * *`, initiation `human_request`, prompt:
-
-> Spawn this month's branch-sweep worker and stop. Do not do the sweep yourself. Read `backlog/routines/monthly-branch-sweep.md` from `BarkernotBob/BarkernotBob.github.io` on `main`, and use `create_session` with `source_url` set to `https://github.com/BarkernotBob/BarkernotBob.github.io`, title `Branch sweep — <this month>`, tags `["branch-sweep"]`, and everything below that file's `---` divider as the prompt. Then stop. If the file is missing, send a notification saying so and stop.
-
-**Step 5 — test the whole chain end to end.** Use `fire_trigger` on the branch-sweep Routine now. It is the safe one to run on demand: it only deletes branches whose work has already landed on `main`, and files an issue about anything that needs a decision. Watch for the worker session to appear and report its counts.
-
-**Step 6 — tell me, in plain English:** whether the workers can reach GitHub, what the branch sweep found, and both new Routine IDs. Keep this chat open — the Routines are bound to it.
+If, after loading, you have no `mcp__github__*` tools, or the briefing file is missing, stop and send a push notification that starts "BROKEN: monthly branch sweep did not run" and names what was missing. Never report a run that could not see GitHub as a quiet month.
+```
 
 ---
 
-## Step 3 — afterwards
+## When you add a repo to `repos.txt`
 
-Leave that chat alone. Don't archive it, don't clear it — the Routines fire into
-it. If it is ever deleted, run this setup again from Step 1.
+Open each Routine → edit → **+** under the instructions → pick the repo → save.
+A repo in the list but not attached shows up as **unreachable** every night.
 
-Both new Routine IDs will be in the chat's final message. Add them to
-`HANDOFF.md` so the next person looking at this knows where they live.
+## How to tell it is working
 
-## How to tell it is actually working
-
-Check the morning after the first run. You should get a push notification with
-counts in it — repos read, issues found, issues built. **Counts are the signal.**
-A run that reports no counts, or just says it finished, is the old failure coming
-back, and it means the chat it is bound to has lost its tools.
+The morning after a run you get a push notification with counts in it —
+`18/18 covered · 18 opened · 0 audited`. **Counts are the signal.** No counts,
+or a message starting "BROKEN", means it isn't working — open the run from the
+Routine page to see why.

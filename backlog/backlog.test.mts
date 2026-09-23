@@ -496,6 +496,13 @@ describe("grilling asks in plain chat", () => {
       assert.doesNotMatch(text, /one question at a time/i, `${name} still says one at a time`)
     }
   })
+
+  test("Questions for you asks every item's question at once", () => {
+    // It used to list the items but ask only the first one's question, costing
+    // a round trip per item.
+    assert.doesNotMatch(nightlyCommand, /\*\*first\*\* item's question/)
+    assert.match(nightlyCommand, /ask them all at once/)
+  })
 })
 
 // install.sh pushes this into every repo's CLAUDE.md. It must add the rule

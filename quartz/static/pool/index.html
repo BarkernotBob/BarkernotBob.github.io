@@ -385,7 +385,13 @@ function chemsOnHand(){ return migrateChemKeys((D.config.chemicals && D.config.c
    read them through here and fall back to the built-in range. */
 function targetRange(key){
   const r=readingByKey(key), t=D.config && D.config.targets && D.config.targets[key];
-  return (t && Array.isArray(t.range) && t.range.length===2) ? t.range : (r?r.numRange.slice():[0,0]);
+  const built = r ? r.numRange.slice() : [0,0];
+  if(!t || !Array.isArray(t.range) || t.range.length!==2) return built;
+  const [lo,hi]=t.range;
+  // A stored value that isn't a finite number (blanked in Settings, or hand-
+  // edited JSON) falls back to the built-in range instead of poisoning every
+  // comparison against it with NaN/null.
+  return (Number.isFinite(lo) && Number.isFinite(hi)) ? t.range : built;
 }
 function ensureTarget(key){
   if(!D.config.targets) D.config.targets={};
@@ -1592,7 +1598,29 @@ async function saveSeason(){
   await saveJson(FILES.config, D.config, 'Update season dates'); toast('Saved'); updateBadges();
 }
 async function saveTargets(){
-  document.querySelectorAll('.tgt').forEach(i=>{ const k=i.dataset.key, idx=+i.dataset.i; ensureTarget(k); D.config.targets[k].range[idx]=parseFloat(i.value); });
+  // Validate into a scratch object first — nothing touches D.config, and
+  // nothing saves, until every box parses and every range makes sense.
+  const candidate={};
+  let err=null;
+  document.querySelectorAll('.tgt').forEach(i=>{
+    if(err) return;
+    const k=i.dataset.key, idx=+i.dataset.i, r=readingByKey(k), v=parseFloat(i.value);
+    if(!Number.isFinite(v)){ err=`${r?r.name:k}: enter a number for both low and high`; return; }
+    if(!candidate[k]) candidate[k]=targetRange(k).slice();
+    candidate[k][idx]=v;
+  });
+  if(err){ toast(err); return; }
+  for(const k in candidate){
+    const [lo,hi]=candidate[k], r=readingByKey(k);
+    if(!(lo<hi)){ err=`${r?r.name:k}: low must be less than high`; break; }
+  }
+  if(!err && candidate.fc && candidate.tc && candidate.fc[1]>candidate.tc[1]){
+    // Free chlorine is a subset of total chlorine (TC = FC + combined
+    // chlorine), so TC can never target a lower ceiling than FC.
+    err='Free chlorine target top cannot be higher than total chlorine target top — total chlorine always covers free chlorine plus any combined chlorine.';
+  }
+  if(err){ toast(err); return; }
+  for(const k in candidate){ ensureTarget(k); D.config.targets[k].range=candidate[k]; }
   // keep the live READINGS ranges in sync for this session
   READINGS.forEach(r=>{ r.numRange=targetRange(r.key); });
   await saveJson(FILES.config, D.config, 'Update target ranges'); toast('Targets saved');

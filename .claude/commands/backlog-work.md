@@ -54,8 +54,12 @@ say so in a comment, add the `blocked` label, remove `in-progress`, and stop.
    don't assume.
 2. Open a PR that says `Closes #<number>` in the body.
 3. Wait for CI. Merge when it's green.
-4. Post a final comment: what changed, and a **Manual test (for Isaiah)** —
-   numbered plain-English steps a non-developer can follow to see it working.
+4. Post a final comment: what changed, and how you verified it yourself (tests,
+   a headless run, screenshots of your own work). Add a **Manual test (for
+   Isaiah)** only if a check truly needs him: taste (a new look or wording he
+   hasn't approved), access you lack (his accounts, phone, real money), or his
+   live data. Open it with `Why you:` in one line, then at most 5 numbered
+   plain-English steps covering only what you couldn't verify.
 5. `gh issue close <number> --repo <repo> --reason completed` and remove the
    `in-progress` label.
 

@@ -469,3 +469,47 @@ describe("nightly run reports repo coverage", () => {
     assert.match(readme, /adding it to the Routines too/)
   })
 })
+
+// install.sh pushes this into every repo's CLAUDE.md. It must add the rule
+// once, keep everything else, and never write an empty or duplicated file.
+describe("merge_rule.py", () => {
+  const script = path.join(here, "merge_rule.py")
+  const run = (input: string | null) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "merge-rule-"))
+    const src = path.join(dir, "in.md")
+    const dst = path.join(dir, "out.md")
+    if (input !== null) fs.writeFileSync(src, input)
+    try {
+      execFileSync("python3", [script, src, dst])
+      return { status: 0, out: fs.readFileSync(dst, "utf8") }
+    } catch (error) {
+      return { status: (error as { status: number }).status, out: fs.existsSync(dst) ? "x" : "" }
+    }
+  }
+
+  test("adds the rule under the git heading and keeps the rest", () => {
+    const input = "# Intro\ntext\n\n## Git checkpoints\n- one\n- two\n\n## Issues\n- three\n"
+    const { status, out } = run(input)
+    assert.equal(status, 0)
+    assert.match(out, /- two\n- \*\*Merge your own PRs\.\*\*[^\n]*\n\n## Issues\n- three\n$/)
+    assert.equal(out.replace(/- \*\*Merge your own PRs\.\*\*[^\n]*\n/, ""), input)
+  })
+
+  test("appends a section when there is no git heading", () => {
+    const { status, out } = run("# Project\nstuff")
+    assert.equal(status, 0)
+    assert.match(out, /^# Project\nstuff\n\n# Merging\n\n- \*\*Merge your own PRs/)
+  })
+
+  test("creates the file when there is no CLAUDE.md", () => {
+    const { status, out } = run(null)
+    assert.equal(status, 0)
+    assert.match(out, /^# Merging\n\n- \*\*Merge your own PRs/)
+  })
+
+  test("does nothing when the rule is already there", () => {
+    const { status, out } = run("# Git\n- **Merge your own PRs.** already\n")
+    assert.equal(status, 2)
+    assert.equal(out, "")
+  })
+})

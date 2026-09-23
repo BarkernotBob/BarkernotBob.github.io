@@ -3,7 +3,9 @@
 # add a repo to backlog/repos.txt.
 #
 # It gives every project the two "what do you want changed" forms you'll see on
-# your phone, plus the labels the board uses. It does not touch your code.
+# your phone, plus the labels the board uses. It also adds one line to each
+# project's CLAUDE.md telling Claude to merge its own PRs once checks pass.
+# It does not touch your code.
 
 cd "$(dirname "$0")" || exit 1
 

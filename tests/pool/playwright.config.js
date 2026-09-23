@@ -20,9 +20,9 @@ module.exports = defineConfig({
     baseURL: 'http://127.0.0.1:5176',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // The app derives "today" with toISOString(), and its season/peak windows
-    // are month-day strings. Pinning the browser to UTC keeps the pinned clock
-    // in support/boot.js meaning the same date wherever this runs.
+    // Pinned to UTC so the noon-UTC clock in support/boot.js is the same date
+    // in every derivation. The app's own "today" is Fort Wayne's calendar day
+    // (issue #136); timezone.spec.js overrides this to prove it off-UTC.
     timezoneId: 'UTC',
     // Pool registers a service worker. Left alive it can serve a cached shell
     // into a later test and turn a real regression into a pass. The PWA files

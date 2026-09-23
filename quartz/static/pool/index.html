@@ -224,10 +224,17 @@ const DB = {}; // in-memory cache: { path:{value,sha} }
 /* ---------- tiny helpers ---------- */
 const $ = sel => document.querySelector(sel);
 const el = (tag, attrs={}, html='') => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(html!=='') e.innerHTML=html; return e; };
-const todayISO = () => new Date().toISOString().slice(0,10);
+// "Today" is the pool's calendar day in Fort Wayne, not UTC — toISOString()
+// rolls over at 8pm Eastern, stamping evening logs with tomorrow's date. Same
+// zone as reminders.mjs, so the app and the email agree on what day it is.
+const TZ = 'America/Indiana/Indianapolis';
+const todayISO = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ }); // YYYY-MM-DD
 const nowISO = () => new Date().toISOString();
-function addDaysISO(iso, n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
-function daysBetween(a,b){ return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/86400000); }
+// The Fort Wayne calendar day an instant (a record's `at`) fell on.
+const dayOf = at => { const d=new Date(at||''); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', { timeZone: TZ }); };
+// Calendar-date arithmetic in UTC, so the device's own offset can't shift a day.
+function addDaysISO(iso, n){ const d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b+'T12:00:00Z') - new Date(a+'T12:00:00Z'))/86400000); }
 function mmdd(iso){ return (iso||todayISO()).slice(5,10); }
 function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${m}/${d}/${y.slice(2)}`; }
 /* MM-DD <-> a full date the native date-picker accepts (year is a placeholder, ignored). */
@@ -663,7 +670,7 @@ function seasonalPrompt(){
   if(md <= s.close && md >= addMonthDay(s.close,-21)) return {kind:'close', when:s.close};
   return null;
 }
-function addMonthDay(md, days){ const d=new Date('2024-'+md+'T12:00:00'); d.setDate(d.getDate()+days); return d.toISOString().slice(5,10); }
+function addMonthDay(md, days){ return addDaysISO('2024-'+md, days).slice(5,10); }
 
 function updateBadges(){
   const n = dueTasks().length + (seasonalPrompt()?1:0);
@@ -826,7 +833,7 @@ async function aiExportText(){
     target_ranges: READINGS.reduce((o,r)=>{ o[r.key]={name:r.name, unit:r.numUnit, range:targetRange(r.key)}; return o; }, {}),
     chemicals_on_hand: CHEM_KEYS.filter(k=>onHand[k]).map(k=>CHEMS[k]),
     tests: (D.tests||[]).map(t=>({date:t.date, mode:t.mode, levels:t.levels||{}, nums:t.nums||{}, notes:t.notes||''})),
-    tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:(l.at||'').slice(0,10), task:l.title})),
+    tasks_done: (D.log||[]).filter(l=>l.kind==='task').map(l=>({date:dayOf(l.at), task:l.title})),
     swim_hours: (D.swim||[]).map(s=>({date:s.date, hours:s.hours})),
     weather_daily: weather.map(w=>({date:w.date, rain_in:w.in, temp_max:w.tmax, temp_min:w.tmin, humidity_pct:w.rhAvg})),
   };
@@ -1459,7 +1466,7 @@ function renderHistory(){
   // recent activity
   const log=(D.log||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,40);
   html += `<div class="card"><h2>🗓 Recent activity</h2>`;
-  html += log.length ? log.map(l=>`<div class="item flex"><div><b>${esc(l.title)}</b><div class="small muted">${esc((l.at||'').slice(0,10))}${l.by?(' · '+esc(l.by)):''}</div></div>
+  html += log.length ? log.map(l=>`<div class="item flex"><div><b>${esc(l.title)}</b><div class="small muted">${esc(dayOf(l.at))}${l.by?(' · '+esc(l.by)):''}</div></div>
       <span class="pill gray">${esc(l.kind)}</span></div>`).join('')
     : `<p class="muted small">Nothing logged yet.</p>`;
   html += `</div>`;

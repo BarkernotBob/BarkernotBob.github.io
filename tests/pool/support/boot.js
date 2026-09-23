@@ -26,9 +26,9 @@ const APP_URL = '/static/pool/index.html'
 const FIXTURES = path.join(__dirname, '..', 'fixtures', 'db')
 
 // Pinned "today". In season (04-20..10-05) and in peak (06-01..08-31), so the
-// season-dependent branches are the ones a summer user actually sees. Noon UTC:
-// the app derives its date with toISOString().slice(0,10), and the config below
-// forces the browser to UTC, so this is 2026-07-15 with no edge to fall off.
+// season-dependent branches are the ones a summer user actually sees. Noon UTC
+// is 8am in Fort Wayne, whose calendar day the app uses (#136), so this is
+// 2026-07-15 there and in UTC alike, with no edge to fall off.
 const TODAY = '2026-07-15'
 const FIXED_TIME = new Date(`${TODAY}T12:00:00Z`)
 
@@ -151,10 +151,12 @@ async function ready(page) {
 //   opts.seed       extra/overriding localStorage keys
 //   opts.db         { 'config.json': '<json>' } to override a fixture file
 //   opts.signedOut  boot with no token, to land on the setup screen
-async function bootApp(page, { viewport = VIEWPORTS.mobile, seed = {}, db = {}, signedOut = false } = {}) {
+//   opts.now        a different pinned instant (Date), e.g. an evening in
+//                   Fort Wayne for the timezone cases
+async function bootApp(page, { viewport = VIEWPORTS.mobile, seed = {}, db = {}, signedOut = false, now = FIXED_TIME } = {}) {
   const errors = watchConsole(page)
   await page.setViewportSize(viewport)
-  await page.clock.setFixedTime(FIXED_TIME)
+  await page.clock.setFixedTime(now)
 
   const store = signedOut ? { ...seed } : { ...SIGNED_IN, ...seed }
   // addInitScript runs on EVERY navigation, a reload included. Seed only what

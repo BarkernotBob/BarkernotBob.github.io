@@ -38,6 +38,7 @@ On its first run this suite found three things:
 | `chemistry.spec.js` | The seven pads on Isaiah's strip and the six chemicals in his shed — the strip form's pads and order, phosphates as a lab-only extra, advice naming a chlorine he owns, hardness steering cal-hypo vs. liquid, high pH becoming a shopping note, chloramines dosed once (but never confused with a routine top-up), bromine never counted as off target or drawn red in history, an emptied shed staying empty, and an older config migrating its chemical keys and gaining the new target ranges |
 | `security.spec.js` | A hostile value renders as inert text, seeded across config/tests and round-tripped |
 | `screenshots.spec.js` | Every tab at 390 / 900 / 1300px, attached to the report, asserting no sideways page scroll |
+| `timezone.spec.js` | Issue #136 — at 9pm Eastern (01:00 UTC next day) a task done, a test saved and the swim picker's default and `max` all use the Fort Wayne date |
 | `sync.spec.js` | The GitHub Contents API path against `tests/shared/mock-github.js` — reads, shas, the stale-sha retry, a missing file, and the sign-in screen |
 
 ## How it boots
@@ -55,8 +56,11 @@ Three things are pinned so the suite is deterministic:
   a function of the date — which tasks are due, whether it is in season, whether
   the open/close prompt shows. Left on the real clock this suite would quietly
   change meaning every day and go red on 2026-10-06 when the season closes. The
-  browser is forced to UTC in `playwright.config.js` to match, since the app
-  derives its date with `toISOString()`.
+  browser is forced to UTC in `playwright.config.js`; the pinned noon UTC is the
+  same calendar day in Fort Wayne, whose day the app records (#136).
+  `timezone.spec.js` is the exception: it runs in `America/Indiana/Indianapolis`
+  at 9pm, when UTC has already rolled over, and checks everything still says
+  that evening's date.
 - **The weather.** The app calls Open-Meteo on every Today and Weather render.
 - **The fonts.** Google Fonts is a `<link>` in the head; unreachable in CI it
   logs a resource error and the clean-console assertion fails for a reason that

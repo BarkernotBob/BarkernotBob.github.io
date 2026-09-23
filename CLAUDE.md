@@ -34,6 +34,7 @@ Beginner with Git, GitHub, and CLI. For any action I must take:
 - As we build, create ongoing regression suites that will run automatically as we deploy new changes to applications.
 
 # Git workflow (every project)
+- **Merge your own PRs.** Once CI is green and there's no merge conflict, squash-merge the PR and delete its branch — don't wait for me; I don't review PRs after we've talked a change through. Never merge on red CI; fix it or tell me what's blocking.
 - At session start, if the project folder is not a git repo, run `sh ~/.claude/scripts/git-armor.sh .` (safe/idempotent; puts the git database in `.git.nosync` so iCloud can't corrupt it, writes a starter .gitignore, makes an initial commit).
 - Commit at every working checkpoint: after a feature/fix lands and is verified, and BEFORE any risky refactor. Small, descriptive commits — don't batch a whole session into one.
 - Never end a session with a working state uncommitted.

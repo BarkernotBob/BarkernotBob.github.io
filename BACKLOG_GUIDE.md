@@ -121,9 +121,11 @@ It will not touch deploy workflows, secrets, or branch settings — those get
 labelled `blocked` for you to handle awake.
 
 **If an item is too vague, it does not guess.** It moves the item to
-`needs-grilling`, writes down the exact question that stopped it, and opens a
-chat about it that's waiting in your Claude app. Same for anything it had to
-label `blocked` — a `Blocked:` chat says what it needs from you. That's what makes it safe for a
+`needs-grilling` and writes down the exact question that stopped it on the
+issue. Same for anything it had to label `blocked`. When the run finishes, it
+leaves a **Questions for you** list at the end of that night's "Nightly backlog"
+chat in your Claude app — tap the notification, answer, and it works through
+them one at a time. That's what makes it safe for a
 one-line dictated note to be fair game.
 
 You get one push notification with the counts. Everything else is written on the

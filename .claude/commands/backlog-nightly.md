@@ -5,7 +5,8 @@ allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, Agent
 
 You are running unattended, overnight. Isaiah is asleep. Nobody will answer a
 question you ask, so don't ask one — decide, do the work, and leave a written
-trail he can read in the morning.
+trail he can read in the morning. (The one exception is the end of the run:
+step 3 leaves the night's open questions in this chat for him to answer later.)
 
 ## Reading and writing GitHub
 
@@ -282,16 +283,28 @@ Two kinds of item end the night waiting on Isaiah, and **each gets its own chat*
 `create_session` and `list_sessions` come from the **Claude Code Remote**
 connector, and like the GitHub tools their schemas are deferred. Load them
 first: `ToolSearch` with `select:mcp__Claude_Code_Remote__create_session,mcp__Claude_Code_Remote__list_sessions`
-(if that finds nothing, search `create_session`).
+(if that finds nothing, search `create_session`). If they load, open one chat
+per item as below.
 
-**If they are still missing after loading, the Routine does not have the
-connector attached.** That is a setup problem only Isaiah can fix — not a reason
-to skip quietly:
+**In the scheduled Routine they will not load, and nobody can fix that.** The
+Routine is made on the web page (it has to be, to have every repo attached),
+the web page cannot attach Claude Code Remote, and a Routine Claude creates
+cannot carry it either (tried 2026-09-23: `create_trigger` stores no
+connectors). So in the Routine, **this run's own chat is where Isaiah answers**:
 
-1. Still put the single blocking question on each issue as a comment, so
-   nothing is lost.
-2. Add this line to the notification, every night until it is fixed:
-   `Add connector: https://claude.ai/code/routines/trig_01CAkWWvfRJwKKVyHFMoCGaV then Edit → Connectors → add Claude Code Remote → Save — N chats could not be opened`
+1. During the run, never stop to ask. Put the single blocking question on each
+   issue as a comment, label it, and keep working.
+2. After everything else is done — queue worked, report written, notification
+   sent — end the run with a message titled **Questions for you**: a numbered
+   list, one line per Grill/Blocked item (repo, issue number, title), then the
+   **first** item's question in full. Ask it in plain chat text, not with
+   `AskUserQuestion`, then stop.
+3. The notification says how many questions are waiting in this chat.
+4. When Isaiah replies (it may be hours later), you are in the same chat with
+   every repo still attached. Run the `/backlog-grill` protocol on that item —
+   one question at a time — and when it is pinned down, update the issue, drop
+   the `needs-grilling`/`blocked` label, and move to the next item. Build it
+   only if he says to; otherwise the next nightly run picks it up.
 
 ### Opening a grill chat
 

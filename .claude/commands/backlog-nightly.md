@@ -194,12 +194,14 @@ Rank Resume + Build into one list, highest impact first:
 
 1. **Resume** — anything `in-progress`. Finish what's started before starting
    anything new.
-2. **Broken** — something Isaiah already uses is wrong: a bug, wrong numbers,
+2. **Urgent** — labelled `urgent`. Isaiah (or Claude, with his yes) put it at
+   the front on purpose; don't second-guess it.
+3. **Broken** — something Isaiah already uses is wrong: a bug, wrong numbers,
    lost or corrupted data, a page that doesn't load.
-3. **Unblocks** — other open issues depend on it.
-4. **Daily use** — improves an app or page he uses often (judge from the repo's
+4. **Unblocks** — other open issues depend on it.
+5. **Daily use** — improves an app or page he uses often (judge from the repo's
    recent commits and issue history, not a guess).
-5. **Everything else.**
+6. **Everything else.**
 
 Ties: "Quick" before "Big", then oldest first. Write the ranked list into this
 run's chat (not onto a public issue — titles from private repos). Grill items

@@ -18,5 +18,10 @@
     "name": "hold",
     "color": "E4E669",
     "description": "Parked on purpose - the nightly routine leaves this alone"
+  },
+  {
+    "name": "urgent",
+    "color": "D93F0B",
+    "description": "Do this first - the nightly routine builds these before anything else"
   }
 ]

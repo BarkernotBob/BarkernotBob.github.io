@@ -49,6 +49,10 @@ describe("labels.json", () => {
     }
   })
 
+  test("defines urgent, the one label that reorders", () => {
+    assert.ok(labelNames.has("urgent"), "missing label: urgent")
+  })
+
   test("does not define a label that filing would have to remember to set", () => {
     // An unlabelled open issue is a planned item. Reintroducing `planned` or
     // `nightly-ok` would put a required tap back on the filing screen, which is
@@ -152,6 +156,8 @@ describe("backlog.py", () => {
     issue(5, "Parked on purpose", ["hold"]),
     issue(6, "Rough idea", ["needs-grilling"]),
     issue(10, "Labelled with something unrelated", ["documentation"]),
+    // Filed last, but `urgent` must still put it at the top of Planned.
+    issue(11, "Do this first", ["urgent"]),
   ]
 
   const closedIssues = [
@@ -196,8 +202,8 @@ describe("backlog.py", () => {
   })
 
   test("counts each status once, with blocked outranking in-progress", () => {
-    // planned 3 (#1, #6, #10) | in-progress 1 | blocked 2 | hold 1 | done 1
-    assert.match(output, /\| \[demo\]\(\S+\) \| 3 \| 1 \| 2 \| 1 \| 1 \|/)
+    // planned 4 (#1, #6, #10, #11) | in-progress 1 | blocked 2 | hold 1 | done 1
+    assert.match(output, /\| \[demo\]\(\S+\) \| 4 \| 1 \| 2 \| 1 \| 1 \|/)
   })
 
   test("an unlabelled open issue lands on the board as Planned", () => {
@@ -225,6 +231,14 @@ describe("backlog.py", () => {
     const roughIdea = output.split("\n").find((line) => line.includes("Rough idea"))
     const context = output.slice(output.indexOf(roughIdea!))
     assert.match(context, /needs a conversation first/)
+  })
+
+  test("urgent stays Planned but is listed first and marked", () => {
+    const planned = output.slice(output.indexOf("### Planned"))
+    const firstItem = planned.split("\n").find((line) => line.startsWith("- ["))
+    assert.match(firstItem!, /Do this first/)
+    const context = output.slice(output.indexOf(firstItem!))
+    assert.match(context.split("\n")[1], /URGENT/)
   })
 
   test("links every item back to its issue", () => {
@@ -282,6 +296,24 @@ describe("backlog.py survives a repo it can't read", () => {
 // executes them is a language model rather than a function. That makes them
 // exactly as easy to delete by accident as any other paragraph — and the
 // failure they prevent is silent by construction, so nothing else would notice.
+describe("nightly ranking honours urgent", () => {
+  const nightly = fs.readFileSync(
+    path.join(repoRoot, ".claude/commands/backlog-nightly.md"),
+    "utf8",
+  )
+  const ranking = nightly.slice(nightly.indexOf("### Rank by impact"))
+
+  test("urgent ranks right after resuming in-progress work", () => {
+    assert.match(ranking, /1\. \*\*Resume\*\*[\s\S]*?2\. \*\*Urgent\*\* — labelled `urgent`/)
+  })
+
+  test("filing proposes urgent rather than asking or applying it unasked", () => {
+    const add = fs.readFileSync(path.join(repoRoot, ".claude/commands/backlog-add.md"), "utf8")
+    assert.match(add, /Suggest urgent:/)
+    assert.match(add, /don't apply it yourself/)
+  })
+})
+
 describe("nightly run reports repo coverage", () => {
   const nightlyCommand = fs.readFileSync(
     path.join(repoRoot, ".claude/commands/backlog-nightly.md"),

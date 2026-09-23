@@ -130,7 +130,7 @@ It will not touch deploy workflows, secrets, or branch settings — those get
 labelled `blocked` for you to handle awake.
 
 **If an item is too vague, it does not guess.** It moves the item to
-`needs-grilling` and writes down the exact question that stopped it on the
+`needs-grilling` and writes down the exact questions that stopped it on the
 issue. Same for anything it had to label `blocked`. When the run finishes, it
 leaves a **Questions for you** list at the end of that night's "Nightly backlog"
 chat in your Claude app — tap the notification and every item's question is

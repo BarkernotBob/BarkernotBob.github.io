@@ -253,9 +253,11 @@ valve into a way of never building anything:
 - **You can see more than one way to implement it.** Choosing between
   implementations is your job; choosing between intents is not.
 
-When you do move something to `needs-grilling`, comment with **the single
-specific question that blocked you** — not a list, and not a restatement of the
-issue. One question he can answer in a sentence.
+When you do move something to `needs-grilling`, comment with **the specific
+questions that blocked you**: every one that isn't blocked by another, as a
+numbered list with your recommended answer on each. Hold back a question whose
+answer depends on another; it comes up when he answers. Not a restatement of
+the issue. Each one he can answer in a sentence.
 
 ### Never invent work
 
@@ -278,7 +280,7 @@ Follow `/backlog-work` for each item, with these differences because nobody is
 watching:
 
 - **Never ask.** If an item is ambiguous enough that you'd want to ask, it isn't
-  ready. Move it to `needs-grilling`, comment saying which specific question
+  ready. Move it to `needs-grilling`, comment saying which specific questions
   blocked you, and go to the next item. This is the safety valve that lets
   everything default to buildable — use it rather than guessing at intent.
   Building the wrong thing costs more than waiting a day.
@@ -323,7 +325,7 @@ land in your context, and a long night doesn't run out of room.
      room, stop, leave the issue `in-progress` with a note on exactly where you
      stopped.";
    - "Reply in at most 10 lines: `merged <PR link>`, `blocked: <why>`,
-     `needs-grilling: <the one question>`, or `stopped: <where>`."
+     `needs-grilling: <the blocking questions>`, or `stopped: <where>`."
 4. **Wait for all three to finish before starting the next batch.** Then act on
    each reply: a `needs-grilling` or `blocked` item gets its label and comment
    if the sub-agent didn't add it. Then take the next three.
@@ -358,13 +360,13 @@ the web page cannot attach Claude Code Remote, and a Routine Claude creates
 cannot carry it either (tried 2026-09-23: `create_trigger` stores no
 connectors). So in the Routine, **this run's own chat is where Isaiah answers**:
 
-1. During the run, never stop to ask. Put the single blocking question on each
+1. During the run, never stop to ask. Put the blocking questions on each
    issue as a comment, label it, and keep working.
 2. After everything else is done — queue worked, report written, notification
    sent — end the run with a message titled **Questions for you**: a numbered
    list, one entry per Grill/Blocked item (repo, issue number, title), each
-   with that item's question in full and your recommended answer. The items
-   don't depend on each other, so ask them all at once — Isaiah asked for this
+   with that item's questions in full and your recommended answer on each. The
+   items don't depend on each other, so ask them all at once — Isaiah asked for this
    on 2026-09-23. Ask in plain chat text, not with `AskUserQuestion`, then stop.
 3. The notification says how many questions are waiting in this chat.
 4. When Isaiah replies (it may be hours later), you are in the same chat with
@@ -383,8 +385,8 @@ For each `needs-grilling` item, use `create_session` to start a separate chat:
 - **tags:** `["backlog-grill"]`
 - **prompt:** a standalone briefing — the repo and issue number, the full issue
   body, what you found when you looked at the relevant code, and the instruction
-  to run the `/backlog-grill` protocol starting with the single most important
-  question. Tell it to follow `/backlog-grill`'s question rules.
+  to run the `/backlog-grill` protocol starting with its first round: every
+  question not blocked by another. Tell it to follow `/backlog-grill`'s question rules.
 
 **Tell it to ask in plain chat text, not with the question tool.** End the
 prompt with this instruction, verbatim:

@@ -53,7 +53,7 @@ jobs:
         run: node patch-plugins.mjs
       - name: Build
         run: npx quartz build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: public
 

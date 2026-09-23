@@ -301,8 +301,8 @@ connectors). So in the Routine, **this run's own chat is where Isaiah answers**:
    `AskUserQuestion`, then stop.
 3. The notification says how many questions are waiting in this chat.
 4. When Isaiah replies (it may be hours later), you are in the same chat with
-   every repo still attached. Run the `/backlog-grill` protocol on that item —
-   one question at a time — and when it is pinned down, update the issue, drop
+   every repo still attached. Run the `/backlog-grill` protocol on that item,
+   following its question rules, and when it is pinned down, update the issue, drop
    the `needs-grilling`/`blocked` label, and move to the next item. Build it
    only if he says to; otherwise the next nightly run picks it up.
 
@@ -320,8 +320,9 @@ For each `needs-grilling` item, use `create_session` to start a separate chat:
 **Tell it to ask in plain chat text, not with the question tool.** End the
 prompt with this instruction, verbatim:
 
-> Ask your questions as ordinary chat messages — one at a time, then stop and
-> wait for the reply. Do not use the `AskUserQuestion` tool.
+> Ask your questions as ordinary chat messages, then stop and wait for the
+> reply. Questions that don't depend on each other go together in one numbered
+> list, each with your recommended answer. Do not use the `AskUserQuestion` tool.
 
 These chats run in auto permission mode, where `AskUserQuestion` needs an
 approval nobody is awake to give. A chat that reaches for it freezes on a

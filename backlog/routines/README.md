@@ -5,56 +5,39 @@ just want the thing working.
 
 This file explains why the design looks the way it does.
 
-## The failure this is built around
+## Two failures this is built around
 
-A Routine freezes its tool grants at the moment it is created. The first nightly
-backlog Routine was created on 2026-08-08 from a session that held no MCP tools,
-so every session it fired had no `gh` CLI, no `mcp__github__*` tools and no
-`add_repo`. It could clone this repo through the git proxy and read the
-protocol — and then it could not list a single issue in any repo, including this
-one.
+**1. A Routine Claude creates can't reach GitHub.** The first nightly Routine
+(2026-08-08) and the dispatcher that replaced it (2026-08-27) were both created
+by Claude with `create_trigger`. A Routine made that way runs with a stripped
+tool set: no `mcp__github__*` and no `add_repo`. The dispatcher was also bound
+to one long-lived chat, and attaching a repo to the Routine afterwards did not
+give that chat any new tools — so every night it resumed, could list nothing,
+and stopped. The run still showed as succeeded.
 
-It reported that correctly and sent a notification. But the run status was
-**SUCCEEDED**, because the agent stopped cleanly. From the outside, a Routine
-that had never once done any work looked healthy for three weeks.
-
-Neither `update_trigger` (no such parameter) nor `create_trigger` (writes the
-same default list regardless of who calls it) can repair a Routine's tool list
-after the fact. It has to be created differently.
+**2. A working Routine has no `add_repo` — and that's fine.** A Routine made
+from the web page starts a fresh chat each run with GitHub tools for exactly the
+repos attached to it. It never has `add_repo`. The briefings used to list a
+missing `add_repo` as a reason to stop, so the first run that could actually
+read GitHub (2026-09-22) stopped itself. A test now guards against that.
 
 ## The design
 
-**One long-lived dispatcher session** — created the normal way, from the web app,
-with this repo attached, so it holds the full tool set. Both Routines are bound
-to it, so each firing resumes *that* session and inherits *its* tools.
+Each Routine is made **from the web page** with **every repo in `repos.txt`
+attached**. Each run is a fresh chat — no dispatcher, no shared transcript
+growing night after night.
 
-**The dispatcher does no work.** On each firing it spawns a fresh worker session
-with `create_session`, hands it a briefing, and stops. That is the whole job.
-
-Why not let the dispatcher do the work directly? Because a bound Routine resumes
-the same conversation every time. Thirty nights of backlog runs in one transcript
-is thirty nights of context re-read on night thirty-one — the exact waste the
-backlog system exists to avoid. The dispatcher's context grows by one tool call
-per night; every worker starts clean.
-
-```
-Routine fires  →  dispatcher session (holds the tools, stays tiny)
-                      │
-                      └─ create_session  →  worker (clean context, full tools)
-                                               └─ does the actual run
-```
+The Routine's own instructions are short: open the briefing in this folder on
+`main` and follow it. So changing what a run does is a normal PR here; only the
+repo list and schedule live in the Routine itself.
 
 ## The files
 
-| File | Role |
-| --- | --- |
-| `SETUP.md` | The prompt to paste into a new chat. It deletes the broken Routines and creates the working ones. |
-| `nightly-backlog.md` | Briefing handed to each nightly worker. |
-| `monthly-branch-sweep.md` | Briefing handed to each monthly worker. |
-
-The briefings are versioned here rather than living only inside the Routines, so
-they can be reviewed in a PR and so a Routine can be rebuilt from the repo
-without anyone having to remember what it said.
+| File                      | Role                                             |
+| ------------------------- | ------------------------------------------------ |
+| `SETUP.md`                | How to rebuild either Routine from the web page. |
+| `nightly-backlog.md`      | Briefing for each nightly run.                   |
+| `monthly-branch-sweep.md` | Briefing for each monthly run.                   |
 
 ## If a run goes quiet again
 

@@ -33,34 +33,24 @@ if [ ! -L node_modules ] || [ ! -e "node_modules/preact/package.json" ]; then
 fi
 
 # --- Pull in the latest game/app builds so the preview always shows your newest
-# --- versions. AUTO-DISCOVERY: any file named "*.standalone.html" anywhere inside
-# --- your Claude folder is picked up automatically — no need to list it here. To add
-# --- a new game, just save it as "<Name>.standalone.html" in that folder.
-GAME_SRC_ROOT="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude"
-if [ -d "$GAME_SRC_ROOT" ]; then
-  for src in "$GAME_SRC_ROOT"/**/*.standalone.html(N); do
-    base="${src:t:r}"; base="${base%.standalone}"; base="${base// /-}"  # "My Game.standalone.html" -> "My-Game"
-    dst="quartz/static/${base}.html"
-    if ! cmp -s "$src" "$dst" 2>/dev/null; then
-      cp "$src" "$dst" && echo "Updated ${base} to your latest version."
-    fi
-  done
-else
-  echo "Note: couldn't find your Claude games folder (it may still be syncing) —"
-  echo "      showing whatever is already in the site folder."
-fi
-
-# Special cases: games whose source file ISN'T named "*.standalone.html".
-# Format per line: "<full path to the source file>|<Name>.html".
-# Games that moved to ~/Projects/<repo> go here too (the Obsidian folder above no longer has them).
+# --- versions. Each GAMES line is "<full path to the built file>|<Name>.html"; the file
+# --- is copied to quartz/static/<Name>.html. To add a game or app, add a line here AND in
+# --- "Publish Changes.command". (Games live in ~/Projects/<repo>.)
 GAMES=(
   "$HOME/Projects/blockchain/Blockchain.standalone.html|Blockchain.html"
-  "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/KnoxLox/Claude/Claude.Tax Modeling/Tax Modeler.html|Tax-Modeler.html"
+  # Hexchain held 2026-09-23: fails its multiplayer test (BarkernotBob/blockchain#47). Remove the
+  # leading "# " on the next line once that issue is closed.
+  # "$HOME/Projects/blockchain/Hexchain.standalone.html|Hexchain.html"
+  "$HOME/Projects/blockchain/BallChain.standalone.html|BallChain.html"
+  "$HOME/Projects/blockchain/Dodecachain.standalone.html|Dodecachain.html"
+  "$HOME/Projects/tax-modeling/Tax Modeler.html|Tax-Modeler.html"
 )
 for entry in "${GAMES[@]}"; do
   src="${entry%%|*}"; dst="quartz/static/${entry##*|}"; name="${dst:t:r}"
-  if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
-    cp "$src" "$dst" && echo "Updated the ${name} to your latest version."
+  if [ ! -f "$src" ]; then
+    echo "Note: couldn't find ${name} at ${src} — showing the copy already in the site folder."
+  elif ! cmp -s "$src" "$dst" 2>/dev/null; then
+    cp "$src" "$dst" && echo "Updated ${name} to your latest version."
   fi
 done
 

@@ -113,15 +113,17 @@ At 2am a Claude session starts on its own, with no one watching, and:
    they're green. That was your call — it ships without asking.
 4. Closes the issue with a **Manual test (for Isaiah)**: numbered plain-English
    steps so you can see the thing working yourself.
-5. Stops after five merges. Five unreviewed changes is already a lot to wake up
-   to.
+5. Keeps going until nothing buildable is left, or it runs out of budget. An
+   item it gets cut off in the middle of stays `in-progress` and is resumed the
+   next night.
 
 It will not touch deploy workflows, secrets, or branch settings — those get
 labelled `blocked` for you to handle awake.
 
 **If an item is too vague, it does not guess.** It moves the item to
 `needs-grilling`, writes down the exact question that stopped it, and opens a
-chat about it that's waiting in your Claude app. That's what makes it safe for a
+chat about it that's waiting in your Claude app. Same for anything it had to
+label `blocked` — a `Blocked:` chat says what it needs from you. That's what makes it safe for a
 one-line dictated note to be fair game.
 
 You get one push notification with the counts. Everything else is written on the

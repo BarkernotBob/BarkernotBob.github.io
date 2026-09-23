@@ -54,7 +54,7 @@ building it.
   aggregates come from private repos.
 - **The nightly routine merges its own work.** That was an explicit decision, not
   an oversight. The guardrails that make it survivable are in
-  `../.claude/commands/backlog-nightly.md`: five merges a night, never on red CI,
+  `../.claude/commands/backlog-nightly.md`: no merge cap (runs till done or out of budget), never on red CI,
   and a hard exclusion list covering workflows, secrets and branch settings.
 - **`install.sh` is POSIX `sh`, on purpose**, so it can be parsed and exercised in
   CI. The `.command` wrappers stay zsh to match the other launchers.

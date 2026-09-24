@@ -348,3 +348,163 @@ test('a partial load failure surfaces too, rather than half-rendering', async ({
   const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
   expect(appErrors, appErrors.join('\n')).toEqual([])
 })
+
+// ---------------------------------------------------------------------------
+// Issue #134 — one tap writes one record. 11 of 33 entries in the real
+// log.json were duplicates: a failed save kept its record and a second tap
+// wrote a new copy, and two taps inside one round trip queued two commits.
+// ---------------------------------------------------------------------------
+
+// Fail the next PATCH of main's ref with `status`, once; everything else
+// (and every later PATCH) goes on to the mock.
+async function failNextRefUpdate(page, status) {
+  let failed = false
+  await page.route('**/git/refs/heads/main', (route) => {
+    if (route.request().method() === 'PATCH' && !failed) {
+      failed = true
+      return route.fulfill({ status, contentType: 'application/json', body: '{"message":"boom"}' })
+    }
+    return route.fallback()
+  })
+}
+
+// Hold every PATCH of main's ref for `ms` — a realistic phone round trip.
+async function slowRefUpdates(page, ms) {
+  await page.route('**/git/refs/heads/main', async (route) => {
+    if (route.request().method() === 'PATCH') await new Promise((r) => setTimeout(r, ms))
+    return route.fallback()
+  })
+}
+
+test('a failed save, tapped again, writes one test record — not two', async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await failNextRefUpdate(page, 500)
+  await goTab(page, 'test')
+  await page.locator('.levels[data-key="fc"] button[data-l="low"]').click()
+
+  await page.click('#t_save')
+  await expect(page.locator('#toast')).toContainText('500')
+  expect((await committed(mock, 'tests.json')).length).toBe(2)
+  // The failed save left the button usable, and the app as it was.
+  await expect(page.locator('#t_save')).toBeEnabled()
+
+  await page.click('#t_save')
+  await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
+  await expect(page.locator('.modal-ov')).toContainText('what to do')
+  expect((await committed(mock, 'tests.json')).at(-1).levels).toEqual({ fc: 'low' })
+})
+
+test('a save that landed but lost its reply writes one record when retried', async ({ page }) => {
+  // The phone case: the commit reached GitHub, the answer never came back, the
+  // app said "failed". Tapping Done again must not log the task a second time.
+  const { mock, errors } = await bootApp(page)
+  mock.armLostResponse()
+  const item = page.locator('#main .item').filter({ hasText: 'Add chlorine' })
+
+  await item.getByRole('button', { name: 'Done' }).click()
+  await expect(page.locator('#toast')).toContainText('502')
+  const afterFirst = await committed(mock, 'log.json')
+  expect(afterFirst).toHaveLength(4) // it did land
+
+  await item.getByRole('button', { name: 'Done' }).click()
+  await expect(page.locator('#toast')).toContainText('Logged')
+  const final = await committed(mock, 'log.json')
+  expect(final).toHaveLength(4)
+  expect(final.filter((e) => e.task === 'chlorine')).toHaveLength(1)
+  const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
+  expect(appErrors, appErrors.join('\n')).toEqual([])
+})
+
+test('two taps on Mark done inside one round trip write one record', async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await slowRefUpdates(page, 1500)
+  await goTab(page, 'schedule')
+  const sel = '#main [data-action="markTask"][data-a1="chlorine"]'
+  const btn = page.locator(sel)
+
+  await page.evaluate((s) => document.querySelector(s).click(), sel)
+  // While it works, the button says so and can't be tapped.
+  await expect(btn).toHaveClass(/busy/)
+  await expect(btn).toBeDisabled()
+  // A second tap still inside the round trip — dispatched even after
+  // re-enabling the button by hand, so this proves the in-flight guard itself,
+  // not just the disabled attribute (a save can re-render the tab under a
+  // second tap, putting a fresh, enabled button there).
+  await page.evaluate((s) => {
+    const b = document.querySelector(s)
+    b.disabled = false
+    b.click()
+  }, sel)
+
+  await expect(page.locator('#toast')).toContainText('Logged')
+  await expect(page.locator('#main .busy')).toHaveCount(0)
+  const log = await committed(mock, 'log.json')
+  expect(log.filter((e) => e.task === 'chlorine')).toHaveLength(1)
+  expect(mock.refUpdates).toBe(1)
+})
+
+test("Today's Done shows it is working without moving anything, and double-taps write once", async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await slowRefUpdates(page, 700)
+  const btn = page.locator('#main [data-action="markTask"][data-a1="chlorine"]')
+  const card = page.locator('#main .card:has([data-action="markTask"][data-a1="chlorine"])')
+  const before = { btn: await btn.boundingBox(), card: await card.boundingBox() }
+
+  await page.evaluate(() => {
+    const b = document.querySelector('#main [data-action="markTask"][data-a1="chlorine"]')
+    b.click()
+    b.click()
+  })
+  await expect(btn).toHaveClass(/busy/)
+  await expect(btn).toBeDisabled()
+  expect(await btn.boundingBox()).toEqual(before.btn)
+  expect(await card.boundingBox()).toEqual(before.card)
+
+  await expect(btn).toHaveText('✓ Done')
+  await expect(btn).not.toHaveClass(/busy/)
+  await expect(btn).toBeDisabled() // settled rows stay done (#144)
+  expect(await btn.boundingBox()).toEqual(before.btn)
+  const log = await committed(mock, 'log.json')
+  expect(log.filter((e) => e.task === 'chlorine')).toHaveLength(1)
+})
+
+test('marking a task already logged today asks first', async ({ page }) => {
+  // Fixture: the robot was already run today (last = 2026-07-15).
+  const { mock, errors } = await bootApp(page)
+  await goTab(page, 'schedule')
+  const markRobot = page.locator('#main [data-action="markTask"][data-a1="robot"]')
+
+  await markRobot.click()
+  const dialog = page.locator('.modal-ov')
+  await expect(dialog).toContainText('already logged today')
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.locator('#main .busy')).toHaveCount(0)
+  expect(await committed(mock, 'log.json')).toHaveLength(3)
+
+  await markRobot.click()
+  await page.locator('.modal-ov').getByRole('button', { name: 'Log again' }).click()
+  await expect.poll(async () => (await committed(mock, 'log.json')).length).toBe(4)
+  expect((await committed(mock, 'log.json')).at(-1)).toMatchObject({ task: 'robot' })
+
+  // A task done for the first time today doesn't ask...
+  await page.locator('#main [data-action="markTask"][data-a1="chlorine"]').click()
+  await expect.poll(async () => (await committed(mock, 'log.json')).length).toBe(5)
+  // ...but tapping it again does.
+  await page.locator('#main [data-action="markTask"][data-a1="chlorine"]').click()
+  await expect(page.locator('.modal-ov')).toContainText('already logged today')
+  expect(errors, errors.join('\n')).toEqual([])
+})
+
+test('marking a seasonal checklist done twice in one day asks first', async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await goTab(page, 'schedule')
+  const mark = page.getByRole('button', { name: /Mark opening done/i })
+
+  await mark.click()
+  await expect.poll(async () => (await committed(mock, 'log.json')).length).toBe(4)
+  await mark.click()
+  const dialog = page.locator('.modal-ov')
+  await expect(dialog).toContainText('already logged today')
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  expect(await committed(mock, 'log.json')).toHaveLength(4)
+})

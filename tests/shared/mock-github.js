@@ -148,6 +148,14 @@ async function installGitHubMock(page, opts = {}) {
     armRaceInject(mods) {
       this._raceMods = mods
     },
+    // One-shot lost reply: the NEXT PATCH ref that would succeed DOES move main,
+    // then answers 502 — the phone case where the commit landed but the
+    // response never arrived. The app sees a failure; a retry must not
+    // write the same record twice (pool #134).
+    _lostResponse: false,
+    armLostResponse() {
+      this._lostResponse = true
+    },
     // Directly advance main (models the processor committing between polls).
     injectRemote(mods) {
       injectRemote(mods)
@@ -220,6 +228,10 @@ async function installGitHubMock(page, opts = {}) {
         return route.fulfill({ status: 422, json: { message: 'Update is not a fast forward' } })
       git.head = { commitSha: newCommit, etag: '"' + newCommit + '"' }
       state.refUpdates++
+      if (state._lostResponse) {
+        state._lostResponse = false
+        return route.fulfill({ status: 502, json: { message: 'Bad Gateway' } })
+      }
       return json(route, { ref: `refs/heads/${BRANCH}`, object: { sha: newCommit, type: 'commit' } })
     }
 

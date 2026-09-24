@@ -236,3 +236,15 @@ test('the setup screen recommends the fine-grained token, not the broad sign-in'
   // Collapsed by default — the broad-scope button must not be the obvious one.
   expect(await fallback.evaluate((d) => d.open)).toBe(false)
 })
+
+test('the tip of main is always read fresh, never from the browser cache', async ({ request }) => {
+  // GitHub serves git/ref/heads/main with Cache-Control: max-age=60, and a
+  // write goes to git/refs/… (plural), which does not evict that cached read.
+  // A second save within a minute would then build on a stale tip and fail
+  // every retry with 422. The mock cannot model HTTP caching, so pin the
+  // source: every read of the ref goes through ghGetRef, which is no-store.
+  const src = await (await request.get('/static/pool/index.html')).text()
+  expect(src).toMatch(/const ghGetRef = \(\) => ghJson\('GET', `git\/ref\/heads\/\$\{BRANCH\}`, undefined, \{cache:'no-store'\}\)/)
+  const refReads = src.match(/git\/ref\/heads/g) || []
+  expect(refReads, 'a ref read bypasses ghGetRef').toHaveLength(1)
+})

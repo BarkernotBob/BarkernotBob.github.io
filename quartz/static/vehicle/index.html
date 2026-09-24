@@ -984,7 +984,14 @@ function renderCompare(){
       <span class="num" style="font-weight:600">${money(r.opt.perYear)}/yr</span></div>`;
   });
   h+=`</div></div>`;
+  // Every tap here rebuilds the screen, and a fresh chip row starts scrolled to
+  // the first car. With 16 cars the row always overflows, so picking one near
+  // the end snapped you back to the start each time (#163). Carry the row's
+  // sideways scroll across the rebuild. Arriving from another tab there is no
+  // old row, so Compare still opens at the first car.
+  const oldRow=app.querySelector(".selrow"), keepX=oldRow?oldRow.scrollLeft:0;
   app.innerHTML=h;
+  if(keepX) $(".selrow",app).scrollLeft=keepX;
   // events
   app.querySelectorAll("[data-sel]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.sel;

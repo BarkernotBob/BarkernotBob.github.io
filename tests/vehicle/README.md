@@ -54,6 +54,7 @@ real year, and `maxAge` no longer collapses to `-Infinity` on an empty set.
 | `flows.spec.js` | One smoke test per main flow — the four assumptions (including the percent-vs-fraction conversion and the NaN guard), add, rename, MPG changing the model output, delete, depreciation rows, purchase point, compare selection, reset to samples |
 | `persistence.spec.js` | Export, an export/import round trip, a junk file and a valid-but-wrong file both refused without destroying the garage, and nothing ever rendering as `NaN` |
 | `security.spec.js` | Hostile values inert seeded, imported and typed; the attribute breakout above; and the no-data-bearing-inline-handler guard |
+| `compare-scroll.spec.js` | Picking a car in Compare keeps the sideways chip row (and the page) where it was, at 390 and 1300px ([#163](https://github.com/BarkernotBob/BarkernotBob.github.io/issues/163)) |
 | `screenshots.spec.js` | Every view at 390 / 900 / 1300px, plus both detail tabs, attached to the report, asserting no sideways page scroll |
 
 ## How it boots

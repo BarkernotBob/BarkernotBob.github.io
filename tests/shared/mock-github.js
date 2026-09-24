@@ -60,6 +60,8 @@ function readFixture(fixturesDir, relPath) {
 //   opts.fixturesDir  (required) directory of *.json seeded as db/<name>
 //   opts.seedImages   paths to seed with a 1x1 PNG, for apps that store photos
 //   opts.oversizeItems / opts.truncateTree  grocery-specific Git Data scenarios
+//   opts.omitFiles    fixture names (e.g. 'swim.json') left out of the seed
+//                     commit, to model a data repo that never had that file
 async function installGitHubMock(page, opts = {}) {
   const fixturesDir = opts.fixturesDir
   if (!fixturesDir) throw new Error('installGitHubMock: opts.fixturesDir is required')
@@ -99,6 +101,7 @@ async function installGitHubMock(page, opts = {}) {
   const seedMap = {}
   for (const name of fs.readdirSync(fixturesDir)) {
     if (!name.endsWith('.json')) continue
+    if ((opts.omitFiles || []).includes(name)) continue
     let text = fs.readFileSync(path.join(fixturesDir, name), 'utf8')
     if (name === 'items.json' && opts.oversizeItems) {
       const arr = JSON.parse(text)
@@ -155,6 +158,11 @@ async function installGitHubMock(page, opts = {}) {
     },
     headSha() {
       return git.head.commitSha
+    },
+    // The blob sha a path currently has at main, so a test can fail that one
+    // blob's read (e.g. a 403 on log.json and nothing else).
+    blobSha(p) {
+      return headTreeMap()[p]
     },
   }
 

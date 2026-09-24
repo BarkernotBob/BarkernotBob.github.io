@@ -7,7 +7,7 @@ const { bootApp, goTab, TODAY } = require('./support/boot')
 // render that looks right over a save that silently threw is precisely the
 // failure this app shipped for months (see editChecklist, in modals.spec.js).
 
-// The app writes with the Contents API, so poll the mock's committed text.
+// Poll the mock's committed text — what actually landed on main.
 async function committed(mock, file) {
   return JSON.parse(mock.readFile(`db/${file}`))
 }
@@ -24,8 +24,7 @@ test('marking a task done reschedules it and writes a log entry', async ({ page 
     .poll(async () => (await committed(mock, 'config.json')).tasks.find((t) => t.id === 'chlorine').last)
     .toBe(TODAY)
 
-  // markTask writes config first, then the log — poll the log separately or
-  // this races the second PUT and reads the fixture's last entry.
+  // Config and log land in one commit (#135), so the log is already there.
   await expect.poll(async () => (await committed(mock, 'log.json')).length).toBe(4)
   expect((await committed(mock, 'log.json')).at(-1)).toMatchObject({ kind: 'task', task: 'chlorine' })
 
@@ -335,9 +334,9 @@ test('a partial load failure surfaces too, rather than half-rendering', async ({
   // that shrugs that off renders a normal-looking Today over half a dataset,
   // and the next "Done" tap throws somewhere nothing catches it and silently
   // does nothing — the worst version, because it looks like it worked.
-  const { errors } = await bootApp(page)
+  const { mock, errors } = await bootApp(page)
 
-  await page.route('**/contents/db/log.json', (route, req) => {
+  await page.route(`**/git/blobs/${mock.blobSha('db/log.json')}`, (route, req) => {
     if (req.method() === 'GET')
       return route.fulfill({ status: 403, contentType: 'application/json', body: '{"message":"Forbidden"}' })
     return route.fallback()

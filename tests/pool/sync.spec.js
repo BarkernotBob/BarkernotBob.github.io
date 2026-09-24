@@ -11,25 +11,42 @@ const { bootApp, goTab, ready, TODAY } = require('./support/boot')
 //
 // This is the whole storage layer for pool — there is no local mode to fall
 // back on, so if these reads and writes are wrong the app has no data at all.
-// It talks the plain Contents API (GET/PUT /repos/:r/contents/:path with a sha
-// for optimistic concurrency), not the Git Data API grocery moved onto.
+// Since #135 it talks the Git Data API, the same as grocery: reads go
+// ref → commit → tree → blob, and every save is ONE commit (blobs → tree on
+// base_tree → commit → PATCH ref) whose changes are replayed onto fresh content
+// if another device moved main first. The Contents API is only for seeding an
+// empty repo.
 
-test('boot reads all four data files', async ({ page }) => {
-  const reads = []
+const CONTENTS_DATA_PATH = /\/contents\/db\//
+
+// Every GitHub request the app makes, as "METHOD path-after-the-repo".
+function recordGitHub(page) {
+  const calls = []
   page.on('request', (req) => {
-    const u = req.url()
-    if (req.method() === 'GET' && u.includes('api.github.com') && u.includes('/contents/'))
-      reads.push(u.split('/contents/')[1])
+    const m = req.url().match(/api\.github\.com\/repos\/[^/]+\/[^/]+\/(.*)$/)
+    if (m) calls.push({ method: req.method(), path: m[1], body: req.postData() })
   })
+  return calls
+}
 
+const log = (mock) => JSON.parse(mock.readFile('db/log.json'))
+const config = (mock) => JSON.parse(mock.readFile('db/config.json'))
+const chlorineLast = (mock) => config(mock).tasks.find((t) => t.id === 'chlorine').last
+
+async function markChlorineDone(page) {
+  await page.locator('#main .item').filter({ hasText: 'Add chlorine' }).getByRole('button', { name: 'Done' }).click()
+}
+
+test('boot reads all four data files through ref, commit, tree and blob', async ({ page }) => {
+  const calls = recordGitHub(page)
   await bootApp(page)
 
-  await expect.poll(async () => reads.slice().sort()).toEqual([
-    'db/config.json',
-    'db/log.json',
-    'db/swim.json',
-    'db/tests.json',
-  ])
+  const gets = calls.filter((c) => c.method === 'GET').map((c) => c.path.split('?')[0].replace(/\/[^/]+$/, '/…'))
+  expect(gets).toContain('git/ref/heads/…')
+  expect(gets).toContain('git/commits/…')
+  expect(gets).toContain('git/trees/…')
+  expect(gets.filter((g) => g === 'git/blobs/…')).toHaveLength(4)
+  expect(calls.filter((c) => CONTENTS_DATA_PATH.test(c.path)), 'a data file was read through the Contents API').toEqual([])
 })
 
 test('the token is sent as a bearer header and never in the URL', async ({ page }) => {
@@ -49,69 +66,133 @@ test('the token is sent as a bearer header and never in the URL', async ({ page 
   for (const u of urls) expect(u, `token leaked into a URL: ${u}`).not.toContain('ghp_test_token')
 })
 
-test('a write sends the previous sha, so a concurrent edit cannot be clobbered', async ({ page }) => {
-  const puts = []
-  page.on('request', (req) => {
-    if (req.method() === 'PUT' && req.url().includes('/contents/'))
-      puts.push(JSON.parse(req.postData() || '{}'))
-  })
-
+test('a write builds on the commit it read and never force-moves main', async ({ page }) => {
+  // What stops a write from clobbering another device's: the new commit's
+  // parent is the tip this device read, and the ref update is force:false, so
+  // GitHub refuses it if main has moved since. (The old test of this name only
+  // checked that a Contents PUT carried a sha — and the retry behind it then
+  // overwrote the other device's edit anyway.)
+  const calls = recordGitHub(page)
   const { mock } = await bootApp(page)
-  await page.locator('#main .item').filter({ hasText: 'Add chlorine' }).getByRole('button', { name: 'Done' }).click()
-  await expect
-    .poll(async () => JSON.parse(mock.readFile('db/config.json')).tasks.find((t) => t.id === 'chlorine').last)
-    .toBe(TODAY)
+  const tipBefore = mock.headSha()
 
-  await expect.poll(async () => puts.length).toBeGreaterThan(0)
-  // Every write carries the sha the app last read — that is what makes GitHub
-  // reject a write against a file someone else already changed.
-  for (const body of puts) expect(body.sha, 'a write went out with no sha').toBeTruthy()
+  await markChlorineDone(page)
+  await expect.poll(async () => chlorineLast(mock)).toBe(TODAY)
+
+  const commit = calls.find((c) => c.method === 'POST' && c.path === 'git/commits')
+  expect(JSON.parse(commit.body).parents).toEqual([tipBefore])
+  const patches = calls.filter((c) => c.method === 'PATCH' && c.path === 'git/refs/heads/main')
+  expect(patches).toHaveLength(1)
+  expect(JSON.parse(patches[0].body).force).toBe(false)
+  expect(calls.filter((c) => c.method === 'PUT'), 'a save went through the Contents API').toEqual([])
 })
 
-test('a stale sha is retried once against fresh content', async ({ page }) => {
-  // saveJson() catches 409/422, re-reads the file for its current sha and puts
-  // again. Without that, one edit from a second device turns every later save
-  // on this one into a silent failure until a reload.
-  const { mock, errors } = await bootApp(page)
+test('marking a task done is ONE commit carrying both config.json and log.json', async ({ page }) => {
+  const calls = recordGitHub(page)
+  const { mock } = await bootApp(page)
 
-  let rejected = false
+  await markChlorineDone(page)
+  await expect.poll(async () => log(mock).length).toBe(4)
+
+  // Both files in the same tree, under the same single commit — so they land
+  // together or not at all.
+  expect(mock.commits).toHaveLength(1)
+  const trees = calls.filter((c) => c.method === 'POST' && c.path === 'git/trees')
+  expect(trees).toHaveLength(1)
+  expect(JSON.parse(trees[0].body).tree.map((e) => e.path).sort()).toEqual(['db/config.json', 'db/log.json'])
+  expect(chlorineLast(mock)).toBe(TODAY)
+})
+
+test('a failed commit changes neither file — no task marked done without its log entry', async ({ page }) => {
+  const { mock, errors } = await bootApp(page)
+  const configBefore = mock.readFile('db/config.json')
+  const logBefore = mock.readFile('db/log.json')
+
   // Registered after bootApp so it takes precedence over the mock.
-  await page.route('**/contents/db/config.json', (route, req) => {
-    if (req.method() === 'PUT' && !rejected) {
-      rejected = true
-      return route.fulfill({
-        status: 409,
-        contentType: 'application/json',
-        body: '{"message":"is at ... but expected ..."}',
-      })
-    }
+  await page.route('**/git/refs/heads/main', (route, req) => {
+    if (req.method() === 'PATCH')
+      return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Server Error"}' })
     return route.fallback()
   })
+  await markChlorineDone(page)
 
-  await page.locator('#main .item').filter({ hasText: 'Add chlorine' }).getByRole('button', { name: 'Done' }).click()
-
-  await expect
-    .poll(async () => JSON.parse(mock.readFile('db/config.json')).tasks.find((t) => t.id === 'chlorine').last)
-    .toBe(TODAY)
-  expect(rejected, 'the 409 never fired, so the retry was not exercised').toBe(true)
+  await expect(page.locator('#toast')).toContainText('500')
+  expect(mock.readFile('db/config.json')).toBe(configBefore)
+  expect(mock.readFile('db/log.json')).toBe(logBefore)
   const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
   expect(appErrors, appErrors.join('\n')).toEqual([])
 })
 
-test('a missing data file falls back to defaults instead of breaking', async ({ page }) => {
-  // A fresh data repo has no db/swim.json until something is logged. loadJson()
-  // treats a 404 as "empty", and the History tab has to survive that.
-  const { errors } = await bootApp(page)
+test("another device's log entry survives a race — replayed onto, not overwritten", async ({ page }) => {
+  // The #135 reproduction: a second device appends a swim entry to log.json
+  // while this one is marking a task done. Main moves under us, the ref update
+  // is rejected, and the save must replay onto the other device's content.
+  const { mock, errors } = await bootApp(page)
+  const other = { id: 'l_other_device', at: '2026-07-15T11:00:00.000Z', kind: 'swim', title: 'Swam 1 h', by: 'otherdevice' }
+  mock.armRaceInject({ 'db/log.json': JSON.stringify([...log(mock), other], null, 2) })
 
-  // Registered after bootApp so it takes precedence over the mock, then picked
-  // up on the reload below.
-  await page.route('**/contents/db/swim.json', (route, req) => {
-    if (req.method() === 'GET')
-      return route.fulfill({ status: 404, contentType: 'application/json', body: '{"message":"Not Found"}' })
-    return route.fallback()
-  })
+  await markChlorineDone(page)
+  await expect.poll(async () => chlorineLast(mock)).toBe(TODAY)
+
+  const final = log(mock)
+  expect(final.map((e) => e.id), "the other device's entry was deleted").toContain('l_other_device')
+  expect(final.at(-1)).toMatchObject({ kind: 'task', task: 'chlorine' })
+  expect(final).toHaveLength(5) // 3 fixture + theirs + ours
+  expect(mock.refUpdates).toBe(1)
+  const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
+  expect(appErrors, appErrors.join('\n')).toEqual([])
+})
+
+test("another device's config edit survives a race with this device's task", async ({ page }) => {
+  // Config is one object, so a replay has to apply only THIS save's change to
+  // the fresh copy: the other device renamed the pool and marked the basket
+  // done; this device marks chlorine done. All three must be in the result.
+  const { mock } = await bootApp(page)
+  const theirs = config(mock)
+  theirs.pool.name = 'Renamed Elsewhere'
+  theirs.tasks.find((t) => t.id === 'basket').last = '2026-07-15'
+  mock.armRaceInject({ 'db/config.json': JSON.stringify(theirs, null, 2) })
+
+  await markChlorineDone(page)
+  await expect.poll(async () => chlorineLast(mock)).toBe(TODAY)
+
+  const final = config(mock)
+  expect(final.pool.name).toBe('Renamed Elsewhere')
+  expect(final.tasks.find((t) => t.id === 'basket').last).toBe('2026-07-15')
+  expect(log(mock).at(-1)).toMatchObject({ task: 'chlorine' })
+  // The screen catches up with the other device too, not just the file.
+  await goTab(page, 'settings')
+  await expect(page.locator('#s_name')).toHaveValue('Renamed Elsewhere')
+})
+
+test('a log.json over the 1 MB Contents API ceiling still loads and still saves', async ({ page }) => {
+  // log.json grows forever and has no pruning. The Contents API refuses files
+  // over 1 MB; blobs are good to 100 MB.
+  const big = []
+  for (let i = 0; i < 6000; i++)
+    big.push({ id: 'l_big_' + i, at: '2026-06-01T12:00:00.000Z', kind: 'task', task: 'pump', title: 'Run the pump — filler entry number ' + i + ' xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', by: 'testuser' })
+  const text = JSON.stringify(big, null, 2)
+  expect(text.length).toBeGreaterThan(1024 * 1024)
+
+  // The real ceiling, enforced here so a regression to Contents reads fails.
+  const { mock, errors } = await bootApp(page, { db: { 'log.json': text } })
+  await page.route('**/contents/db/**', (route) =>
+    route.fulfill({ status: 403, contentType: 'application/json', body: '{"message":"This API returns blobs up to 1 MB in size."}' })
+  )
   await page.reload()
   await ready(page)
+
+  await markChlorineDone(page)
+  await expect.poll(async () => log(mock).length).toBe(6001)
+  expect(log(mock).at(-1)).toMatchObject({ task: 'chlorine' })
+  expect(errors.filter((e) => !/Failed to load resource/.test(e))).toEqual([])
+})
+
+test('a missing data file falls back to defaults instead of breaking', async ({ page }) => {
+  // A fresh data repo has no db/swim.json until something is logged. loadJson()
+  // treats a path missing from the tree as "empty", and the History tab has to
+  // survive that.
+  const { errors } = await bootApp(page, { omit: ['swim.json'] })
   await goTab(page, 'history')
 
   await expect(page.locator('#main')).toContainText('Swim hours')
@@ -154,4 +235,16 @@ test('the setup screen recommends the fine-grained token, not the broad sign-in'
   await expect(fallback).toContainText('every')
   // Collapsed by default — the broad-scope button must not be the obvious one.
   expect(await fallback.evaluate((d) => d.open)).toBe(false)
+})
+
+test('the tip of main is always read fresh, never from the browser cache', async ({ request }) => {
+  // GitHub serves git/ref/heads/main with Cache-Control: max-age=60, and a
+  // write goes to git/refs/… (plural), which does not evict that cached read.
+  // A second save within a minute would then build on a stale tip and fail
+  // every retry with 422. The mock cannot model HTTP caching, so pin the
+  // source: every read of the ref goes through ghGetRef, which is no-store.
+  const src = await (await request.get('/static/pool/index.html')).text()
+  expect(src).toMatch(/const ghGetRef = \(\) => ghJson\('GET', `git\/ref\/heads\/\$\{BRANCH\}`, undefined, \{cache:'no-store'\}\)/)
+  const refReads = src.match(/git\/ref\/heads/g) || []
+  expect(refReads, 'a ref read bypasses ghGetRef').toHaveLength(1)
 })

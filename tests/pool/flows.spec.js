@@ -508,3 +508,23 @@ test('marking a seasonal checklist done twice in one day asks first', async ({ p
   await dialog.getByRole('button', { name: 'Cancel' }).click()
   expect(await committed(mock, 'log.json')).toHaveLength(4)
 })
+
+test('the same swim logged again minutes after a lost reply is a second record, not a dropped resend', async ({ page }) => {
+  // A kept record is only for an immediate retry. Later, the same date and
+  // hours are a real second swim and must be written.
+  const { mock } = await bootApp(page)
+  mock.armLostResponse()
+  const logSwim = async () => {
+    await page.getByRole('button', { name: 'Log swim time' }).click()
+    await page.locator('.modal-ov #sw_hrs').fill('1')
+    await page.locator('.modal-ov').getByRole('button', { name: 'Save' }).click()
+  }
+  await logSwim()
+  await expect(page.locator('#toast')).toContainText('502')
+  expect(await committed(mock, 'swim.json')).toHaveLength(3) // it landed
+
+  // Nobody retries. A later swim with the same date and hours is real.
+  await page.clock.setFixedTime(new Date(`${TODAY}T12:05:00Z`)) // same day, 5 min on
+  await logSwim() // same swim, five minutes later: a new record
+  await expect.poll(async () => (await committed(mock, 'swim.json')).length).toBe(4)
+})

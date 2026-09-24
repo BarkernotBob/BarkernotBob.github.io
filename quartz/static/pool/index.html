@@ -443,9 +443,17 @@ const appendTo = (path, record) => ({ path, op:'append', record });
    trying to write, keyed by what they say. Tapping Save again with the same
    contents resends those exact records (same ids) instead of minting new ones,
    so if the failed attempt had in fact landed, the id check in applyDelta()
-   makes the retry a no-op rather than a duplicate. Cleared once a save lands. */
+   makes the retry a no-op rather than a duplicate. Cleared once a save lands,
+   and forgotten after two minutes: a retry follows its failure right away,
+   while the same swim or reading entered later is a real second event that
+   must get its own record, not be dropped as a resend. */
 const PENDING = {};
-function pendingFor(key, make){ return PENDING[key] || (PENDING[key] = make()); }
+const PENDING_TTL_MS = 2*60*1000;
+function pendingFor(key, make){
+  const p = PENDING[key];
+  if(p && Date.now()-p.t < PENDING_TTL_MS) return p.rec;
+  return (PENDING[key] = {rec:make(), t:Date.now()}).rec;
+}
 function donePending(key){ delete PENDING[key]; }
 
 /* =========================================================================
@@ -1307,10 +1315,13 @@ function loggedToday(kind, task){
 async function markTask(id){
   const t=(D.config.tasks||[]).find(x=>x.id===id); if(!t) return;
   const day=todayISO();
-  // Already done today → ask, don't silently log it twice (#134).
-  if((t.last===day || loggedToday('task', id))
-     && !await confirmModal(`“${t.title}” is already logged today. Log it again?`, 'Log again')) return;
   const key='task:'+id+':'+day;
+  // Already done today → ask, don't silently log it twice (#134). A yes is a
+  // deliberate second entry, so it never reuses a kept record.
+  if(t.last===day || loggedToday('task', id)){
+    if(!await confirmModal(`“${t.title}” is already logged today. Log it again?`, 'Log again')) return;
+    donePending(key);
+  }
   const entry=pendingFor(key, ()=>({id:uid('l'), at:nowISO(), kind:'task', task:t.id, title:t.title, by:LS.login||LS.device||''}));
   try{
     // One commit: the task's new date and its log entry land together or not at all.
@@ -1617,9 +1628,11 @@ async function editChecklist(kind){
 }
 async function logChecklistDone(kind){
   const title=D.config[kind].title;
-  if(loggedToday('season', kind)
-     && !await confirmModal(`“${title}” is already logged today. Log it again?`, 'Log again')) return;
   const key='season:'+kind+':'+todayISO();
+  if(loggedToday('season', kind)){
+    if(!await confirmModal(`“${title}” is already logged today. Log it again?`, 'Log again')) return;
+    donePending(key);
+  }
   const entry=pendingFor(key, ()=>({id:uid('l'), at:nowISO(), kind:'season', task:kind, title, by:LS.login||LS.device||''}));
   try{ await commitFiles([appendTo(FILES.log, entry)], 'Log '+kind+' completed'); donePending(key); toast(title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
 }

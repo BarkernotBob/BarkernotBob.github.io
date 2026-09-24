@@ -22,7 +22,7 @@ const APP_SCRIPTS = (APP_HTML.match(/<script\b/g) || []).length
 // bug — it hands over grocery's and bank-bonus's GitHub tokens too.
 //
 // Pool is unusual among the three in that it stores NOTHING locally: every
-// value it renders came back over the network from the GitHub Contents API. So
+// value it renders came back over the network from GitHub (the Git Data API). So
 // "data we fetched" and "data the user typed" are the same trust level here,
 // and the audit treats both as untrusted. The fixtures below inject at both.
 

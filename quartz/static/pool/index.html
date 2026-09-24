@@ -288,7 +288,19 @@ function uid(p){ return p+'_'+Math.floor(Date.now()/1000)+'_'+Math.random().toSt
 function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
 function b64decode(b64){ return decodeURIComponent(escape(atob(b64))); }
 
-/* ---------- GitHub API ---------- */
+/* ---------- GitHub API (Git Data layer, #135) ------------------------------
+   Same shape as grocery/app.js. Reads go ref → commit → tree → blob, so the
+   Contents API's 1 MB ceiling no longer applies (log.json grows forever).
+   Writes are ATOMIC BATCHED COMMITS through one primitive, commitFiles():
+   blobs → tree on base_tree → commit → PATCH ref. Every save is a DELTA that is
+   applied to FRESHLY FETCHED content at commit time — never a stale in-memory
+   copy. So when another device moved `main` first (PATCH ref → 422), we refetch,
+   replay the deltas onto its content and retry (×3): its entry survives.
+   The old Contents-API saveJson() re-PUT its own stale array on a 409, which
+   silently deleted the other device's work, and wrote config then log as two
+   separate commits that could half-land.
+   The Contents API is kept only to seed the db files into a fresh repo. -------*/
+const BRANCH = 'main';
 function ghHeaders(){ return { 'Authorization':'Bearer '+LS.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
 async function ghContents(path){
   const r = await fetch(`${API}/repos/${LS.repo}/contents/${path}`, {headers:ghHeaders()});
@@ -296,6 +308,8 @@ async function ghContents(path){
   if(!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
+/* Contents PUT — bootstrap only (ensureRepoReady seeding an empty repo, which
+   has no commit for the Git Data API to build on). Never a user-data write. */
 async function ghPut(path, contentB64, sha, message){
   const body = { message, content:contentB64 };
   if(sha) body.sha = sha;
@@ -303,26 +317,112 @@ async function ghPut(path, contentB64, sha, message){
   if(!r.ok) throw new Error(`Save failed ${r.status}: ${(await r.text()).slice(0,180)}`);
   return r.json();
 }
+async function ghJson(method, path, body){
+  const init = {method, headers:ghHeaders()};
+  if(body!==undefined) init.body = JSON.stringify(body);
+  const r = await fetch(`${API}/repos/${LS.repo}/${path}`, init);
+  if(!r.ok) throw new Error(`GitHub ${r.status} (${method} ${path.split('/').slice(0,2).join('/')}): ${(await r.text()).slice(0,180)}`);
+  return r.json();
+}
+async function ghGetTree(sha){
+  const j = await ghJson('GET', `git/trees/${sha}?recursive=1`);
+  const map = {};
+  (j.tree||[]).forEach(e=>{ if(e.type==='blob') map[e.path]=e.sha; });
+  if(j.truncated){
+    // A truncated recursive listing is incomplete — resolve db/ from its own
+    // subtree so a data file never silently reads as missing.
+    const root = await ghJson('GET', `git/trees/${sha}`);
+    const dbEntry = (root.tree||[]).find(e=>e.path==='db' && e.type==='tree');
+    if(dbEntry) ((await ghJson('GET', `git/trees/${dbEntry.sha}?recursive=1`)).tree||[])
+      .forEach(e=>{ if(e.type==='blob') map['db/'+e.path]=e.sha; });
+  }
+  return map;
+}
+async function ghGetBlobText(sha){
+  const j = await ghJson('GET', `git/blobs/${sha}`);
+  return b64decode((j.content||'').replace(/\n/g,''));
+}
+/* HEAD mirrors main's tip: commit sha, tree sha and a path → blob sha map. */
+let HEAD = null;
+async function loadHead(){
+  const ref = await ghJson('GET', `git/ref/heads/${BRANCH}`);
+  const commit = await ghJson('GET', `git/commits/${ref.object.sha}`);
+  HEAD = { commitSha:ref.object.sha, treeSha:commit.tree.sha, tree:await ghGetTree(commit.tree.sha) };
+  return HEAD;
+}
 async function loadJson(path, fallback){
-  const c = await ghContents(path);
-  if(c===null){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
-  const value = JSON.parse(b64decode(c.content));
-  DB[path] = {value, sha:c.sha};
+  const blobSha = HEAD && HEAD.tree[path];
+  if(!blobSha){ DB[path]={value:JSON.parse(JSON.stringify(fallback)), sha:null}; return DB[path].value; }
+  if(DB[path] && DB[path].sha===blobSha) return DB[path].value;   // unchanged since last read
+  const value = JSON.parse(await ghGetBlobText(blobSha));
+  DB[path] = {value, sha:blobSha};
   return value;
 }
-async function saveJson(path, value, message){
-  let sha = DB[path] ? DB[path].sha : null;
-  try{
-    const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
-    DB[path] = {value, sha:res.content.sha};
-  }catch(e){
-    if(String(e).includes('409')||String(e).includes('422')){ // stale sha: re-read & retry once
-      const c = await ghContents(path); sha = c? c.sha : null;
-      const res = await ghPut(path, b64encode(JSON.stringify(value,null,2)), sha, message);
-      DB[path] = {value, sha:res.content.sha};
-    } else throw e;
+
+/* A delta describes a change to ONE file, applied to fresh content:
+     {path, op:'append', record}              – push one record onto an array file
+     {path, op:'mutate', fn, base}            – fn(freshParsed) → new value (config)
+   `base` is what a missing file starts as. */
+function applyDelta(currentText, d){
+  if(d.op==='append'){
+    const arr = currentText!=null ? JSON.parse(currentText) : (d.base || []);
+    arr.push(d.record);
+    return arr;
   }
+  if(d.op==='mutate'){
+    const cur = currentText!=null ? JSON.parse(currentText) : JSON.parse(JSON.stringify(d.base!==undefined ? d.base : {}));
+    return d.fn(cur);
+  }
+  throw new Error('unknown delta op '+d.op);
 }
+/* One atomic commit across every file a save touches — both land or neither.
+   A ref race (another device committed first) → refetch, replay, retry ×3. */
+async function commitFiles(deltas, message){
+  let lastErr;
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const ref = await ghJson('GET', `git/ref/heads/${BRANCH}`);
+      const parent = ref.object.sha;
+      const baseTreeSha = (await ghJson('GET', `git/commits/${parent}`)).tree.sha;
+      const tree = await ghGetTree(baseTreeSha);
+      // Apply every delta first (several may target one file), then write blobs.
+      const texts = {}, values = {};
+      for(const d of deltas){
+        if(!(d.path in texts)) texts[d.path] = tree[d.path] ? await ghGetBlobText(tree[d.path]) : null;
+        values[d.path] = applyDelta(texts[d.path], d);
+        texts[d.path] = JSON.stringify(values[d.path]);
+      }
+      const entries = [];
+      for(const p in values){
+        const blob = await ghJson('POST', 'git/blobs', {content:b64encode(JSON.stringify(values[p],null,2)), encoding:'base64'});
+        entries.push({ path:p, mode:'100644', type:'blob', sha:blob.sha });
+      }
+      const newTree = await ghJson('POST', 'git/trees', {base_tree:baseTreeSha, tree:entries});
+      const newCommit = await ghJson('POST', 'git/commits', {message, tree:newTree.sha, parents:[parent]});
+      // force:false → GitHub answers 422 (not a fast forward) if main moved.
+      await ghJson('PATCH', `git/refs/heads/${BRANCH}`, {sha:newCommit.sha, force:false});
+      const map = Object.assign({}, tree);
+      entries.forEach(e=>{ map[e.path]=e.sha; });
+      HEAD = { commitSha:newCommit.sha, treeSha:newTree.sha, tree:map };
+      // The committed values are the truth now — they include whatever the
+      // other device wrote, so the screen catches up with it too.
+      for(const p in values){ DB[p]={value:values[p], sha:map[p]}; const k=KEY_BY_PATH[p]; if(k) D[k]=values[p]; }
+      if(values[FILES.config]) normalizeConfig();
+      return values;
+    }catch(e){
+      lastErr = e; const s = String(e);
+      if((s.includes('422')||s.includes('409')) && attempt<2) continue;   // main moved: replay
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+/* Config edits as a delta: change only what this save owns, on fresh content,
+   after bringing that content up to date the same way loadAll() does. */
+function configDelta(change){
+  return { path:FILES.config, op:'mutate', base:defaultConfig(), fn:c=>{ upgradeConfig(c); change(c); return c; } };
+}
+const appendTo = (path, record) => ({ path, op:'append', record });
 
 /* =========================================================================
    DEFAULTS — the whole pool "brain" lives in config so you can edit it later.
@@ -395,8 +495,8 @@ function chemsOnHand(){ return migrateChemKeys((D.config.chemicals && D.config.c
 /* Target ranges live in config so they're editable, but the strip gained pads
    (total chlorine, bromine) after the first configs were written — so always
    read them through here and fall back to the built-in range. */
-function targetRange(key){
-  const r=readingByKey(key), t=D.config && D.config.targets && D.config.targets[key];
+function targetRange(key, cfg=D.config){
+  const r=readingByKey(key), t=cfg && cfg.targets && cfg.targets[key];
   const built = r ? r.numRange.slice() : [0,0];
   if(!t || !Array.isArray(t.range) || t.range.length!==2) return built;
   const [lo,hi]=t.range;
@@ -405,21 +505,35 @@ function targetRange(key){
   // comparison against it with NaN/null.
   return (Number.isFinite(lo) && Number.isFinite(hi)) ? t.range : built;
 }
-function ensureTarget(key){
-  if(!D.config.targets) D.config.targets={};
-  if(!D.config.targets[key]) D.config.targets[key]={range:targetRange(key)};
-  return D.config.targets[key];
+function ensureTarget(key, cfg=D.config){
+  if(!cfg.targets) cfg.targets={};
+  if(!cfg.targets[key]) cfg.targets[key]={range:targetRange(key, cfg)};
+  return cfg.targets[key];
 }
 /* Bring an older saved config up to date: new strip pads get target ranges,
    and the two renamed chemical keys become their new names. */
-function migrateConfig(){
-  if(!D.config) return;
-  READINGS.forEach(r=>ensureTarget(r.key));
+function migrateConfig(cfg=D.config){
+  if(!cfg) return;
+  READINGS.forEach(r=>ensureTarget(r.key, cfg));
   // An empty onHand means "I'm out of everything", which is a real answer —
   // only a config that never had the key at all gets the starting inventory.
-  const had = !!(D.config.chemicals && D.config.chemicals.onHand);
-  const on = migrateChemKeys((D.config.chemicals&&D.config.chemicals.onHand)||{});
-  D.config.chemicals={ onHand: had?on:{...CHEMS_DEFAULT_ON_HAND} };
+  const had = !!(cfg.chemicals && cfg.chemicals.onHand);
+  const on = migrateChemKeys((cfg.chemicals&&cfg.chemicals.onHand)||{});
+  cfg.chemicals={ onHand: had?on:{...CHEMS_DEFAULT_ON_HAND} };
+}
+/* Everything loadAll() does to bring a stored config up to date, as a function
+   of the config itself — so a save can apply it to the FRESH copy it commits
+   onto, not just to this device's in-memory one. */
+function upgradeConfig(cfg){
+  // merge any newly-added default keys into an older config (non-destructive)
+  const dc = defaultConfig();
+  for(const k in dc){ if(cfg[k]===undefined) cfg[k]=dc[k]; }
+  migrateConfig(cfg); // new strip pads get target ranges; renamed chemical keys get renamed
+  return cfg;
+}
+function normalizeConfig(){
+  upgradeConfig(D.config);
+  READINGS.forEach(r=>{ r.numRange=targetRange(r.key); });
 }
 function hasChem(k){ return !!chemsOnHand()[k]; }
 // Given a list of acceptable chemicals, decide whether the user can act now.
@@ -630,17 +744,15 @@ function defaultClosing(){
    DATA LOAD
    ========================================================================= */
 const FILES = { config:'db/config.json', tests:'db/tests.json', log:'db/log.json', swim:'db/swim.json' };
+const KEY_BY_PATH = Object.fromEntries(Object.entries(FILES).map(([k,v])=>[v,k]));
 let D = {};
 async function loadAll(){
+  await loadHead();
   D.config = await loadJson(FILES.config, defaultConfig());
   D.tests  = await loadJson(FILES.tests, []);
   D.log    = await loadJson(FILES.log, []);
   D.swim   = await loadJson(FILES.swim, []);
-  // merge any newly-added default keys into an older config (non-destructive)
-  const dc = defaultConfig();
-  for(const k in dc){ if(D.config[k]===undefined) D.config[k]=dc[k]; }
-  migrateConfig(); // new strip pads get target ranges; renamed chemical keys get renamed
-  READINGS.forEach(r=>{ r.numRange=targetRange(r.key); });
+  normalizeConfig();
   updateBadges();
 }
 function swimForDate(d){ return (D.swim||[]).filter(s=>s.date===d).reduce((a,s)=>a+(+s.hours||0),0); }
@@ -917,8 +1029,7 @@ async function importInsights(){
   const v=await p; if(v!=='import') return;
   const parsed=parseInsightArray(text);
   if(!parsed||!parsed.length){ toast('Couldn\'t find valid rules in that text'); return; }
-  D.config.insights=(D.config.insights||[]).concat(parsed);
-  try{ await saveJson(FILES.config, D.config, `Import ${parsed.length} AI insight(s)`); toast(`Imported ${parsed.length} ✓`); renderSettings(); }
+  try{ await commitFiles([configDelta(c=>{ c.insights=(c.insights||[]).concat(parsed); })], `Import ${parsed.length} AI insight(s)`); toast(`Imported ${parsed.length} ✓`); renderSettings(); }
   catch(e){ toast(String(e.message||e)); }
 }
 async function addInsightManual(){
@@ -939,14 +1050,12 @@ async function addInsightManual(){
   const v=await p; if(v!=='save') return;
   if(!label.trim()){ toast('Give the rule a name'); return; }
   const trig = (metric && value!=='' && !isNaN(parseFloat(value))) ? {metric, op, value:parseFloat(value)} : null;
-  D.config.insights=(D.config.insights||[]);
-  D.config.insights.push({ id:uid('in'), label:label.trim(), advice:advice.trim(), trigger:trig, source:'manual' });
-  try{ await saveJson(FILES.config, D.config, 'Add insight'); toast('Saved ✓'); renderSettings(); }
+  const ins={ id:uid('in'), label:label.trim(), advice:advice.trim(), trigger:trig, source:'manual' };
+  try{ await commitFiles([configDelta(c=>{ c.insights=(c.insights||[]).concat([ins]); })], 'Add insight'); toast('Saved ✓'); renderSettings(); }
   catch(e){ toast(String(e.message||e)); }
 }
 async function deleteInsight(id){
-  D.config.insights=(D.config.insights||[]).filter(x=>x.id!==id);
-  try{ await saveJson(FILES.config, D.config, 'Delete insight'); renderSettings(); }
+  try{ await commitFiles([configDelta(c=>{ c.insights=(c.insights||[]).filter(x=>x.id!==id); })], 'Delete insight'); renderSettings(); }
   catch(e){ toast(String(e.message||e)); }
 }
 
@@ -1168,11 +1277,14 @@ function shoppingList(t){
 
 async function markTask(id){
   const t=(D.config.tasks||[]).find(x=>x.id===id); if(!t) return;
-  t.last = todayISO();
-  D.log.push({id:uid('l'), at:nowISO(), kind:'task', task:t.id, title:t.title, by:LS.login||LS.device||''});
+  const day=todayISO();
+  const entry={id:uid('l'), at:nowISO(), kind:'task', task:t.id, title:t.title, by:LS.login||LS.device||''};
   try{
-    await saveJson(FILES.config, D.config, 'Mark task done: '+t.title);
-    await saveJson(FILES.log, D.log, 'Log task: '+t.title);
+    // One commit: the task's new date and its log entry land together or not at all.
+    await commitFiles([
+      configDelta(c=>{ const x=(c.tasks||[]).find(x=>x.id===id); if(x) x.last=day; }),
+      appendTo(FILES.log, entry),
+    ], 'Mark task done: '+t.title);
     toast('Logged ✓'); updateBadges();
     if(CUR==='today') settleDoneRow(id); else render(CUR);
   }catch(e){ toast(String(e.message||e)); }
@@ -1203,9 +1315,13 @@ async function logSwim(){
   const hi=document.getElementById('sw_hrs');  if(hi) hi.addEventListener('input',e=>{hrs=e.target.value;});
   const v=await p; if(v!=='save') return;
   const h=parseFloat(hrs); if(isNaN(h)||h<=0){ toast('Enter the hours swum'); return; }
-  D.swim.push({id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''});
-  D.log.push({id:uid('l'), at:nowISO(), kind:'swim', title:`Swam ${h} h`, by:LS.login||LS.device||''});
-  try{ await saveJson(FILES.swim, D.swim, `Log swim ${date} ${h}h`); await saveJson(FILES.log, D.log, 'Log swim'); toast('Logged ✓'); render(CUR); }
+  try{
+    await commitFiles([
+      appendTo(FILES.swim, {id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''}),
+      appendTo(FILES.log, {id:uid('l'), at:nowISO(), kind:'swim', title:`Swam ${h} h`, by:LS.login||LS.device||''}),
+    ], `Log swim ${date} ${h}h`);
+    toast('Logged ✓'); render(CUR);
+  }
   catch(e){ toast(String(e.message||e)); }
 }
 
@@ -1295,13 +1411,13 @@ async function saveTest(){
   if(!Object.keys(rec.levels).length && !Object.keys(rec.nums).length){ toast('Pick at least one reading'); return; }
   const btn=$('#t_save'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saving…';
   try{
-    D.tests.push(rec);
-    // mark the "test the water" task done
-    // ...as of the test's own date — a back-dated test never moves it later
-    // than it was, or forward to a day nobody tested
-    const tt=(D.config.tasks||[]).find(x=>x.id==='test'); if(tt && (!tt.last || date>tt.last)) tt.last=date;
-    await saveJson(FILES.tests, D.tests, 'Log water test '+rec.date);
-    await saveJson(FILES.config, D.config, 'Mark test task done');
+    // One commit: the test, and the "test the water" task marked done —
+    // as of the test's own date, so a back-dated test never moves it later
+    // than it was, or forward to a day nobody tested.
+    await commitFiles([
+      appendTo(FILES.tests, rec),
+      configDelta(c=>{ const tt=(c.tasks||[]).find(x=>x.id==='test'); if(tt && (!tt.last || date>tt.last)) tt.last=date; }),
+    ], 'Log water test '+rec.date);
     for(const k in picked) delete picked[k];
     testDate='';
     toast('Saved ✓'); updateBadges();
@@ -1443,9 +1559,7 @@ async function editTask(id){
   if(inp) inp.addEventListener('input', e=>{ lastVal=e.target.value; });
   const v=await p;
   if(v!=='save') return;
-  t.cadence=cad;
-  t.last=lastVal?lastVal:null;
-  try{ await saveJson(FILES.config, D.config, 'Edit task: '+t.title); toast('Updated'); updateBadges(); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
+  try{ await commitFiles([configDelta(c=>{ const x=(c.tasks||[]).find(x=>x.id===id); if(x){ x.cadence=cad; x.last=lastVal?lastVal:null; } })], 'Edit task: '+t.title); toast('Updated'); updateBadges(); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
 }
 async function editChecklist(kind){
   const obj=D.config[kind];
@@ -1455,12 +1569,11 @@ async function editChecklist(kind){
     <div class="row" style="margin-top:10px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
   if(v!=='save') return;
   const steps=$('#cl_steps').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  obj.steps=steps;
-  try{ await saveJson(FILES.config, D.config, 'Edit '+kind+' checklist'); toast('Saved'); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
+  try{ await commitFiles([configDelta(c=>{ c[kind]={...c[kind], steps}; })], 'Edit '+kind+' checklist'); toast('Saved'); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
 }
 async function logChecklistDone(kind){
-  D.log.push({id:uid('l'), at:nowISO(), kind:'season', task:kind, title:D.config[kind].title, by:LS.login||LS.device||''});
-  try{ await saveJson(FILES.log, D.log, 'Log '+kind+' completed'); toast(D.config[kind].title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
+  const entry={id:uid('l'), at:nowISO(), kind:'season', task:kind, title:D.config[kind].title, by:LS.login||LS.device||''};
+  try{ await commitFiles([appendTo(FILES.log, entry)], 'Log '+kind+' completed'); toast(D.config[kind].title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
 }
 
 /* =========================================================================
@@ -1631,14 +1744,15 @@ async function savePool(){
     D.config.geo={ lat: prev.lat??41.0793, lon: prev.lon??-85.1394, ...prev, mode:'address' };
   }
   _wx=null; // location may have changed — refetch weather next time
-  await saveJson(FILES.config, D.config, 'Update pool settings'); toast('Saved');
+  const {name, gallons, location} = D.config.pool, geo = {...D.config.geo};
+  await commitFiles([configDelta(c=>{ c.pool={...c.pool, name, gallons, location}; c.geo=geo; })], 'Update pool settings'); toast('Saved');
 }
-async function saveEmail(){ D.config.email=$('#s_email').value.trim(); await saveJson(FILES.config, D.config, 'Update reminder email'); toast('Email saved'); }
+async function saveEmail(){ const email=$('#s_email').value.trim(); await commitFiles([configDelta(c=>{ c.email=email; })], 'Update reminder email'); toast('Email saved'); }
 async function saveSeason(){
   const md=(id,fallback)=>{ const v=dateToMd($(id).value); return v||fallback; };
-  D.config.season.open=md('#s_open', D.config.season.open); D.config.season.close=md('#s_close', D.config.season.close);
-  D.config.season.peakStart=md('#s_pstart', D.config.season.peakStart); D.config.season.peakEnd=md('#s_pend', D.config.season.peakEnd);
-  await saveJson(FILES.config, D.config, 'Update season dates'); toast('Saved'); updateBadges();
+  const s=D.config.season;
+  const season={ open:md('#s_open', s.open), close:md('#s_close', s.close), peakStart:md('#s_pstart', s.peakStart), peakEnd:md('#s_pend', s.peakEnd) };
+  await commitFiles([configDelta(c=>{ c.season={...c.season, ...season}; })], 'Update season dates'); toast('Saved'); updateBadges();
 }
 async function saveTargets(){
   // Validate into a scratch object first — nothing touches D.config, and
@@ -1663,15 +1777,12 @@ async function saveTargets(){
     err='Free chlorine target top cannot be higher than total chlorine target top — total chlorine always covers free chlorine plus any combined chlorine.';
   }
   if(err){ toast(err); return; }
-  for(const k in candidate){ ensureTarget(k); D.config.targets[k].range=candidate[k]; }
-  // keep the live READINGS ranges in sync for this session
-  READINGS.forEach(r=>{ r.numRange=targetRange(r.key); });
-  await saveJson(FILES.config, D.config, 'Update target ranges'); toast('Targets saved');
+  // commitFiles re-syncs the live READINGS ranges from the committed config.
+  await commitFiles([configDelta(c=>{ for(const k in candidate) ensureTarget(k, c).range=candidate[k]; })], 'Update target ranges'); toast('Targets saved');
 }
 async function saveChemicals(){
   const onHand={}; document.querySelectorAll('.chem').forEach(i=>{ if(i.checked) onHand[i.dataset.key]=true; });
-  D.config.chemicals={ onHand };
-  await saveJson(FILES.config, D.config, 'Update chemicals on hand'); toast('Chemicals saved');
+  await commitFiles([configDelta(c=>{ c.chemicals={ onHand }; })], 'Update chemicals on hand'); toast('Chemicals saved');
 }
 async function saveDevice(){ LS.device=$('#s_device').value.trim(); LS.repo=$('#s_repo').value.trim(); toast('Saved'); D={}; for(const k in DB) delete DB[k]; show('settings'); }
 async function signOut(){ if(await confirmModal('Sign out on this device? Your data stays safe in GitHub; other devices stay signed in.','Sign out',true)){ localStorage.removeItem('pl_token'); localStorage.removeItem('pl_login'); localStorage.removeItem('pl_method'); toast('Signed out'); renderSetup(); } }

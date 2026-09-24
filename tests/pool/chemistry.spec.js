@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test')
 const { bootApp, goTab, fixture } = require('./support/boot')
 
-// The app writes with the Contents API, so poll the mock's committed text.
+// Poll the mock's committed text — what actually landed on main.
 async function committed(mock, file) {
   return JSON.parse(mock.readFile(`db/${file}`))
 }

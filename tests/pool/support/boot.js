@@ -3,7 +3,7 @@
 // Pool is NOT local-first. Unlike bank-bonus, which keeps a whole localStorage
 // database and only talks to GitHub once a token is connected, pool stores
 // nothing but the sign-in itself (pl_repo / pl_token / pl_login / pl_method /
-// pl_device) and reads every byte of data from the GitHub Contents API. There
+// pl_device) and reads every byte of data from GitHub (the Git Data API, #135). There
 // is no offline mode to test. So every booted test here runs against
 // tests/shared/mock-github.js — there is no bootApp()/bootSynced() split.
 //
@@ -153,7 +153,8 @@ async function ready(page) {
 //   opts.signedOut  boot with no token, to land on the setup screen
 //   opts.now        a different pinned instant (Date), e.g. an evening in
 //                   Fort Wayne for the timezone cases
-async function bootApp(page, { viewport = VIEWPORTS.mobile, seed = {}, db = {}, signedOut = false, now = FIXED_TIME } = {}) {
+//   opts.omit       fixture names to leave out of the data repo entirely
+async function bootApp(page, { viewport = VIEWPORTS.mobile, seed = {}, db = {}, signedOut = false, now = FIXED_TIME, omit = [] } = {}) {
   const errors = watchConsole(page)
   await page.setViewportSize(viewport)
   await page.clock.setFixedTime(now)
@@ -170,7 +171,7 @@ async function bootApp(page, { viewport = VIEWPORTS.mobile, seed = {}, db = {}, 
   }, store)
 
   const external = await stubExternals(page)
-  const mock = await installGitHubMock(page, { fixturesDir: FIXTURES })
+  const mock = await installGitHubMock(page, { fixturesDir: FIXTURES, omitFiles: omit })
   // Fixture overrides land as a commit BEFORE the first navigation, so the app's
   // opening read already sees them. (The mock has no seed-time override hook;
   // injectRemote is its supported way to advance head, and pre-goto it is

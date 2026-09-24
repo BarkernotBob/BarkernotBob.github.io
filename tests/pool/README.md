@@ -39,14 +39,14 @@ On its first run this suite found three things:
 | `security.spec.js` | A hostile value renders as inert text, seeded across config/tests and round-tripped |
 | `screenshots.spec.js` | Every tab at 390 / 900 / 1300px, attached to the report, asserting no sideways page scroll; and #144 — tapping Done on every due task at 390px moves no row, card or tab |
 | `timezone.spec.js` | Issue #136 — at 9pm Eastern (01:00 UTC next day) a task done, a test saved and the swim picker's default and `max` all use the Fort Wayne date |
-| `sync.spec.js` | The GitHub Contents API path against `tests/shared/mock-github.js` — reads, shas, the stale-sha retry, a missing file, and the sign-in screen |
+| `sync.spec.js` | The GitHub Git Data path against `tests/shared/mock-github.js` (#135) — reads through ref → commit → tree → blob, a save is one commit carrying every file it touches (both land or neither), a race with another device replays onto its content instead of deleting its entry (`armRaceInject`), a log.json over the Contents API's 1 MB ceiling, a missing file, and the sign-in screen |
 
 ## How it boots
 
 **Pool is not local-first, and that is the main way this suite differs from
 bank-bonus's.** Pool stores nothing but the sign-in itself (`pl_repo`,
 `pl_token`, `pl_login`, `pl_method`, `pl_device`) and reads every byte of data
-from the GitHub Contents API. There is no offline mode, so there is no
+from GitHub through the Git Data API (#135). There is no offline mode, so there is no
 `bootApp()`/`bootSynced()` split — every booted test runs against
 `tests/shared/mock-github.js`.
 

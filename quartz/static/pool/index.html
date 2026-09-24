@@ -106,6 +106,18 @@
   .item.is-done{opacity:.55}
   .item.is-done b{text-decoration:line-through}
   .item:first-child{border-top:0}
+  /* History rows with a Delete (#138). The button has a fixed width, so the
+     "Delete" -> "Deleted" swap can't change the row, and a deleted row fades
+     and strikes through in place rather than vanishing and pulling the rows
+     below it up under your thumb. The list settles on the next visit. */
+  .item .rowtxt{min-width:0;overflow-wrap:anywhere}
+  .item .acts{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  button.delbtn{width:72px;flex:0 0 72px;padding:10px 0;background:none;color:var(--danger);font-size:13px;font-weight:600;letter-spacing:0;text-align:right}
+  button.delbtn:hover{filter:none;text-decoration:underline}
+  button.delbtn.busy::after{border-color:rgba(187,74,58,.25);border-top-color:var(--danger)}
+  .item.is-deleted{opacity:.55}
+  .item.is-deleted b{text-decoration:line-through}
+  .item.is-deleted button.delbtn{color:var(--muted);opacity:1}
   .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
   nav{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
@@ -373,9 +385,18 @@ async function loadJson(path, fallback){
 
 /* A delta describes a change to ONE file, applied to fresh content:
      {path, op:'append', record}              – push one record onto an array file
-     {path, op:'mutate', fn, base}            – fn(freshParsed) → new value (config)
-   `base` is what a missing file starts as. */
-function applyDelta(currentText, d){
+     {path, op:'mutate', fn, base, reads}     – fn(freshParsed, peek) → new value (config)
+     {path, op:'remove', id}                  – drop the record with that id (#138)
+   `base` is what a missing file starts as. `reads` lists other files a mutate
+   needs to see; peek(path) returns that file as it stands in THIS commit, after
+   any earlier delta in the same save, without writing it. */
+function applyDelta(currentText, d, peek){
+  if(d.op==='remove'){
+    // Idempotent: a record already gone (another device deleted it, or a
+    // retried delete whose first attempt landed) is simply not there to drop.
+    const arr = currentText!=null ? JSON.parse(currentText) : [];
+    return arr.filter(r=>!(r && r.id===d.id));
+  }
   if(d.op==='append'){
     const arr = currentText!=null ? JSON.parse(currentText) : (d.base || []);
     // Idempotent by id (#134): a retry of a save whose commit actually landed
@@ -387,7 +408,7 @@ function applyDelta(currentText, d){
   }
   if(d.op==='mutate'){
     const cur = currentText!=null ? JSON.parse(currentText) : JSON.parse(JSON.stringify(d.base!==undefined ? d.base : {}));
-    return d.fn(cur);
+    return d.fn(cur, peek||(()=>null));
   }
   throw new Error('unknown delta op '+d.op);
 }
@@ -403,9 +424,11 @@ async function commitFiles(deltas, message){
       const tree = await ghGetTree(baseTreeSha);
       // Apply every delta first (several may target one file), then write blobs.
       const texts = {}, values = {};
+      const peek = p => p in values ? values[p] : (texts[p]!=null ? JSON.parse(texts[p]) : null);
       for(const d of deltas){
-        if(!(d.path in texts)) texts[d.path] = tree[d.path] ? await ghGetBlobText(tree[d.path]) : null;
-        values[d.path] = applyDelta(texts[d.path], d);
+        for(const p of [d.path, ...(d.reads||[])])
+          if(!(p in texts)) texts[p] = tree[p] ? await ghGetBlobText(tree[p]) : null;
+        values[d.path] = applyDelta(texts[d.path], d, peek);
         texts[d.path] = JSON.stringify(values[d.path]);
       }
       const entries = [];
@@ -435,8 +458,8 @@ async function commitFiles(deltas, message){
 }
 /* Config edits as a delta: change only what this save owns, on fresh content,
    after bringing that content up to date the same way loadAll() does. */
-function configDelta(change){
-  return { path:FILES.config, op:'mutate', base:defaultConfig(), fn:c=>{ upgradeConfig(c); change(c); return c; } };
+function configDelta(change, reads){
+  return { path:FILES.config, op:'mutate', base:defaultConfig(), reads, fn:(c, peek)=>{ upgradeConfig(c); change(c, peek); return c; } };
 }
 const appendTo = (path, record) => ({ path, op:'append', record });
 /* One tap, one record (#134). A save that fails keeps the record(s) it was
@@ -1361,10 +1384,12 @@ async function logSwim(){
   const v=await p; if(v!=='save') return;
   const h=parseFloat(hrs); if(isNaN(h)||h<=0){ toast('Enter the hours swum'); return; }
   const key='swim:'+date+':'+h;
-  const recs=pendingFor(key, ()=>({
-    swim:{id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''},
-    log:{id:uid('l'), at:nowISO(), kind:'swim', title:`Swam ${h} h`, by:LS.login||LS.device||''},
-  }));
+  const recs=pendingFor(key, ()=>{
+    const swim={id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''};
+    // swimId ties the activity row to its swim record, so deleting the row
+    // deletes the hours too (#138).
+    return { swim, log:{id:uid('l'), at:nowISO(), kind:'swim', swimId:swim.id, title:`Swam ${h} h`, by:LS.login||LS.device||''} };
+  });
   try{
     await commitFiles([appendTo(FILES.swim, recs.swim), appendTo(FILES.log, recs.log)], `Log swim ${date} ${h}h`);
     donePending(key);
@@ -1637,11 +1662,81 @@ async function logChecklistDone(kind){
   try{ await commitFiles([appendTo(FILES.log, entry)], 'Log '+kind+' completed'); donePending(key); toast(title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
 }
 
+/* ---- deleting a mis-logged entry (#138) ------------------------------------
+   Every delete is ONE commit across every file it touches (the record, a swim
+   row's hours, a task's `last` date), through the same fresh-content replay as
+   every other save, so a race with another device never loses its work. */
+// The newest day there is still evidence a task was done: its remaining log
+// entries, plus — for "test the water" — the remaining tests themselves.
+function lastEvidence(taskId, log, tests){
+  let best=null;
+  (log||[]).forEach(e=>{ if(e && e.kind==='task' && e.task===taskId){ const d=dayOf(e.at); if(d && (!best || d>best)) best=d; } });
+  if(taskId==='test') (tests||[]).forEach(t=>{ if(t && t.date && (!best || t.date>best)) best=t.date; });
+  return best;
+}
+// If the removed record was what a task's `last` date rested on, walk `last`
+// back to the newest evidence left (null if there is none), so the task never
+// claims a date nothing supports. A `last` pointing at another day is left be.
+// Goes AFTER the remove deltas: peek() then sees the files with it gone.
+function rewindLastDelta(taskId, removedDay){
+  return configDelta((c, peek)=>{
+    const t=(c.tasks||[]).find(x=>x.id===taskId);
+    if(t && removedDay && t.last===removedDay) t.last=lastEvidence(taskId, peek(FILES.log), peek(FILES.tests));
+  }, [FILES.log, FILES.tests]);
+}
+// The swim.json record behind a "Swam N h" activity row. New rows carry its id;
+// older ones are matched the way they were written — same hours, same moment
+// (the two records were stamped milliseconds apart in one save).
+function swimRecordFor(l, swims){
+  if(l.swimId) return (swims||[]).find(s=>s && s.id===l.swimId) || null;
+  const m=/Swam ([\d.]+) h/.exec(l.title||''); if(!m) return null;
+  const at=Date.parse(l.at); let best=null, gap=Infinity;
+  (swims||[]).forEach(s=>{ const g=Math.abs(Date.parse(s && s.at)-at); if(s && +s.hours===+m[1] && g<=5000 && g<gap){ best=s; gap=g; } });
+  return best;
+}
+// A deleted row fades and strikes through where it is (see .is-deleted).
+function settleDeletedRow(action, id){
+  const btn=[...document.querySelectorAll(`#main [data-action="${action}"]`)].find(b=>b.getAttribute('data-a1')===id);
+  if(!btn) return;
+  btn.dataset.done='1'; btn.disabled=true; btn.textContent='Deleted';
+  btn.closest('.item')?.classList.add('is-deleted');
+}
+async function deleteLog(id){
+  const l=(D.log||[]).find(e=>e && e.id===id); if(!l) return;
+  const day=dayOf(l.at), title=logTitle(l);
+  const swim = l.kind==='swim';
+  if(!await confirmModal(`Delete “${title}” from ${day}?${swim?' Its swim hours are removed too.':''} This can’t be undone.`, 'Delete', true)) return;
+  const deltas=[{path:FILES.log, op:'remove', id}];
+  // Matched on the FRESH swim.json inside the commit, not on this device's
+  // copy, which can be older than the activity row (another device's swim).
+  if(swim) deltas.push({path:FILES.swim, op:'mutate', base:[], fn:arr=>{ const s=swimRecordFor(l, arr); return s ? arr.filter(x=>x!==s) : arr; }});
+  if(l.kind==='task') deltas.push(rewindLastDelta(l.task, day));
+  try{
+    await commitFiles(deltas, `Delete log entry: ${title} (${day})`);
+    toast('Deleted'); updateBadges(); settleDeletedRow('deleteLog', id);
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function deleteTest(id){
+  const t=(D.tests||[]).find(x=>x && x.id===id); if(!t) return;
+  if(!await confirmModal(`Delete the water test from ${t.date}? This can’t be undone.`, 'Delete', true)) return;
+  try{
+    await commitFiles([{path:FILES.tests, op:'remove', id}, rewindLastDelta('test', t.date)], `Delete water test ${t.date}`);
+    toast('Deleted'); updateBadges(); settleDeletedRow('deleteTest', id);
+  }catch(e){ toast(String(e.message||e)); }
+}
+const delBtn = (action, id, label) => id ? `<button class="delbtn" data-action="${action}" data-a1="${esc(id)}" aria-label="${esc(label)}">Delete</button>` : '';
+// "FC low · pH high" — enough to tell two tests on one day apart.
+function testSummary(t){
+  const ab=k=>k==='ph'?'pH':k.toUpperCase();
+  const parts=[...Object.entries(t.levels||{}).map(([k,v])=>`${ab(k)} ${v}`), ...Object.entries(t.nums||{}).map(([k,v])=>`${ab(k)} ${v}`)];
+  return (t.mode==='num'?'Numbers':'Strips') + (parts.length?' · '+parts.join(' · '):'');
+}
+
 /* =========================================================================
    HISTORY  (test trends + activity log)
    ========================================================================= */
 function renderHistory(){
-  const tests=(D.tests||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const tests=(D.tests||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'') || (a.at||'').localeCompare(b.at||''));
   let html=`<div class="card"><h2>📈 Test history</h2>`;
   if(!tests.length){ html+=`<p class="muted small">No tests yet.</p>`; }
   else {
@@ -1676,9 +1771,17 @@ function renderHistory(){
   // recent activity
   const log=(D.log||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,40);
   html += `<div class="card"><h2>🗓 Recent activity</h2>`;
-  html += log.length ? log.map(l=>`<div class="item flex"><div><b>${esc(logTitle(l))}</b><div class="small muted">${esc(dayOf(l.at))}${l.by?(' · '+esc(l.by)):''}</div></div>
-      <span class="pill gray">${esc(l.kind)}</span></div>`).join('')
+  html += log.length ? log.map(l=>`<div class="item flex"><div class="rowtxt"><b>${esc(logTitle(l))}</b><div class="small muted">${esc(dayOf(l.at))}${l.by?(' · '+esc(l.by)):''}</div></div>
+      <div class="acts"><span class="pill gray">${esc(l.kind)}</span>${delBtn('deleteLog', l.id, 'Delete '+logTitle(l)+' from '+dayOf(l.at))}</div></div>`).join('')
     : `<p class="muted small">Nothing logged yet.</p>`;
+  html += `</div>`;
+
+  // every logged test, newest first, each deletable (#138)
+  const recentTests=tests.slice().reverse().slice(0,40);
+  html += `<div class="card"><h2>🧪 Logged tests</h2>`;
+  html += recentTests.length ? recentTests.map(t=>`<div class="item flex"><div class="rowtxt"><b>${esc(fmtDate(t.date))}</b><div class="small muted">${esc(testSummary(t))}${t.by?(' · '+esc(t.by)):''}</div>${t.notes?`<div class="small muted">${esc(t.notes)}</div>`:''}</div>
+      <div class="acts">${delBtn('deleteTest', t.id, 'Delete the test from '+t.date)}</div></div>`).join('')
+    : `<p class="muted small">No tests yet.</p>`;
   html += `</div>`;
   $('#main').innerHTML = html;
   fillRainHistory();
@@ -1902,7 +2005,7 @@ const ACTIONS = {
   pickLevel, setTestMode, setGeoMode, saveTokenSetup, signInWithGitHub,
   logSwim, saveTest, lookupGeo, savePool, saveEmail, saveSeason, saveTargets,
   saveChemicals, showAiExport, importInsights, addInsightManual, saveDevice,
-  signOut,
+  signOut, deleteLog, deleteTest,
 };
 
 /* Actions that write to GitHub (#134). While one is running, a second tap on
@@ -1913,7 +2016,7 @@ const ACTIONS = {
    re-render the tab and put a brand-new button under the next tap. */
 const WRITES = new Set(['markTask','logChecklistDone','logSwim','saveTest','editTask','editChecklist',
   'deleteInsight','importInsights','addInsightManual','savePool','saveEmail','saveSeason','saveTargets',
-  'saveChemicals','saveTokenSetup']);
+  'saveChemicals','saveTokenSetup','deleteLog','deleteTest']);
 const INFLIGHT = new Set();
 
 document.addEventListener('click', e=>{

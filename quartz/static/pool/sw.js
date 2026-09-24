@@ -7,7 +7,7 @@
      and writes must never be served stale from a cache.
    Bump CACHE on any shell change to force clients onto the new version.
    ========================================================================= */
-const CACHE = 'poolcare-v7';
+const CACHE = 'poolcare-v8';
 const FONTS = 'poolcare-fonts-v1';
 const SHELL = [
   './',

@@ -172,3 +172,24 @@ test("a delete racing another device's save keeps the other device's entry", asy
   const appErrors = errors.filter((e) => !/Failed to load resource/.test(e))
   expect(appErrors, appErrors.join('\n')).toEqual([])
 })
+
+test("another device's swim, seen only through the log, still takes its hours when deleted", async ({ page }) => {
+  // This device's swim.json copy is older than its log: a save refreshes only
+  // the files it wrote. The match must run on the fresh swim.json in the commit.
+  const { mock } = await bootApp(page)
+  const swim = { id: 'sw_other', date: '2026-07-15', hours: 3, at: '2026-07-15T11:00:00.000Z', by: 'otherdevice' }
+  const entry = { id: 'l_other', at: '2026-07-15T11:00:00.004Z', kind: 'swim', swimId: 'sw_other', title: 'Swam 3 h', by: 'otherdevice' }
+  mock.injectRemote({
+    'db/swim.json': JSON.stringify([...read(mock, 'swim.json'), swim], null, 2),
+    'db/log.json': JSON.stringify([...read(mock, 'log.json'), entry], null, 2),
+  })
+  // Marking a task done commits log.json, so this device now sees the swim row.
+  await page.locator('#main .item').filter({ hasText: 'Add chlorine' }).getByRole('button', { name: 'Done' }).click()
+  await expect.poll(async () => taskLast(mock, 'chlorine')).toBe('2026-07-15')
+
+  await goTab(page, 'history')
+  await activity(page).getByRole('button', { name: 'Delete Swam 3 h from 2026-07-15' }).click()
+  await confirmDelete(page)
+  await expect.poll(async () => read(mock, 'swim.json').map((s) => s.id)).toEqual(['sw_fixture_1', 'sw_fixture_2'])
+  expect(read(mock, 'log.json').map((e) => e.id)).not.toContain('l_other')
+})

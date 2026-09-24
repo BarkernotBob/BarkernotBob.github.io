@@ -1704,10 +1704,12 @@ function settleDeletedRow(action, id){
 async function deleteLog(id){
   const l=(D.log||[]).find(e=>e && e.id===id); if(!l) return;
   const day=dayOf(l.at), title=logTitle(l);
-  const sw = l.kind==='swim' ? swimRecordFor(l, D.swim) : null;
-  if(!await confirmModal(`Delete “${title}” from ${day}?${sw?' Its swim hours are removed too.':''} This can’t be undone.`, 'Delete', true)) return;
+  const swim = l.kind==='swim';
+  if(!await confirmModal(`Delete “${title}” from ${day}?${swim?' Its swim hours are removed too.':''} This can’t be undone.`, 'Delete', true)) return;
   const deltas=[{path:FILES.log, op:'remove', id}];
-  if(sw) deltas.push({path:FILES.swim, op:'remove', id:sw.id});
+  // Matched on the FRESH swim.json inside the commit, not on this device's
+  // copy, which can be older than the activity row (another device's swim).
+  if(swim) deltas.push({path:FILES.swim, op:'mutate', base:[], fn:arr=>{ const s=swimRecordFor(l, arr); return s ? arr.filter(x=>x!==s) : arr; }});
   if(l.kind==='task') deltas.push(rewindLastDelta(l.task, day));
   try{
     await commitFiles(deltas, `Delete log entry: ${title} (${day})`);

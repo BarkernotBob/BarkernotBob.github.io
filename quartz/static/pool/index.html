@@ -83,6 +83,12 @@
   button.link{background:none;color:var(--brand);width:auto;padding:8px 0;font-weight:600;letter-spacing:0}
   button.link:hover{filter:none;text-decoration:underline}
   button:disabled{opacity:.5;pointer-events:none}
+  /* A button whose write is in flight (#134). The label goes transparent and a
+     spinner is drawn over it, absolutely positioned, so the button keeps its
+     exact size and nothing around it moves while it works. */
+  button.busy{color:transparent!important;position:relative;opacity:.75}
+  button.busy::after{content:'';position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:r .7s linear infinite}
+  button.sec.busy::after,button.link.busy::after{border-color:rgba(15,107,112,.25);border-top-color:var(--brand)}
   /* min-width:0 matters: a flex item defaults to min-width:auto, so it refuses
      to shrink below its content's intrinsic width. Two date inputs in one .row
      (Settings → Season) each claim ~178px in Chrome and pushed the page 11px
@@ -372,7 +378,11 @@ async function loadJson(path, fallback){
 function applyDelta(currentText, d){
   if(d.op==='append'){
     const arr = currentText!=null ? JSON.parse(currentText) : (d.base || []);
-    arr.push(d.record);
+    // Idempotent by id (#134): a retry of a save whose commit actually landed
+    // (the reply was lost, or a 422 replay after our own PATCH went through)
+    // resends the SAME record, and must not write it a second time.
+    const id = d.record && d.record.id;
+    if(!(id && arr.some(r=>r && r.id===id))) arr.push(d.record);
     return arr;
   }
   if(d.op==='mutate'){
@@ -429,6 +439,22 @@ function configDelta(change){
   return { path:FILES.config, op:'mutate', base:defaultConfig(), fn:c=>{ upgradeConfig(c); change(c); return c; } };
 }
 const appendTo = (path, record) => ({ path, op:'append', record });
+/* One tap, one record (#134). A save that fails keeps the record(s) it was
+   trying to write, keyed by what they say. Tapping Save again with the same
+   contents resends those exact records (same ids) instead of minting new ones,
+   so if the failed attempt had in fact landed, the id check in applyDelta()
+   makes the retry a no-op rather than a duplicate. Cleared once a save lands,
+   and forgotten after two minutes: a retry follows its failure right away,
+   while the same swim or reading entered later is a real second event that
+   must get its own record, not be dropped as a resend. */
+const PENDING = {};
+const PENDING_TTL_MS = 2*60*1000;
+function pendingFor(key, make){
+  const p = PENDING[key];
+  if(p && Date.now()-p.t < PENDING_TTL_MS) return p.rec;
+  return (PENDING[key] = {rec:make(), t:Date.now()}).rec;
+}
+function donePending(key){ delete PENDING[key]; }
 
 /* =========================================================================
    DEFAULTS — the whole pool "brain" lives in config so you can edit it later.
@@ -1281,16 +1307,29 @@ function shoppingList(t){
   return out;
 }
 
+/* Was this task (or seasonal checklist) already logged on this Fort Wayne day? */
+function loggedToday(kind, task){
+  const day=todayISO();
+  return (D.log||[]).some(e=>e && e.kind===kind && e.task===task && dayOf(e.at)===day);
+}
 async function markTask(id){
   const t=(D.config.tasks||[]).find(x=>x.id===id); if(!t) return;
   const day=todayISO();
-  const entry={id:uid('l'), at:nowISO(), kind:'task', task:t.id, title:t.title, by:LS.login||LS.device||''};
+  const key='task:'+id+':'+day;
+  // Already done today → ask, don't silently log it twice (#134). A yes is a
+  // deliberate second entry, so it never reuses a kept record.
+  if(t.last===day || loggedToday('task', id)){
+    if(!await confirmModal(`“${t.title}” is already logged today. Log it again?`, 'Log again')) return;
+    donePending(key);
+  }
+  const entry=pendingFor(key, ()=>({id:uid('l'), at:nowISO(), kind:'task', task:t.id, title:t.title, by:LS.login||LS.device||''}));
   try{
     // One commit: the task's new date and its log entry land together or not at all.
     await commitFiles([
       configDelta(c=>{ const x=(c.tasks||[]).find(x=>x.id===id); if(x) x.last=day; }),
       appendTo(FILES.log, entry),
     ], 'Mark task done: '+t.title);
+    donePending(key);
     toast('Logged ✓'); updateBadges();
     if(CUR==='today') settleDoneRow(id); else render(CUR);
   }catch(e){ toast(String(e.message||e)); }
@@ -1301,7 +1340,7 @@ async function markTask(id){
 function settleDoneRow(id){
   const btn=[...document.querySelectorAll('#main [data-action="markTask"]')].find(b=>b.getAttribute('data-a1')===id);
   if(!btn){ render(CUR); return; }
-  btn.disabled=true; btn.textContent='✓ Done';
+  btn.disabled=true; btn.dataset.done='1'; btn.textContent='✓ Done';
   btn.closest('.item')?.classList.add('is-done');
   const c=$('#dueCount');
   if(c){ const n=document.querySelectorAll('#main .item:has(.donebtn):not(.is-done)').length;
@@ -1321,11 +1360,14 @@ async function logSwim(){
   const hi=document.getElementById('sw_hrs');  if(hi) hi.addEventListener('input',e=>{hrs=e.target.value;});
   const v=await p; if(v!=='save') return;
   const h=parseFloat(hrs); if(isNaN(h)||h<=0){ toast('Enter the hours swum'); return; }
+  const key='swim:'+date+':'+h;
+  const recs=pendingFor(key, ()=>({
+    swim:{id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''},
+    log:{id:uid('l'), at:nowISO(), kind:'swim', title:`Swam ${h} h`, by:LS.login||LS.device||''},
+  }));
   try{
-    await commitFiles([
-      appendTo(FILES.swim, {id:uid('sw'), date, hours:h, at:nowISO(), by:LS.login||LS.device||''}),
-      appendTo(FILES.log, {id:uid('l'), at:nowISO(), kind:'swim', title:`Swam ${h} h`, by:LS.login||LS.device||''}),
-    ], `Log swim ${date} ${h}h`);
+    await commitFiles([appendTo(FILES.swim, recs.swim), appendTo(FILES.log, recs.log)], `Log swim ${date} ${h}h`);
+    donePending(key);
     toast('Logged ✓'); render(CUR);
   }
   catch(e){ toast(String(e.message||e)); }
@@ -1407,15 +1449,18 @@ async function saveTest(){
   // the pool, logged that evening or the next morning.
   const date=($('#t_date')||{}).value||todayISO();
   if(date>todayISO()){ toast('A test can’t be dated in the future'); return; }
-  const rec={ id:uid('t'), date, at:nowISO(), by:LS.login||LS.device||'', mode:testMode,
-    levels:{}, nums:{}, notes:($('#t_notes').value.trim()||'') };
+  const reading={ date, mode:testMode, levels:{}, nums:{}, notes:($('#t_notes').value.trim()||'') };
   if(testMode==='qual'){
-    document.querySelectorAll('#testForm .levels').forEach(g=>{ const k=g.dataset.key; if(picked[k]) rec.levels[k]=picked[k]; });
+    document.querySelectorAll('#testForm .levels').forEach(g=>{ const k=g.dataset.key; if(picked[k]) reading.levels[k]=picked[k]; });
   } else {
-    document.querySelectorAll('#testForm .num').forEach(i=>{ const v=i.value.trim(); if(v!=='') rec.nums[i.dataset.key]=parseFloat(v); });
+    document.querySelectorAll('#testForm .num').forEach(i=>{ const v=i.value.trim(); if(v!=='') reading.nums[i.dataset.key]=parseFloat(v); });
   }
-  if(!Object.keys(rec.levels).length && !Object.keys(rec.nums).length){ toast('Pick at least one reading'); return; }
-  const btn=$('#t_save'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saving…';
+  if(!Object.keys(reading.levels).length && !Object.keys(reading.nums).length){ toast('Pick at least one reading'); return; }
+  // Same readings after a failed save → the same record (#134). The button's
+  // busy state comes from the click dispatcher, like every other write.
+  const key='test:'+JSON.stringify(reading);
+  const rec=pendingFor(key, ()=>({ id:uid('t'), date, at:nowISO(), by:LS.login||LS.device||'', mode:reading.mode,
+    levels:reading.levels, nums:reading.nums, notes:reading.notes }));
   try{
     // One commit: the test, and the "test the water" task marked done —
     // as of the test's own date, so a back-dated test never moves it later
@@ -1424,11 +1469,15 @@ async function saveTest(){
       appendTo(FILES.tests, rec),
       configDelta(c=>{ const tt=(c.tasks||[]).find(x=>x.id==='test'); if(tt && (!tt.last || date>tt.last)) tt.last=date; }),
     ], 'Log water test '+rec.date);
+    donePending(key);
+    // Saved: the button stays disabled (as before #134) until the form is left,
+    // so a stray second tap can't log the same readings as a new test.
+    const btn=$('#t_save'); if(btn){ btn.disabled=true; btn.dataset.done='1'; }
     for(const k in picked) delete picked[k];
     testDate='';
     toast('Saved ✓'); updateBadges();
     showRecModal(rec);
-  }catch(e){ toast(String(e.message||e)); btn.disabled=false; btn.innerHTML='Save & get advice'; }
+  }catch(e){ toast(String(e.message||e)); }
 }
 /* Plain-language consequence of leaving a reading off — used in the caveat. */
 function ramification(key, dir){
@@ -1578,8 +1627,14 @@ async function editChecklist(kind){
   try{ await commitFiles([configDelta(c=>{ c[kind]={...c[kind], steps}; })], 'Edit '+kind+' checklist'); toast('Saved'); renderSchedule(); }catch(e){ toast(String(e.message||e)); }
 }
 async function logChecklistDone(kind){
-  const entry={id:uid('l'), at:nowISO(), kind:'season', task:kind, title:D.config[kind].title, by:LS.login||LS.device||''};
-  try{ await commitFiles([appendTo(FILES.log, entry)], 'Log '+kind+' completed'); toast(D.config[kind].title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
+  const title=D.config[kind].title;
+  const key='season:'+kind+':'+todayISO();
+  if(loggedToday('season', kind)){
+    if(!await confirmModal(`“${title}” is already logged today. Log it again?`, 'Log again')) return;
+    donePending(key);
+  }
+  const entry=pendingFor(key, ()=>({id:uid('l'), at:nowISO(), kind:'season', task:kind, title, by:LS.login||LS.device||''}));
+  try{ await commitFiles([appendTo(FILES.log, entry)], 'Log '+kind+' completed'); donePending(key); toast(title+' logged ✓'); }catch(e){ toast(String(e.message||e)); }
 }
 
 /* =========================================================================
@@ -1850,20 +1905,42 @@ const ACTIONS = {
   signOut,
 };
 
+/* Actions that write to GitHub (#134). While one is running, a second tap on
+   the same action is ignored, and its button is disabled and shows a spinner.
+   Without this, two taps inside one network round trip queued two commits and
+   wrote the same record twice (the pump ×3 in 1.2 s in log.json). The guard is
+   keyed by action + argument, not by the DOM node, because a save can
+   re-render the tab and put a brand-new button under the next tap. */
+const WRITES = new Set(['markTask','logChecklistDone','logSwim','saveTest','editTask','editChecklist',
+  'deleteInsight','importInsights','addInsightManual','savePool','saveEmail','saveSeason','saveTargets',
+  'saveChemicals','saveTokenSetup']);
+const INFLIGHT = new Set();
+
 document.addEventListener('click', e=>{
   // closest(), not e.target: several of these buttons wrap an <svg>, so the
   // click lands on a child and a target-only check would silently do nothing.
   const el = e.target.closest('[data-action]');
   if(!el) return;
-  const fn = ACTIONS[el.getAttribute('data-action')];
+  const name = el.getAttribute('data-action');
+  const fn = ACTIONS[name];
   if(typeof fn !== 'function') return;
   const a1 = el.getAttribute('data-a1');
   const a2 = el.getAttribute('data-a2');
   // Arity is decided by which attributes are present, so a handler that takes
   // no argument is never handed a stray undefined.
-  if(a2 !== null) fn(a1, a2, el);
-  else if(a1 !== null) fn(a1);
-  else fn();
+  const run = () => a2 !== null ? fn(a1, a2, el) : a1 !== null ? fn(a1) : fn();
+  if(!WRITES.has(name)){ run(); return; }
+  const key = name + ':' + (a1 ?? '');
+  if(INFLIGHT.has(key)) return;
+  INFLIGHT.add(key);
+  const wasDisabled = el.disabled;
+  el.disabled = true; el.classList.add('busy'); el.setAttribute('aria-busy','true');
+  Promise.resolve().then(run).catch(err=>toast(String(err && err.message || err))).finally(()=>{
+    INFLIGHT.delete(key);
+    el.classList.remove('busy'); el.removeAttribute('aria-busy');
+    // A Done button that settled into "✓ Done" stays disabled (#144).
+    if(el.dataset.done !== '1') el.disabled = wasDisabled;
+  });
 });
 
 /* ---------- PWA: register the service worker (offline app shell) ---------- */

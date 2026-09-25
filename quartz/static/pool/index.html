@@ -162,6 +162,16 @@
   .levels{display:flex;gap:6px;margin-top:5px}
   .levels button{padding:10px 4px;font-size:12px;font-weight:600;background:#eef3f2;color:var(--muted);border:1.5px solid var(--line);border-radius:10px}
   .levels button.on{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 6px 14px -8px rgba(15,107,112,.7)}
+  /* Strip pad picker (#137): the pad's printed values on the top row, the
+     half-way values between two swatches on a lower row, offset so each sits
+     under the gap it stands for. Every state keeps the same size and border
+     width, so tapping a value never moves anything. */
+  .scale{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:5px 5px;margin-top:5px}
+  .scale button{width:auto;min-width:0;letter-spacing:0;font-family:var(--font-body);font-weight:600;border-radius:10px;
+    background:#eef3f2;color:var(--muted);border:1.5px solid var(--line);box-shadow:none;transition:none}
+  .scale button.v{grid-row:1;padding:10px 0;font-size:13.5px;color:var(--ink)}
+  .scale button.mid{grid-row:2;padding:5px 0;font-size:11.5px;background:transparent;border-style:dashed}
+  .scale button.on{background:var(--brand);color:#fff;border-color:var(--brand);border-style:solid}
   .sev0{color:var(--ok)} .sev1{color:var(--warn)} .sev2{color:var(--danger)}
   .dot{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px}
   .dot.s0{background:var(--ok)}.dot.s1{background:#caa23f}.dot.s2{background:var(--danger)}.dot.sx{background:#cdd6d3}
@@ -221,7 +231,8 @@
    data inside an inline handler. ---- */
 import { esc } from '../shared/text.js';
 import {
-  useConfig, READINGS, STRIP_READINGS, LEVELS, severity, readingByKey,
+  useConfig, READINGS, STRIP_READINGS, severity, readingByKey,
+  stripScale, scaleMid, cleanScale, SCALE_MAX,
   CHEMS, CHEM_KEYS, CHEMS_DEFAULT_ON_HAND, neededChem, chemsOnHand, chemPlan,
   chlorineChoice, targetRange, ensureTarget, migrateConfig, applyTargets,
   testCtx, testRecs, BALANCE_ORDER,
@@ -1140,9 +1151,13 @@ async function logSwim(){
 }
 
 /* =========================================================================
-   TEST  (qualitative by default, numeric optional)
+   TEST  (strip values by default, lab numbers optional)
    ========================================================================= */
-let testMode='qual';
+/* 'strip' = tap the values printed on the strip bottle (saves numbers, #137);
+   'num' = type numbers from a lab panel. Tests saved before #137 are
+   mode:'qual' with words in `levels` — they still render and still get
+   advice, they just can't be logged that way any more. */
+let testMode='strip';
 let testDate='';   // a back-dated test keeps its date across a Strips/Numbers switch
 /* Settings location entry mode: 'address' (look up a place name) or 'latlon'. */
 let geoMode=null;
@@ -1168,13 +1183,13 @@ function renderTest(){
   <div class="card">
     <div class="flex"><h2 style="margin:0">🧪 Log a test</h2>
       <div class="row" style="flex:0 0 auto;gap:6px;width:auto">
-        <button class="${testMode==='qual'?'':'sec'}" style="width:auto;padding:8px 12px" data-action="setTestMode" data-a1="qual">Strips</button>
+        <button class="${testMode==='strip'?'':'sec'}" style="width:auto;padding:8px 12px" data-action="setTestMode" data-a1="strip">Strips</button>
         <button class="${testMode==='num'?'':'sec'}" style="width:auto;padding:8px 12px" data-action="setTestMode" data-a1="num">Numbers</button>
       </div></div>
-    <p class="small muted" style="margin:4px 0 0">${testMode==='qual'
-      ? 'Pick what each strip pad reads. Leave any you didn\'t test blank.'
+    <p class="small muted" style="margin:4px 0 0">${testMode==='strip'
+      ? 'Tap the number printed beside the colour each pad matches. Between two colours? Tap the dashed value underneath. Tap again to clear; leave any you didn\'t test blank.'
       : 'Enter measured values from an in-depth test. Leave blanks for ones you didn\'t measure.'}</p>
-    <div id="testForm" style="margin-top:6px">${testMode==='qual'?qualForm():numForm()}</div>
+    <div id="testForm" style="margin-top:6px">${testMode==='strip'?stripForm():numForm()}</div>
     <label>Date tested</label>
     <input id="t_date" type="date" value="${esc(testDate||todayISO())}" max="${todayISO()}"/>
     <label>Notes (optional)</label>
@@ -1184,14 +1199,19 @@ function renderTest(){
   ${lt?`<div class="card"><h2>Last test — ${fmtDate(lt.date)}</h2>${recHtml(lt)}</div>`:''}`;
 }
 function setTestMode(m){ const d=($('#t_date')||{}).value||''; testDate=d===todayISO()?'':d; testMode=m; renderTest(); }
-function qualForm(){
-  return STRIP_READINGS.map(r=>`
+function stripForm(){
+  return STRIP_READINGS.map(r=>{
+    const sc=stripScale(r.key), unit=r.numUnit?' '+r.numUnit:'';
+    const on=v=>picked[r.key]===v;
+    const btn=(v, cls, col, label)=>`<button type="button" class="${cls}${on(v)?' on':''}" style="grid-column:${col} / span 2" data-v="${v}" aria-pressed="${on(v)}" aria-label="${esc(label)}" data-action="pickStrip" data-a1="${esc(r.key)}" data-a2="${v}">${esc(String(v))}</button>`;
+    const vals=sc.map((v,i)=>btn(v, 'v', 2*i+1, `${r.name} ${v}${unit}`)).join('');
+    const mids=sc.slice(1).map((b,i)=>{ const a=sc[i], m=scaleMid(a,b); return btn(m, 'mid', 2*i+2, `${r.name} between ${a} and ${b}: ${m}${unit}`); }).join('');
+    return `
     <div style="margin-top:10px">
-      <label style="margin:0">${esc(r.name)}${r.advisory?' <span class="muted small">(you run chlorine — this pad is just for reference)</span>':''}</label>
-      <div class="levels" data-key="${r.key}">
-        ${LEVELS.map(l=>`<button type="button" class="lv" data-l="${l}" data-action="pickLevel" data-a1="${esc(r.key)}" data-a2="${esc(l)}">${l.replace('very ','v.')}</button>`).join('')}
-      </div>
-    </div>`).join('');
+      <label style="margin:0">${esc(r.name)}${r.numUnit?` <span class="muted">(${esc(r.numUnit)})</span>`:''}${r.advisory?' <span class="muted small">(you run chlorine — this pad is just for reference)</span>':''}</label>
+      <div class="scale" data-key="${r.key}" style="--cols:${2*sc.length}">${vals}${mids}</div>
+    </div>`;
+  }).join('');
 }
 function numField(r){
   return `
@@ -1205,10 +1225,18 @@ function numForm(){
         <p class="small muted" style="margin:2px 0 0">Only fill these in if you had a lab panel done (e.g. at Leslie's).</p>
         ${extra.map(numField).join('')}</div>` : '');
 }
+/* key -> the number tapped on the Strips form. Kept across a Strips/Numbers
+   switch and re-drawn from here, so what's lit is always what will be saved. */
 const picked={};
-function pickLevel(key,l,btn){
-  picked[key]=l;
-  btn.parentElement.querySelectorAll('.lv').forEach(b=>b.classList.toggle('on', b===btn));
+function pickStrip(key, v){
+  const n=Number(v); if(!Number.isFinite(n)) return;
+  if(picked[key]===n) delete picked[key]; else picked[key]=n;
+  // Only classes and aria change — never size, border width or content — so
+  // nothing on the form moves (CLAUDE.md no-reflow rule).
+  document.querySelectorAll(`#testForm .scale[data-key="${key}"] button`).forEach(b=>{
+    const lit = picked[key]===Number(b.dataset.v);
+    b.classList.toggle('on', lit); b.setAttribute('aria-pressed', String(lit));
+  });
 }
 async function saveTest(){
   // The day the water was tested, which may be earlier than today: tested at
@@ -1216,8 +1244,10 @@ async function saveTest(){
   const date=($('#t_date')||{}).value||todayISO();
   if(date>todayISO()){ toast('A test can’t be dated in the future'); return; }
   const reading={ date, mode:testMode, levels:{}, nums:{}, notes:($('#t_notes').value.trim()||'') };
-  if(testMode==='qual'){
-    document.querySelectorAll('#testForm .levels').forEach(g=>{ const k=g.dataset.key; if(picked[k]) reading.levels[k]=picked[k]; });
+  if(testMode==='strip'){
+    // A strip test saves NUMBERS (#137), so it feeds the trend lines, the
+    // combined-chlorine sum and the AI export exactly like a Numbers test.
+    STRIP_READINGS.forEach(r=>{ if(picked[r.key]!=null) reading.nums[r.key]=picked[r.key]; });
   } else {
     document.querySelectorAll('#testForm .num').forEach(i=>{ const v=i.value.trim(); if(v!=='') reading.nums[i.dataset.key]=parseFloat(v); });
   }
@@ -1487,9 +1517,12 @@ function renderHistory(){
         return {date:t.date, n, q};
       }).filter(p=>p.n!=null || p.q);
       if(!pts.length) return '';
-      const hasNums = pts.some(p=>p.n!=null);
+      // Tests logged before #137 carry words, not numbers. They keep their
+      // dot timeline; any numbers get the trend line — both when a reading has
+      // some of each.
+      const words = pts.filter(p=>p.n==null), hasNums = pts.length>words.length;
       return `<div style="margin:12px 0"><div class="flex"><b class="small">${esc(r.name)}</b><span class="small muted">${pts.length} reading(s)</span></div>
-        ${hasNums ? spark(pts, r) : qualTimeline(pts, r)}</div>`;
+        ${hasNums ? spark(pts, r) : ''}${words.length ? (hasNums?`<div class="small muted" style="margin-top:6px">Earlier tests, logged as words:</div>`:'')+qualTimeline(words, r) : ''}</div>`;
     }).join('');
   }
   html += `</div>`;
@@ -1603,6 +1636,13 @@ function renderSettings(){
     <button style="margin-top:10px" data-action="saveTargets">Save targets</button>
   </div>
   <div class="card">
+    <h2>🎨 Strip scales</h2>
+    <p class="small muted">The numbers printed beside each pad's colours on your strip bottle — they're the choices on the Strips form. Only change these if you switch to a different brand of strip. Separate values with commas; clear a box to go back to the default.</p>
+    ${STRIP_READINGS.map(r=>`<label style="margin:10px 0 4px">${esc(r.name)} ${r.numUnit?`(${esc(r.numUnit)})`:''}</label>
+      <input class="scl" data-key="${r.key}" value="${esc(stripScale(r.key).join(', '))}" autocapitalize="off" autocorrect="off" spellcheck="false"/>`).join('')}
+    <button style="margin-top:10px" data-action="saveScales">Save strip scales</button>
+  </div>
+  <div class="card">
     <h2>🧪 Chemicals on hand</h2>
     <p class="small muted">Check what you keep stocked. Advice only tells you to use what's ticked; anything missing turns into a “shopping list” note instead.</p>
     ${(()=>{ const on=chemsOnHand();
@@ -1684,6 +1724,31 @@ async function saveTargets(){
   // commitFiles re-syncs the live READINGS ranges from the committed config.
   await commitFiles([configDelta(c=>{ for(const k in candidate) ensureTarget(k, c).range=candidate[k]; })], 'Update target ranges'); toast('Targets saved');
 }
+async function saveScales(){
+  // Validate every box before anything is saved, like saveTargets.
+  const out={}; let err=null;
+  document.querySelectorAll('.scl').forEach(i=>{
+    if(err) return;
+    const k=i.dataset.key, r=readingByKey(k), txt=i.value.trim();
+    if(!txt){ out[k]=null; return; } // blank = back to the built-in scale
+    const sc=cleanScale(txt.split(/[,;\s]+/).filter(Boolean));
+    if(!sc){ err=`${r?r.name:k}: enter 2–${SCALE_MAX} numbers separated by commas`; return; }
+    out[k]=sc;
+  });
+  if(err){ toast(err); return; }
+  // A pad whose scale changed can't keep a tap from the old one.
+  const before={}; for(const k in out) before[k]=stripScale(k).join(',');
+  await commitFiles([configDelta(c=>{
+    const cur={...(c.stripScales||{})};
+    for(const k in out){ if(out[k]) cur[k]=out[k]; else delete cur[k]; }
+    c.stripScales=cur;
+  })], 'Update strip scales');
+  document.querySelectorAll('.scl').forEach(i=>{
+    const k=i.dataset.key; i.value=stripScale(k).join(', ');
+    if(before[k]!==stripScale(k).join(',')) delete picked[k];
+  });
+  toast('Strip scales saved');
+}
 async function saveChemicals(){
   const onHand={}; document.querySelectorAll('.chem').forEach(i=>{ if(i.checked) onHand[i.dataset.key]=true; });
   await commitFiles([configDelta(c=>{ c.chemicals={ onHand }; })], 'Update chemicals on hand'); toast('Chemicals saved');
@@ -1742,8 +1807,8 @@ window.addEventListener('load', async ()=>{
    hostile name still can't reach anything that isn't listed. */
 const ACTIONS = {
   show, markTask, editTask, editChecklist, logChecklistDone, deleteInsight,
-  pickLevel, setTestMode, setGeoMode, saveTokenSetup, signInWithGitHub,
-  logSwim, saveTest, lookupGeo, savePool, saveEmail, saveSeason, saveTargets,
+  pickStrip, setTestMode, setGeoMode, saveTokenSetup, signInWithGitHub,
+  logSwim, saveTest, lookupGeo, savePool, saveEmail, saveSeason, saveTargets, saveScales,
   saveChemicals, showAiExport, importInsights, addInsightManual, saveDevice,
   signOut, deleteLog, deleteTest,
 };
@@ -1755,7 +1820,7 @@ const ACTIONS = {
    keyed by action + argument, not by the DOM node, because a save can
    re-render the tab and put a brand-new button under the next tap. */
 const WRITES = new Set(['markTask','logChecklistDone','logSwim','saveTest','editTask','editChecklist',
-  'deleteInsight','importInsights','addInsightManual','savePool','saveEmail','saveSeason','saveTargets',
+  'deleteInsight','importInsights','addInsightManual','savePool','saveEmail','saveSeason','saveTargets','saveScales',
   'saveChemicals','saveTokenSetup','deleteLog','deleteTest']);
 const INFLIGHT = new Set();
 

@@ -32,18 +32,48 @@ function cfgNow(){ return getConfig(); }
    Total alkalinity · Cyanuric acid.  `strip:true` = it's on the strip, so it
    shows on the Strips form. Phosphates are NOT on the strip (Leslie's tests
    them) so they stay available in Numbers mode only.
-   `advisory:true` = shown and stored, but never counted as "off target". */
+   `advisory:true` = shown and stored, but never counted as "off target".
+   `scale` = the values printed beside that pad's colour swatches on the strip
+   bottle (issue #137). The Strips form offers exactly these, so a strip test
+   saves real numbers. They're the built-in default: a config can override one
+   (`config.stripScales[key]`, edited in Settings) if the strips change brand —
+   always read them through stripScale(). */
 export const READINGS = [
-  {key:'ch',  name:'Total hardness',   numUnit:'ppm', numRange:[200,400], strip:true},
-  {key:'tc',  name:'Total chlorine',   numUnit:'ppm', numRange:[1,3],     strip:true},
-  {key:'br',  name:'Total bromine',    numUnit:'ppm', numRange:[2,4],     strip:true, advisory:true},
-  {key:'fc',  name:'Free chlorine',    numUnit:'ppm', numRange:[1,3],     strip:true},
-  {key:'ph',  name:'pH',               numUnit:'',    numRange:[7.4,7.6], strip:true},
-  {key:'ta',  name:'Total alkalinity', numUnit:'ppm', numRange:[80,120],  strip:true},
-  {key:'cya', name:'Cyanuric acid',    numUnit:'ppm', numRange:[30,50],   strip:true},
+  {key:'ch',  name:'Total hardness',   numUnit:'ppm', numRange:[200,400], strip:true, scale:[0,100,250,500]},
+  {key:'tc',  name:'Total chlorine',   numUnit:'ppm', numRange:[1,3],     strip:true, scale:[0,0.5,1,3,5,10]},
+  {key:'br',  name:'Total bromine',    numUnit:'ppm', numRange:[2,4],     strip:true, scale:[0,1,2,6,10,20], advisory:true},
+  {key:'fc',  name:'Free chlorine',    numUnit:'ppm', numRange:[1,3],     strip:true, scale:[0,0.5,1,3,5,10]},
+  {key:'ph',  name:'pH',               numUnit:'',    numRange:[7.4,7.6], strip:true, scale:[6.2,6.8,7.2,7.8,8.4]},
+  {key:'ta',  name:'Total alkalinity', numUnit:'ppm', numRange:[80,120],  strip:true, scale:[0,40,80,120,180,240]},
+  {key:'cya', name:'Cyanuric acid',    numUnit:'ppm', numRange:[30,50],   strip:true, scale:[0,30,100,150,300]},
   {key:'po4', name:'Phosphates',       numUnit:'ppb', numRange:[0,100],   strip:false},
 ];
 export const STRIP_READINGS = READINGS.filter(r=>r.strip);
+/* A strip pad offers at most this many printed values — more won't fit a
+   phone-width row of buttons. */
+export const SCALE_MAX = 8;
+/* Turn whatever a scale was stored as into a clean ascending list of distinct
+   finite numbers, or null if it isn't a usable scale (fewer than two values,
+   or too many to show). */
+export function cleanScale(v){
+  if(!Array.isArray(v)) return null;
+  const all=v.map(x=>(x===null||(typeof x==='string'&&x.trim()===''))?NaN:Number(x));
+  if(!all.every(Number.isFinite)) return null;
+  const nums=[...new Set(all)].sort((a,b)=>a-b);
+  return (nums.length>=2 && nums.length<=SCALE_MAX) ? nums : null;
+}
+/* The printed values for one strip pad: the config's override when it's a
+   usable scale, else the built-in one. [] for a pad that isn't on the strip. */
+export function stripScale(key, cfg=cfgNow()){
+  const r=readingByKey(key); const built=(r && r.scale) ? r.scale.slice() : [];
+  const o=cfg && cfg.stripScales && cfg.stripScales[key];
+  return (o && cleanScale(o)) || built;
+}
+/* Half-way between two neighbouring printed values — for a pad whose colour
+   lands between two swatches. pH is why this exists: its target (7.4–7.6)
+   sits between the printed 7.2 and 7.8, so without it no strip pH could ever
+   read as in range. */
+export function scaleMid(a, b){ return Math.round((a+b)/2*100)/100; }
 export const LEVELS = ['very low','low','normal','high','very high']; // index 0..4, normal=2
 export function levelIdx(l){ return LEVELS.indexOf(l); }
 export function severity(l){ const i=levelIdx(l); return i<0?null:Math.abs(i-2); } // 0 good,1,2

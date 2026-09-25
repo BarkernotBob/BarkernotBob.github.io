@@ -45,15 +45,17 @@ test('logging a strip test saves it and marks the test task done', async ({ page
   const { mock, errors } = await bootApp(page)
   await goTab(page, 'test')
 
-  await page.locator('.levels[data-key="fc"] button[data-l="low"]').click()
-  await page.locator('.levels[data-key="ph"] button[data-l="normal"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="0.5"]').click()
+  await page.locator('.scale[data-key="ph"] button.mid[data-v="7.5"]').click()
   await page.fill('#t_notes', 'Green-ish after the storm')
   await page.click('#t_save')
 
   await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
   const saved = (await committed(mock, 'tests.json')).at(-1)
-  expect(saved).toMatchObject({ date: TODAY, mode: 'qual', notes: 'Green-ish after the storm' })
-  expect(saved.levels).toEqual({ fc: 'low', ph: 'normal' })
+  // A strip test saves the printed numbers (#137), not words.
+  expect(saved).toMatchObject({ date: TODAY, mode: 'strip', notes: 'Green-ish after the storm' })
+  expect(saved.nums).toEqual({ fc: 0.5, ph: 7.5 })
+  expect(saved.levels).toEqual({})
 
   // Saving a test also ticks the "test the water" chore off.
   await expect
@@ -82,7 +84,7 @@ test('a back-dated test keeps its date and never drags the test task backwards',
   await page.getByRole('button', { name: 'Strips' }).click()
   await expect(page.locator('#t_date')).toHaveValue('2026-07-10')
 
-  await page.locator('.levels[data-key="fc"] button[data-l="normal"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="1"]').click()
   await page.click('#t_save')
   await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
   expect((await committed(mock, 'tests.json')).at(-1).date).toBe('2026-07-10')
@@ -104,7 +106,7 @@ test('a back-dated test newer than the task moves the task to the test date, not
   })
   await goTab(page, 'test')
   await page.locator('#t_date').fill('2026-07-13')
-  await page.locator('.levels[data-key="ph"] button[data-l="normal"]').click()
+  await page.locator('.scale[data-key="ph"] button.mid[data-v="7.5"]').click()
   await page.click('#t_save')
   await expect.poll(async () => (await committed(mock, 'config.json')).tasks.find((t) => t.id === 'test').last)
     .toBe('2026-07-13')
@@ -115,7 +117,7 @@ test('a back-dated test sorts by its date, not by when it was typed in', async (
   const { mock } = await bootApp(page)
   await goTab(page, 'test')
   await page.locator('#t_date').fill('2026-07-10')
-  await page.locator('.levels[data-key="fc"] button[data-l="high"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="5"]').click()
   await page.click('#t_save')
   await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
   await page.locator('.modal-ov').click({ position: { x: 5, y: 5 } })
@@ -142,7 +144,7 @@ test('a test dated in the future is refused', async ({ page }) => {
   const { mock } = await bootApp(page)
   await goTab(page, 'test')
   await page.locator('#t_date').evaluate((el) => { el.removeAttribute('max'); el.value = '2026-07-20' })
-  await page.locator('.levels[data-key="fc"] button[data-l="normal"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="1"]').click()
   await page.click('#t_save')
   await expect(page.locator('#toast, .toast').first()).toContainText('future')
   expect(JSON.parse(mock.readFile('db/tests.json'))).toHaveLength(2)
@@ -380,7 +382,7 @@ test('a failed save, tapped again, writes one test record — not two', async ({
   const { mock } = await bootApp(page)
   await failNextRefUpdate(page, 500)
   await goTab(page, 'test')
-  await page.locator('.levels[data-key="fc"] button[data-l="low"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="0.5"]').click()
 
   await page.click('#t_save')
   await expect(page.locator('#toast')).toContainText('500')
@@ -391,7 +393,7 @@ test('a failed save, tapped again, writes one test record — not two', async ({
   await page.click('#t_save')
   await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
   await expect(page.locator('.modal-ov')).toContainText('what to do')
-  expect((await committed(mock, 'tests.json')).at(-1).levels).toEqual({ fc: 'low' })
+  expect((await committed(mock, 'tests.json')).at(-1).nums).toEqual({ fc: 0.5 })
 })
 
 test('a save that landed but lost its reply writes one record when retried', async ({ page }) => {

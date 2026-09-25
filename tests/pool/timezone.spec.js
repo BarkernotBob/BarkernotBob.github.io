@@ -34,7 +34,7 @@ test('a task marked done at 9pm Eastern records that day, not tomorrow', async (
 test('a test logged at 9pm Eastern is dated that day', async ({ page }) => {
   const { mock, errors } = await bootApp(page, { now: EVENING })
   await goTab(page, 'test')
-  await page.locator('.levels[data-key="fc"] button[data-l="normal"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="1"]').click()
   await page.click('#t_save')
   await expect.poll(async () => (await committed(mock, 'tests.json')).length).toBe(3)
   expect((await committed(mock, 'tests.json')).at(-1).date).toBe(LOCAL_DAY)

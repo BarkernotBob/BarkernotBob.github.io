@@ -1,13 +1,14 @@
 /* =========================================================================
    Pool Care — service worker (PWA offline app-shell).
    - Precaches the app shell so it opens offline / from the Home Screen.
-   - Same-origin files: stale-while-revalidate (fast launch, updates in bg).
+   - Same-origin scripts: network-first, cache fallback (see the fetch handler).
+   - Other same-origin files: stale-while-revalidate (fast launch, updates in bg).
    - Google Fonts: cache-first (so the shell looks right offline).
    - Everything else (api.github.com, open-meteo): network only — pool DATA
      and writes must never be served stale from a cache.
    Bump CACHE on any shell change to force clients onto the new version.
    ========================================================================= */
-const CACHE = 'poolcare-v9';
+const CACHE = 'poolcare-v10';
 const FONTS = 'poolcare-fonts-v1';
 const SHELL = [
   './',
@@ -24,7 +25,8 @@ const SHELL = [
   // module that imports it.
   '../shared/text.js',
   // The chemistry, shared with the email script (issue #142).
-  '../shared/pool-chem.js',
+  // Same ?v= tag as index.html's import, or offline finds no match for it.
+  '../shared/pool-chem.js?v=137',
 ];
 
 self.addEventListener('install', e => {
@@ -70,7 +72,23 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Same-origin assets: stale-while-revalidate.
+  // Scripts: network-first, falling back to the cache offline. The page itself
+  // always comes from the network (above), so a stale-while-revalidate module
+  // would pair a NEW index.html with an OLD ../shared/pool-chem.js on the first
+  // launch after a deploy — and an import of a name the old file lacks kills
+  // the whole app (#137 added exports; a CACHE bump alone can't save that
+  // launch, because the old worker is still the one answering).
+  if (req.destination === 'script') {
+    e.respondWith(
+      caches.open(CACHE).then(c =>
+        fetch(req).then(res => { if (res && res.ok) c.put(req, res.clone()); return res; })
+          .catch(() => c.match(req))
+      )
+    );
+    return;
+  }
+
+  // Other same-origin assets: stale-while-revalidate.
   e.respondWith(
     caches.open(CACHE).then(c =>
       c.match(req).then(hit => {

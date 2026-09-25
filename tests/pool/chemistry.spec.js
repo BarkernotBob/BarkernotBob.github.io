@@ -49,7 +49,7 @@ test('the strips form offers exactly the seven pads on his strip', async ({ page
   const { errors } = await bootWithShed(page)
   await goTab(page, 'test')
 
-  const keys = await page.locator('#testForm .levels').evaluateAll((els) => els.map((e) => e.dataset.key))
+  const keys = await page.locator('#testForm .scale').evaluateAll((els) => els.map((e) => e.dataset.key))
   expect(keys).toEqual(['ch', 'tc', 'br', 'fc', 'ph', 'ta', 'cya'])
   for (const pad of STRIP_PADS) {
     await expect(page.locator('#testForm')).toContainText(pad)
@@ -74,7 +74,7 @@ test('low chlorine is dosed with a chlorine he owns, not a generic product', asy
   const { errors } = await bootWithShed(page)
   await goTab(page, 'test')
 
-  await page.locator('.levels[data-key="fc"] button[data-l="low"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="0.5"]').click()
   await page.click('#t_save')
 
   const modal = page.locator('.modal-ov')
@@ -104,7 +104,7 @@ test('high pH becomes a shopping note — he keeps no acid', async ({ page }) =>
   const { errors } = await bootWithShed(page)
   await goTab(page, 'test')
 
-  await page.locator('.levels[data-key="ph"] button[data-l="high"]').click()
+  await page.locator('.scale[data-key="ph"] button.v[data-v="8.4"]').click()
   await page.click('#t_save')
 
   const modal = page.locator('.modal-ov')
@@ -119,7 +119,7 @@ test('low alkalinity is fixed with the Alkalinity Up on his shelf', async ({ pag
   const { errors } = await bootWithShed(page)
   await goTab(page, 'test')
 
-  await page.locator('.levels[data-key="ta"] button[data-l="low"]').click()
+  await page.locator('.scale[data-key="ta"] button.v[data-v="40"]').click()
   await page.click('#t_save')
 
   const modal = page.locator('.modal-ov')
@@ -149,7 +149,7 @@ test('the bromine pad is informational and never counted as off target', async (
 
   // "very low" on any real reading would be a danger card; on bromine, in a
   // chlorine pool, it means nothing and must not generate an action.
-  await page.locator('.levels[data-key="br"] button[data-l="very low"]').click()
+  await page.locator('.scale[data-key="br"] button.v[data-v="0"]').click()
   await page.click('#t_save')
 
   const modal = page.locator('.modal-ov')
@@ -302,7 +302,7 @@ test('unticking every chemical sticks — an empty shed is a real answer', async
 
   // …and the advice agrees: nothing to dose with, so it's all a shopping list.
   await goTab(page, 'test')
-  await page.locator('.levels[data-key="fc"] button[data-l="low"]').click()
+  await page.locator('.scale[data-key="fc"] button.v[data-v="0.5"]').click()
   await page.click('#t_save')
   const modal = page.locator('.modal-ov')
   await expect(modal).toContainText('To fully fix it')

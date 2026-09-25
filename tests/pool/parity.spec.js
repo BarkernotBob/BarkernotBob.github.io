@@ -108,3 +108,14 @@ test('a blanked target range and a missing inventory are handled the same on bot
     oneTest({ mode: 'num', nums: { fc: 0.8, tc: 2.4, ta: 85, ch: 150, ph: 7.9, po4: 400 } }),
   )
 })
+
+test('a strip test logged as printed values (#137) matches', async ({ page }) => {
+  // Strip tests now save the bottle's numbers into `nums`, so the email must
+  // read them through the same numeric path: chloramines from total − free,
+  // pH at a half-way value, hardness and CYA off the printed scale.
+  await expectSameAdvice(
+    page,
+    fixture('config.json'),
+    oneTest({ mode: 'strip', nums: { ch: 500, tc: 3, br: 6, fc: 1, ph: 8.1, ta: 40, cya: 150 } }),
+  )
+})

@@ -28,6 +28,7 @@ Every future fix had the same problem. Now there is one place to fix.
 | `storage.js` | `createStore(prefix, spec)` — builds an app's localStorage accessor |
 | `github.js` | `GITHUB_API`, `ghHeaders(token)`, and the shared `OAUTH` config |
 | `ui.js` | `toast`, `modal`, `confirmModal`, `openSheet`, `isModalOpen` |
+| `pool-chem.js` | Pool Care's chemistry: `READINGS`, `LEVELS`, `CHEMS`, the config upgrade (`migrateConfig`, `applyTargets`) and every recommendation (`recForLevel`, `recForNumber`, `testRecs`, `offTargetAdvice`, …). Shared by the pool app **and** its daily email script, `pool/reminders.mjs` (#142). |
 
 ## Two things to know
 
@@ -63,3 +64,15 @@ request for `/static/shared/*.js` still reaches its worker's fetch handler, so
 precaching them in the app's shell list keeps it launching offline. Grocery's
 `sw.js` does this, and `tests/grocery/pwa.spec.js` proves it by pulling the
 network and cold-starting.
+
+## `pool-chem.js` also runs under Node
+
+`pool/reminders.mjs` runs in the private pool-data repo's GitHub Actions
+workflow, which downloads **only** that one file with `curl`. So the script
+reads `pool-chem.js` from beside itself when it can, and otherwise fetches it
+from the live site, then imports the text through a `data:` URL. Two rules
+follow, and `tests/pool/parity.spec.js` breaks if either is ignored:
+
+- **`pool-chem.js` must not `import` anything.** A `data:` URL module has no
+  base URL, so a relative import inside it cannot resolve.
+- **No DOM, no `window`, no Node APIs** in it — it runs in both places.

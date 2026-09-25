@@ -63,7 +63,8 @@ const { useConfig, migrateConfig, applyTargets, offTargetAdvice } = await loadCh
 const readJson = (p, dflt) => { try{ return JSON.parse(readFileSync(p,'utf8')); }catch{ return dflt; } };
 const config = readJson('db/config.json', null);
 if(!config){ console.error('No db/config.json found — has the app been opened/signed-in yet?'); process.exit(0); }
-// Bring the config up to date exactly the way the app does on load: missing
+// Bring the config up to date the way the app does on load (the chemistry
+// part of it — the app also fills in unrelated defaults like tasks): missing
 // target ranges filled in, renamed chemical keys renamed, a config that never
 // had an inventory given the starting shed. Then judge readings against the
 // saved target ranges (a blank or non-numeric one falls back to the default).

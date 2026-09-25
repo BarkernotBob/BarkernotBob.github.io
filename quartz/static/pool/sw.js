@@ -7,7 +7,7 @@
      and writes must never be served stale from a cache.
    Bump CACHE on any shell change to force clients onto the new version.
    ========================================================================= */
-const CACHE = 'poolcare-v8';
+const CACHE = 'poolcare-v9';
 const FONTS = 'poolcare-fonts-v1';
 const SHELL = [
   './',
@@ -23,6 +23,8 @@ const SHELL = [
   // so precaching it keeps the app launching offline now that index.html is a
   // module that imports it.
   '../shared/text.js',
+  // The chemistry, shared with the email script (issue #142).
+  '../shared/pool-chem.js',
 ];
 
 self.addEventListener('install', e => {

@@ -236,7 +236,13 @@ import {
   CHEMS, CHEM_KEYS, CHEMS_DEFAULT_ON_HAND, neededChem, chemsOnHand, chemPlan,
   chlorineChoice, targetRange, ensureTarget, migrateConfig, applyTargets,
   testCtx, testRecs, BALANCE_ORDER,
-} from '../shared/pool-chem.js';
+} from '../shared/pool-chem.js?v=137';
+/* The ?v= tag: bump it whenever pool-chem.js gains or renames an export. An
+   installed app's OLD service worker serves this file stale-while-revalidate,
+   so on the first launch after a deploy it would hand the new page the old
+   module — and a missing export stops the whole app from starting. A new URL
+   is a cache miss, so it comes from the network. (sw.js precaches the same
+   URL, so offline still works.) */
 
 /* ---- App-wide sign-in config. Filled in once the OAuth App + Worker exist.
         Until both are set, the app uses the token-paste fallback. ---- */

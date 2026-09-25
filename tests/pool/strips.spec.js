@@ -191,3 +191,15 @@ test('a pad scale is editable in Settings for a different brand of strip', async
   expect(await values(page, 'ch', 'v')).toEqual([0, 50, 120, 250, 500, 1000])
   expect(errors, errors.join('\n')).toEqual([])
 })
+
+test('the app imports the same tagged chemistry file the service worker precaches', async () => {
+  // The ?v= tag keeps an installed app from pairing a new page with a stale
+  // pool-chem.js after a deploy. If index.html and sw.js disagree, offline
+  // launches find nothing in the cache for the import.
+  const fs = require('fs')
+  const path = require('path')
+  const dir = path.join(__dirname, '..', '..', 'quartz', 'static', 'pool')
+  const tag = (f) => (fs.readFileSync(path.join(dir, f), 'utf8').match(/shared\/pool-chem\.js(\?v=[\w.-]+)?'/) || [])[1]
+  expect(tag('index.html')).toMatch(/^\?v=/)
+  expect(tag('sw.js')).toBe(tag('index.html'))
+})

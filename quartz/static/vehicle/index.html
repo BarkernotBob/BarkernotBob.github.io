@@ -259,6 +259,33 @@ nav.tab button.on{color:var(--primary)}
   background:var(--ink);color:#fff;padding:11px 16px;border-radius:11px;font-size:13.5px;font-weight:500;
   box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:opacity .2s, transform .2s}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+/* ---------- Garage sort & filter (#162) ---------- */
+/* Phone: stacked, full width, thumb-sized. Desktop: one row (below). */
+.gtools{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 4px}
+.gsearch{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:11px;
+  padding:0 12px;min-width:0}
+.gsearch svg{width:17px;height:17px;color:var(--faint);flex:0 0 auto}
+.gsearch input{border:0;flex:1;min-width:0;padding:11px 0;font-size:16px;font-family:inherit;background:transparent;color:var(--ink)}
+.gsearch input:focus{outline:none}
+.gsearch:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-t)}
+.gtype button{white-space:nowrap}
+.gtype .n{font-weight:600;color:var(--faint);margin-left:2px}
+.gtype button.on .n{color:var(--muted)}
+.gsort{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:0 0 0 12px;min-width:0}
+.gsort .k{font-size:12.5px;font-weight:600;color:var(--muted);flex:0 0 auto}
+.gsort select{flex:1;min-width:0;border:0;background:transparent;font-family:inherit;font-size:16px;color:var(--ink);
+  padding:11px 10px 11px 0;cursor:pointer}
+.gsort select:focus{outline:none}
+.gsort:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-t)}
+.gshow{font-size:12.5px;color:var(--muted);min-height:20px;line-height:20px;padding:0 2px;visibility:hidden}
+.gnone{padding:28px 20px}
+.gnone p{margin:0 0 12px}
+@media(min-width:760px){
+  .gtools{grid-template-columns:minmax(0,1fr) auto 250px;align-items:center}
+  .gtools .gshow{grid-column:1/-1}
+  .gsort select{font-size:14px}
+  .gsearch input{font-size:15px}
+}
 @media(min-width:760px){
   .page-title{font-size:30px}
   .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
@@ -634,32 +661,69 @@ function render(){
 /* ============================================================ *
  *  VIEW: GARAGE                                                *
  * ============================================================ */
-function renderGarage(){
-  setBar("Driveline","Long-term cost of ownership",false);
+/* ---- Sort & filter (#162) ------------------------------------------------
+   The garage list can be searched, narrowed to one powertrain and sorted. The
+   sort and type you pick are a per-device view preference, so they live under
+   their own key — NOT in `state`, which is what Export writes out and Import
+   replaces. The search box is kept only for this session. Typing or tapping a
+   control redraws the car list alone (#vlist): the controls are never rebuilt,
+   so the search box keeps focus and nothing above the list moves. */
+const VIEW_KEY="driveline.view.v1";
+const SORTS={
+  manual:"Your order", costAsc:"Cost per year · low to high", costDesc:"Cost per year · high to low",
+  mileAsc:"Cost per mile · low to high", yearDesc:"Model year · newest first", nameAsc:"Name · A to Z"
+};
+const TYPES={all:"All",gas:"Gas",hybrid:"Hybrid",ev:"EV"};
+let garageView=loadView(), garageQuery="";
+function loadView(){
+  const out={sort:"manual",type:"all"};
+  try{
+    const v=JSON.parse(localStorage.getItem(VIEW_KEY)||"null")||{};
+    if(Object.prototype.hasOwnProperty.call(SORTS,v.sort)) out.sort=v.sort;
+    if(Object.prototype.hasOwnProperty.call(TYPES,v.type)) out.type=v.type;
+  }catch(e){}
+  return out;
+}
+function saveView(){ try{ localStorage.setItem(VIEW_KEY,JSON.stringify(garageView)); }catch(e){} }
+function ptKey(pt){ return pt==="ev"||pt==="hybrid"?pt:"gas"; }
+// Every car's figures, computed once per garage render and reused by each
+// keystroke. `i` is the car's position in your list: it fixes its colour, so
+// sorting never repaints a car, and "Your order" is just sorting by it.
+function garageEntries(){
   const S=state.settings;
-  let h=`<div class="view">
-    <div class="page-title">Garage</div>
-    <div class="page-sub">${state.vehicles.length} vehicle${state.vehicles.length!==1?"s":""} · costs modeled at your driving</div>
-    <div class="assume">
-      <button class="chip alt" data-assume="annualMiles"><span class="k">Driving</span><b>${(+S.annualMiles).toLocaleString()} mi/yr</b></button>
-      <button class="chip" data-assume="fuelPrice"><span class="k">Fuel</span><b>${money2(S.fuelPrice)}</b></button>
-      <button class="chip" data-assume="inflation"><span class="k">Inflation</span><b>${(S.inflation*100).toFixed(1)}%</b></button>
-      <button class="chip" data-assume="salesTax"><span class="k">Tax</span><b>${(S.salesTax*100).toFixed(1)}%</b></button>
-    </div>
-    <div class="btnrow" style="margin:14px 0 4px">
-      <button class="btn" id="addVeh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add vehicle</button>
-      ${state.vehicles.length>=2?`<button class="btn sec" id="goCompare">Compare</button>`:""}
-    </div>`;
-  if(!state.vehicles.length){
-    h+=`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 13l1.6-4.8A2 2 0 0 1 8.5 7h7a2 2 0 0 1 1.9 1.2L19 13"/><path d="M4 13h16v4h-2v-1H6v1H4z"/></svg>
-      <p>No vehicles yet.</p></div>`;
-  }
-  state.vehicles.forEach((v,i)=>{
-    const color=PALETTE[i%PALETTE.length];
-    let o,P;
+  return state.vehicles.map((v,i)=>{
+    let o=null,P=null;
     try{ ensurePurchase(v); P=v.purchase; const M=Eng.model(v,S);
-      o=M.ownership(M.refYear-P.modelYear,P.holdYears,{startOdo:P.startMiles,price:P.priceOverride}); }catch(e){ o=null; }
-    h+=`<button class="vcard" data-veh="${esc(v.id)}">
+      o=M.ownership(M.refYear-P.modelYear,P.holdYears,{startOdo:P.startMiles,price:P.priceOverride});
+      // With no price in any row there is no value curve, so the figure would
+      // be fuel and fees alone and look like the cheapest car in the garage.
+      // Show it as not yet priced, and sort it last, unless you typed a price.
+      const priced=P.priceOverride!=null||Eng.prep(v.rows).pts.some(p=>p.price>0);
+      if(!o||!priced||!isFinite(o.perYear)) o=null; }catch(e){ o=null; }
+    const hay=[v.name,v.make,v.model].map(x=>String(x==null?"":x).toLowerCase()).join(" ");
+    return {v,i,o,P,hay,type:ptKey(v.pt),color:PALETTE[i%PALETTE.length]};
+  });
+}
+function visibleEntries(entries){
+  const q=garageQuery.trim().toLowerCase(), words=q?q.split(/\s+/):[];
+  const list=entries.filter(e=>(garageView.type==="all"||e.type===garageView.type)&&words.every(w=>e.hay.includes(w)));
+  const key={
+    costAsc:e=>e.o&&e.o.perYear, costDesc:e=>e.o&&-e.o.perYear, mileAsc:e=>e.o&&e.o.perMile,
+    yearDesc:e=>e.o&&-e.P.modelYear
+  }[garageView.sort];
+  if(garageView.sort==="nameAsc") list.sort((a,b)=>String(a.v.name||"").localeCompare(String(b.v.name||""),undefined,{sensitivity:"base",numeric:true})||a.i-b.i);
+  else if(key) list.sort((a,b)=>{
+    // Cars without enough data to price always go last, in your order.
+    const x=a.o?key(a):null, y=b.o?key(b):null;
+    if(x==null||y==null) return (x==null)-(y==null)||a.i-b.i;
+    return x-y||a.i-b.i;
+  });
+  else list.sort((a,b)=>a.i-b.i);
+  return list;
+}
+function vcardHTML(e){
+  const {v,o,P,color}=e;
+  return `<button class="vcard" data-veh="${esc(v.id)}">
       <span class="accentbar" style="background:${color}"></span>
       <div class="vc-top">
         <div style="min-width:0">
@@ -680,17 +744,89 @@ function renderGarage(){
         <span class="chev">›</span>
       </div>
     </button>`;
-  });
+}
+function renderGarage(){
+  setBar("Driveline","Long-term cost of ownership",false);
+  const S=state.settings;
+  const entries=garageEntries();
+  const tools=state.vehicles.length>=2;
+  // A type filter left on a powertrain you no longer have would hide
+  // everything with no button to undo it; fall back to All.
+  if(tools&&garageView.type!=="all"&&!entries.some(e=>e.type===garageView.type)){ garageView.type="all"; saveView(); }
+  const count=t=>t==="all"?entries.length:entries.filter(e=>e.type===t).length;
+  let h=`<div class="view">
+    <div class="page-title">Garage</div>
+    <div class="page-sub">${state.vehicles.length} vehicle${state.vehicles.length!==1?"s":""} · costs modeled at your driving</div>
+    <div class="assume">
+      <button class="chip alt" data-assume="annualMiles"><span class="k">Driving</span><b>${(+S.annualMiles).toLocaleString()} mi/yr</b></button>
+      <button class="chip" data-assume="fuelPrice"><span class="k">Fuel</span><b>${money2(S.fuelPrice)}</b></button>
+      <button class="chip" data-assume="inflation"><span class="k">Inflation</span><b>${(S.inflation*100).toFixed(1)}%</b></button>
+      <button class="chip" data-assume="salesTax"><span class="k">Tax</span><b>${(S.salesTax*100).toFixed(1)}%</b></button>
+    </div>
+    <div class="btnrow" style="margin:14px 0 4px">
+      <button class="btn" id="addVeh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add vehicle</button>
+      ${tools?`<button class="btn sec" id="goCompare">Compare</button>`:""}
+    </div>`;
+  if(tools){
+    h+=`<div class="gtools" id="gtools">
+      <div class="gsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input type="search" id="gSearch" placeholder="Search name, make or model" aria-label="Search your cars" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" value="${esc(garageQuery)}"></div>
+      <div class="seg gtype" role="group" aria-label="Show type">${Object.keys(TYPES).map(t=>
+        `<button type="button" data-gtype="${t}" class="${garageView.type===t?"on":""}" aria-pressed="${garageView.type===t}">${TYPES[t]} <span class="n num">${count(t)}</span></button>`).join("")}</div>
+      <label class="gsort"><span class="k">Sort</span>
+        <select id="gSort" aria-label="Sort cars">${Object.keys(SORTS).map(k=>`<option value="${k}"${garageView.sort===k?" selected":""}>${SORTS[k]}</option>`).join("")}</select></label>
+      <div class="gshow" id="gShow"><span id="gShowTxt"></span> · <button type="button" class="inline-link" id="gClear">Clear</button></div>
+    </div>`;
+  }
+  if(!state.vehicles.length){
+    h+=`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 13l1.6-4.8A2 2 0 0 1 8.5 7h7a2 2 0 0 1 1.9 1.2L19 13"/><path d="M4 13h16v4h-2v-1H6v1H4z"/></svg>
+      <p>No vehicles yet.</p></div>`;
+  }
+  h+=`<div id="vlist"></div>`;
   h+=`<div class="sec-gap"></div>
     <p class="note" style="margin-top:14px;text-align:center">Data stays on this device. Add a car straight from CarEdge, or enter cost data by hand. <button class="inline-link" id="aboutModel">How the model works</button></p>
   </div>`;
   app.innerHTML=h;
-  // spark lines
-  app.querySelectorAll(".vcard").forEach(card=>card.onclick=()=>{route._back="garage";go("vehicle",card.dataset.veh);});
+  const drawList=()=>renderGarageList(entries);
   $("#addVeh").onclick=()=>go("add");
   const gc=$("#goCompare"); if(gc) gc.onclick=()=>go("compare");
   $("#aboutModel").onclick=showModelInfo;
   app.querySelectorAll("[data-assume]").forEach(b=>b.onclick=()=>editAssumption(b.dataset.assume));
+  if(tools){
+    const inp=$("#gSearch");
+    inp.oninput=()=>{ garageQuery=inp.value; drawList(); };
+    $("#gSort").onchange=e=>{ garageView.sort=e.target.value; saveView(); drawList(); };
+    app.querySelectorAll("[data-gtype]").forEach(b=>b.onclick=()=>{
+      garageView.type=b.dataset.gtype; saveView();
+      // Only the highlight changes — same size, same weight — so nothing moves.
+      app.querySelectorAll("[data-gtype]").forEach(x=>{ const on=x===b; x.classList.toggle("on",on); x.setAttribute("aria-pressed",on); });
+      drawList();
+    });
+    $("#gClear").onclick=()=>{
+      garageQuery=""; inp.value=""; garageView.type="all"; saveView();
+      app.querySelectorAll("[data-gtype]").forEach(x=>{ const on=x.dataset.gtype==="all"; x.classList.toggle("on",on); x.setAttribute("aria-pressed",on); });
+      drawList();
+    };
+  }
+  drawList();
+}
+function renderGarageList(entries){
+  const box=$("#vlist",app); if(!box) return;
+  const tools=state.vehicles.length>=2;
+  const list=tools?visibleEntries(entries):entries;
+  let h=list.map(vcardHTML).join("");
+  if(tools&&!list.length) h=`<div class="empty gnone"><p>No cars match.</p><button type="button" class="btn sec sm" id="gNoneClear">Clear search &amp; filter</button></div>`;
+  box.innerHTML=h;
+  box.querySelectorAll(".vcard").forEach(card=>card.onclick=()=>{route._back="garage";go("vehicle",card.dataset.veh);});
+  const nc=$("#gNoneClear",box); if(nc) nc.onclick=()=>$("#gClear",app).click();
+  const show=$("#gShow",app);
+  if(show){
+    // The line's space is always reserved; it is only shown or hidden, so a
+    // filter coming on or off never pushes the list up or down.
+    const filtered=list.length!==entries.length;
+    $("#gShowTxt",app).textContent=`Showing ${list.length} of ${entries.length}`;
+    show.style.visibility=filtered?"visible":"hidden";
+  }
 }
 
 function editAssumption(key){

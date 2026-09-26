@@ -107,6 +107,15 @@ async function stubExternals(page) {
       }),
     })
   )
+  // Address lookup (#165): Nominatim first, Open-Meteo's geocoder as fallback.
+  // Only ever called from Settings on a tap, never on boot.
+  await page.route('**://nominatim.openstreetmap.org/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ lat: '39.7817', lon: '-89.6501', display_name: 'Springfield, Sangamon County, Illinois, United States' }]),
+    })
+  )
   // Fonts: fulfilled empty rather than aborted, so no failed-request noise.
   await page.route('**://fonts.googleapis.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'text/css', body: '' })
@@ -117,7 +126,7 @@ async function stubExternals(page) {
   await page.route('**://*/**', (route, req) => {
     const url = req.url()
     if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) return route.continue()
-    if (/api\.github\.com|open-meteo\.com|fonts\.(googleapis|gstatic)\.com/.test(url)) return route.fallback()
+    if (/api\.github\.com|open-meteo\.com|nominatim\.openstreetmap\.org|fonts\.(googleapis|gstatic)\.com/.test(url)) return route.fallback()
     external.push(url)
     return route.abort()
   })

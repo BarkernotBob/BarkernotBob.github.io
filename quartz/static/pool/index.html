@@ -1760,7 +1760,10 @@ async function savePool(){
     else if(lat<-90 || lat>90) bad='Latitude must be between -90 and 90.';
     else if(lon<-180 || lon>180) bad='Longitude must be between -180 and 180.';
     if(bad){ geoSay('latStatus', `<span class="sev2">${esc(bad)}</span> <a href="https://www.latlong.net/" target="_blank" rel="noopener">Find it on latlong.net →</a>`); toast('Check the coordinates'); return; }
-    geo={ ...prev, lat, lon, mode:'latlon' };
+    // Typed coordinates no longer come from the saved address — drop it, so
+    // switching back to address mode can't pair that address with them.
+    const { address, ...rest } = prev;
+    geo={ ...rest, lat, lon, mode:'latlon' };
   } else {
     // Address mode: use the lookup the user already did, or do it now — typing
     // an address and tapping Save used to keep the old coordinates silently.
@@ -1769,8 +1772,10 @@ async function savePool(){
     if(geoPending && geoPending.q===q) hit=geoPending;
     else if(q && q!==prev.address){ hit=await lookupGeo(); if(!hit){ toast('Address not saved — see the note under it'); return; } }
     else if(!q && prev.lat==null){ geoSay('geoStatus','<span class="sev2">Type an address or town first.</span>'); return; }
-    geo = hit ? { ...prev, lat:hit.lat, lon:hit.lon, address:q, mode:'address' }
-              : { lat:41.0793, lon:-85.1394, ...prev, mode:'address' };
+    const { address, ...rest } = prev;
+    geo = hit ? { ...rest, lat:hit.lat, lon:hit.lon, address:q, mode:'address' }
+        : q ? { lat:41.0793, lon:-85.1394, ...prev, mode:'address' }   // unchanged address
+            : { lat:41.0793, lon:-85.1394, ...rest, mode:'address' };  // box cleared: forget it
   }
   const name=$('#s_name').value.trim()||'Our Pool';
   const gallons=parseInt($('#s_gal').value,10)||10000;

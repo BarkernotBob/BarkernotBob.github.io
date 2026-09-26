@@ -171,3 +171,30 @@ for (const vp of ['mobile', 'desktop']) {
     await page.locator('.geopanels').locator('..').screenshot({ path: `test-results/location-${vp}.png` })
   })
 }
+
+test('saving typed coordinates forgets the old address, so it never pairs with them', async ({ page }) => {
+  const { mock } = await bootApp(page)
+  await geocoders(page)
+  await goTab(page, 'settings')
+  await page.getByRole('button', { name: 'By address' }).click()
+  await page.fill('#s_addr', '1234 Main St, Fort Wayne, IN')
+  await page.getByRole('button', { name: 'Save pool' }).click()
+  await expect.poll(() => configOf(mock).geo.address).toBe('1234 Main St, Fort Wayne, IN')
+
+  await page.getByRole('button', { name: 'By lat/lon' }).click()
+  await page.fill('#s_lat', '10')
+  await page.fill('#s_lon', '10')
+  await page.getByRole('button', { name: 'Save pool' }).click()
+  await expect.poll(() => configOf(mock).geo.lat).toBe(10)
+  expect(configOf(mock).geo.address).toBeUndefined()
+
+  // Clearing the address box in address mode forgets it too.
+  await goTab(page, 'today')
+  await goTab(page, 'settings')
+  await page.getByRole('button', { name: 'By address' }).click()
+  await expect(page.locator('#s_addr')).toHaveValue('')
+  await page.getByRole('button', { name: 'Save pool' }).click()
+  await expect.poll(() => configOf(mock).geo.mode).toBe('address')
+  expect(configOf(mock).geo).toMatchObject({ lat: 10, lon: 10 })
+  expect(configOf(mock).geo.address).toBeUndefined()
+})

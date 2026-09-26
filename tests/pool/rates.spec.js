@@ -94,7 +94,9 @@ test('a bad value reopens the form with what was typed and saves nothing', async
   await page.fill('#rt_min', '10')
   await page.fill('#rt_max', '4')
   await dialog(page).getByRole('button', { name: 'Save' }).click()
-  await expect(page.locator('#toast, .toast').first()).toContainText('can’t be less')
+  // Shown inside the reopened form, where it can be seen — not a toast under the backdrop.
+  await expect(dialog(page).getByRole('alert')).toBeVisible()
+  await expect(dialog(page).getByRole('alert')).toContainText('can’t be less')
   await expect(page.locator('#rt_label')).toHaveValue('Drain — main drain')
   await expect(page.locator('#rt_max')).toHaveValue('4')
   await dialog(page).getByRole('button', { name: 'Cancel' }).click()

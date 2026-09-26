@@ -129,6 +129,7 @@
   .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
   /* Schedule → Water level → measured rates (pool-data#3). */
   .ratehead{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
+  .rateerr{color:var(--danger);font-weight:600;margin:0 0 4px}
   .rate .rateval{flex:0 0 auto;font-weight:700;color:var(--brand);font-variant-numeric:tabular-nums;white-space:nowrap}
   nav{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
@@ -1504,8 +1505,10 @@ function waterLevelCard(){
     <button class="sec" style="margin-top:10px" data-action="addRate">+ Add a measurement</button>
   </div>`;
 }
-function rateForm(d, isNew){
+function rateForm(d, isNew, err){
+  // The error lives inside the form: a toast would sit under the modal's backdrop.
   return `<h2>${isNew?'Add a measurement':'Edit measurement'}</h2>
+    ${err?`<p class="small rateerr" role="alert">${esc(err)}</p>`:''}
     <label for="rt_label">What you measured</label>
     <input id="rt_label" value="${esc(d.label)}" placeholder="e.g. Drain — waste valve"/>
     <div class="row">
@@ -1529,9 +1532,9 @@ async function rateModal(id){
   const str=v=>v===null||v===undefined?'':String(v);
   let d=cur ? { label:str(cur.label), min:str(cur.min), max:str(cur.max), unit:str(cur.unit), detail:str(cur.detail), measuredAt:str(cur.measuredAt) }
             : { label:'', min:'', max:'', unit:'min', detail:'', measuredAt:todayISO() };
-  let rec;
+  let rec, err='';
   for(;;){
-    const v=await modal(rateForm(d, !cur));
+    const v=await modal(rateForm(d, !cur, err));
     if(v==='delete'){
       if(!await confirmModal(`Delete “${cur.label}”?`, 'Delete', true)) return;
       await commitFiles([configDelta(c=>{ c.waterLevel.rates=c.waterLevel.rates.filter(r=>r.id!==id); })], 'Delete measurement: '+cur.label);
@@ -1541,14 +1544,13 @@ async function rateModal(id){
     d={ label:$('#rt_label').value.trim(), min:$('#rt_min').value.trim(), max:$('#rt_max').value.trim(),
         unit:$('#rt_unit').value.trim(), detail:$('#rt_detail').value.trim(), measuredAt:$('#rt_at').value };
     const lo=rateNum(d.min), hi=d.max===''?null:rateNum(d.max);
-    let err='';
+    err='';
     if(!d.label) err='Give the measurement a name, e.g. “Drain — waste valve”.';
     else if(lo===null || !/^-?\d*\.?\d+$/.test(d.min)) err='Amount must be a number, e.g. 7 or 1.5.';
     else if(d.max!=='' && (hi===null || !/^-?\d*\.?\d+$/.test(d.max))) err='“Up to” must be a number, or left blank.';
     else if(hi!==null && hi<lo) err='“Up to” can’t be less than the amount.';
     else if(d.measuredAt && d.measuredAt>todayISO()) err='The measured date can’t be in the future.';
     if(!err){ rec={ id:cur?cur.id:uid('r'), label:d.label, min:lo, max:(hi!==null&&hi!==lo)?hi:null, unit:d.unit, detail:d.detail, measuredAt:d.measuredAt||null }; break; }
-    toast(err);
   }
   await commitFiles([configDelta(c=>{
     const list=c.waterLevel.rates, i=list.findIndex(r=>r.id===rec.id);

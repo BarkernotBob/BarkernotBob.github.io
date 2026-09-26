@@ -127,6 +127,10 @@
   .item.is-deleted b{text-decoration:line-through}
   .item.is-deleted button.delbtn{color:var(--muted);opacity:1}
   .flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  /* Schedule → Water level → measured rates (pool-data#3). */
+  .ratehead{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
+  .rateerr{color:var(--danger);font-weight:600;margin:0 0 4px}
+  .rate .rateval{flex:0 0 auto;font-weight:700;color:var(--brand);font-variant-numeric:tabular-nums;white-space:nowrap}
   nav{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
     background:rgba(255,255,255,.88);backdrop-filter:saturate(1.7) blur(14px);-webkit-backdrop-filter:saturate(1.7) blur(14px);
@@ -564,6 +568,7 @@ function upgradeConfig(cfg){
   const dc = defaultConfig();
   for(const k in dc){ if(cfg[k]===undefined) cfg[k]=dc[k]; }
   migrateConfig(cfg); // new strip pads get target ranges; renamed chemical keys get renamed
+  migrateWaterLevel(cfg); // pool-data#3: drainRate + the fill sentence become waterLevel.rates
   return cfg;
 }
 function normalizeConfig(){
@@ -586,8 +591,46 @@ function defaultConfig(){
     tasks: defaultTasks(),
     opening: defaultOpening(),
     closing: defaultClosing(),
-    waterLevel:{ note:'Keep between the lowest and highest side screws. Filling adds ~1 inch per hour with the hose.' }
+    waterLevel:{ note:'Keep between the lowest and highest side screws.', rates: defaultRates() }
   };
+}
+/* ---- Measured rates (pool-data#3) ------------------------------------------
+   waterLevel.rates is a list of things you've timed: how fast the waste valve
+   drains the pool, how fast the hose fills it, and anything measured later.
+   One shape for all of them, so a new measurement is a new row in the list
+   (added from the Schedule tab), never new code:
+     { id, label, min, max|null, unit, detail, measuredAt:'YYYY-MM-DD'|null }
+   min alone is a single value; min+max is a range ("7–10 min"). A null
+   measuredAt means it's still a rule of thumb, not something you've timed. */
+const FILL_SENTENCE = /\s*Filling adds ~1 inch per hour with the hose\.\s*/;
+function defaultRates(){
+  return [{ id:'fill', label:'Fill — garden hose', min:1, max:null, unit:'in / hr',
+    detail:'Topping up with the hose. Time your next top-up and edit this with what you measure.', measuredAt:null }];
+}
+function rateNum(v){ const n=typeof v==='number'?v:parseFloat(v); return Number.isFinite(n)?n:null; }
+function migrateWaterLevel(cfg){
+  if(!cfg.waterLevel || typeof cfg.waterLevel!=='object') cfg.waterLevel={ note:'' };
+  const wl=cfg.waterLevel;
+  if(Array.isArray(wl.rates)) return;
+  // An older config: the fill rate lived as a sentence in the note, and the
+  // first measured drain rate as its own object. Both become rows.
+  if(typeof wl.note==='string') wl.note=wl.note.replace(FILL_SENTENCE,' ').trim();
+  const rates=defaultRates();
+  const dr=wl.drainRate;
+  if(dr && typeof dr==='object'){
+    const r=Array.isArray(dr.measuredMinutesRange)?dr.measuredMinutesRange:[];
+    const lo=rateNum(r[0]), hi=rateNum(r[1]);
+    rates.push({ id:'drain', label:'Drain — waste valve', min:lo, max:(hi!==null&&hi!==lo)?hi:null, unit:'min',
+      detail:String(dr.note||''), measuredAt:typeof dr.measuredAt==='string'?dr.measuredAt:null });
+    delete wl.drainRate;
+  }
+  wl.rates=rates;
+}
+function rateValue(r){
+  const f=v=>{ const n=rateNum(v); return n===null?'?':String(n); };
+  const hi=rateNum(r.max);
+  const span=(hi!==null && hi!==rateNum(r.min)) ? `${f(r.min)}–${f(hi)}` : f(r.min);
+  return r.unit ? `${span} ${r.unit}` : span;
 }
 function defaultTasks(){
   return [
@@ -1445,9 +1488,78 @@ function renderSchedule(){
   html += checklistCard('opening', D.config.opening, '🌷');
   html += checklistCard('closing', D.config.closing, '🍂');
 
-  html += `<div class="card"><h2>💧 Water level</h2><p class="small muted">${esc(D.config.waterLevel.note)}</p></div>`;
+  html += waterLevelCard();
   $('#main').innerHTML = html;
 }
+function waterLevelCard(){
+  const wl=D.config.waterLevel||{}, rates=Array.isArray(wl.rates)?wl.rates:[];
+  return `<div class="card" id="waterCard"><h2>💧 Water level</h2>
+    ${wl.note?`<p class="small muted">${esc(wl.note)}</p>`:''}
+    <h3 class="ratehead">Measured rates</h3>
+    ${rates.length ? rates.map(r=>`<div class="item rate" data-rate="${esc(r.id)}">
+        <div class="flex"><b class="rowtxt">${esc(r.label||'Untitled')}</b><span class="rateval">${esc(rateValue(r))}</span></div>
+        ${r.detail?`<div class="small muted rowtxt" style="margin:3px 0 0">${esc(r.detail)}</div>`:''}
+        <div class="flex"><span class="small muted">${r.measuredAt?'Measured '+esc(fmtDate(r.measuredAt)):'Rule of thumb — not timed yet'}</span>
+          <button class="link" data-action="editRate" data-a1="${esc(r.id)}" aria-label="Edit ${esc(r.label||'measurement')}">Edit</button></div>
+      </div>`).join('') : `<p class="muted small">Nothing measured yet.</p>`}
+    <button class="sec" style="margin-top:10px" data-action="addRate">+ Add a measurement</button>
+  </div>`;
+}
+function rateForm(d, isNew, err){
+  // The error lives inside the form: a toast would sit under the modal's backdrop.
+  return `<h2>${isNew?'Add a measurement':'Edit measurement'}</h2>
+    ${err?`<p class="small rateerr" role="alert">${esc(err)}</p>`:''}
+    <label for="rt_label">What you measured</label>
+    <input id="rt_label" value="${esc(d.label)}" placeholder="e.g. Drain — waste valve"/>
+    <div class="row">
+      <div><label for="rt_min">Amount</label><input id="rt_min" inputmode="decimal" value="${esc(d.min)}" placeholder="7"/></div>
+      <div><label for="rt_max">Up to <span class="muted">(if a range)</span></label><input id="rt_max" inputmode="decimal" value="${esc(d.max)}" placeholder="10"/></div>
+    </div>
+    <label for="rt_unit">Unit</label>
+    <input id="rt_unit" value="${esc(d.unit)}" placeholder="e.g. min, in / hr" autocapitalize="off"/>
+    <label for="rt_detail">Notes <span class="muted">(how, from what to what)</span></label>
+    <textarea id="rt_detail" rows="3">${esc(d.detail)}</textarea>
+    <label for="rt_at">Measured on <span class="muted">(blank = rule of thumb)</span></label>
+    <input id="rt_at" type="date" value="${esc(d.measuredAt)}" max="${todayISO()}"/>
+    <div class="row" style="margin-top:12px"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>
+    ${isNew?'':'<button class="link" style="color:var(--danger);margin-top:6px" data-mval="delete">Delete this measurement</button>'}`;
+}
+// One form for add and edit. A bad value reopens the form with what you typed
+// rather than throwing it away.
+async function rateModal(id){
+  const cur=id ? ((D.config.waterLevel||{}).rates||[]).find(r=>r.id===id) : null;
+  if(id && !cur) return;
+  const str=v=>v===null||v===undefined?'':String(v);
+  let d=cur ? { label:str(cur.label), min:str(cur.min), max:str(cur.max), unit:str(cur.unit), detail:str(cur.detail), measuredAt:str(cur.measuredAt) }
+            : { label:'', min:'', max:'', unit:'min', detail:'', measuredAt:todayISO() };
+  let rec, err='';
+  for(;;){
+    const v=await modal(rateForm(d, !cur, err));
+    if(v==='delete'){
+      if(!await confirmModal(`Delete “${cur.label}”?`, 'Delete', true)) return;
+      await commitFiles([configDelta(c=>{ c.waterLevel.rates=c.waterLevel.rates.filter(r=>r.id!==id); })], 'Delete measurement: '+cur.label);
+      toast('Deleted'); renderSchedule(); return;
+    }
+    if(v!=='save') return;
+    d={ label:$('#rt_label').value.trim(), min:$('#rt_min').value.trim(), max:$('#rt_max').value.trim(),
+        unit:$('#rt_unit').value.trim(), detail:$('#rt_detail').value.trim(), measuredAt:$('#rt_at').value };
+    const lo=rateNum(d.min), hi=d.max===''?null:rateNum(d.max);
+    err='';
+    if(!d.label) err='Give the measurement a name, e.g. “Drain — waste valve”.';
+    else if(lo===null || !/^-?\d*\.?\d+$/.test(d.min)) err='Amount must be a number, e.g. 7 or 1.5.';
+    else if(d.max!=='' && (hi===null || !/^-?\d*\.?\d+$/.test(d.max))) err='“Up to” must be a number, or left blank.';
+    else if(hi!==null && hi<lo) err='“Up to” can’t be less than the amount.';
+    else if(d.measuredAt && d.measuredAt>todayISO()) err='The measured date can’t be in the future.';
+    if(!err){ rec={ id:cur?cur.id:uid('r'), label:d.label, min:lo, max:(hi!==null&&hi!==lo)?hi:null, unit:d.unit, detail:d.detail, measuredAt:d.measuredAt||null }; break; }
+  }
+  await commitFiles([configDelta(c=>{
+    const list=c.waterLevel.rates, i=list.findIndex(r=>r.id===rec.id);
+    if(i>=0) list[i]=rec; else list.push(rec);
+  })], (cur?'Edit':'Add')+' measurement: '+rec.label);
+  toast('Saved'); renderSchedule();
+}
+function addRate(){ return rateModal(null); }
+function editRate(id){ return rateModal(id); }
 function cadenceLabel(t){
   return ({weekly:'weekly', biweekly:'every 2 weeks', monthly:'monthly', pump:'twice weekly / daily in summer'})[t.cadence]||t.cadence;
 }
@@ -1905,7 +2017,7 @@ const ACTIONS = {
   pickStrip, setTestMode, setGeoMode, flipSign, saveTokenSetup, signInWithGitHub,
   logSwim, saveTest, lookupGeo, savePool, saveEmail, saveSeason, saveTargets, saveScales,
   saveChemicals, showAiExport, importInsights, addInsightManual, saveDevice,
-  signOut, deleteLog, deleteTest,
+  signOut, deleteLog, deleteTest, addRate, editRate,
 };
 
 /* Actions that write to GitHub (#134). While one is running, a second tap on
@@ -1916,7 +2028,7 @@ const ACTIONS = {
    re-render the tab and put a brand-new button under the next tap. */
 const WRITES = new Set(['markTask','logChecklistDone','logSwim','saveTest','editTask','editChecklist',
   'deleteInsight','importInsights','addInsightManual','savePool','saveEmail','saveSeason','saveTargets','saveScales',
-  'saveChemicals','saveTokenSetup','deleteLog','deleteTest']);
+  'saveChemicals','saveTokenSetup','deleteLog','deleteTest','addRate','editRate']);
 const INFLIGHT = new Set();
 
 document.addEventListener('click', e=>{

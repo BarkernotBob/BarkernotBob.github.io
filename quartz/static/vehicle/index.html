@@ -695,11 +695,8 @@ function garageEntries(){
     let o=null,P=null;
     try{ ensurePurchase(v); P=v.purchase; const M=Eng.model(v,S);
       o=M.ownership(M.refYear-P.modelYear,P.holdYears,{startOdo:P.startMiles,price:P.priceOverride});
-      // With no price in any row there is no value curve, so the figure would
-      // be fuel and fees alone and look like the cheapest car in the garage.
-      // Show it as not yet priced, and sort it last, unless you typed a price.
-      const priced=P.priceOverride!=null||Eng.prep(v.rows).pts.some(p=>p.price>0);
-      if(!o||!priced||!isFinite(o.perYear)) o=null; }catch(e){ o=null; }
+      // An unreadable figure is shown as "—" rather than "$0", and sorts last.
+      if(!o||!isFinite(o.perYear)||!isFinite(o.perMile)) o=null; }catch(e){ o=null; }
     const hay=[v.name,v.make,v.model].map(x=>String(x==null?"":x).toLowerCase()).join(" ");
     return {v,i,o,P,hay,type:ptKey(v.pt),color:PALETTE[i%PALETTE.length]};
   });
@@ -707,14 +704,15 @@ function garageEntries(){
 function visibleEntries(entries){
   const q=garageQuery.trim().toLowerCase(), words=q?q.split(/\s+/):[];
   const list=entries.filter(e=>(garageView.type==="all"||e.type===garageView.type)&&words.every(w=>e.hay.includes(w)));
+  // Each key returns null when the car can't be placed on that measure.
   const key={
-    costAsc:e=>e.o&&e.o.perYear, costDesc:e=>e.o&&-e.o.perYear, mileAsc:e=>e.o&&e.o.perMile,
-    yearDesc:e=>e.o&&-e.P.modelYear
+    costAsc:e=>e.o?e.o.perYear:null, costDesc:e=>e.o?-e.o.perYear:null, mileAsc:e=>e.o?e.o.perMile:null,
+    yearDesc:e=>e.P&&isFinite(e.P.modelYear)?-e.P.modelYear:null
   }[garageView.sort];
   if(garageView.sort==="nameAsc") list.sort((a,b)=>String(a.v.name||"").localeCompare(String(b.v.name||""),undefined,{sensitivity:"base",numeric:true})||a.i-b.i);
   else if(key) list.sort((a,b)=>{
-    // Cars without enough data to price always go last, in your order.
-    const x=a.o?key(a):null, y=b.o?key(b):null;
+    // Cars that can't be placed (no figure to price them) go last, in your order.
+    const x=key(a), y=key(b);
     if(x==null||y==null) return (x==null)-(y==null)||a.i-b.i;
     return x-y||a.i-b.i;
   });

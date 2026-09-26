@@ -122,25 +122,29 @@ test('model-year sort puts the newest purchase first', async ({ page }) => {
   expect(years).toEqual([...years].sort((a, b) => b - a))
 })
 
-test('a car with no cost data always sorts last', async ({ page }) => {
+test('a car the model cannot price sorts last on cost, but still by year', async ({ page }) => {
+  // An unreadable typed price (e.g. from an imported file) leaves the model with
+  // no figure: the card shows "—", and the cost sorts must not treat it as $0.
   await bootApp(page, {
     mutate: (s) => {
-      const blank = JSON.parse(JSON.stringify(s.vehicles[0]))
-      blank.id = 'vblank01'
-      blank.name = 'Aaa No Data'
-      blank.rows = []
-      s.vehicles.unshift(blank)
+      const bad = JSON.parse(JSON.stringify(s.vehicles[0]))
+      bad.id = 'vbad0001'
+      bad.name = 'Aaa Unpriced'
+      bad.purchase = { modelYear: 2025, startMiles: 0, priceOverride: 'abc', holdYears: 5 }
+      s.vehicles.forEach((v) => (v.purchase = { modelYear: 2018, startMiles: 0, priceOverride: null, holdYears: 5 }))
+      s.vehicles.push(bad)
     },
   })
-  for (const sort of ['costAsc', 'costDesc', 'mileAsc', 'yearDesc']) {
+  const card = page.locator('#vlist .vcard').filter({ hasText: 'Aaa Unpriced' })
+  await expect(card.locator('.big')).toHaveText('—')
+  for (const sort of ['costAsc', 'costDesc', 'mileAsc']) {
     await page.selectOption('#gSort', sort)
     const ns = await names(page)
-    expect(ns[ns.length - 1], sort).toBe('Aaa No Data')
+    expect(ns[ns.length - 1], sort).toBe('Aaa Unpriced')
   }
-  // And its card says it needs data rather than showing a made-up cost.
-  const card = page.locator('#vlist .vcard').filter({ hasText: 'Aaa No Data' })
-  await expect(card.locator('.big')).toHaveText('—')
-  await expect(card).toContainText('Add cost data to model')
+  // Model year doesn't need a price: the newest (2025) goes first regardless.
+  await page.selectOption('#gSort', 'yearDesc')
+  expect((await names(page))[0]).toBe('Aaa Unpriced')
 })
 
 test('sort and type are remembered on this device, apart from the exported data', async ({ page }) => {

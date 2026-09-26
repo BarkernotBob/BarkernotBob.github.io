@@ -94,6 +94,14 @@
      (Settings → Season) each claim ~178px in Chrome and pushed the page 11px
      wider than a 390px phone, scrolling the whole app sideways. */
   .row{display:flex;gap:10px} .row>*{flex:1;min-width:0}
+  /* Settings → location (#165). Both entry panels sit in ONE grid cell and the
+     hidden one is only visibility:hidden, so the cell is always as tall as the
+     taller panel and switching modes moves nothing below it. The status lines
+     reserve three lines so a lookup result can't push Save down either. */
+  .geopanels{display:grid} .geopanel{grid-area:1/1;min-width:0} .geopanel.off{visibility:hidden}
+  .geostatus{margin:8px 0 0;min-height:4.5em;overflow-wrap:anywhere}
+  .coord{display:flex;gap:6px} .coord input{flex:1;min-width:0}
+  .coord button{flex:0 0 46px;width:46px;padding:0;font-size:18px}
   .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.02em;font-family:var(--font-body)}
   .pill.warn{background:#f6ead4;color:#8a5418}
   .pill.ok{background:#d9efe4;color:#1f6048}
@@ -286,13 +294,45 @@ function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); retu
 /* MM-DD <-> a full date the native date-picker accepts (year is a placeholder, ignored). */
 function mdToDate(md){ return /^\d{2}-\d{2}$/.test(md||'') ? '2024-'+md : ''; }
 function dateToMd(v){ return (v && v.length>=10) ? v.slice(5,10) : ''; }
-/* Look up coordinates for a place name (free, no key — Open-Meteo geocoder). */
-async function geocodePlace(q){
+/* Look up coordinates for an address or place (free, no key). OpenStreetMap's
+   Nominatim finds full street addresses ("1234 Main St, Fort Wayne, IN") as
+   well as towns; Open-Meteo's geocoder only knows place names, so it is the
+   fallback when Nominatim is down or finds nothing (#165). Returns null when
+   neither matches; throws only when neither could be reached. */
+async function geocodeNominatim(q){
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`, { headers:{ 'Accept-Language':'en' } });
+  if(!r.ok) throw new Error('geocode '+r.status);
+  const hit = (await r.json())[0];
+  if(!hit) return null;
+  const lat=parseFloat(hit.lat), lon=parseFloat(hit.lon);
+  if(!isFinite(lat) || !isFinite(lon)) return null;
+  return { lat, lon, name:String(hit.display_name||q) };
+}
+async function geocodeOpenMeteo(q){
   const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`);
   if(!r.ok) throw new Error('geocode '+r.status);
   const hit = ((await r.json()).results||[])[0];
   if(!hit) return null;
   return { lat:hit.latitude, lon:hit.longitude, name:[hit.name, hit.admin1, hit.country_code].filter(Boolean).join(', ') };
+}
+async function geocodePlace(q){
+  let failures=0;
+  for(const find of [geocodeNominatim, geocodeOpenMeteo]){
+    try{ const hit=await find(q); if(hit) return hit; }
+    catch(e){ failures++; }
+  }
+  if(failures===2) throw new Error('lookup failed');
+  return null;
+}
+/* A typed coordinate. Accepts "41.08", "-85.14", "41.08° N" / "85.14 W". */
+function parseCoord(v){
+  let t=String(v||'').trim().replace(/[°\s]/g,'').toUpperCase();
+  if(!t) return NaN;
+  let sign=1;
+  if(/[SW]$/.test(t)){ sign=-1; t=t.slice(0,-1); } else if(/[NE]$/.test(t)) t=t.slice(0,-1);
+  t=t.replace(/^\u2212/,'-');   // a typographic minus pasted from a web page
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(t)) return NaN;
+  return sign*parseFloat(t);
 }
 function toast(msg, ms=2800){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
 function modal(innerHtml){
@@ -1165,23 +1205,48 @@ async function logSwim(){
    advice, they just can't be logged that way any more. */
 let testMode='strip';
 let testDate='';   // a back-dated test keeps its date across a Strips/Numbers switch
-/* Settings location entry mode: 'address' (look up a place name) or 'latlon'. */
+/* Settings location entry mode: 'address' (look it up) or 'latlon' (type it).
+   Switching only flips which panel is showing — both are always rendered in
+   the same grid cell, so the Save button below them never moves and nothing
+   you typed elsewhere on the card is thrown away (#165). */
 let geoMode=null;
+let geoPending=null;   // the last successful lookup: {q, lat, lon, name}
 function curGeoMode(){ return geoMode || ((D.config.geo&&D.config.geo.mode)||'latlon'); }
-function setGeoMode(m){ geoMode=m; if(D.config.geo) D.config.geo.mode=m; renderSettings(); }
+function setGeoMode(m){
+  if(m!=='address' && m!=='latlon') return;
+  geoMode=m;
+  document.querySelectorAll('#geoTabs [data-a1]').forEach(b=>{
+    const on=b.getAttribute('data-a1')===m;
+    b.classList.toggle('sec', !on); b.setAttribute('aria-pressed', String(on));
+  });
+  document.querySelectorAll('.geopanel').forEach(p=>{
+    const on=p.getAttribute('data-geo')===m;
+    p.classList.toggle('off', !on);
+    if(on) p.removeAttribute('inert'); else p.setAttribute('inert','');
+    p.setAttribute('aria-hidden', String(!on));
+  });
+}
+function geoSay(id, html){ const o=$('#'+id); if(o) o.innerHTML=html; }
+/* Flip the sign of a coordinate box: the iPhone decimal keypad has no minus. */
+function flipSign(id){
+  const i=$('#'+id); if(!i) return;
+  const v=i.value.trim();
+  i.value = v.startsWith('-')||v.startsWith('\u2212') ? v.slice(1) : '-'+v;
+}
 async function lookupGeo(){
-  const q=($('#s_addr')&&$('#s_addr').value.trim())||'';
-  const out=$('#geoStatus');
-  if(!q){ toast('Type a city or place name first'); return; }
-  if(out) out.innerHTML='<span class="spin"></span> Looking up…';
-  try{
-    const hit=await geocodePlace(q);
-    if(!hit){ if(out) out.innerHTML='<span class="sev2">No match — try a nearby city name.</span>'; return; }
-    D.config.geo={ ...(D.config.geo||{}), lat:hit.lat, lon:hit.lon, mode:'address' };
-    if(!$('#s_loc').value.trim()) $('#s_loc').value=hit.name;
-    _wx=null;
-    if(out) out.innerHTML=`✓ Found <b>${esc(hit.name)}</b> — ${hit.lat.toFixed(4)}, ${hit.lon.toFixed(4)}. Tap <b>Save pool</b> to keep it.`;
-  }catch(e){ if(out) out.innerHTML='<span class="sev2">Lookup failed — check your connection.</span>'; }
+  const q=(($('#s_addr')||{}).value||'').trim();
+  if(!q){ geoSay('geoStatus','<span class="sev2">Type an address or town first.</span>'); return null; }
+  geoSay('geoStatus','<span class="spin"></span> Looking up…');
+  let hit;
+  try{ hit=await geocodePlace(q); }
+  catch(e){ geoSay('geoStatus','<span class="sev2">Lookup failed — check your connection, or use “By lat/lon”.</span>'); return null; }
+  if(!hit){ geoSay('geoStatus','<span class="sev2">No match — check the spelling, or try just the town and state.</span>'); return null; }
+  geoPending={ q, ...hit };
+  // Mirror the result into the lat/lon boxes so switching modes shows it.
+  if($('#s_lat')) $('#s_lat').value=hit.lat.toFixed(4);
+  if($('#s_lon')) $('#s_lon').value=hit.lon.toFixed(4);
+  geoSay('geoStatus', `✓ Found <b>${esc(hit.name)}</b> — ${hit.lat.toFixed(4)}, ${hit.lon.toFixed(4)}. Tap <b>Save pool</b> to keep it.`);
+  return geoPending;
 }
 function renderTest(){
   const lt=lastTest();
@@ -1601,21 +1666,25 @@ function renderSettings(){
     <p class="small muted" style="margin:4px 0 0">Shown on the Today screen. Your <b>coordinates</b> (below) are what fetch the weather.</p>
 
     <label style="margin-top:14px">How do you want to set your location?</label>
-    <div class="row" style="gap:6px">
-      <button class="${curGeoMode()==='address'?'':'sec'}" style="margin:0" data-action="setGeoMode" data-a1="address">By address</button>
-      <button class="${curGeoMode()==='latlon'?'':'sec'}" style="margin:0" data-action="setGeoMode" data-a1="latlon">By lat/lon</button>
+    <div class="row" id="geoTabs" role="group" aria-label="Location entry">
+      <button class="${curGeoMode()==='address'?'':'sec'}" style="margin:0" aria-pressed="${curGeoMode()==='address'}" data-action="setGeoMode" data-a1="address">By address</button>
+      <button class="${curGeoMode()==='latlon'?'':'sec'}" style="margin:0" aria-pressed="${curGeoMode()==='latlon'}" data-action="setGeoMode" data-a1="latlon">By lat/lon</button>
     </div>
-
-    ${curGeoMode()==='address' ? `
-      <label style="margin-top:12px">City or place name</label>
-      <input id="s_addr" placeholder="e.g. Fort Wayne, IN" value="${esc(c.pool.location||'')}" autocapitalize="words"/>
-      <button class="sec" style="margin-top:8px" data-action="lookupGeo">📍 Look up coordinates</button>
-      <p class="small muted" id="geoStatus" style="margin-top:8px">Using ${esc(((c.geo||{}).lat ?? 41.0793))}, ${esc(((c.geo||{}).lon ?? -85.1394))}. Type a place and tap look up to change it.</p>
-    ` : `
-      <div class="row" style="margin-top:6px"><div><label>Latitude</label><input id="s_lat" inputmode="decimal" value="${esc((c.geo||{}).lat ?? 41.0793)}"/></div>
-        <div><label>Longitude</label><input id="s_lon" inputmode="decimal" value="${esc((c.geo||{}).lon ?? -85.1394)}"/></div></div>
-      <p class="small muted" style="margin-top:6px">Don't know your lat/lon? <a href="https://www.latlong.net/" target="_blank" rel="noopener">Find it on latlong.net →</a> (search your address, then copy the Latitude &amp; Longitude it shows).</p>
-    `}
+    <div class="geopanels">
+      <div class="geopanel${curGeoMode()==='address'?'':' off'}" data-geo="address" aria-hidden="${curGeoMode()!=='address'}" ${curGeoMode()==='address'?'':'inert'}>
+        <label style="margin-top:12px" for="s_addr">Address or town</label>
+        <input id="s_addr" placeholder="e.g. 1234 Main St, Fort Wayne, IN" value="${esc((c.geo||{}).address||'')}" autocomplete="street-address" autocapitalize="words"/>
+        <button class="sec" style="margin-top:8px" data-action="lookupGeo">📍 Look up coordinates</button>
+        <p class="small muted geostatus" id="geoStatus">Using ${esc(((c.geo||{}).lat ?? 41.0793))}, ${esc(((c.geo||{}).lon ?? -85.1394))}. Type a street address or a town, then tap look up — or just tap <b>Save pool</b> and it looks it up for you.</p>
+      </div>
+      <div class="geopanel${curGeoMode()==='latlon'?'':' off'}" data-geo="latlon" aria-hidden="${curGeoMode()!=='latlon'}" ${curGeoMode()==='latlon'?'':'inert'}>
+        <div class="row" style="margin-top:6px">
+          <div><label for="s_lat">Latitude</label><div class="coord"><input id="s_lat" inputmode="decimal" value="${esc((c.geo||{}).lat ?? 41.0793)}"/><button type="button" class="sec" aria-label="Flip latitude between north and south" data-action="flipSign" data-a1="s_lat">±</button></div></div>
+          <div><label for="s_lon">Longitude</label><div class="coord"><input id="s_lon" inputmode="decimal" value="${esc((c.geo||{}).lon ?? -85.1394)}"/><button type="button" class="sec" aria-label="Flip longitude between east and west" data-action="flipSign" data-a1="s_lon">±</button></div></div>
+        </div>
+        <p class="small muted geostatus" id="latStatus">Don't know your lat/lon? <a href="https://www.latlong.net/" target="_blank" rel="noopener">Find it on latlong.net →</a> Search your address, then copy the Latitude &amp; Longitude it shows. In the US the longitude is negative — tap <b>±</b> to add the minus sign.</p>
+      </div>
+    </div>
     <button style="margin-top:10px" data-action="savePool">Save pool</button>
   </div>
   <div class="card">
@@ -1682,20 +1751,40 @@ function renderSettings(){
   </div>`;
 }
 async function savePool(){
-  D.config.pool.name=$('#s_name').value.trim()||'Our Pool';
-  D.config.pool.gallons=parseInt($('#s_gal').value,10)||10000;
-  D.config.pool.location=$('#s_loc').value.trim();
   const prev=D.config.geo||{};
-  if(curGeoMode()==='latlon' && $('#s_lat') && $('#s_lon')){
-    const lat=parseFloat($('#s_lat').value), lon=parseFloat($('#s_lon').value);
-    D.config.geo={ ...prev, lat: isNaN(lat)?(prev.lat??41.0793):lat, lon: isNaN(lon)?(prev.lon??-85.1394):lon, mode:'latlon' };
+  let geo;
+  if(curGeoMode()==='latlon'){
+    const lat=parseCoord($('#s_lat').value), lon=parseCoord($('#s_lon').value);
+    let bad='';
+    if(isNaN(lat) || isNaN(lon)) bad='Enter both a latitude and a longitude as numbers, e.g. 41.0793 and -85.1394.';
+    else if(lat<-90 || lat>90) bad='Latitude must be between -90 and 90.';
+    else if(lon<-180 || lon>180) bad='Longitude must be between -180 and 180.';
+    if(bad){ geoSay('latStatus', `<span class="sev2">${esc(bad)}</span> <a href="https://www.latlong.net/" target="_blank" rel="noopener">Find it on latlong.net →</a>`); toast('Check the coordinates'); return; }
+    // Typed coordinates no longer come from the saved address — drop it, so
+    // switching back to address mode can't pair that address with them.
+    const { address, ...rest } = prev;
+    geo={ ...rest, lat, lon, mode:'latlon' };
   } else {
-    // address mode — coordinates were set by "Look up coordinates"; just record the mode
-    D.config.geo={ lat: prev.lat??41.0793, lon: prev.lon??-85.1394, ...prev, mode:'address' };
+    // Address mode: use the lookup the user already did, or do it now — typing
+    // an address and tapping Save used to keep the old coordinates silently.
+    const q=(($('#s_addr')||{}).value||'').trim();
+    let hit=null;
+    if(geoPending && geoPending.q===q) hit=geoPending;
+    else if(q && q!==prev.address){ hit=await lookupGeo(); if(!hit){ toast('Address not saved — see the note under it'); return; } }
+    else if(!q && prev.lat==null){ geoSay('geoStatus','<span class="sev2">Type an address or town first.</span>'); return; }
+    const { address, ...rest } = prev;
+    geo = hit ? { ...rest, lat:hit.lat, lon:hit.lon, address:q, mode:'address' }
+        : q ? { lat:41.0793, lon:-85.1394, ...prev, mode:'address' }   // unchanged address
+            : { lat:41.0793, lon:-85.1394, ...rest, mode:'address' };  // box cleared: forget it
   }
+  const name=$('#s_name').value.trim()||'Our Pool';
+  const gallons=parseInt($('#s_gal').value,10)||10000;
+  let location=$('#s_loc').value.trim();
+  if(!location && geo.mode==='address' && geo.address) location=geo.address;
+  await commitFiles([configDelta(c=>{ c.pool={...c.pool, name, gallons, location}; c.geo=geo; })], 'Update pool settings');
+  geoPending=null; geoMode=null;
   _wx=null; // location may have changed — refetch weather next time
-  const {name, gallons, location} = D.config.pool, geo = {...D.config.geo};
-  await commitFiles([configDelta(c=>{ c.pool={...c.pool, name, gallons, location}; c.geo=geo; })], 'Update pool settings'); toast('Saved');
+  toast('Saved');
 }
 async function saveEmail(){ const email=$('#s_email').value.trim(); await commitFiles([configDelta(c=>{ c.email=email; })], 'Update reminder email'); toast('Email saved'); }
 async function saveSeason(){
@@ -1813,7 +1902,7 @@ window.addEventListener('load', async ()=>{
    hostile name still can't reach anything that isn't listed. */
 const ACTIONS = {
   show, markTask, editTask, editChecklist, logChecklistDone, deleteInsight,
-  pickStrip, setTestMode, setGeoMode, saveTokenSetup, signInWithGitHub,
+  pickStrip, setTestMode, setGeoMode, flipSign, saveTokenSetup, signInWithGitHub,
   logSwim, saveTest, lookupGeo, savePool, saveEmail, saveSeason, saveTargets, saveScales,
   saveChemicals, showAiExport, importInsights, addInsightManual, saveDevice,
   signOut, deleteLog, deleteTest,

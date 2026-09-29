@@ -304,9 +304,10 @@ watching:
 sub-agent (the `Agent` tool), so one item's files, test output and CI logs never
 land in your context, and a long night doesn't run out of room.
 
-1. Take the **top three** from the ranked list. Prefer three different repos. Two
-   items in the same repo only if they plainly touch different files;
-   otherwise take the next item instead and leave that one for a later batch.
+1. Take the **top three** from the ranked list. Prefer three different repos, but
+   **up to three items in the same repo may run at once** (Isaiah allowed this
+   2026-09-29) under the rules in "Same-repo items in parallel" below. Take the
+   next item instead only when a pair is excluded there.
 2. For each, read the issue body and comments, and apply the readiness test. An
    item that fails it goes to Grill and the next ranked item takes its slot.
 3. Launch the three sub-agents **at the same time** (all `Agent` calls in one
@@ -333,6 +334,34 @@ land in your context, and a long night doesn't run out of room.
 A batch that finishes means three items shipped or cleanly parked. If the night
 ends mid-batch, at most three items are open, each with a note saying where it
 stopped. Never have more than one batch running.
+
+### Same-repo items in parallel
+
+Items in one repo usually share files (a main script, a test-count baseline,
+generated build output), so parallel branches will conflict at merge time.
+That is allowed; merging them safely is the job. The rules:
+
+- **Excluded pairs — never in the same batch:** an item whose issue says to run
+  alone; an item that restructures the build or test tooling (build scripts,
+  the test runner, a shared test harness) alongside any other item from that
+  repo; two items whose main change is the same function, component or screen.
+  An `in-progress` item another session is working on counts as in the batch.
+- **Merges go one at a time, never back to back from stale checks.** Before
+  merging, each worker fetches the latest default branch, merges it in (no
+  rebase or force-push), and resolves conflicts:
+  - test-count baselines (e.g. `tests/baseline.json`) are **recomputed** as the
+    default branch's value plus the tests this branch adds, then proven by
+    running the suite; never pick one side;
+  - generated files (built bundles, lockfiles) are **regenerated** with the
+    repo's build tooling, never hand-merged;
+  - real code conflicts: keep both behaviours; if that isn't possible without
+    choosing, stop and report `blocked`.
+  Then it re-runs the repo's checks and waits for CI green on that exact head.
+  It merges with `expectedHeadSha` set to that head. If the default branch
+  moved again in the meantime, repeat the merge-in and checks; never merge a
+  head that hasn't been tested against the current default branch.
+- Tell each worker in its prompt which other issues from its repo are in the
+  same batch, so it expects the default branch to move under it.
 
 ## 3. Open a chat for every question Isaiah has to answer
 

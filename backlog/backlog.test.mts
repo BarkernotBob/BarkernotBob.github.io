@@ -314,6 +314,31 @@ describe("nightly ranking honours urgent", () => {
   })
 })
 
+// Isaiah allowed same-repo items in parallel on 2026-09-29. The safety
+// is entirely in the merge rules, so losing them is how two branches clobber
+// each other's test baselines.
+describe("nightly same-repo parallel builds merge safely", () => {
+  const nightly = fs.readFileSync(
+    path.join(repoRoot, ".claude/commands/backlog-nightly.md"),
+    "utf8",
+  )
+  const section = nightly.slice(nightly.indexOf("### Same-repo items in parallel"))
+
+  test("the parallel section exists", () => {
+    assert.ok(nightly.includes("### Same-repo items in parallel"))
+  })
+
+  test("baselines are recomputed and generated files regenerated", () => {
+    assert.match(section, /\*\*recomputed\*\*/)
+    assert.match(section, /\*\*regenerated\*\*/)
+  })
+
+  test("merges pin the tested head against the current default branch", () => {
+    assert.match(section, /expectedHeadSha/)
+    assert.match(section, /never merge a\s+head that hasn't been tested against the current default branch/)
+  })
+})
+
 describe("nightly run reports repo coverage", () => {
   const nightlyCommand = fs.readFileSync(
     path.join(repoRoot, ".claude/commands/backlog-nightly.md"),

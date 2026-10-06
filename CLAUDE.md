@@ -46,8 +46,8 @@ Beginner with Git, GitHub, and CLI. For any action I must take:
 - **Filing issues for me (any chat, not just `/backlog-add`):** if I said urgent/ASAP, add `urgent`. Otherwise, when an item plainly deserves the front of the queue (something I use is broken or wrong, data loss, a named deadline, other items waiting on it), propose it in one line I can answer "yes" to — never ask mid-filing, never add it unasked. Suggest sparingly.
 - Commands: `/backlog-add` (file items from a dictated list), `/backlog` (see everything), `/backlog-work <n>` (build it), `/backlog-grill <n>` (pin down a rough idea), `/backlog-nightly` (the unattended pass).
 - Every issue file must contain acceptance criteria AND a "Manual test (for Isaiah)" section: numbered plain-English steps a non-developer can follow. Write it when the issue is completed, not before.
-- Autonomous runs go through /ralph or the nightly backlog Routine (`/backlog-nightly`) — never improvise an unattended loop outside those two.
-- Prototype code (prototype/* branches, prototypes/ folders) never merges to main. Promoting a prototype = re-implementing through the normal pipeline (/grill-me → /to-prd → /to-issues). If feature requests start piling onto a prototype, flag it and offer promotion.
+- Autonomous runs go through /implement-spec or the nightly backlog Routine (`/backlog-nightly`) — never improvise an unattended loop outside those two.
+- Prototype code (prototype/* branches, prototypes/ folders) never merges to main. Promoting a prototype = re-implementing through the normal pipeline (/grill-with-docs → /to-spec → /to-tickets). If feature requests start piling onto a prototype, flag it and offer promotion.
 
 # Code review & debugging discipline
 - Before declaring an issue/feature complete, run /code-review (medium) on the diff, fix confirmed findings, then commit.

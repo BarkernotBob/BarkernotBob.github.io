@@ -23,7 +23,8 @@ questioning yourself.
 
 ## Before asking anything
 
-Read the issue and its comments. Then go look at the actual code — the idea will
+Read the issue and its comments. If the nightly run left questions there, they
+are your first round — confirm or sharpen them rather than starting over. Then go look at the actual code — the idea will
 usually collide with something that already exists, and the collision is the
 most useful thing you can bring to the conversation.
 

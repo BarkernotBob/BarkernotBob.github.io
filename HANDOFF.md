@@ -1,6 +1,6 @@
 # HANDOFF — barkernotbob.github.io (Quartz v5 site)
 
-_Last updated: 2026-09-22_
+_Last updated: 2026-10-06_
 
 ## Current status
 
@@ -29,6 +29,19 @@ The old Claude-made Routines are **paused, not deleted**:
 
 ## What just changed
 
+- 2026-10-06 — **nightly redesigned to stop eating the week's usage.** One `search_issues` call
+  finds the work (an empty night ends there); the Opus coordinator stays thin and never reads code;
+  at most 3 background workers, one per repo, refilled one at a time; nothing new after 2h; workers
+  turn on auto-merge instead of waiting on CI, and the next night merges/fixes leftovers found by
+  the PR marker `Built by the nightly backlog run.`. The nightly never asks questions: unclear items
+  get questions on the issue + `needs-grilling`, and Isaiah grills with the new `/backlog-next`
+  (builds a project's top ready item, else grills its oldest `needs-grilling` one). **Isaiah still
+  needs to:** set `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` on the Routine's environment
+  (`backlog/routines/SETUP.md` step 8); attach chess, learn-claude-code-terminal and
+  business-assurance-resource-allocation to the nightly Routine; turn on "Allow auto-merge" in
+  repos with CI; run "Install Backlog System.command" on the Mac. **Unverified until the first
+  run:** background workers re-wake a Routine coordinator; the search reaches every attached repo
+  (the nightly audit checks one repo a night); the env var reaches subagents.
 - 2026-09-23 — **games publish from `~/Projects` again.** The copy step looked in the old Obsidian
   folder (gone), so the live games sat on July builds. `GAMES` in both scripts lists the apps by
   path (Hexchain held: blockchain#47) and prints a note if one is missing. `~/Website Launchers` point here too.

@@ -112,34 +112,33 @@ say "put a hold on that one" in a Claude chat.
 
 At 2am a Claude session starts on its own, with no one watching, and:
 
-1. Ranks everything open by impact: unfinished work first, then things that are
-   broken, then things that unblock other items, then everyday improvements.
-2. Builds three at a time, each by its own helper (a "sub-agent" — a separate
-   Claude worker), and finishes all three before starting the next three. If the
-   night runs out, at most three things are left half-done. Each comments on its
-   issue as it goes — the plan first, then decisions and dead ends.
-3. Opens a pull request, waits for the automated checks, and **merges it** once
-   they're green. That was your call — it ships without asking.
-4. Closes the issue with a **Manual test (for Isaiah)**: numbered plain-English
-   steps so you can see the thing working yourself.
-5. Keeps going until nothing buildable is left, or it runs out of budget. An
-   item it gets cut off in the middle of stays `in-progress` and is resumed the
-   next night.
+1. Finishes last night's leftovers: merges any of its pull requests whose
+   automated checks passed, and fixes any that failed.
+2. Runs one search for open items. If there's nothing buildable, it stops right
+   there and tells you so.
+3. Ranks what it found: unfinished work first, then `urgent`, then things that
+   are broken, then things that unblock other items, then everyday improvements.
+4. Builds up to three at a time, each by its own helper (a "sub-agent" — a
+   separate Claude worker), never two from the same project at once. When one
+   finishes, the next item takes its place. Each comments on its issue as it
+   goes — the plan first, then decisions and dead ends.
+5. Opens a pull request and turns on **auto-merge**: GitHub merges it by itself
+   once the automated checks pass. (Projects with no automated checks get merged
+   straight away.) That was your call — it ships without asking.
+6. Stops starting new items after two hours. Anything cut off mid-way stays
+   `in-progress` and is picked up the next night.
 
 It will not touch deploy workflows, secrets, or branch settings — those get
 labelled `blocked` for you to handle awake.
 
 **If an item is too vague, it does not guess.** It moves the item to
-`needs-grilling` and writes down the exact questions that stopped it on the
-issue. Same for anything it had to label `blocked`. When the run finishes, it
-leaves a **Questions for you** list at the end of that night's "Nightly backlog"
-chat in your Claude app — tap the notification and every item's question is
-there at once, numbered, each with a suggested answer. Answer the ones you can
-in one reply. That's what makes it safe for a
-one-line dictated note to be fair game.
+`needs-grilling` and writes the exact questions that stopped it on the issue,
+each with a suggested answer. It never asks you anything in the nightly chat.
 
-You get one push notification with the counts. Everything else is written on the
-issues, next to the work.
+You get one push notification. The first line says what got done. If anything
+is waiting on you (`needs-grilling` or `blocked`), the second line says how many
+and links straight to the list. To deal with one, see "Working an item
+yourself" below.
 
 ---
 
@@ -147,6 +146,11 @@ issues, next to the work.
 
 In a Claude chat, in the right project:
 
+- `/backlog-next` — do whatever that project needs next. If something is ready,
+  it builds it. If not, it starts grilling the next vague item, beginning with
+  the questions the nightly run left on it. One item per chat: when it's done,
+  open a new chat and run it again. From the website project you can name the
+  project instead: `/backlog-next chess`.
 - `/backlog-work 12` — pick up issue 12 and take it to done. No number given,
   it takes the oldest one.
 - `/backlog-grill 12` — talk through a rough idea until it's buildable.
@@ -183,8 +187,9 @@ Only projects listed in that file are ever touched by the nightly routine.
 
 **An item is `blocked`.** Read the last comment. It says what it needs from you.
 
-**An item is `needs-grilling`.** There's a chat waiting in your Claude app, or
-run `/backlog-grill <number>` yourself.
+**An item is `needs-grilling`.** Its questions are in the last comment. Open a
+chat in that project and run `/backlog-next` (or `/backlog-grill <number>` for a
+specific one).
 
 **`Backlog.command` says it couldn't read a project.** Either you're signed out
 (`gh auth login` in Terminal) or the repo name in `backlog/repos.txt` is wrong.

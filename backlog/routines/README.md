@@ -22,10 +22,20 @@ missing `add_repo` as a reason to stop, so the first run that could actually
 read GitHub (2026-09-22) stopped itself. A test now guards against that.
 
 **3. The Routine can't open new chats.** `create_session` comes from the
-Claude Code Remote connector. The web page can't attach it, and `create_trigger`
-from a chat stores no connectors (tried 2026-09-23). So grill and blocked
-questions are asked at the end of the nightly run, in its own chat — see step 3
-of the command file.
+Claude Code Remote connector. The web page can't attach it, and connectors on
+Claude-made Routines are not available to this account (tried 2026-09-23 and
+2026-10-06). So the run never asks anything: questions go on the issue with the
+`needs-grilling` label, the notification links the list, and Isaiah grills each
+one in a chat of its own with `/backlog-next`. (Until 2026-10-06 the run asked
+them at the end of its own chat and grilled there, which kept every repo and the
+whole night's context in one chat.)
+
+**4. Cost.** On 2026-10-05 one run used the five-hour session limit in under
+three hours: a coordinator near 190k tokens a turn, six workers near 140k each,
+and workers idling on CI long enough for their prompt cache to expire. Since
+2026-10-06: one search instead of listing every repo, three workers at most and
+one per repo, no new item after two hours, no worker waits on CI, and each chat
+compacts at about 200k (`SETUP.md` step 8).
 
 ## The design
 

@@ -6,7 +6,8 @@ allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill
 
 Work a backlog item through to done. Target: $ARGUMENTS — if empty, take the
 oldest open issue in the current repo that isn't already `in-progress`,
-`blocked` or `hold`.
+`blocked`, `hold` or `needs-grilling`. (`/backlog-next` falls back to grilling
+when nothing is ready.)
 
 ## Reading and writing GitHub
 
@@ -53,7 +54,8 @@ say so in a comment, add the `blocked` label, remove `in-progress`, and stop.
 1. Confirm every "Done when..." line in the issue actually holds. Check them,
    don't assume.
 2. Open a PR that says `Closes #<number>` in the body.
-3. Wait for CI. Merge when it's green.
+3. Wait for CI. Merge when it's green. (The nightly run doesn't wait: it turns
+   on auto-merge instead — step 4 of `/backlog-nightly`.)
 4. Post a final comment: what changed, and how you verified it yourself (tests,
    a headless run, screenshots of your own work). Add a **Manual test (for
    Isaiah)** only if a check truly needs him: taste (a new look or wording he

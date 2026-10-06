@@ -57,6 +57,12 @@ say so in your summary. Don't stall the whole batch on one unclear item.
 Check for an obvious duplicate in the target repo before creating each one. If
 you find a real duplicate, comment on the existing issue instead and say so.
 
+Also check the repo's issues closed as **not planned**
+(`gh issue list --repo <repo> --state closed --search "reason:not-planned"`).
+If one asks for the same thing, by idea and not just wording, still file the new
+item (no questions), but note the old one on that item's report line:
+`(you turned this down in #8: <reason, half a sentence>)`.
+
 ## Report back
 
 One compact list, nothing else:
@@ -69,7 +75,8 @@ BarkernotBob.github.io #7  Home splash cards are cramped on iPhone  (needs grill
 
 Then one line: how many filed, and anything you had to guess at. If you flagged
 something `needs-grilling`, say which and why in half a sentence — that's the
-one thing worth his attention.
+one thing worth his attention. Same for anything that matches an idea he
+turned down before.
 
 ### Propose `urgent` — don't ask, and don't apply it yourself
 

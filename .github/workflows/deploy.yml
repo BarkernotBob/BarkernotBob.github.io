@@ -31,8 +31,25 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
       - run: npm ci
+      # Plugin install re-downloads every plugin (~70s). Reuse the last run's
+      # copy unless quartz.lock.json changed. restore/save are separate steps on
+      # purpose: the save runs BEFORE the patches below, so the cache always holds
+      # clean, unpatched plugins and the patches always re-apply on every run.
+      - name: Restore Quartz plugins from cache
+        id: plugin-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .quartz/plugins
+          key: ${{ runner.os }}-quartz-plugins-${{ hashFiles('quartz.lock.json') }}
       - name: Install Quartz plugins
+        if: steps.plugin-cache.outputs.cache-hit != 'true'
         run: npx quartz plugin install
+      - name: Save Quartz plugins to cache (unpatched)
+        if: steps.plugin-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .quartz/plugins
+          key: ${{ steps.plugin-cache.outputs.cache-primary-key }}
       - name: Make search match within words (substring), not just word-starts
         run: |
           sed -i 's/tokenize:"forward"/tokenize:"full"/g' \

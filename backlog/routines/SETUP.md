@@ -24,6 +24,13 @@ Open **https://claude.ai/code/routines** → **New routine**.
    the repos.
 6. **Notifications:** on, with **Push notification** ticked.
 7. **Create**, then press **Run now** once and check the run reports counts.
+8. **Context cap.** Add the environment variable
+   `CLAUDE_CODE_AUTO_COMPACT_WINDOW` = `200000` to the cloud environment the
+   Routine runs in: open any cloud session in that environment at
+   https://claude.ai/code, click the environment name in the session's title
+   bar, then **Edit** → environment variables. It makes each chat in the run
+   compact at about 200k tokens instead of running to 1M. It applies to every
+   session in that environment, not just the Routine.
 
 ```
 Run tonight's backlog pass.
@@ -65,6 +72,7 @@ A repo in the list but not attached shows up as **unreachable** every night.
 ## How to tell it is working
 
 The morning after a run you get a push notification with counts in it —
-`18/18 covered · 18 opened · 0 audited`. **Counts are the signal.** No counts,
+`Merged 2 · 1 merging when CI passes · 0 stopped mid-way · audit ok`, or
+`Nothing ready to build · audit ok`. **Counts are the signal.** No counts,
 or a message starting "BROKEN", means it isn't working — open the run from the
 Routine page to see why.

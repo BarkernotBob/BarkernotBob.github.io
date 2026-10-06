@@ -1,12 +1,38 @@
 ---
-description: The unattended nightly pass over the backlog — build and merge what's ready, open grilling chats for what isn't
+description: The unattended nightly pass over the backlog — build and merge what's ready, flag what needs Isaiah
 allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, Agent
 ---
 
 You are running unattended, overnight. Isaiah is asleep. Nobody will answer a
-question you ask, so don't ask one — decide, do the work, and leave a written
-trail he can read in the morning. (The one exception is the end of the run:
-step 3 leaves the night's open questions in this chat for him to answer later.)
+question, so never ask one — not during the run and not at the end. Decide, do
+the work, and leave a written trail on the issues.
+
+**You are a thin coordinator.** You read issue titles and a few issue bodies,
+launch workers, and record what they report. You never clone a repo, read code,
+run tests, read a diff or a CI log. All of that happens inside a worker, so this
+chat stays small however long the night runs.
+
+## Limits (Isaiah, 2026-10-06)
+
+The old design — every repo listed, batches of three, workers waiting on CI —
+used most of a week's usage in single nights. These limits replace it:
+
+- **At most three workers at once, and at most one per repo.** Two items from
+  the same repo are never built at the same time.
+- **Rolling, not batches.** When a worker finishes, its slot is refilled with
+  the next item; nobody waits for the slowest of three.
+- **No new item after 2 hours.** Note the start time (`date -u`) first thing.
+  Once two hours have passed, launch nothing new; let running workers finish,
+  then report and end.
+- **No worker waits on CI.** A worker opens its PR, turns on auto-merge, and
+  ends. The next night's run merges or fixes whatever it left (step 1).
+- **No questions in this chat, ever.** An item that needs Isaiah gets its
+  questions written on the issue and a label. He grills it in his own chat, one
+  issue per chat, with `/backlog-next` or `/backlog-grill`.
+- **Context cap.** No chat in this run should exceed about 200k tokens. The
+  Routine's environment sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` so
+  compaction kicks in there (see `backlog/routines/SETUP.md`). Beyond that, keep
+  everything you read small: titles before bodies, counts before detail.
 
 ## Reading and writing GitHub
 
@@ -20,208 +46,144 @@ it. Every `gh ...` example below has a direct MCP equivalent.
 
 ### Prove you can reach GitHub before doing anything else
 
-Having the tool is not the same as the tool working. The MCP schemas are
-deferred: they must be loaded with `ToolSearch` before the first call, and a
-call made without loading one fails with `InputValidationError` — which reads
-like "no GitHub access" but is not.
+The MCP schemas are deferred: load them with `ToolSearch` before the first call
+(`select:mcp__github__search_issues,mcp__github__search_pull_requests,mcp__github__get_file_contents,mcp__github__list_issues,mcp__github__issue_read,mcp__github__issue_write,mcp__github__add_issue_comment,mcp__github__pull_request_read,mcp__github__merge_pull_request`).
+A call made without loading fails with `InputValidationError`, which reads like
+"no GitHub access" but is not.
 
-So the start of every run is one real read, not a capability guess:
+Then fetch `backlog/repos.txt` from `BarkernotBob/BarkernotBob.github.io`.
+**If that read fails, stop the run**: send a push notification starting
+`BROKEN: nightly backlog did not run`, naming the route you tried and quoting
+the error. **Never continue past a failed probe** — a run that cannot read
+GitHub cannot tell "no open issues" from "I could not look".
 
-1. If you picked MCP, load the schemas you need first
-   (`ToolSearch` with `select:mcp__github__search_issues,mcp__github__list_issues,...`).
-2. Make one read-only call that must succeed: fetch `backlog/repos.txt` from
-   `BarkernotBob/BarkernotBob.github.io`.
-3. **If that read fails, stop the run.** Send a push notification saying the
-   nightly pass could not reach GitHub, name the route you tried (`gh` or MCP)
-   and quote the error. Then end.
+`repos.txt` is the scope. An issue or PR in a repo not listed there is ignored.
 
-**Never continue past a failed probe.** A run that cannot read GitHub cannot
-tell "no open issues" from "I could not look", and reporting the first when the
-second is true is the exact silent success this whole file exists to prevent.
-An empty queue is only ever a real result _after_ this probe has passed.
+## 1. Finish last night's PRs first
 
-## 1. Build the queue
-
-`backlog/repos.txt` in `BarkernotBob/BarkernotBob.github.io` is the list of
-projects in scope. Nothing outside it is ever read from or worked on.
-
-### In a scheduled Routine: every repo is already attached
-
-The nightly Routine is created with every repo in `repos.txt` attached to it,
-and a Routine session has **no `add_repo` tool** — it can reach exactly the
-repos attached to the Routine and no others. That is expected, not a failure.
-In a Routine session:
-
-- **Skip the search-first scan and the audit below.** They exist to avoid
-  `add_repo` calls, and there are none to avoid.
-- `list_issues` on **every** repo in `repos.txt`, directly — **lean**: see
-  "Scan cheaply" below.
-- A repo the tools refuse is `unreachable`: it is in `repos.txt` but was never
-  added to the Routine. Record it by name (step 4) and keep going — only Isaiah
-  can add a repo to a Routine.
-- In the ledger every repo is then `read` or `unreachable`. `opened` is the
-  number read, and `audited` is 0 because nothing was assumed.
-- **If this run merges a change to `repos.txt`** (step 4 adds new projects),
-  re-read it afterwards and `list_issues` on every newly listed repo. One the
-  tools can read is in scope for the rest of this run — work it like any other.
-  One they refuse is `unreachable`. Never leave a repo out of the queue just
-  because it was added to `repos.txt` after the run started: on 2026-09-23
-  `blockchain` was attached and readable, got added mid-run, and its issues
-  still went untouched until the next night.
-
-Everything from here to the ledger applies to interactive sessions, where repos
-are attached on demand.
-
-### Find the work before attaching anything
-
-**Do not attach every repo.** One search per owner finds every open issue
-without attaching anything:
+Workers mark every PR they open with the line
+`Built by the nightly backlog run.` in the body. One search finds the ones
+still open:
 
 ```
-search_issues: is:open is:issue user:BarkernotBob
+search_pull_requests: is:open is:pr user:BarkernotBob "Built by the nightly backlog run" in:body
 ```
 
-`repos.txt` is the list that decides scope, not this query. Take the distinct
-owners in `repos.txt` and run one search each — today they are all
-`BarkernotBob`, but the file's format permits any `owner/repo`, and a repo whose
-owner no search covered would be permanently invisible while counting as
-covered. **Any repo in `repos.txt` not covered by an owner you searched must be
-attached and listed directly**, every run, no exceptions.
+Usually this is empty. For each result (`pull_request_read`, status and
+mergeability only — never the diff or logs):
 
-Almost every night, all but one or two repos have nothing open. Attaching the
-rest costs an `add_repo` call each — and each is a chance for the session's
-auto-mode permission classifier to refuse, which is what produced the silent
-coverage gaps this scan replaces.
+- **The issue it closes is `blocked`, `hold` or `needs-grilling`** → leave it
+  alone. A worker already handed it to Isaiah; fixing it again every night is
+  the loop this rule exists to stop.
+- **Checks green and mergeable** → squash-merge it and make sure the issue it
+  closes is closed. Leave the branch: you have no tool to delete one, and the
+  monthly branch sweep clears it.
+- **Checks red, or a merge conflict** → it becomes a **Fix** item. Fix items go
+  ahead of everything in step 2.
+- **Checks still running** → leave it alone.
 
-So: **search first, then attach only the repos that actually have issues.**
+Note which issues these PRs close. Those issues are taken; never start them
+again from step 2.
 
-1. Run the search above. It returns each issue with a `repository_url`.
-2. Discard any repo not listed in `repos.txt`.
-3. `add_repo` **only** the repos that came back with at least one open issue.
-   Attach one repo at a time and retry a refusal once — refusals cluster when several
-   calls go out together, and a lone retry usually succeeds. Two refusals means
-   that repo is out of reach tonight: record it by name and keep going.
-4. For each attached repo, `list_issues` is the authority you build from. The
-   search is discovery; the listing is truth. Labels and dates from the listing,
-   not from the search result.
+## 2. Find the work, cheaply
 
-### Audit two repos the search called empty
+### One search, titles only
 
-The search is fast but **unproven on repos this session has not attached** — it
-has never been observed returning an issue from an unattached repo, because no
-such issue has existed to test with. If it turns out to be scoped to attached
-repos, a repo with real work would silently never be seen: the exact failure
-this system keeps producing.
+```
+search_issues: is:open is:issue user:BarkernotBob -label:blocked -label:hold -label:needs-grilling
+```
 
-So every run checks a little of it:
+Sort oldest first, minimal output if offered — **no bodies**. Number, title,
+labels, repo and dates are enough to rank. Drop anything outside `repos.txt`
+and anything a step-1 PR already closes.
 
-- Take `repos.txt` **sorted, as a fixed list**, and pick the two at positions
-  `(2 × day-of-year) mod N` and `(2 × day-of-year + 1) mod N`. Rotating over the
-  fixed list — not over "whichever repos the search called empty tonight", which
-  is a different set each night — is what actually walks the whole list. Skip
-  any that the search flagged as having work, since those are being opened
-  anyway, and take the next one along.
-- Attach each and `list_issues`.
-- **If either has an open issue the search missed, the search is unreliable.**
-  Say so loudly, fall back to attaching every repo in `repos.txt` for the rest of
-  this run, and record it on the coverage issue named in step 4. Do not quietly
-  carry on with a scan you have just caught missing work.
-- If both agree with the search, note that and move on.
+An `in-progress` issue updated in the last 12 hours is someone else's live work —
+skip it. One untouched for longer is stalled — it is a **Resume** item. (12, not
+24: a worker cut off at 5am was last touched about 21 hours before the next run,
+and a 24-hour window would leave it for a second night.)
 
-Two extra `add_repo` calls a night is the price of the fast path not being able
-to fail silently. Pay it.
+**If nothing is left, and step 1 found no Fix items, the night is empty.** Run
+the audit below, send the notification (step 5), and end. Do not read anything
+else. An empty night is a correct and complete outcome.
 
-### Keep a coverage ledger
+### Audit one repo, every night
 
-Record every repo in `repos.txt` under exactly one of four outcomes:
+The search has never been proven to see every repo the Routine can read. So each
+run checks one: take `repos.txt` **sorted, as a fixed list**, and pick the repo
+at position `day-of-year mod N`. `list_issues` on it (open, titles and labels
+only), drop the ones labelled `blocked`, `hold` or `needs-grilling` (the search
+leaves those out on purpose), and compare what remains with what the search
+returned for that repo.
 
-| Outcome         | Meaning                                                                       |
-| --------------- | ----------------------------------------------------------------------------- |
-| **read**        | Search found work, repo attached, issues listed                               |
-| **empty**       | Search found nothing, and the audit confirmed it                              |
-| **assumed**     | Search found nothing, not audited this run                                    |
-| **unreachable** | `add_repo` refused twice, or (in a Routine) not attached — _you never looked_ |
-
-**Never collapse these into one number** — including in the notification. A
-single "covered" fraction is exactly the collapse this table exists to prevent:
-under search-first, most repos are `assumed` every night, so a lone `18/18`
-would read as "I looked at eighteen repos" on a night nobody opened sixteen of
-them. That is the silent-success failure this system keeps producing, wearing a
-new number.
-
-So the fraction never travels alone. **`opened` and `audited` go with it, every
-time** — see step 4. "Nothing to do", "the search says nothing to do" and "I
-never looked" mean different things, and an issue filed from a phone into a repo
-the run never examined is invisible, which is the whole thing this system exists
-to prevent.
-
-If anything ends up `unreachable`, say so **by name** before you stop — step 4
-explains where the names go, since the notification can't carry them.
-
-### Scan cheaply: titles first, detail only for work you'll start
-
-Most repos have nothing open on most nights. Reading one costs context the
-build batches need, so the scan reads as little as it can:
-
-- `list_issues` with `state: OPEN` and `fields: ["number", "title", "labels",
-"created_at", "updated_at"]` — **no bodies**. That is enough to sort and to
-  rank most items.
-- Read an issue's body and comments (`issue_read`) only when it is a candidate
-  for the **next batch**, or when its title alone can't be ranked.
-- **Never clone a repo, read its `CLAUDE.md`, or open its code** during the
-  scan. That happens inside the sub-agent building an item from that repo,
-  and only then.
-
-### Sort what you found
-
-**An open issue with no label is work to do** — filing something must never
-require remembering to tag it. Sort into:
-
-Check Skip first — `blocked` and `hold` outrank everything, so an item that is
-both `in-progress` and `blocked` is skipped, not resumed.
-
-- **Skip** — labelled `blocked` or `hold`. Leave these completely alone.
-- **Resume** — labelled `in-progress`, untouched for over a day. These come
-  next; something stalled.
-- **Grill** — labelled `needs-grilling`, or anything the next section says is
-  not ready.
-- **Build** — everything else that's open. This is the normal case and most
-  items will land here.
+- They agree → note `audit ok` for the notification.
+- The listing has an issue the search missed → **the search is unreliable.**
+  Say so in the notification, comment it on the coverage issue (step 5), and
+  for the rest of this run use `list_issues` (titles only) on every repo in
+  `repos.txt` instead of the search.
+- The tools refuse the repo → it is **unreachable**; see step 5.
 
 ### Rank by impact
 
-Rank Resume + Build into one list, highest impact first:
+Rank Fix + Resume + everything else into one list, highest impact first, from
+titles and labels alone:
 
-1. **Resume** — anything `in-progress`. Finish what's started before starting
-   anything new.
+1. **Resume** — anything `in-progress` that stalled, plus step-1 Fix items.
+   Finish what's started before starting anything new.
 2. **Urgent** — labelled `urgent`. Isaiah (or Claude, with his yes) put it at
    the front on purpose; don't second-guess it.
 3. **Broken** — something Isaiah already uses is wrong: a bug, wrong numbers,
    lost or corrupted data, a page that doesn't load.
 4. **Unblocks** — other open issues depend on it.
-5. **Daily use** — improves an app or page he uses often (judge from the repo's
-   recent commits and issue history, not a guess).
+5. **Daily use** — improves an app or page he uses often.
 6. **Everything else.**
 
-Ties: "Quick" before "Big", then oldest first. Write the ranked list into this
-run's chat (not onto a public issue — titles from private repos). Grill items
-are not ranked; they go to step 3.
+Ties: oldest first. Keep the ranked list in this chat, never on a public issue —
+titles come from private repos.
+
+### Never invent work
+
+The queue is the open issues the search returned. That is the whole of it.
+
+- **Do not file new work items.** Not wishlist ideas, not refactors, not "while
+  I was in here I noticed". Say it as a comment on the issue being worked.
+- **Do not widen an item** beyond what it asks for.
+- **Do not go looking** for something to do when the queue is empty. An empty
+  night is a correct and complete outcome.
+
+Two narrow exceptions, both reports rather than work: a **defect a worker
+actually reproduced** may be filed as one issue with its reproduction, and the
+**coverage issue** in step 5.
+
+## 3. Fill a slot
+
+To fill a free slot, walk the ranked list from the top and take the first item
+whose repo has no worker running. Then:
+
+1. Read that one issue's body and comments (`issue_read`). Only this one —
+   never read ahead for items you aren't launching now.
+2. Apply the readiness test below. Not ready → post its questions on the issue,
+   label it `needs-grilling`, and take the next item instead.
+3. Ready → label it `in-progress` and launch its worker.
+
+Start by filling up to three slots. **Launch each worker in the background**
+(`run_in_background: true`) so you're told the moment one finishes. When one
+does: record its result, and if the two hours aren't up, re-run the step-2
+search (it's cheap, and it picks up anything filed or changed tonight), re-rank,
+and fill that one slot. One item at a time, never a fresh batch.
 
 ### Is it ready to build, or does it need grilling?
 
 Isaiah's normal way of working is to align with an agent in chat on exactly what
 an issue requires, then let it build, then review the result. **The nightly run
 has no such conversation available.** A grilling chat is that conversation,
-deferred to when he is awake. So the question to ask of each item is: _could I
-have had that alignment conversation with myself, and been confident of his
-answers?_
+deferred to when he is awake. So ask of each item: _could I have had that
+alignment conversation with myself, and been confident of his answers?_
 
 **Ready to build** — all four hold:
 
 1. **Observable.** It names a behaviour, symptom or outcome you could point at
    on a screen. Not a feeling about the software.
-2. **Located.** From the issue plus the code, you can tell which app, page or
-   flow it concerns.
+2. **Located.** You can tell which app, page or flow it concerns.
 3. **Checkable.** You can write the "Done when…" lines yourself, and he would
    recognise them as what he meant.
 4. **One reading.** Two developers given only this text would build the same
@@ -229,8 +191,8 @@ answers?_
 
 **Needs grilling** — any one of these:
 
-1. It names a feeling or a verdict — "make it better", "stop sucking", "clean
-   this up" — with no symptom attached.
+1. It names a feeling or a verdict — "make it better", "clean this up" — with
+   no symptom attached.
 2. There are two plausible readings that lead to different builds.
 3. It names a place but not a change, or a change but not a place.
 4. It needs a product decision: several behaviours would satisfy the words, and
@@ -238,9 +200,8 @@ answers?_
 5. You would have to invent acceptance criteria he never implied.
 6. It is a preference — wording, ordering, layout — and no preference is stated.
 
-**The test, before you write any code:** draft the "Done when…" lines. If you
-cannot write them without guessing what he meant, it is not ready. If you can
-write them but would not bet he would agree, it is not ready either.
+**The test:** draft the "Done when…" lines. If you cannot write them without
+guessing what he meant, or would not bet he would agree, it is not ready.
 
 **These are NOT reasons to grill**, and treating them as such turns the safety
 valve into a way of never building anything:
@@ -248,287 +209,107 @@ valve into a way of never building anything:
 - **Thin.** A single dictated sentence naming a real symptom is buildable. Short
   is not ambiguous.
 - **Big.** Size is not ambiguity. A large, clearly-specified job is ready.
-- **Unfamiliar code.** That is research you should go and do, not a question for
-  him.
-- **You can see more than one way to implement it.** Choosing between
-  implementations is your job; choosing between intents is not.
+- **Unfamiliar code.** That is research the worker does, not a question for him.
+- **More than one way to implement it.** Choosing between implementations is
+  the worker's job; choosing between intents is not.
 
-When you do move something to `needs-grilling`, comment with **the specific
-questions that blocked you**: every one that isn't blocked by another, as a
-numbered list with your recommended answer on each. Hold back a question whose
-answer depends on another; it comes up when he answers. Not a restatement of
-the issue. Each one he can answer in a sentence.
+When an item moves to `needs-grilling`, comment with **the specific questions
+that blocked you**: every one that isn't blocked by another, as a numbered list
+with your recommended answer on each. Hold back a question whose answer depends
+on another; it comes up when he answers. Not a restatement of the issue. Each
+one he can answer in a sentence. That comment is what his grilling chat starts
+from.
 
-### Never invent work
+### The worker prompt
 
-The queue is open issues in `repos.txt`. That is the whole of it.
+Each prompt must stand alone:
 
-- **Do not file new work items.** Not wishlist ideas, not refactors, not "while
-  I was in here I noticed". If you find something worth saying, say it as a
-  comment on the issue you are working.
-- **Do not widen an item** beyond what it asks for.
-- **Do not go looking** for something to do when the queue is empty. An empty
-  night is a correct and complete outcome — stop and report it.
+- the repo, issue number and title, and the one-line reason it was ranked here
+  (for a Fix item: the PR link and what's failing, by check name only);
+- "Follow `.claude/commands/backlog-work.md` from
+  BarkernotBob/BarkernotBob.github.io, with the overrides in step 4 of
+  `.claude/commands/backlog-nightly.md`. The repo's own `CLAUDE.md` is the
+  authority on how to build.";
+- "GitHub MCP schemas are deferred — load them with `ToolSearch` first.";
+- "Work on branch `nightly/<issue>` in a checkout of only this repo: the one
+  already in the session if there is one, else a fresh clone under
+  `/tmp/nightly/<repo>-<issue>`. Start from the latest default branch." For a
+  Fix item instead: "Check out the PR's existing branch and push fixes to it.
+  Never reset or force-push it." (For a conflict, merge the default branch in.);
+- "Reply in at most 5 lines: `merged <PR link>`, `auto-merge <PR link>`,
+  `pr-open <PR link>`, `blocked: <why>`, `needs-grilling`, or
+  `stopped: <where>`."
 
-Two narrow exceptions, both reports rather than work: a **defect you actually
-reproduced** while building may be filed as one issue with its reproduction, and
-the **coverage issue** in step 4 records a scan that could not see everything.
+## 4. Rules for every worker
 
-## 2. Work the queue
+`/backlog-work` applies, with these overrides because nobody is watching:
 
-Follow `/backlog-work` for each item, with these differences because nobody is
-watching:
-
-- **Never ask.** If an item is ambiguous enough that you'd want to ask, it isn't
-  ready. Move it to `needs-grilling`, comment saying which specific questions
-  blocked you, and go to the next item. This is the safety valve that lets
-  everything default to buildable — use it rather than guessing at intent.
-  Building the wrong thing costs more than waiting a day.
-- **Merge your own work** once CI is green. That is the standing instruction.
-  Squash-merge, delete the branch.
-- **Never merge on red CI.** Fix it, or if you can't, leave the PR open, label
-  the issue `blocked`, comment why, move on.
+- **Never ask.** If the code shows the item is ambiguous after all, post the
+  blocking questions on the issue (numbered, recommended answer on each), swap
+  `in-progress` for `needs-grilling`, and reply `needs-grilling`.
 - **Never touch, in any repo:** GitHub Actions workflow files, secrets,
   `.github/` permissions, branch protection, or anything under `.quartz/plugins/`.
   If an item needs one of those, label it `blocked` with a comment saying it
-  needs a human, and move on.
-- **No merge cap.** Keep going until the queue is empty or the session runs out
-  of budget (context or usage limit). Isaiah removed the old five-a-night cap on
-  2026-09-23. Because the run can be cut off mid-item, leave the issue's
-  progress comment current as you go, so an item cut off is labelled
-  `in-progress` and gets resumed the next night instead of lost.
+  needs a human, and stop.
+- **Prove it locally, then hand off to CI.** Build, run the repo's own checks,
+  run `/code-review medium` and fix confirmed findings, add the regression test.
+  Open the PR with `Closes #<n>` and the line
+  `Built by the nightly backlog run.` in the body. Then, without waiting:
+  - **The repo has CI** (any workflow under `.github/workflows/` that runs on
+    pull requests) → enable auto-merge, squash. Reply `auto-merge`. If
+    auto-merge can't be turned on, leave the PR open and reply `pr-open`; the
+    next run merges it once green.
+  - **The repo has no CI** → squash-merge now, delete the branch, confirm the
+    issue closed. Reply `merged`.
+- **Never merge on red.** A worker never merges over a failing check; nor does
+  step 1.
+- **Delete the branch** whenever you merge. Branches auto-merge leaves behind
+  are cleared by the monthly branch sweep.
+- **Keep the issue's progress comment current**, so an item cut off mid-way is
+  left `in-progress` with a note on exactly where it stopped and gets resumed.
 
-### Build in batches of three, one sub-agent per item
-
-**You are the coordinator. You don't write code.** Each item is built by its own
-sub-agent (the `Agent` tool), so one item's files, test output and CI logs never
-land in your context, and a long night doesn't run out of room.
-
-1. Take the **top three** from the ranked list. Prefer three different repos, but
-   **up to three items in the same repo may run at once** (Isaiah allowed this
-   2026-09-29) under the rules in "Same-repo items in parallel" below. Take the
-   next item instead only when a pair is excluded there.
-2. For each, read the issue body and comments, and apply the readiness test. An
-   item that fails it goes to Grill and the next ranked item takes its slot.
-3. Launch the three sub-agents **at the same time** (all `Agent` calls in one
-   message). Each prompt must stand alone:
-   - the repo and issue number, and the one-line reason it was ranked here;
-   - "Follow `.claude/commands/backlog-work.md` from
-     BarkernotBob/BarkernotBob.github.io, plus the rules in step 2 of
-     `.claude/commands/backlog-nightly.md` (never ask, merge on green, never on
-     red, never touch workflows/secrets/`.quartz/plugins/`). The repo's own
-     `CLAUDE.md` is the authority on how to build.";
-   - "GitHub MCP schemas are deferred — load them with `ToolSearch` first.";
-   - "Work in your own checkout (`git worktree add` or a fresh clone under
-     `/tmp/nightly/<repo>-<issue>`), on branch `nightly/<issue>`. Before
-     merging, bring in the latest default branch and re-run checks.";
-   - "Keep the issue's progress comment current as you go. If you run low on
-     room, stop, leave the issue `in-progress` with a note on exactly where you
-     stopped.";
-   - "Reply in at most 10 lines: `merged <PR link>`, `blocked: <why>`,
-     `needs-grilling: <the blocking questions>`, or `stopped: <where>`."
-4. **Wait for all three to finish before starting the next batch.** Then act on
-   each reply: a `needs-grilling` or `blocked` item gets its label and comment
-   if the sub-agent didn't add it. Then take the next three.
-
-A batch that finishes means three items shipped or cleanly parked. If the night
-ends mid-batch, at most three items are open, each with a note saying where it
-stopped. Never have more than one batch running.
-
-### Same-repo items in parallel
-
-Items in one repo usually share files (a main script, a test-count baseline,
-generated build output), so parallel branches will conflict at merge time.
-That is allowed; merging them safely is the job. The rules:
-
-- **Excluded pairs — never in the same batch:** an item whose issue says to run
-  alone; an item that restructures the build or test tooling (build scripts,
-  the test runner, a shared test harness) alongside any other item from that
-  repo; two items whose main change is the same function, component or screen.
-  An `in-progress` item another session is working on counts as in the batch.
-- **Merges go one at a time, never back to back from stale checks.** Before
-  merging, each worker fetches the latest default branch, merges it in (no
-  rebase or force-push), and resolves conflicts:
-  - test-count baselines (e.g. `tests/baseline.json`) are **recomputed** as the
-    default branch's value plus the tests this branch adds, then proven by
-    running the suite; never pick one side;
-  - generated files (built bundles, lockfiles) are **regenerated** with the
-    repo's build tooling, never hand-merged;
-  - real code conflicts: keep both behaviours; if that isn't possible without
-    choosing, stop and report `blocked`.
-  Then it re-runs the repo's checks and waits for CI green on that exact head.
-  It merges with `expectedHeadSha` set to that head. If the default branch
-  moved again in the meantime, repeat the merge-in and checks; never merge a
-  head that hasn't been tested against the current default branch.
-- Tell each worker in its prompt which other issues from its repo are in the
-  same batch, so it expects the default branch to move under it.
-
-## 3. Open a chat for every question Isaiah has to answer
-
-Two kinds of item end the night waiting on Isaiah, and **each gets its own chat**:
-
-- **Grill** — every `needs-grilling` item.
-- **Blocked** — every item _this run_ labelled `blocked` because it needs a
-  decision or action from him (red CI you could not fix, a workflow/secret/
-  settings change, anything you would otherwise have asked). Title it
-  `Blocked: <issue title>`, tag `["backlog-blocked"]`, and brief it with what
-  you tried, exactly what is blocking, and the one thing you need from him.
-  Items that were already `blocked` before tonight have been asked; leave them.
-
-### Load the chat tool before deciding you can't
-
-`create_session` and `list_sessions` come from the **Claude Code Remote**
-connector, and like the GitHub tools their schemas are deferred. Load them
-first: `ToolSearch` with `select:mcp__Claude_Code_Remote__create_session,mcp__Claude_Code_Remote__list_sessions`
-(if that finds nothing, search `create_session`). If they load, open one chat
-per item as below.
-
-**In the scheduled Routine they will not load, and nobody can fix that.** The
-Routine is made on the web page (it has to be, to have every repo attached),
-the web page cannot attach Claude Code Remote, and a Routine Claude creates
-cannot carry it either (tried 2026-09-23: `create_trigger` stores no
-connectors). So in the Routine, **this run's own chat is where Isaiah answers**:
-
-1. During the run, never stop to ask. Put the blocking questions on each
-   issue as a comment, label it, and keep working.
-2. After everything else is done — queue worked, report written, notification
-   sent — end the run with a message titled **Questions for you**: a numbered
-   list, one entry per Grill/Blocked item (repo, issue number, title), each
-   with that item's questions in full and your recommended answer on each. The
-   items don't depend on each other, so ask them all at once — Isaiah asked for this
-   on 2026-09-23. Ask in plain chat text, not with `AskUserQuestion`, then stop.
-3. The notification says how many questions are waiting in this chat.
-4. When Isaiah replies (it may be hours later), you are in the same chat with
-   every repo still attached. Run the `/backlog-grill` protocol on every item he
-   answered, following its question rules: any follow-ups that don't depend on
-   each other, across items too, go together in one numbered list. When an item
-   is pinned down, update the issue and drop the `needs-grilling`/`blocked`
-   label. An item he didn't answer keeps its label. Build only what he says to;
-   otherwise the next nightly run picks it up.
-
-### Opening a grill chat
-
-For each `needs-grilling` item, use `create_session` to start a separate chat:
-
-- **title:** `Grill: <issue title>`
-- **tags:** `["backlog-grill"]`
-- **prompt:** a standalone briefing — the repo and issue number, the full issue
-  body, what you found when you looked at the relevant code, and the instruction
-  to run the `/backlog-grill` protocol starting with its first round: every
-  question not blocked by another. Tell it to follow `/backlog-grill`'s question rules.
-
-**Tell it to ask in plain chat text, not with the question tool.** End the
-prompt with this instruction, verbatim:
-
-> Ask your questions as ordinary chat messages, then stop and wait for the
-> reply. Questions that don't depend on each other go together in one numbered
-> list, each with your recommended answer. Do not use the `AskUserQuestion` tool.
-
-These chats run in auto permission mode, where `AskUserQuestion` needs an
-approval nobody is awake to give. A chat that reaches for it freezes on a
-permission prompt instead of asking — it looks like it is waiting for an answer
-when it is really waiting to be allowed to speak. A plain chat message needs no
-permission and reaches him the same way.
-
-It sits in the Claude app until Isaiah opens it.
-
-**Don't create a second chat for an issue that already has one** (grill or
-blocked). Match on title, not tags: `list_sessions` currently rejects its `tags` filter outright
-(`tags filter is not currently available`), so a tag-based check does not return
-an empty list — it errors, and an error swallowed here means a duplicate chat
-every night for the same issue. Instead list recent sessions without a filter
-and compare titles against `Grill: <issue title>` / `Blocked: <issue title>`. If that exact title is
-already there, skip the item — it has been asked.
-
-## 4. Report
-
-Two audiences, and the split is deliberate: the notification is counts, the
-issues carry the detail.
+## 5. Report
 
 ### The notification
 
-One push notification, at most three lines: how many merged, how many blocked,
-how many chats are waiting, and coverage as **three numbers, never one** —
-`18/18 covered · 2 opened · 2 audited`.
-Do not put private repo names or issue titles in it — just counts. The one
-exception is the access reminder below, which Isaiah asked for by name.
-
-- **covered** — every repo in `repos.txt` the run can account for: `read`,
-  `empty` and `assumed`. Only `unreachable` subtracts.
-- **opened** — repos actually attached and listed. Usually one or two.
-- **audited** — repos opened purely to check the search was telling the truth.
-
-**The fraction alone is forbidden.** Under search-first, `covered` is 18/18 on
-almost every night, including a night when nobody opened sixteen of those repos
-— so on its own it means little more than "the run finished". `opened` and
-`audited` are what say how much was actually seen, and they are the numbers that
-would look wrong if the scan quietly stopped working.
-
-If the audit caught the search missing an issue, the fraction is not the story —
-say that instead, and in the notification. A scan caught missing work is a
-broken run, not a quiet one.
-
-Always send the coverage fraction, including on a night when everything was
-reachable. `18/18` is a real result and takes one number; leaving it out when it
-is clean means its absence is the only signal anything is wrong, and absence is
-exactly what nobody notices.
-
-### Remind Isaiah to add access for any repo you can't reach
-
-Only Isaiah can give a Routine access to a repo, so a new project stays
-invisible until he's told. Find every repo that needs it:
-
-1. **In `repos.txt` but refused** — every `unreachable` repo.
-2. **A new project not in `repos.txt` at all** — run `search_repositories` with
-   `user:BarkernotBob archived:false fork:false` and take any repo it returns
-   that isn't in `repos.txt`. Open a PR adding each to `repos.txt` (sorted),
-   and merge it once CI is green. It's his repo, and an issue he files there
-   must not be invisible. (Unproven: the search may only return repos this
-   Routine can already see. Case 1 is the reliable path, which is why new
-   projects get added to `repos.txt` when they are created.)
-
-For each one, add a line to the notification — this is the one place a repo
-name goes in it:
+One push notification. Counts and links only — **do not put private repo names
+or issue titles in it**; the one exception is the Add access line below.
 
 ```
-Add access: BarkernotBob/<repo> → https://claude.ai/code/routines/trig_01CAkWWvfRJwKKVyHFMoCGaV then Edit → + → pick the repo → Save
+Merged 2 · 1 merging when CI passes · 1 stopped mid-way · audit ok
+3 need you → https://github.com/search?q=user%3ABarkernotBob+is%3Aissue+is%3Aopen+label%3Aneeds-grilling%2Cblocked&type=issues
 ```
 
-Then the same line with the monthly sweep's page,
-`https://claude.ai/code/routines/trig_017f6WzFdjz8ZxFqWmN3A6jo`. Repeat it
-every night until the repo is reachable. If there are more than three, name
-three and say how many more are on the coverage issue.
+- Line 1: what tonight did, plus the audit result. On an empty night:
+  `Nothing ready to build · audit ok`.
+- Line 2: how many open issues are labelled `needs-grilling` or `blocked`
+  across every repo (one `search_issues` count), with that link. Leave the line
+  out when the count is zero.
+- If the audit caught the search missing an issue, line 1 says so instead of
+  `audit ok`. A scan caught missing work is a broken run, not a quiet one.
 
-### If any repo was unreachable
+### Repos the run couldn't reach
 
-The fraction says _how many_; it can't say _which_, because names don't go in a
-notification. So the names go on an issue, where they're durable and next to the
-work:
+A repo in `repos.txt` that the tools refused (in the audit or in a worker) is
+**unreachable**: it isn't attached to the Routine. Only Isaiah can attach it.
 
-1. Look for an open issue in `BarkernotBob/BarkernotBob.github.io` titled
-   **`Nightly pass could not reach every repo`**.
-2. If one exists, add a comment: tonight's date, the repos missed by name, and
-   whether each was refused once or twice.
-3. If none exists, file it with that exact title and label it **`hold`**.
+1. Add a line to the notification, the one place a repo name goes in it:
 
-`hold` is deliberate. This is a platform limitation, not buildable work — a
-later pass that picked it up would try to build a fix for a classifier it
-doesn't control. `hold` keeps it visible on the board and out of the queue.
+   ```
+   Add access: BarkernotBob/<repo> → https://claude.ai/code/routines/trig_01CAkWWvfRJwKKVyHFMoCGaV then Edit → + → pick the repo → Save
+   ```
 
-Reuse the existing issue rather than filing a new one each night, or a bad week
-produces seven issues saying the same thing.
+2. Comment tonight's date and the repo on the open issue in
+   `BarkernotBob/BarkernotBob.github.io` titled
+   **`Nightly pass could not reach every repo`**. If none is open, file it with
+   that exact title and label it **`hold`** — it is a platform limitation, not
+   buildable work, and `hold` keeps it out of the queue. Reuse it rather than
+   filing one a night.
 
 ### Never report a blind spot as a quiet night
 
-A repo you could not attach has **unknown** contents, not empty ones — and
-under search-first, a repo nobody opened is only as trustworthy as the search
-plus that night's audit. If the queue came back empty, say which case it was:
+A repo you could not read has **unknown** contents, not empty ones. If the queue
+came back empty, the notification says which case it was: the search found
+nothing and the audit agreed, or something was unreachable or missed.
 
-- _"No open issues anywhere in scope"_ — only if coverage was complete.
-- _"No open issues: the search found none, 2 audited repos agreed, 0
-  unreachable"_ — the normal quiet night under search-first.
-- _"No open issues in the 15 repos I covered; 3 unreachable, listed on the
-  coverage issue"_ — whenever something could not be reached.
-
-Then end the run. Everything else you have to say goes on the issues themselves,
-where he'll find it next to the work.
+Then end the run. Everything else goes on the issues, next to the work.

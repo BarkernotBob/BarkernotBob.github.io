@@ -314,28 +314,57 @@ describe("nightly ranking honours urgent", () => {
   })
 })
 
-// Isaiah allowed same-repo items in parallel on 2026-09-29. The safety
-// is entirely in the merge rules, so losing them is how two branches clobber
-// each other's test baselines.
-describe("nightly same-repo parallel builds merge safely", () => {
-  const nightly = fs.readFileSync(
+// Isaiah, 2026-10-06: the nightly used most of a week's usage in single
+// nights. These limits are what keep it cheap, and each is one paragraph that
+// could be deleted without anything else noticing.
+describe("nightly run stays within its limits", () => {
+  const nightlyCommand = fs.readFileSync(
     path.join(repoRoot, ".claude/commands/backlog-nightly.md"),
     "utf8",
   )
-  const section = nightly.slice(nightly.indexOf("### Same-repo items in parallel"))
+  const workerBriefing = fs.readFileSync(path.join(here, "routines/nightly-backlog.md"), "utf8")
+  const setup = fs.readFileSync(path.join(here, "routines/SETUP.md"), "utf8")
 
-  test("the parallel section exists", () => {
-    assert.ok(nightly.includes("### Same-repo items in parallel"))
+  test("at most three workers, one per repo, refilled one at a time", () => {
+    assert.match(nightlyCommand, /At most three workers at once, and at most one per repo/)
+    assert.match(nightlyCommand, /Rolling, not batches/)
+    assert.match(nightlyCommand, /One item at a time, never a fresh batch/)
+    assert.match(workerBriefing, /At most three workers at once, one per repo/)
   })
 
-  test("baselines are recomputed and generated files regenerated", () => {
-    assert.match(section, /\*\*recomputed\*\*/)
-    assert.match(section, /\*\*regenerated\*\*/)
+  test("nothing new starts after two hours", () => {
+    assert.match(nightlyCommand, /No new item after 2 hours/)
+    assert.match(workerBriefing, /Nothing new after two hours/)
   })
 
-  test("merges pin the tested head against the current default branch", () => {
-    assert.match(section, /expectedHeadSha/)
-    assert.match(section, /never merge a\s+head that hasn't been tested against the current default branch/)
+  test("the coordinator stays thin", () => {
+    assert.match(nightlyCommand, /thin coordinator/)
+    assert.match(nightlyCommand, /never\s+read\s+ahead/)
+  })
+
+  test("no worker waits on CI; the next run picks up its PR", () => {
+    assert.match(nightlyCommand, /No worker waits on CI/)
+    assert.match(nightlyCommand, /enable auto-merge, squash/)
+    // Step 1 finds leftover PRs by this marker. A worker that drops it leaves
+    // a PR nobody ever merges, so check each side on its own.
+    const marker = "Built by the nightly backlog run"
+    const section = (from: string, to: string) =>
+      nightlyCommand.slice(nightlyCommand.indexOf(from), nightlyCommand.indexOf(to))
+    const stepOne = section("## 1. Finish last night's PRs first", "## 2.")
+    const workerRules = section("## 4. Rules for every worker", "## 5.")
+    assert.ok(stepOne.includes(marker), "step 1 no longer searches for the marker")
+    assert.ok(workerRules.includes(marker), "workers no longer add the marker")
+    // A PR whose worker gave up must not become a Fix item every night.
+    assert.match(stepOne, /`blocked`, `hold` or `needs-grilling`\*\* → leave it/)
+  })
+
+  test("never merges on red", () => {
+    assert.match(nightlyCommand, /Never merge on red/)
+  })
+
+  test("the context cap is configured where the Routine runs", () => {
+    assert.match(nightlyCommand, /CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000/)
+    assert.match(setup, /CLAUDE_CODE_AUTO_COMPACT_WINDOW/)
   })
 })
 
@@ -351,56 +380,28 @@ describe("nightly run reports repo coverage", () => {
   // Both files have to name it identically or the run files a duplicate.
   const coverageIssueTitle = "Nightly pass could not reach every repo"
 
-  test("the command file keeps all four ledger outcomes distinct", () => {
-    // `assumed` is what the search-first scan added: a repo the search spoke
-    // for but nobody opened. Collapsing it into `empty` is how a scan that
-    // cannot see a repo starts reporting that repo as clean.
-    for (const outcome of ["read", "empty", "assumed", "unreachable"]) {
-      assert.match(
-        nightlyCommand,
-        new RegExp(`\\*\\*${outcome}\\*\\*`),
-        `the coverage ledger no longer names "${outcome}"`,
-      )
-    }
-  })
-
-  test("the command file forbids collapsing empty into unreachable", () => {
+  test("a blind spot is never reported as a quiet night", () => {
     // The whole bug: "nothing to do" and "I never looked" read identically in a
     // summary that only counts issues found.
-    assert.match(nightlyCommand, /[Nn]ever collapse/)
-    assert.match(nightlyCommand, /blind spot/)
+    assert.match(nightlyCommand, /Never report a blind spot as a quiet night/)
+    assert.match(nightlyCommand, /\*\*unknown\*\* contents/)
   })
 
-  test("a refused add_repo is retried once", () => {
-    // Retries demonstrably succeed, so not retrying throws away coverage for
-    // free. Both files carry this one; it is the step most likely to be skipped
-    // under time pressure.
-    for (const [name, text] of [
-      ["command file", nightlyCommand],
-      ["worker briefing", workerBriefing],
-    ] as const) {
-      assert.match(text, /retry .{0,40}refusal once|[Rr]etry a refusal once/, `${name} dropped it`)
+  test("a failed probe stops the run loudly", () => {
+    assert.match(nightlyCommand, /Never continue past a failed probe/)
+    for (const text of [nightlyCommand, workerBriefing]) {
+      assert.match(text, /BROKEN: nightly backlog did not run/)
     }
   })
 
-  test("add_repo calls are serialized rather than batched", () => {
-    // Anchored on "repo" so this can't be satisfied by the unrelated "One item
-    // at a time" rule in step 2, which is about issues, not repositories.
-    assert.match(nightlyCommand, /one repo at a time/i)
-  })
-
-  test("the notification carries coverage as a fraction", () => {
-    // Counts only — names would leak private repos into a push notification.
-    assert.match(nightlyCommand, /\d+\/\d+ covered/)
+  test("the notification carries counts and the needs-you link, not names", () => {
+    // Names would leak private repos into a push notification.
     assert.match(nightlyCommand, /[Dd]o not put private repo names/)
-
-    // The fraction must never travel alone. Under search-first, `covered` is
-    // ~100% every night including nights nobody opened most of those repos, so
-    // on its own it means little more than "the run finished". `opened` and
-    // `audited` are the numbers that would look wrong if the scan broke.
-    assert.match(nightlyCommand, /\*\*opened\*\*/)
-    assert.match(nightlyCommand, /\*\*audited\*\*/)
-    assert.match(nightlyCommand, /fraction alone is forbidden/i)
+    assert.match(
+      nightlyCommand,
+      /https:\/\/github\.com\/search\?q=user%3ABarkernotBob\+is%3Aissue\+is%3Aopen\+label%3Aneeds-grilling%2Cblocked/,
+    )
+    assert.match(nightlyCommand, /Nothing ready to build · audit ok/)
   })
 
   test("unreachable repos are named on a reused, held issue", () => {
@@ -421,46 +422,38 @@ describe("nightly run reports repo coverage", () => {
       nightlyCommand,
       /Add access: BarkernotBob\/<repo> → https:\/\/claude\.ai\/code\/routines\/trig_/,
     )
-    assert.match(nightlyCommand, /search_repositories/)
     assert.match(workerBriefing, /\*\*Add access\*\* line/)
   })
 
   test("the worker briefing routes names and counts to the right channels", () => {
-    // Names on the coverage issue, counts in the notification. The briefing
-    // used to say "by name" without saying where, which reads as license to put
-    // private repo names in a push notification.
     assert.match(workerBriefing, /notification carries counts only/i)
     assert.match(workerBriefing, /names of repos you were refused go on the coverage issue/i)
   })
 
-  test("the scan searches before attaching, and attaches only what has work", () => {
-    // Eighteen add_repo calls to find work in one repo was eighteen chances for
-    // the classifier to refuse. One search replaces them.
-    // Deliberately not pinned to a repo count: repos.txt grows, and a guard
-    // that hardcodes 18 would pass while silently dropping the 19th.
-    assert.match(nightlyCommand, /[Dd]o not attach every repo/)
-    assert.match(nightlyCommand, /attach only the repos that actually have issues/i)
-    // repos.txt permits any owner; a repo no search covered must still be read.
-    assert.match(nightlyCommand, /not covered by an owner you searched/)
+  test("one search finds the work, with grilling items left out", () => {
+    const query =
+      "is:open is:issue user:BarkernotBob -label:blocked -label:hold -label:needs-grilling"
     for (const [name, text] of [
       ["command file", nightlyCommand],
       ["worker briefing", workerBriefing],
+      ["README", readme],
     ] as const) {
-      assert.match(text, /is:open is:issue user:BarkernotBob/, `${name} lost the search`)
+      assert.ok(text.includes(query), `${name} lost the search`)
     }
+    assert.match(nightlyCommand, /no bodies/)
   })
 
-  test("the run audits repos the search called empty", () => {
-    // The search has never been observed reaching an UNATTACHED repo, because
-    // no issue has existed in one to test it with. Without this audit that
-    // stays unknown forever, and a scoped search would hide work silently.
-    assert.match(nightlyCommand, /[Aa]udit two repos the search called empty/)
-    assert.match(nightlyCommand, /fall back to attaching every repo/)
-    // Rotation must walk repos.txt itself, not "whichever repos the search
-    // called empty tonight" — that set differs nightly, so some repos would be
-    // audited repeatedly and others effectively never.
-    assert.match(nightlyCommand, /day-of-year/)
+  test("the run audits one repo against the search", () => {
+    // The search has never been proven to reach every attached repo. Without
+    // the audit that stays unknown forever, and a blind search hides work.
+    assert.match(nightlyCommand, /### Audit one repo, every night/)
+    // Rotation must walk repos.txt itself, or some repos are audited
+    // repeatedly and others never.
+    assert.match(nightlyCommand, /day-of-year mod N/)
     assert.match(nightlyCommand, /sorted, as a fixed list/)
+    assert.match(nightlyCommand, /the search is unreliable/)
+    // The search excludes these labels; an unfiltered listing always differs.
+    assert.match(nightlyCommand, /drop the ones labelled `blocked`, `hold` or `needs-grilling`/)
   })
 
   test("readiness is defined, and thin or big alone never sends an item to grilling", () => {
@@ -475,8 +468,6 @@ describe("nightly run reports repo coverage", () => {
         `"${notAReason}" is no longer listed as a non-reason to grill`,
       )
     }
-    // Specific, answerable questions, not a restatement. Since 2026-09-23 every
-    // question not blocked by another goes in, as a list.
     // \s+ rather than a literal space: Prettier reflows this prose, and a guard
     // that breaks on a line wrap gets deleted rather than fixed.
     assert.match(nightlyCommand, /specific\s+questions\s+that\s+blocked\s+you/)
@@ -507,11 +498,10 @@ describe("nightly run reports repo coverage", () => {
       assert.doesNotMatch(text, /no `add_repo`, or/, `${name} stops over a missing add_repo`)
       assert.match(text, /no `add_repo` tool is \*\*not\*\* a reason to stop/i, `${name}`)
     }
-    assert.match(nightlyCommand, /In a scheduled Routine: every repo is already attached/)
   })
 
-  test("README documents the search-first scan and the readiness bar", () => {
-    assert.match(readme, /stop attaching repos that have no work/i)
+  test("README documents the search, the audit and the readiness bar", () => {
+    assert.match(readme, /### One search, one audit/)
     assert.match(readme, /## What the nightly run may build/)
     assert.match(readme, /thin is not ambiguous and big is not ambiguous/i)
   })
@@ -529,54 +519,63 @@ describe("nightly run reports repo coverage", () => {
   })
 })
 
-// AskUserQuestion is denied in Isaiah's settings, and in an unattended grill
-// chat it freezes on a permission prompt that looks like waiting for an answer.
-describe("grilling asks in plain chat", () => {
-  const grillCommand = fs.readFileSync(
-    path.join(repoRoot, ".claude/commands/backlog-grill.md"),
-    "utf8",
-  )
-  const nightlyCommand = fs.readFileSync(
-    path.join(repoRoot, ".claude/commands/backlog-nightly.md"),
-    "utf8",
-  )
+// Grilling never happens in the nightly chat (Isaiah, 2026-10-06): the run
+// leaves questions on the issue and he grills each one in its own chat.
+describe("grilling happens in its own chat", () => {
+  const read = (name: string) =>
+    fs.readFileSync(path.join(repoRoot, `.claude/commands/${name}.md`), "utf8")
+  const grillCommand = read("backlog-grill")
+  const nightlyCommand = read("backlog-nightly")
+  const nextCommand = read("backlog-next")
+  const workCommand = read("backlog-work")
 
+  // AskUserQuestion is denied in Isaiah's settings, and in an unattended grill
+  // chat it freezes on a permission prompt that looks like waiting for an answer.
   test("backlog-grill does not allow the question tool", () => {
     const allowed = grillCommand.match(/^allowed-tools:.*$/m)?.[0] ?? ""
     assert.ok(!allowed.includes("AskUserQuestion"), allowed)
   })
 
+  test("the nightly asks nothing in its own chat", () => {
+    assert.match(nightlyCommand, /No questions in this chat, ever/)
+    assert.doesNotMatch(nightlyCommand, /Questions for you/)
+  })
+
+  test("/backlog-next builds what's ready, else grills the next item", () => {
+    assert.match(nextCommand, /\/backlog-work <number>/)
+    assert.match(nextCommand, /\/backlog-grill <number>/)
+    assert.match(nextCommand, /One item per chat/)
+    // Bodies are what make a pick expensive; titles are enough to choose.
+    assert.match(nextCommand, /Don't read issue bodies until you've picked/)
+    // An issue waiting on auto-merge still looks stalled by morning.
+    assert.match(nextCommand, /Built by the nightly backlog run/)
+  })
+
+  test("grilling starts from the questions the nightly left", () => {
+    assert.match(grillCommand, /If the nightly run left questions there/)
+  })
+
+  test("/backlog-work never builds an item that still needs grilling", () => {
+    const pick = workCommand.slice(0, workCommand.indexOf("## Reading and writing GitHub"))
+    assert.match(pick, /`needs-grilling`/)
+  })
+
   test("independent questions are batched, not one at a time", () => {
     assert.match(grillCommand, /numbered\s+list/)
-    for (const [name, text] of [
-      ["backlog-grill", grillCommand],
-      ["backlog-nightly", nightlyCommand],
-    ] as const) {
-      assert.doesNotMatch(text, /one question at a time/i, `${name} still says one at a time`)
-    }
-  })
-
-  test("Questions for you asks every item's question at once", () => {
-    // It used to list the items but ask only the first one's question, costing
-    // a round trip per item.
-    assert.doesNotMatch(nightlyCommand, /\*\*first\*\* item's question/)
-    assert.match(nightlyCommand, /ask them all at once/)
-  })
-
-  test("no step narrows a grill to a single question", () => {
+    assert.match(grillCommand, /[Gg]rill in rounds/)
     // Isaiah, 2026-09-23: grilling asks every question not blocked by another,
     // together. These are the phrasings the files used before.
     for (const [name, text] of [
       ["backlog-grill", grillCommand],
       ["backlog-nightly", nightlyCommand],
+      ["backlog-next", nextCommand],
     ] as const) {
       assert.doesNotMatch(
         text,
-        /single\s+(specific\s+|blocking\s+|most\s+important\s+)?question|the\s+one\s+question|one\s+or\s+two\s+at\s+a\s+time/i,
+        /one question at a time|single\s+(specific\s+|blocking\s+|most\s+important\s+)?question|the\s+one\s+question|one\s+or\s+two\s+at\s+a\s+time/i,
         name,
       )
     }
-    assert.match(grillCommand, /[Gg]rill in rounds/)
   })
 })
 

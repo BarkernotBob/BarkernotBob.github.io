@@ -26,7 +26,7 @@ _adds_ — but only order, never visibility: an item without it is still worked.
 | `backlog.test.mts`                | Regression suite for the labels, forms and `BACKLOG.md` bucketing.                                                                                                                                            |
 | `capture-page.test.mts`           | Regression suite for `../quartz/static/Backlog.html` — no secrets, no repo names, correct URL encoding.                                                                                                       |
 | `../quartz/static/Backlog.html`   | The manual capture page. Unlinked and `noindex`; reachable only by bookmark.                                                                                                                                  |
-| `../.claude/commands/backlog*.md` | `/backlog-add`, `/backlog`, `/backlog-work`, `/backlog-grill`, `/backlog-nightly`.                                                                                                                            |
+| `../.claude/commands/backlog*.md` | `/backlog-add`, `/backlog`, `/backlog-next`, `/backlog-work`, `/backlog-grill`, `/backlog-nightly`.                                                                                                           |
 
 ## Status precedence
 
@@ -38,8 +38,9 @@ blocked  >  hold  >  in-progress  >  (nothing) = planned
 ```
 
 `needs-grilling` is an orthogonal flag, not a status: the item still shows as
-planned, but the nightly routine opens a conversation about it instead of
-building it.
+planned, but the nightly routine writes its questions on the issue instead of
+building it, and Isaiah grills it in a chat of its own (`/backlog-next` or
+`/backlog-grill`).
 
 ## Things that will bite you
 
@@ -55,8 +56,9 @@ building it.
   aggregates come from private repos.
 - **The nightly routine merges its own work.** That was an explicit decision, not
   an oversight. The guardrails that make it survivable are in
-  `../.claude/commands/backlog-nightly.md`: no merge cap (runs till done or out of budget), never on red CI,
-  and a hard exclusion list covering workflows, secrets and branch settings.
+  `../.claude/commands/backlog-nightly.md`: at most three workers at once and
+  one per repo, nothing new after two hours, never on red CI, and a hard
+  exclusion list covering workflows, secrets and branch settings.
 - **`install.sh` is POSIX `sh`, on purpose**, so it can be parsed and exercised in
   CI. The `.command` wrappers stay zsh to match the other launchers.
 - **There is no `gh` in a cloud session.** Local Claude Code has the CLI; the
@@ -64,94 +66,53 @@ building it.
   MCP tools instead. Every command file says so up front and every `gh` example
   in them has an MCP equivalent. Anything new that shells out to `gh` has to
   carry the same fallback or it will only ever work on the Mac.
-- **A cloud run cannot be guaranteed to reach all 18 repos**, and this is worked
-  around, not fixed. See "Repo coverage" below.
+- **A cloud run can only read the repos attached to it.** See "Repo coverage"
+  below.
 
 ## Repo coverage
 
-A cloud session starts holding exactly one repo and calls `add_repo` for each of
-the others. Some of those calls come back refused — **by the session's own
-auto-mode permission classifier, not by GitHub**:
+**Interactive sessions** start holding one repo and call `add_repo` for the
+rest. The session's auto-mode permission classifier refuses some of those calls
+at random (more often when several go out together), so a chat should attach
+one repo at a time and retry a refusal once. A session Claude launches can't
+start with every repo attached either: `create_session` takes `source_url` —
+singular, one string.
 
-> Permission for this action was denied by the Claude Code auto mode classifier.
+**The scheduled Routine sidesteps this.** A Routine made from the web page
+(claude.ai/code/routines → New routine) can have many repos attached, and every
+run starts with all of them readable. It has no `add_repo` at all — and needs
+none. **Adding a repo to `repos.txt` means adding it to the Routines too**, or
+it can't be read.
 
-The refusals are not about specific repositories. Across runs:
+### One search, one audit
 
-- A repo refused on one night is reachable the next. `logos-notes` was
-  unreachable on 28 Aug and fine on 29 Aug.
-- A repo refused inside a batch often succeeds when retried on its own. Two did
-  on 29 Aug, more than one on 30 Aug.
-- Refusals cluster when several `add_repo` calls are issued together. On 30 Aug
-  a block of six produced two refusals; attaching one or two at a time went
-  through nearly every time.
-
-So it behaves like rate-limiting or a flaky classifier, and the mitigations are
-**serialize the calls** and **retry each refusal once**. Neither makes coverage
-certain.
-
-**A session Claude launches can't start with every repo attached.**
-`create_session` takes `source_url` — singular, one string. So in a chat,
-runtime `add_repo` is the only route in.
-
-**The scheduled Routine sidesteps all of this.** A Routine made from the web
-page (claude.ai/code/routines → New routine) can have many repos attached, and
-every run starts with all of them readable. It has no `add_repo` at all — and
-needs none. Since 2026-09-22 the nightly Routine has every repo in `repos.txt`
-attached and simply lists each one; nothing gets refused. The rest of this
-section is about interactive sessions, which still attach on demand.
-
-**Adding a repo to `repos.txt` means adding it to the Routines too** — a repo
-that is in the list but not attached shows up as `unreachable` every night
-until someone does.
-
-### The fix: stop attaching repos that have no work
-
-The refusals only matter because the run was attaching all 18 repos every night
-to ask each one whether it had anything to do. It almost never did — on 30 Aug,
-17 of 18 were empty. Eighteen `add_repo` calls to find work in one repo is
-eighteen chances for the classifier to refuse.
-
-One search answers the same question without attaching anything:
+Since 2026-10-06 the nightly reads no repo one by one. One search finds every
+open, buildable issue across the owner:
 
 ```
-search_issues: is:open is:issue user:BarkernotBob
+search_issues: is:open is:issue user:BarkernotBob -label:blocked -label:hold -label:needs-grilling
 ```
 
-So the run now **searches first and attaches only the repos that came back with
-open issues** — typically one or two. `list_issues` on those is still the
-authority it builds from; the search is discovery, the listing is truth.
+Most nights that returns nothing and the run ends there. The earlier design
+listed every repo every night, and read issue bodies and code for items it
+never got to; that is what made single nights cost most of a week's usage.
 
-**One thing about that search is unproven.** It has never been observed
-returning an issue from a repo the session has _not_ attached, because no such
-issue has existed to test it with. On 30 Aug all 18 repos were attached and the
-search agreed exactly with per-repo enumeration — but that is agreement under
-the easy condition. If the search turns out to be scoped to attached repos, a
-repo with real work would silently never be seen.
+**One thing is unproven:** that the search sees every repo the Routine can read.
+So every run **audits one repo**, rotating over `repos.txt` by day of year, and
+compares a direct listing with the search. A mismatch means the search is
+unreliable: the run says so in the notification, falls back to listing every
+repo, and records it on the issue below.
 
-So every run **audits two repos the search called empty**, rotating by day of
-month so the list is covered over a few weeks. If either turns out to have an
-open issue, the search is unreliable: the run says so, falls back to attaching
-everything, and records it. Two extra `add_repo` calls a night is the price of
-the fast path being unable to fail silently.
+A repo the tools refuse is **unreachable** — it isn't attached to the Routine.
+The notification gets an "Add access" line naming it and linking the Routine
+page, and the name goes on a reused issue titled
+`Nightly pass could not reach every repo`, labelled `hold` (it is a platform
+limitation, not buildable work, so a later pass must not try to fix it).
 
-### What the run must do about it
-
-`.claude/commands/backlog-nightly.md` is the authority; in short:
-
-|              |                                                                                         |
-| ------------ | --------------------------------------------------------------------------------------- |
-| Ledger       | Every repo lands in exactly one of **read** / **empty** / **assumed** / **unreachable** |
-| Notification | Carries coverage as a fraction (`18/18 repos covered`), every run, names never          |
-| Names        | Go on a reused issue titled `Nightly pass could not reach every repo`, labelled `hold`  |
-| The rule     | **`empty`, `assumed` and `unreachable` must never be collapsed into one number**        |
-
-That last line is the whole point. "No open issues", "probably no open issues"
-and "I never looked" are indistinguishable in a summary that only counts issues
-found, and they mean different things — an issue filed from a phone into a repo
-the run never examined is invisible, which is the same class of silent
-disappearance the retired `planned` label caused. The coverage issue is labelled
-`hold` on purpose: it is a platform limitation rather than buildable work, so a
-later pass must not pick it up and try to fix a classifier it doesn't control.
+**Never report a blind spot as a quiet night.** "No open issues" and "I never
+looked" mean different things; an issue filed from a phone into a repo the run
+can't read is invisible, the same silent disappearance the retired `planned`
+label caused.
 
 ## What the nightly run may build
 

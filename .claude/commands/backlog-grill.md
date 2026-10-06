@@ -27,6 +27,11 @@ Read the issue and its comments. Then go look at the actual code — the idea wi
 usually collide with something that already exists, and the collision is the
 most useful thing you can bring to the conversation.
 
+Also look for a past rejection: the repo's issues closed as **not planned**
+(`gh issue list --repo <repo> --state closed --search "reason:not-planned"`).
+If one asked for the same idea, put it first in round one: "You turned this down
+in #8 because <reason>. Still feel that way?" A yes closes this one the same way.
+
 ## The grilling
 
 Grill in rounds, not question by question. Each round asks every question
@@ -57,15 +62,18 @@ or define it on the spot.
 ## When it's pinned down
 
 1. Rewrite the issue body in the shape of the **Planned change** form: what and
-   why, `Done when...` as a checkable list, size, notes. Keep the original text
-   at the bottom under `### Original idea`.
+   why, `Done when...` as a checkable list, `Not in this change` (the nearby
+   things you agreed to leave alone, so the build doesn't wander into them),
+   size, notes. Keep the original text at the bottom under `### Original idea`.
 2. `gh issue edit <number> --repo <repo> --remove-label needs-grilling`. With
    that label gone it is a plain open issue again, which is all the nightly
    routine needs to pick it up next run.
 3. Say plainly: it's ready, and it gets built tonight.
 
 If the grilling shows the idea isn't worth doing, say so, and close the issue
-with `--reason not-planned` and a comment explaining the reasoning.
+with `--reason not-planned` and a comment explaining the reasoning. Write the
+reason so it still makes sense months later: the next filing of the same idea
+gets checked against it.
 
 If they stop replying, leave the issue exactly as it is. Don't guess the answers
 and don't mark it ready.

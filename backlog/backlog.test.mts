@@ -623,3 +623,17 @@ describe("merge_rule.py", () => {
     assert.equal(out, "")
   })
 })
+
+// Isaiah, 2026-10-05: dropped Matt Pocock's /triage, keeping its two ideas here.
+describe("ideas kept from /triage", () => {
+  const add = fs.readFileSync(path.join(repoRoot, ".claude/commands/backlog-add.md"), "utf8")
+  const grill = fs.readFileSync(path.join(repoRoot, ".claude/commands/backlog-grill.md"), "utf8")
+
+  test("filing and grilling both check ideas turned down before", () => {
+    for (const text of [add, grill]) assert.match(text, /reason:not-planned/)
+  })
+
+  test("a grilled issue says what is not in the change", () => {
+    assert.match(grill, /Not in this change/)
+  })
+})

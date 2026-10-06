@@ -279,3 +279,40 @@ test("the filter script is valid POSIX shell", () => {
     .replaceAll("${{ github.event.before }}", "a".repeat(40))
   execFileSync("sh", ["-n"], { input: script })
 })
+
+// ---- #170: Quartz plugin cache ------------------------------------------------
+// The build caches .quartz/plugins between deploys. The three plugin patches are
+// load-bearing (the explorer one is what makes the home page's drawer work), so
+// they must run on EVERY run, hit or miss, and the cache must be saved before
+// they run so it only ever holds clean, unpatched plugins.
+test("plugin cache never skips the plugin patches and caches only unpatched plugins", () => {
+  const steps: any[] = workflow.jobs.build.steps
+  const idx = (pred: (s: any) => boolean, what: string) => {
+    const i = steps.findIndex(pred)
+    assert.ok(i >= 0, `build job lost its ${what} step`)
+    return i
+  }
+  const restore = idx((s) => String(s.uses ?? "").startsWith("actions/cache/restore"), "cache restore")
+  const install = idx((s) => /quartz plugin install/.test(s.run ?? ""), "plugin install")
+  const save = idx((s) => String(s.uses ?? "").startsWith("actions/cache/save"), "cache save")
+  const patches = [
+    idx((s) => /tokenize:"full"/.test(s.run ?? ""), "search tokenize patch"),
+    idx((s) => /99999px/.test(s.run ?? ""), "explorer drawer patch"),
+    idx((s) => /node patch-plugins\.mjs/.test(s.run ?? ""), "patch-plugins.mjs"),
+  ]
+  const build = idx((s) => /npx quartz build/.test(s.run ?? ""), "quartz build")
+
+  assert.ok(restore < install && install < save, "order must be restore → install → save")
+  for (const p of patches) {
+    assert.ok(p > save && p < build, "every patch must run after the cache save and before the build")
+    assert.equal(steps[p].if, undefined, "a plugin patch must never be conditional on the cache")
+  }
+  assert.equal(steps[restore].with.path, ".quartz/plugins")
+  assert.equal(steps[save].with.path, ".quartz/plugins")
+  assert.match(steps[restore].with.key, /hashFiles\('quartz\.lock\.json'\)/)
+  // The all-in-one actions/cache saves at job end — after patching. Forbid it here.
+  assert.ok(
+    !steps.some((s) => /^actions\/cache@/.test(s.uses ?? "") && s.with?.path === ".quartz/plugins"),
+    "use cache/restore + cache/save, not actions/cache, for .quartz/plugins",
+  )
+})

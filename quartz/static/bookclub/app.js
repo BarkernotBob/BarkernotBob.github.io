@@ -199,7 +199,7 @@ function renderStats(members, withTimes) {
     <div class="stat">
       <div class="stat-label">Joined</div>
       <div class="stat-num">${state.loaded ? people.length : '–'} <small>${people.length === 1 ? 'person' : 'people'}</small></div>
-      <div class="stat-note">${withTimes.length} added times</div>
+      <div class="stat-note">${withTimes.length} of ${people.length} marked times</div>
     </div>
     <div class="stat">
       <div class="stat-label">Meet every</div>

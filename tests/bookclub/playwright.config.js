@@ -18,6 +18,9 @@ module.exports = defineConfig({
     baseURL: 'http://127.0.0.1:5178',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // A live service worker could serve a cached page into a later test; the
+    // PWA side is checked by tests/install-checks instead.
+    serviceWorkers: 'block',
     launchOptions: process.env.PW_CHROMIUM_PATH
       ? { executablePath: process.env.PW_CHROMIUM_PATH }
       : {},

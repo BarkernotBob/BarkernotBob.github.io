@@ -60,6 +60,14 @@ const APPS = [
       bb_method: 'token',
     },
   },
+  {
+    name: 'bookclub',
+    url: '/static/bookclub/index.html',
+    manifestHref: 'manifest.webmanifest',
+    appleTouchIcon: 'icons/apple-touch-icon.png',
+    // Signed-out view needs no seed; its API calls just fail quietly here.
+    seed: {},
+  },
 ]
 
 // Boot an app with its session seeded and every GitHub call stubbed, so these
@@ -264,6 +272,7 @@ const CACHE_PREFIXES = {
   pool: 'poolcare-',
   vehicle: 'dl-',
   'bank-bonus': 'bb-',
+  bookclub: 'bc-',
 }
 
 // The prefixes only separate the apps if none is a prefix of another, so say so

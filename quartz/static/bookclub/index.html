@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#fff6ea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Book Club" />
+    <title>Book Club · When can we meet?</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="/static/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+    />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">📚</span>
+        <div>
+          <div class="brand-kicker">Book Club</div>
+          <h1>When can we meet?</h1>
+        </div>
+      </div>
+      <div class="who" id="who"></div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="View">
+      <button class="tab" role="tab" id="tab-group" aria-selected="true" data-view="group">Group calendar</button>
+      <button class="tab" role="tab" id="tab-me" aria-selected="false" data-view="me">My availability</button>
+    </nav>
+
+    <main>
+      <div class="banner" id="banner" hidden></div>
+
+      <!-- ===================== GROUP VIEW ===================== -->
+      <section id="view-group" class="view" aria-labelledby="tab-group">
+        <div class="stats" id="stats"></div>
+
+        <div class="group-layout">
+          <div class="col-main">
+            <article class="card" id="cal-card">
+              <div class="card-head">
+                <div>
+                  <h2>Weekly availability</h2>
+                  <p class="sub">Each box is one hour, starting at the time shown · <strong>Eastern Time</strong></p>
+                </div>
+                <div class="legend" id="legend"></div>
+              </div>
+              <div class="chips" id="people-filter" role="radiogroup" aria-label="Show availability for"></div>
+              <div class="grid-wrap">
+                <div class="grid" id="group-grid" role="grid" aria-label="Group availability"></div>
+                <div class="empty-overlay" id="empty-overlay" hidden>
+                  <div>
+                    <p class="empty-title">No one has added times yet.</p>
+                    <button class="btn primary" data-action="start">Be the first: add my times</button>
+                  </div>
+                </div>
+              </div>
+              <div class="detail" id="detail" aria-live="polite"></div>
+            </article>
+          </div>
+
+          <aside class="col-side">
+            <article class="card" id="best-card">
+              <h2>Best times to meet</h2>
+              <p class="sub">Blocks where the same people are free the whole time. Tap one to see it on the calendar.</p>
+              <ol class="best" id="best"></ol>
+              <div class="plan" id="plan"></div>
+            </article>
+
+            <article class="card">
+              <h2>Meeting rhythm</h2>
+              <p class="sub">Who can commit to meeting this often.</p>
+              <div id="rhythm"></div>
+            </article>
+
+            <article class="card">
+              <h2>Weekly reading time</h2>
+              <p class="sub">Hours each person can read per week.</p>
+              <div id="reading"></div>
+            </article>
+          </aside>
+        </div>
+
+        <article class="card">
+          <h2>Members</h2>
+          <div class="members" id="members"></div>
+        </article>
+      </section>
+
+      <!-- ===================== MY AVAILABILITY ===================== -->
+      <section id="view-me" class="view" aria-labelledby="tab-me" hidden>
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2><span class="step">1</span> When could you meet?</h2>
+              <p class="sub">
+                <span class="only-fine">Click or drag across boxes to mark times you're free.</span>
+                <span class="only-coarse">Tap boxes to mark times you're free.</span>
+                Tap a day or time label to fill the whole column or row. <strong>Eastern Time.</strong>
+              </p>
+            </div>
+          </div>
+          <div class="chips presets" id="presets"></div>
+          <div class="grid-wrap">
+            <div class="grid editable" id="my-grid" role="grid" aria-label="Your availability"></div>
+          </div>
+          <p class="count-line" id="my-count"></p>
+        </article>
+
+        <article class="card">
+          <h2><span class="step">2</span> How often can you commit to meeting?</h2>
+          <p class="sub">Pick the most often you could reliably make it.</p>
+          <div class="choices" id="cadence-choices" role="radiogroup" aria-label="Meeting rhythm"></div>
+        </article>
+
+        <article class="card">
+          <h2><span class="step">3</span> How many hours a week can you read?</h2>
+          <p class="sub">A realistic average week, not your best one.</p>
+          <div class="chips big" id="hours-choices" role="radiogroup" aria-label="Reading hours per week"></div>
+        </article>
+
+        <div class="savebar">
+          <span class="save-state" id="save-state"></span>
+          <button class="btn primary" id="save-btn">Save my availability</button>
+        </div>
+        <p class="remove-line"><button class="linkish" id="remove-btn">Remove me from the club</button></p>
+      </section>
+    </main>
+
+    <!-- Sign-in sheet -->
+    <div class="sheet-backdrop" id="signin" hidden>
+      <form class="sheet" id="signin-form" novalidate aria-labelledby="signin-title">
+        <h2 id="signin-title">Add your availability</h2>
+        <p class="sub">
+          <strong>New here?</strong> Enter your name and make up any 4-digit PIN.<br />
+          <strong>Coming back?</strong> Use the same name and PIN to edit your answers.
+        </p>
+        <label class="field">
+          <span>Your name</span>
+          <input id="in-name" name="name" autocomplete="name" maxlength="40" required />
+        </label>
+        <label class="field">
+          <span>4-digit PIN</span>
+          <input
+            id="in-pin"
+            name="pin"
+            type="password"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="4"
+            autocomplete="off"
+            required
+          />
+        </label>
+        <p class="form-error" id="signin-error" aria-live="polite"></p>
+        <div class="sheet-actions">
+          <button type="button" class="btn" data-action="close-signin">Cancel</button>
+          <button type="submit" class="btn primary" id="signin-btn">Continue</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="toast-slot" aria-live="polite"><div class="toast" id="toast"></div></div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

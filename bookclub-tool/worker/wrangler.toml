@@ -1,0 +1,9 @@
+name = "bookclub-api"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bookclub"
+database_id = "1f89617e-198a-4126-aa69-3fb5ebbebf5a"

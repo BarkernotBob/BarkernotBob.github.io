@@ -37,6 +37,7 @@ const workflow = parse(source)
  * the bug. A new suite fails the coverage test until someone picks one.
  */
 const UNWIRED = new Map([
+  ["bookclub", "added from a session that can't edit deploy.yml — wire into ALL + the bookclub path filter next"],
   ["install-checks", "PWA install checks — not one of the four apps #110 covers"],
 ])
 

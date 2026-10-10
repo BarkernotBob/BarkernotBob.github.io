@@ -60,7 +60,11 @@ test('coming back on the same device keeps you signed in with your answers', asy
   await expect(page.locator('#toast')).toContainText('Welcome back, Priya')
   await expect(page.locator('#my-grid [data-slot="5-11"]')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('[data-hours="8"]')).toHaveAttribute('aria-checked', 'true')
+  // Nothing was changed, so leaving must not raise an "unsaved changes" prompt.
+  let prompt = null
+  page.once('dialog', (d) => ((prompt = d.type()), d.accept()))
   await page.reload()
+  expect(prompt, 'reload raised an unsaved-changes prompt').toBeNull()
   await expect(page.locator('#who')).toContainText('Priya')
 })
 

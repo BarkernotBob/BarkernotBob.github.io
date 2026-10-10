@@ -42,6 +42,8 @@ tests/pool/test-results/
 tests/pool/playwright-report/
 tests/vehicle/test-results/
 tests/vehicle/playwright-report/
+tests/bookclub/test-results/
+tests/bookclub/playwright-report/
 
 # Studio local editor: safety net copies + soft-deleted pages. Never published.
 .studio-backups/
@@ -50,3 +52,6 @@ tests/vehicle/playwright-report/
 # Generated snapshot of the GitHub backlog (Backlog.command). Not source.
 BACKLOG.md
 backlog/__pycache__/
+
+# Cloudflare Wrangler local state
+.wrangler/

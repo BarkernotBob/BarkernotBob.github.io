@@ -5,7 +5,7 @@
    - The API (workers.dev) and anything non-GET: never touched, so availability
      is never shown stale from a cache.
    Bump CACHE when the shell list changes. */
-const CACHE = 'bc-v1'
+const CACHE = 'bc-v2'
 const FONTS = 'bc-fonts-v1'
 const SHELL = ['./', './index.html', './app.css', './app.js', './logic.js', './manifest.webmanifest', './icons/icon-192.png']
 

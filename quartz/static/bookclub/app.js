@@ -782,3 +782,7 @@ setInterval(() => document.visibilityState === 'visible' && state.view === 'grou
 
 render()
 load()
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}))
+}

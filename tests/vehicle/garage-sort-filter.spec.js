@@ -247,4 +247,18 @@ test('phone stacks the controls, desktop puts them in one row', async ({ page })
   const a = await top('.gsearch'), b = await top('.gtype'), c = await top('.gsort')
   expect(Math.abs(a - b)).toBeLessThan(12)
   expect(Math.abs(a - c)).toBeLessThan(12)
+  // ...and at desktop width too (#202): a desktop override once shrank them to
+  // 14/15px, which still zooms on an iPad or a wide phone in landscape.
+  expect(await page.locator('#gSearch').evaluate((e) => getComputedStyle(e).fontSize)).toBe('16px')
+  expect(await page.locator('#gSort').evaluate((e) => getComputedStyle(e).fontSize)).toBe('16px')
+  // At 16px the longest sort label must still fit its box, not clip mid-word.
+  const fit = await page.locator('#gSort').evaluate((e) => {
+    const ctx = document.createElement('canvas').getContext('2d')
+    const cs = getComputedStyle(e)
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+    const need = Math.max(...[...e.options].map((o) => ctx.measureText(o.text).width))
+    // Leave room for the right padding and the native dropdown arrow.
+    return { need: Math.ceil(need), room: e.clientWidth - parseFloat(cs.paddingRight) - 20 }
+  })
+  expect(fit.need, JSON.stringify(fit)).toBeLessThanOrEqual(fit.room)
 })

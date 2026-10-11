@@ -252,13 +252,16 @@ test('phone stacks the controls, desktop puts them in one row', async ({ page })
   expect(await page.locator('#gSearch').evaluate((e) => getComputedStyle(e).fontSize)).toBe('16px')
   expect(await page.locator('#gSort').evaluate((e) => getComputedStyle(e).fontSize)).toBe('16px')
   // At 16px the longest sort label must still fit its box, not clip mid-word.
+  // A <select> sized to max-content is as wide as its longest option plus its
+  // own arrow, in whatever font and platform it renders with, so the live one
+  // must be at least that wide.
   const fit = await page.locator('#gSort').evaluate((e) => {
-    const ctx = document.createElement('canvas').getContext('2d')
-    const cs = getComputedStyle(e)
-    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
-    const need = Math.max(...[...e.options].map((o) => ctx.measureText(o.text).width))
-    // Leave room for the right padding and the native dropdown arrow.
-    return { need: Math.ceil(need), room: e.clientWidth - parseFloat(cs.paddingRight) - 20 }
+    const probe = e.cloneNode(true)
+    probe.style.cssText = 'position:absolute;visibility:hidden;flex:none;width:max-content'
+    e.parentNode.appendChild(probe)
+    const need = probe.offsetWidth
+    probe.remove()
+    return { need, have: e.offsetWidth }
   })
-  expect(fit.need, JSON.stringify(fit)).toBeLessThanOrEqual(fit.room)
+  expect(fit.have, JSON.stringify(fit)).toBeGreaterThanOrEqual(fit.need)
 })

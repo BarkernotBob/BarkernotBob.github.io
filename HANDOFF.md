@@ -1,6 +1,6 @@
 # HANDOFF — barkernotbob.github.io (Quartz v5 site)
 
-_Last updated: 2026-10-10_
+_Last updated: 2026-10-11_
 
 ## Current status
 
@@ -50,9 +50,8 @@ The old Claude-made Routines are **paused, not deleted**:
 
 ## Exact next step
 
-1. Morning of 2026-09-23: the nightly should have sent a push with three counts
-   (`N/N covered · N opened · 0 audited`). No counts, or "BROKEN…", means it's
-   still failing — open the run from the Routine page and read why.
+1. **Dev Hub** (grilled 2026-10-11): `/prototype` per `DEV-HUB-SCOPE.md` → "Next step". Terms in
+   `GLOSSARY.md`. Related: BarkernotBob/claude-setup#1 (move local tickets into GitHub).
 2. Studio v1 has items 1–7 specced in `STUDIO-SCOPE.md`. Mark which are done and
    pick up the first unfinished one — nothing records that status yet.
 

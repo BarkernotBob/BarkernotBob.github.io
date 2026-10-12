@@ -90,6 +90,36 @@ Built (notes in `KnoxLox/Dev Hub prototype/G - Bright`, `H - Workspace`, `I - Br
   start with blockchain"), then one story per project with its top 3 numbered items and buttons;
   an "At a glance" table on the side. Item = article with the open questions below.
 
+## Prototype round 4 (2026-10-12): verdict on round 3, and the brief for round 4
+
+Isaiah's verdict on round 3:
+- **I "Briefing": no.** Drop it.
+- **G:** keep the **Grill / Test / Blocked filter tiles** at the top.
+- **A:** keep the **easy jump into a project** (one click from the hub to a project).
+- **H's sidebar is the base.** "If we did a few things, that could be a real winner":
+  1. **Progress bars under each project in the sidebar**, the stacked colour bar from A's hub
+     project cards (`a_view.js`, `.dha-bar`: one segment per status, sized by count). The
+     sidebar may get a little wider and each project row a little taller to fit it.
+  2. **Grill and Blocked need clearly different colours.** Today both are orange-red
+     (A: `#e8590c` vs `#e03131`; G/H: `#ee6a1f`/`#e8641c` vs `#e23c55`/`#df3a52`).
+     They should not look like neighbours on a bar.
+  3. **Push-and-pull panes (desktop).** The item viewer on the right stays fixed in place and
+     size. The two left panes (lists sidebar and items list) share a fixed total width: one is
+     expanded, the other squished but **still visible** (not hidden). Hovering the squished one
+     expands it and squishes the other. The viewer never moves.
+
+Round 4 = **3 more prototypes (J, K, L)** that riff on the above: all are H-based with points 1–3,
+G's filter tiles and A's project jump. Each one also riffs differently on the visual styling:
+colour palette, icons, sizes and shapes. Same rules as round 3: always light, no sideways
+scrolling, full titles, every count and button labelled.
+
+Assumptions to confirm with Isaiah in the round-4 session (not decided by him):
+- **Phone has no hover.** Default: keep H's phone drill-in (one pane at a time). One prototype
+  could try a tap-to-swap version of push-and-pull.
+- **Squished pane content.** Default: the squished sidebar shows icons + counts + the progress
+  bars; the squished items list shows a narrow strip of coloured dots + short titles.
+
 ## Next step
 
-Isaiah picks one of A/G/H/I (or a mix), then `/to-spec` and `/to-tickets`.
+Build round 4 (J, K, L) on branch `prototype/dev-hub` in a fresh session; Isaiah picks, then
+`/to-spec` and `/to-tickets`.

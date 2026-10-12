@@ -24,7 +24,8 @@ Being grilled 2026-10-11; terms settle here as decisions land.
   completed work reachable from it.
 - **Item note** — one note per issue or local ticket, so items can be linked to. Shows title, status,
   first paragraph and any open-questions comment word for word. No AI rewriting.
-- **Sources** — GitHub issues plus each repo's local `issues/*.md` tickets, read from `main` on GitHub.
+- **Sources** — GitHub Issues only. Local `issues/*.md` tickets are being moved into GitHub
+  (BarkernotBob/claude-setup#1); the Dev Hub doesn't read them. Test = the `needs-test` label.
 - **Buckets** — *Needs you*: Grill · Test · Blocked. *Claude's queue*: Urgent · Ready to build ·
   In progress. *Parked*: hold. *Shipped*: closed in the last 7 days — secondary, never front and center.
 - **Ready** — open, no status label: the nightly will build it when its turn comes.
@@ -38,6 +39,7 @@ Being grilled 2026-10-11; terms settle here as decisions land.
 - **Completed item** — title, date closed, the merged PR's title as "what was done", GitHub link.
   Kept forever, newest first, collapsed on the project note. Local tickets use their
   "Verified by Claude" lines.
-- **Refresh** — every 30 minutes while the Mac is awake, plus an Obsidian refresh command. The
-  phone shows a "Last updated" stamp. No Raycast command.
+- **Refresh** — once a day. If a day's refresh hasn't succeeded (Mac asleep or off, network down),
+  it runs the next time the Mac is open, so it can't fail silently day after day. Plus an Obsidian
+  refresh command. The phone shows a "Last updated" stamp. No Raycast command.
 - **Home** — code in `backlog/` of this repo. The Dev Hub replaces `BACKLOG.md`; `/backlog` stays.

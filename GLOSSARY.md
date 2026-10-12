@@ -27,4 +27,17 @@ Being grilled 2026-10-11; terms settle here as decisions land.
 - **Sources** — GitHub issues plus each repo's local `issues/*.md` tickets, read from `main` on GitHub.
 - **Buckets** — *Needs you*: Grill · Test · Blocked. *Claude's queue*: Urgent · Ready to build ·
   In progress. *Parked*: hold. *Shipped*: closed in the last 7 days — secondary, never front and center.
-- **Refresh** — once a night on the Mac, plus a manual refresh command.
+- **Ready** — open, no status label: the nightly will build it when its turn comes.
+- **Parked** — `hold` label: set aside on purpose; the nightly leaves it alone.
+- **Sort order** — Urgent first (whatever its bucket), then Grill → Test → Blocked → In progress →
+  Ready → Parked → Done; oldest first within each. Any column can still be re-sorted.
+- **Grill button** — opens a Claude chat pre-filled with `/backlog-grill <issue link>` (fallback: copy
+  the command and open the Claude app). A smaller GitHub link sits beside it.
+- **Pass / Fail buttons** — on a Test item, open a Claude chat saying it passed or failed; Claude
+  updates the ticket. The hub itself never writes back.
+- **Completed item** — title, date closed, the merged PR's title as "what was done", GitHub link.
+  Kept forever, newest first, collapsed on the project note. Local tickets use their
+  "Verified by Claude" lines.
+- **Refresh** — every 30 minutes while the Mac is awake, plus an Obsidian refresh command. The
+  phone shows a "Last updated" stamp. No Raycast command.
+- **Home** — code in `backlog/` of this repo. The Dev Hub replaces `BACKLOG.md`; `/backlog` stays.

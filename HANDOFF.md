@@ -46,6 +46,9 @@ The old Claude-made Routines are **paused, not deleted**:
   page + Cloudflare Worker/D1 API (`bookclub-tool/`, README there). Login = name + 4-digit PIN.
   Suite `tests/bookclub` passes locally but is **not yet in the deploy gate**: this session can't
   edit `deploy.yml` (add `bookclub` to `ALL`, `bookclub) extra='' ;;`, drop it from `UNWIRED`).
+- 2026-10-11 — **#202 install checks green for all apps.** Grocery already passed; vehicle's Garage
+  search/sort dropped to 15/14px on desktop. Now 16px, sort column sized to its content.
+  `tests/install-checks` is still not in the deploy gate (needs a `deploy.yml` edit).
 - Older entries: `docs/archive/HANDOFF-history-to-2026-09.md`.
 
 ## Exact next step

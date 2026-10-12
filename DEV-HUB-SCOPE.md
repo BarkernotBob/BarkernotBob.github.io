@@ -46,7 +46,7 @@ Findings that carry forward:
 - Snapshot + screenshots stay local (gitignored): they hold private-repo issue text and this repo
   is public.
 
-## Next step: `/prototype` round 2 — three riffs on A
+## Prototype round 2 (2026-10-11): three riffs on A, built
 
 A stays the fallback. Build three new designs that keep the "app" feel (custom renderer, tappable
 cards, big action buttons) but each look clearly different from A in style, colour, layout, even
@@ -58,3 +58,22 @@ function:
 Same three pages (hub, project note, item note), same snapshot and pretend labels, screenshots at
 phone and desktop (≥1300px), notes installed into `KnoxLox/Dev Hub prototype/` alongside A.
 Then Isaiah picks, and on to `/to-spec` and `/to-tickets`.
+
+Built (same branch and folder; notes in `KnoxLox/Dev Hub prototype/D - Calm`, `E - Focus`, `F - Messages`):
+- **D "Calm"** (ultra safe): Settings-app grouped lists, one blue accent, small status dots. Hub
+  lists the actual items that need you (Urgent / Grill / Test / Blocked, 5 each + "Show all");
+  projects on the right. Item page: prose left, sticky card right with one big button.
+- **E "Focus"** (out on a limb): always dark, neon per bucket. Hub is one item at a time ("Up
+  next", ‹ › to cycle, filter chips, buttons right on the hub) plus a swipeable strip of project
+  rings. Project = board of bucket columns with inline buttons. Item = action dock pinned to the
+  bottom on phone, with "Next up" on desktop.
+- **F "Messages"** (off the wall): the backlog as a chat app. Hub = conversation list (pinned
+  "Needs you" thread, unread badges, live search); desktop shows the open thread beside it. A
+  project is a thread: shipped items as green bubbles, open items as messages with quick-reply
+  buttons, most urgent at the bottom where it opens. Item = your issue as a blue bubble, Claude's
+  latest comment as the reply, action bar pinned to the bottom.
+
+## Next step
+
+Isaiah picks one of A/D/E/F (or a mix, e.g. "E's hub with D's item page"), then `/to-spec` and
+`/to-tickets`.

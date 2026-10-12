@@ -1,0 +1,124 @@
+/* PROTOTYPE — Dev Hub variant F ("Messages"). Throwaway. Its own light chat palette, whatever the Obsidian theme. */
+.devhub-f .inline-title, .devhub-f .metadata-container,
+:is(.markdown-preview-view, .markdown-source-view):has(.dhf) :is(.inline-title, .metadata-container) { display: none; }
+:is(.markdown-preview-view, .markdown-source-view):has(.dhf) { --file-line-width: 1240px; background: #f6f7fb; }
+.workspace-leaf-content:has(.dhf) :is(.view-header, .view-content) { background: #f6f7fb; }
+.devhub-f .block-language-dataviewjs { margin: 0; }
+/* dataview's block scrolls (overflow:auto), which would stop the reply bar and headers sticking. */
+.block-language-dataviewjs:has(.dhf) { overflow: visible !important; }
+
+.dhf {
+  container-type: inline-size;
+  --ink: #111827; --mute: #6b7280; --line: #e5e7eb; --blue: #0a7cff; --wall: #eef1f7;
+  --grill: #f97316; --test: #8b5cf6; --blocked: #ef4444; --in-progress: #0ea5e9; --ready: #22c55e; --parked: #9ca3af; --urgent: #e11d48;
+  color: var(--ink); font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
+}
+.dhf a { text-decoration: none !important; cursor: pointer; }
+.dhf-k-grill { --c: var(--grill); } .dhf-k-test { --c: var(--test); } .dhf-k-blocked { --c: var(--blocked); }
+.dhf-k-in-progress { --c: var(--in-progress); } .dhf-k-ready { --c: var(--ready); } .dhf-k-parked { --c: var(--parked); }
+
+/* ---- avatars */
+.dhf-av { --h: 210; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px;
+  background: linear-gradient(160deg, hsl(var(--h) 70% 62%), hsl(calc(var(--h) + 25) 65% 45%)); }
+.dhf-av-bell { background: linear-gradient(160deg, #fb7185, #e11d48); font-size: 20px; }
+.dhf-av-s { width: 30px; height: 30px; font-size: 11.5px; align-self: flex-start; margin-top: 2px; }
+.dhf-av-gap { width: 0; }
+
+/* ---- hub: two panes on desktop */
+.dhf-shell { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: max(560px, calc(100vh - 150px)); border-radius: 18px; overflow: hidden;
+  background: #fff; box-shadow: 0 1px 2px #0000000d, 0 8px 30px #0000000f; border: 1px solid var(--line); }
+.dhf-side { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 0; }
+.dhf-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
+.dhf-top h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.dhf button.dhf-icon { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--wall); color: var(--blue); box-shadow: none; font-size: 17px; }
+.dhf input.dhf-search { margin: 6px 16px 10px; height: 36px; border-radius: 10px; border: 0; background: var(--wall); padding: 0 12px; font-size: 16px; color: var(--ink); width: auto; }
+.dhf-convos { overflow-y: auto; flex: 1; min-height: 0; }
+.dhf-convo { display: flex; gap: 12px; align-items: center; padding: 10px 14px; cursor: pointer; position: relative; height: 72px; box-sizing: border-box; }
+.dhf-convo::after { content: ""; position: absolute; left: 70px; right: 0; bottom: 0; border-bottom: 1px solid var(--line); }
+.dhf-convo:hover { background: #f5f7fb; }
+.dhf-convo.is-open { background: #e8f1ff; }
+.dhf-convo.is-pinned { background: #fff5f6; }
+.dhf-convo.is-pinned.is-open { background: #ffe4e8; }
+.dhf-convo-m { flex: 1; min-width: 0; }
+.dhf-l1, .dhf-l2 { display: flex; align-items: center; gap: 8px; }
+.dhf-l1 .dhf-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dhf-when { color: var(--mute); font-size: 12.5px; flex: none; }
+.dhf-prev { flex: 1; color: var(--mute); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.dhf-badge { flex: none; min-width: 22px; height: 22px; border-radius: 11px; padding: 0 7px; box-sizing: border-box; display: grid; place-items: center; background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; }
+.dhf-badge.is-urgent { background: var(--urgent); }
+.dhf-pane { overflow-y: auto; min-height: 0; background: var(--wall);
+  background-image: radial-gradient(#d7dce8 1px, transparent 1.2px); background-size: 18px 18px; }
+.dhf-note { color: var(--mute); font-size: 12px; margin: 14px 4px 0; }
+
+/* ---- a thread (hub pane, project note, item note) */
+.dhf-thead { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-height: 64px; box-sizing: border-box;
+  background: #ffffffe6; backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.dhf-thead .dhf-av { width: 40px; height: 40px; }
+.dhf-thead-t { flex: 1; min-width: 0; }
+.dhf-thead .dhf-name { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dhf-sub { color: var(--mute); font-size: 12.5px; }
+.dhf-back { font-size: 32px; line-height: 1; color: var(--blue) !important; padding: 0 4px 4px 0; }
+.dhf-gh { color: var(--blue) !important; font-size: 13.5px; font-weight: 600; flex: none; }
+.dhf-thread { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 8px; max-width: 820px; margin: 0 auto; }
+.dhf-day, .dhf-delivered { text-align: center; color: var(--mute); font-size: 12px; font-weight: 600; margin: 8px 0 2px; }
+.dhf-delivered { padding-bottom: 18px; }
+.dhf button.dhf-earlier { align-self: center; height: 30px; padding: 0 14px; border-radius: 15px; background: #fff; color: var(--blue); box-shadow: 0 1px 2px #0000001a; font-size: 13px; }
+.dhf button.dhf-earlier:disabled { color: var(--mute); }
+
+.dhf-msg { display: flex; gap: 8px; align-items: flex-end; max-width: 78%; }
+.dhf-msg-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dhf-me { align-self: flex-end; justify-content: flex-end; }
+.dhf-from { font-size: 12px; color: var(--mute); padding-left: 12px; font-weight: 600; }
+.dhf-bubble { display: block; background: #fff; color: var(--ink) !important; border-radius: 20px 20px 20px 6px; padding: 10px 14px; line-height: 1.4; cursor: pointer;
+  box-shadow: 0 1px 1.5px #0000001a; min-width: 0; overflow-wrap: anywhere; }
+.dhf-bubble[class*="dhf-k-"]:not(.dhf-quiet) { background: color-mix(in srgb, var(--c) 11%, #fff); box-shadow: inset 3px 0 0 var(--c), 0 1px 1.5px #0000001a; }
+.dhf-quiet { background: #fff; opacity: .85; }
+.dhf-urgent { box-shadow: 0 0 0 2px var(--urgent), 0 4px 14px #e11d4833 !important; }
+.dhf-me .dhf-bubble { border-radius: 20px 20px 6px 20px; }
+.dhf-shipped { background: #dcf8e3 !important; }
+.dhf-out { background: var(--blue) !important; color: #fff !important; cursor: default; }
+.dhf-out .dhf-ask { color: #ffffffcc; }
+.dhf-out .dhf-md a { color: #fff; text-decoration: underline !important; }
+.dhf-ask { font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--c, var(--mute)); margin-bottom: 3px; }
+.dhf-shipped .dhf-ask { color: #15803d; }
+.dhf-bt { font-weight: 650; }
+.dhf-bp { color: #374151; font-size: 14px; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.dhf-time { color: var(--mute); font-size: 11.5px; text-align: right; margin-top: 4px; }
+.dhf-md p { margin: 6px 0; } .dhf-md p:first-child { margin-top: 2px; } .dhf-md p:last-child { margin-bottom: 0; }
+.dhf-md :is(ul, ol) { padding-left: 20px; margin: 6px 0; }
+.dhf-md code { overflow-wrap: anywhere; }
+.dhf-long { cursor: default; }
+.dhf-status { align-self: center; background: #fff; border-radius: 14px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--ink); box-shadow: 0 1px 2px #0000001a; margin: 6px 0 4px; }
+
+/* quick replies: fixed-height pills */
+.dhf-replies { display: flex; gap: 6px; flex-wrap: wrap; }
+.dhf .dhf-reply { display: inline-flex; align-items: center; height: 32px; padding: 0 13px; border-radius: 16px; background: #fff; color: var(--blue) !important;
+  box-shadow: inset 0 0 0 1.5px var(--blue); font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.dhf .dhf-reply-grill, .dhf .dhf-reply-pass { background: var(--blue); color: #fff !important; box-shadow: none; }
+.dhf .dhf-reply-fail { color: var(--blocked) !important; box-shadow: inset 0 0 0 1.5px var(--blocked); }
+
+/* project + item notes: a single full-width conversation */
+.dhf-solo { background: var(--wall); background-image: radial-gradient(#d7dce8 1px, transparent 1.2px); background-size: 18px 18px;
+  border-radius: 18px; border: 1px solid var(--line); min-height: 70vh; }
+.dhf-solo .dhf-thead { border-radius: 18px 18px 0 0; }
+.dhf-bar { position: sticky; bottom: 12px; z-index: 3; margin: 6px 12px 12px; padding: 10px 12px; border-radius: 18px; background: #ffffffeb; backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px #0000001f; display: flex; justify-content: center; }
+.dhf-bar .dhf-reply { height: 40px; padding: 0 18px; border-radius: 20px; font-size: 15px; }
+
+@container (max-width: 760px) {
+  .dhf-shell { display: block; height: auto; border-radius: 16px; }
+  .dhf-side { border-right: 0; }
+  .dhf-pane { display: none; }
+  .dhf.is-thread .dhf-side { display: none; }
+  .dhf.is-thread .dhf-pane { display: block; }
+  .dhf-msg { max-width: 92%; }
+  .dhf-thread { padding: 12px 10px 8px; }
+  .dhf-thead { padding: 8px 10px; gap: 10px; }
+  .dhf-gh { display: none; }
+  .dhf-bar { bottom: 86px; margin: 6px 8px 12px; padding: 8px; }
+  .dhf-bar .dhf-reply { padding: 0 12px; font-size: 14px; }
+}
+/* On notes the page itself scrolls and Obsidian pads it, so a sticky header floats mid-page; let it scroll away.
+   The hub's right pane is its own scroller, where sticky works. On phone, Obsidian's header floats over it anyway. */
+.dhf-solo .dhf-thead { position: static; }
+@container (max-width: 760px) { .dhf-thead { position: static; } }

@@ -50,9 +50,9 @@ The old Claude-made Routines are **paused, not deleted**:
 
 ## Exact next step
 
-1. **Dev Hub**: round 1 prototype done, Isaiah picked A "App". Next: round 2, three riffs on A,
-   per `DEV-HUB-SCOPE.md` → "Next step" (work on branch `prototype/dev-hub`). Terms in
-   `GLOSSARY.md`. Related: BarkernotBob/claude-setup#1 (move local tickets into GitHub).
+1. **Dev Hub**: round 2 built (D Calm, E Focus, F Messages, in `KnoxLox/Dev Hub prototype/`
+   next to A). Waiting on Isaiah's pick, then `/to-spec`. See `DEV-HUB-SCOPE.md` (branch
+   `prototype/dev-hub`). Related: BarkernotBob/claude-setup#1.
 2. Studio v1 has items 1–7 specced in `STUDIO-SCOPE.md`. Mark which are done and
    pick up the first unfinished one — nothing records that status yet.
 

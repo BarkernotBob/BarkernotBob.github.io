@@ -4,7 +4,8 @@ from snapshot.json (+ prs.json), so Isaiah can compare them on phone and desktop
 
     python3 gen.py <vault-root>
 
-Writes <vault-root>/Dev Hub prototype/{A - App, B - Sortable, C - Plain}/.
+Writes <vault-root>/Dev Hub prototype/{A - App, B - Sortable, C - Plain, D - Calm, E - Focus, F - Messages}/.
+    python3 gen.py <vault-root> DEF   # only some variants
 Not the real refresh: no change detection, no scheduling, no tests.
 """
 import json, re, sys, urllib.parse
@@ -144,26 +145,40 @@ PRETEND_NOTE = ("Prototype data: today's real issues (snapshot Oct 11). Nothing 
                 "`urgent` yet, so ytfree #2 and site #202 pretend to be Test, blockchain #46 pretends to be urgent.")
 
 
-# ---------------------------------------------------------------- A: App (dataviewjs)
-def gen_a(base, items, done, projs):
-    d = base / "A - App"
-    data = dict(stamp=STAMP, note=PRETEND_NOTE, root=f"{ROOT_NAME}/A - App",
+# ---------------------------------------------------------------- A, D, E, F: custom renderers (dataviewjs)
+# Each is one view.js/view.css pair rendering hub / project / item from a shared data.json.
+VIEWS = {  # letter: (folder, cssclass, source prefix)
+    "A": ("A - App", "devhub-a", "a"),
+    "D": ("D - Calm", "devhub-d", "d"),
+    "E": ("E - Focus", "devhub-e", "e"),
+    "F": ("F - Messages", "devhub-f", "f"),
+}
+
+
+def gen_view(letter, base, items, done, projs):
+    folder, css, src = VIEWS[letter]
+    d = base / folder
+    root = f"{ROOT_NAME}/{folder}"
+    data = dict(stamp=STAMP, note=PRETEND_NOTE, root=root, snap=SNAP_TIME.isoformat(),
                 labels=LABEL, icons=ICON, buckets=BUCKETS, needsYou=list(NEEDS_YOU),
                 projects=[dict(name=p["name"], counts=p["counts"], urgent=p["urgent"], needs=p["needs"],
-                               week=len(p["week"])) for p in projs],
+                               week=len(p["week"]), total=len(p["items"]),
+                               last=max([i["updated"] for i in p["items"]] + [x["closed"] for x in p["done"]]).isoformat())
+                          for p in projs],
                 items=[dict(proj=i["proj"], num=i["num"], title=i["title"], url=i["url"], bucket=i["bucket"],
                             urgent=i["urgent"], rank=i["rank"], created=i["created"].isoformat(),
+                            updated=i["updated"].isoformat(),
                             age=age(i["created"]), file=i["file"], para=i["para"], comment=i["comment"],
                             commentHeading=comment_heading(i), pretend=i["pretend"],
                             actions=[dict(label=a, url=u, copy=c) for a, u, c in actions(i)]) for i in items],
                 done=[dict(proj=x["proj"], num=x["num"], title=x["title"], url=x["url"],
-                           closed=x["closed"].strftime("%b %-d, %Y"),
+                           closed=x["closed"].strftime("%b %-d, %Y"), closedIso=x["closed"].isoformat(),
                            week=(SNAP_TIME - x["closed"]).days < 7, what=x["what"]) for x in done])
     write(d / "_view" / "data.json", json.dumps(data))
-    write(d / "_view" / "view.js", (HERE / "a_view.js").read_text())
-    write(d / "_view" / "view.css", (HERE / "a_view.css").read_text())
-    block = lambda kind, key="": (f"---\ncssclasses: [devhub-a]\n---\n```dataviewjs\nawait dv.view(\"{ROOT_NAME}/A - App/_view\", "
-                                  f"{{kind: \"{kind}\", key: {json.dumps(key)}}})\n```\n")
+    write(d / "_view" / "view.js", (HERE / f"{src}_view.js").read_text())
+    write(d / "_view" / "view.css", (HERE / f"{src}_view.css").read_text())
+    block = lambda kind, key="": (f"---\ncssclasses: [{css}]\n---\n```dataviewjs\nawait dv.view(\"{root}/_view\", "
+                                  f"{{kind: \"{kind}\", key: {json.dumps(key)}, root: \"{root}\"}})\n```\n")
     write(d / "Dev Hub.md", block("hub"))
     for p in projs:
         write(d / "Projects" / f"{p['name']}.md", block("project", p["name"]))
@@ -348,10 +363,15 @@ def gen_c(base, items, done, projs):
 
 if __name__ == "__main__":
     vault = Path(sys.argv[1])
+    which = sys.argv[2] if len(sys.argv) > 2 else "ABCDEF"
     base = vault / ROOT_NAME
     items, done = load()
     projs = projects(items, done)
-    gen_a(base, items, done, projs)
-    gen_b(base, items, done, projs)
-    gen_c(base, items, done, projs)
-    print(f"{len(items)} open, {len(done)} done, {len(projs)} projects → {base}")
+    for L in which:
+        if L in VIEWS:
+            gen_view(L, base, items, done, projs)
+    if "B" in which:
+        gen_b(base, items, done, projs)
+    if "C" in which:
+        gen_c(base, items, done, projs)
+    print(f"{len(items)} open, {len(done)} done, {len(projs)} projects → {base} ({which})")

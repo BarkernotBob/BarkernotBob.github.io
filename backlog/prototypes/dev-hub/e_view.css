@@ -1,0 +1,122 @@
+/* PROTOTYPE — Dev Hub variant E ("Focus"). Throwaway. Always dark, whatever the Obsidian theme. */
+.devhub-e .inline-title, .devhub-e .metadata-container,
+:is(.markdown-preview-view, .markdown-source-view):has(.dhe) :is(.inline-title, .metadata-container) { display: none; }
+:is(.markdown-preview-view, .markdown-source-view):has(.dhe) { --file-line-width: 1240px; background: #0d0f17; }
+.workspace-leaf-content:has(.dhe) :is(.view-header, .view-content) { background: #0d0f17; --text-normal: #eef0f6; }
+.workspace-leaf-content:has(.dhe) .view-header :is(.view-header-title, .view-header-breadcrumb, .clickable-icon) { color: #8b91a7; }
+.devhub-e .block-language-dataviewjs { margin: 0; }
+/* dataview's block scrolls (overflow:auto), which would stop the phone action dock sticking. */
+.block-language-dataviewjs:has(.dhe) { overflow: visible !important; }
+
+.dhe {
+  container-type: inline-size;
+  --bg: #0d0f17; --s1: #161a26; --s2: #1f2433; --tx: #eef0f6; --fa: #8b91a7; --ln: #2a3042;
+  --grill: #ff8a3d; --test: #b18cff; --blocked: #ff5c7a; --in-progress: #4dabf7; --ready: #51cf66; --parked: #8b93a7; --urgent: #ff3b5c;
+  color: var(--tx); font-size: 15px; font-family: "Inter", -apple-system, var(--font-interface);
+}
+.dhe-c-grill { --c: var(--grill); } .dhe-c-test { --c: var(--test); } .dhe-c-blocked { --c: var(--blocked); }
+.dhe-c-in-progress { --c: var(--in-progress); } .dhe-c-ready { --c: var(--ready); } .dhe-c-parked { --c: var(--parked); } .dhe-c-urgent { --c: var(--urgent); }
+.dhe a { text-decoration: none !important; }
+.dhe-faint { color: var(--fa); font-size: 12.5px; }
+.dhe-label { font-size: 11.5px; font-weight: 800; letter-spacing: .14em; color: var(--fa); margin-bottom: 10px; }
+.dhe-label-pad { margin-top: 30px; }
+
+.dhe-top { display: flex; align-items: center; gap: 12px; margin: 4px 0 16px; }
+.dhe-brand { font-weight: 900; letter-spacing: .2em; font-size: 14px; }
+.dhe-stamp { margin-left: auto; order: 2; }
+.dhe-top .dhe-icon { order: 3; }
+.dhe-back { color: var(--fa) !important; font-weight: 800; letter-spacing: .12em; font-size: 12.5px; cursor: pointer; }
+.dhe button.dhe-icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; background: var(--s2); color: var(--tx); box-shadow: none; font-size: 18px; }
+
+.dhe-chips { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+.dhe button.dhe-chip { flex: none; height: 34px; padding: 0 14px; border-radius: 17px; background: var(--s1); color: var(--fa); box-shadow: inset 0 0 0 1px var(--ln); font-size: 13px; font-weight: 600; }
+.dhe button.dhe-chip.is-on { background: var(--tx); color: var(--bg); box-shadow: none; }
+
+.dhe-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; }
+.dhe-hero { position: relative; border-radius: 22px; padding: 22px 24px; height: 400px; /* fixed: cycling items must not move the page */ display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 60%), var(--s1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, var(--ln)); }
+.dhe-hero-nav { display: flex; align-items: center; justify-content: space-between; font-weight: 800; letter-spacing: .12em; }
+.dhe-arrows { display: flex; gap: 8px; }
+.dhe-ask { color: var(--c); font-weight: 800; font-size: 13px; letter-spacing: .04em; margin-top: 14px; }
+.dhe-hero-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: none; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; margin: 6px 0 10px; cursor: pointer; }
+.dhe-tags { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dhe-tag { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; padding: 3px 8px; border-radius: 6px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); }
+.dhe-hero-para { color: #c3c7d4; line-height: 1.55; margin: 14px 0 18px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.dhe-more { color: var(--fa) !important; font-size: 13px; margin-top: 12px; cursor: pointer; }
+.dhe-hero .dhe-acts { margin-top: auto; }
+
+.dhe-acts { display: flex; gap: 8px; }
+.dhe .dhe-btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border-radius: 12px; font-weight: 800; font-size: 13.5px; color: #0d0f17 !important; box-shadow: none; cursor: pointer; }
+.dhe-acts-big .dhe-btn { height: 52px; flex: 1; font-size: 16px; border-radius: 16px; }
+.dhe-btn-grill { background: var(--grill); } .dhe-btn-pass { background: var(--ready); } .dhe-btn-fail { background: var(--blocked); }
+.dhe .dhe-btn-ghost { background: var(--s2); color: var(--tx) !important; }
+.dhe-acts-big .dhe-btn-ghost { flex: 0 0 96px; }
+
+.dhe-next { display: flex; flex-direction: column; gap: 8px; }
+.dhe-mini { background: var(--s1); border-radius: 14px; padding: 10px 12px; border-left: 3px solid var(--c); cursor: pointer; }
+.dhe-mini:hover { background: var(--s2); }
+.dhe-mini-t { font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; }
+
+.dhe-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 168px; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: thin; }
+.dhe-tile { position: relative; scroll-snap-align: start; background: var(--s1); border-radius: 18px; padding: 14px; cursor: pointer; }
+.dhe-tile:hover { background: var(--s2); }
+.dhe-ring { --p: 0; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 10px;
+  background: radial-gradient(closest-side, var(--s1) 76%, transparent 78%), conic-gradient(var(--grill) calc(var(--p) * 1%), var(--s2) 0); }
+.dhe-ring span { font-weight: 900; font-size: 18px; }
+.dhe-tile-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dhe-tile-flag { position: absolute; top: 14px; right: 12px; }
+.dhe-foot { margin-top: 24px; }
+
+.dhe-pname { font-size: 38px; font-weight: 900; letter-spacing: -.03em; line-height: 1.1; }
+.dhe-stats { display: flex; gap: 28px; margin: 12px 0 22px; }
+.dhe-stat-n { font-size: 26px; font-weight: 800; }
+.dhe-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; align-items: start; padding-bottom: 6px; }
+.dhe-col { scroll-snap-align: start; background: var(--s1); border-radius: 18px; padding: 12px; border-top: 3px solid var(--c); }
+.dhe-col-h { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 800; letter-spacing: .1em; color: var(--c); padding: 2px 4px 10px; }
+.dhe-card { background: var(--s2); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.dhe-card:hover { box-shadow: inset 0 0 0 1px var(--c); }
+.dhe .dhe-card .dhe-btn-ghost { background: var(--s1); }
+.dhe-card-t { font-weight: 600; line-height: 1.3; margin: 4px 0; }
+.dhe-card .dhe-acts { margin-top: 8px; }
+.dhe-timeline { border-left: 2px solid var(--ln); margin-left: 6px; }
+.dhe-tl { display: grid; grid-template-columns: 70px 1fr; gap: 12px; padding: 7px 0 7px 16px; position: relative; color: var(--tx) !important; }
+.dhe-tl::before { content: ""; position: absolute; left: -6px; top: 13px; width: 10px; height: 10px; border-radius: 50%; background: var(--ln); }
+.dhe-tl.is-week::before { background: var(--ready); }
+.dhe-tl.is-hidden { display: none; }
+.dhe-tl-date { color: var(--fa); font-size: 12.5px; padding-top: 2px; }
+.dhe-showall { margin-top: 10px; }
+
+.dhe-ihead { border-radius: 22px; padding: 20px 22px; margin-bottom: 16px;
+  background: radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--c) 28%, transparent), transparent 60%), var(--s1); }
+.dhe-ititle { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 6px 0 12px; }
+.dhe-icols { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.dhe-lead { font-size: 18px; line-height: 1.55; color: #dfe2ea; margin-bottom: 16px; }
+.dhe-qcard { background: var(--s1); border-radius: 18px; padding: 16px 18px; border-left: 4px solid var(--c); }
+.dhe-prose { line-height: 1.6; color: #d4d7e0; }
+.dhe-prose p:first-child, .dhe-lead p:first-child { margin-top: 0; }
+.dhe-prose code, .dhe-lead code { background: var(--s2); color: var(--tx); overflow-wrap: anywhere; }
+.dhe-prose, .dhe-lead { overflow-wrap: anywhere; min-width: 0; }
+.dhe-dock { position: sticky; top: 12px; background: var(--s1); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.dhe-gh { text-align: center; }
+.dhe-nextup { border-top: 1px solid var(--ln); padding-top: 10px; cursor: pointer; }
+
+@container (max-width: 760px) {
+  .dhe-main, .dhe-icols { grid-template-columns: 1fr; }
+  .dhe-next { display: none; }
+  .dhe-hero { height: 470px; padding: 18px; }
+  .dhe-hero-title { -webkit-line-clamp: 3; }
+  .dhe-hero-title, .dhe-ititle { font-size: 24px; }
+  .dhe-board { grid-auto-columns: 84%; }
+  .dhe-pname { font-size: 30px; }
+  .dhe-stamp { display: none; }
+  /* Thumb-reach dock: pinned to the bottom of the screen above Obsidian's toolbar. */
+  .dhe-dock { position: sticky; top: auto; bottom: 86px; order: 2; box-shadow: 0 -10px 30px #0009; z-index: 2; }
+  .dhe-ibody { order: 1; min-width: 0; }
+  .dhe-dock { padding: 10px; min-width: 0; }
+  .dhe-acts-big .dhe-btn { white-space: nowrap; padding: 0 8px; }
+  .dhe-acts-big .dhe-btn-ghost { flex: 0 0 76px; }
+  .dhe-dock :is(.dhe-nextup, .dhe-gh) { display: none; }
+  .dhe-icols { display: flex; flex-direction: column; }
+  .dhe-ihead { padding: 18px; }
+}

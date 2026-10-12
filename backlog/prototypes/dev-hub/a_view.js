@@ -1,6 +1,6 @@
 // PROTOTYPE — Dev Hub variant A ("App"). Loaded by dv.view(); renders hub / project / item
 // pages from data.json so every page shares one custom look. Throwaway.
-const root = "Dev Hub prototype/A - App";
+const root = input.root ?? "Dev Hub prototype/A - App";
 const data = JSON.parse(await app.vault.adapter.read(`${root}/_view/data.json`));
 const { kind, key } = input;
 const here = dv.currentFilePath;

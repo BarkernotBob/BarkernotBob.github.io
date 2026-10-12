@@ -29,13 +29,32 @@ GitHub Issues once a day by a script in `backlog/` on the Mac.
   (`needs-grilling`). Until then the Test bucket only fills from a `needs-test` label that issue adds.
 - Raycast command, push notifications.
 
-## Next step: `/prototype` (Isaiah wants to see it before any spec or build)
+## Prototype round 1 (2026-10-11): verdict — A "App"
 
-- 2–3 designs for the hub, a project note and an item note, built as real vault notes from a
-  snapshot of today's open issues (44 open, 81 closed on 2026-10-11).
-- Screenshot each at phone and desktop (≥1300px) width. Phone layout: the Obsidian mobile CSS
-  harness in Claude's memory (app.css from obsidian.asar + headless Chromium).
-- Vault has Bases, Datacore, Dataview, Meta Bind and Buttons available — pick what renders on mobile.
-- Find out whether a link can open a Claude Code chat with a pre-filled prompt (Grill / Pass / Fail
-  buttons). If not, fallback: copy the command and open the Claude app.
-- Then `/to-spec` and `/to-tickets`.
+Three designs were built as real vault notes from that day's issues (branch `prototype/dev-hub`,
+code in `backlog/prototypes/dev-hub/`, notes in `KnoxLox/Dev Hub prototype/`):
+A "App" (custom cards, one dataviewjs renderer), B "Sortable" (native Bases tables + Meta Bind),
+C "Plain" (markdown lists). **Isaiah picked A.** B lost on phone (tables show one column; a
+properties wall opens every item). C works but reads like a long list.
+
+Findings that carry forward:
+- **Grill / Pass / Fail link:** `claude://code/new?q=<prompt>&folder=<abs repo path>` opens a new
+  Claude Code session in the Mac app with the prompt pre-filled (read from Claude.app's code, not
+  yet clicked). Phone unverified, so every action also has a Copy button.
+- Dataview JS renders in reading mode on phone and desktop; no CSS snippet needed (`view.css`
+  next to the renderer loads itself).
+- Snapshot + screenshots stay local (gitignored): they hold private-repo issue text and this repo
+  is public.
+
+## Next step: `/prototype` round 2 — three riffs on A
+
+A stays the fallback. Build three new designs that keep the "app" feel (custom renderer, tappable
+cards, big action buttons) but each look clearly different from A in style, colour, layout, even
+function:
+1. **Ultra safe** — calm, conventional, nothing that could confuse; polish over novelty.
+2. **Slightly out on a limb** — one or two bolder ideas in layout or interaction.
+3. **Off the wall** — experimental; break the dashboard mould entirely.
+
+Same three pages (hub, project note, item note), same snapshot and pretend labels, screenshots at
+phone and desktop (≥1300px), notes installed into `KnoxLox/Dev Hub prototype/` alongside A.
+Then Isaiah picks, and on to `/to-spec` and `/to-tickets`.

@@ -42,4 +42,6 @@ Being grilled 2026-10-11; terms settle here as decisions land.
 - **Refresh** — once a day. If a day's refresh hasn't succeeded (Mac asleep or off, network down),
   it runs the next time the Mac is open, so it can't fail silently day after day. Plus an Obsidian
   refresh command. The phone shows a "Last updated" stamp. No Raycast command.
+- **Look** — "app" style: a custom renderer with tappable cards and big action buttons (prototype
+  A, picked 2026-10-11). Not native Bases tables, not plain lists.
 - **Home** — code in `backlog/` of this repo. The Dev Hub replaces `BACKLOG.md`; `/backlog` stays.

@@ -1,0 +1,37 @@
+/* PROTOTYPE — J "Studio". H's calm look, tightened: soft grey lists pane, indigo accent, emoji icons,
+   12px corners, slim rounded bars with gaps. Grill = amber, Blocked = red. */
+.dhx-j {
+  --grill: #f59f00; --test: #7048e8; --blocked: #e03131; --in-progress: #1c7ed6; --ready: #2f9e44; --parked: #adb5bd;
+  --acc: #4c6ef5; --side: #f4f5f9; --hi: #edf2ff;
+  --W: 720px; --S: 176px;
+  font-size: 14.5px; border-radius: 16px; box-shadow: 0 0 0 1px var(--ln), 0 8px 30px #17191f0d;
+}
+.dhx-j .dhx-nav { background: var(--side); border-right: 1px solid var(--ln); }
+.dhx-j .dhx-mid { border-right: 1px solid var(--ln); }
+.dhx-j button.dhx-refresh { background: #fff; border-radius: 9px; }
+.dhx-j .dhx-tile { background: #fff; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--ln); }
+.dhx-j .dhx-tile:hover { box-shadow: inset 0 0 0 1.5px var(--c); }
+.dhx-j .dhx-tile.is-on { box-shadow: inset 0 0 0 2px var(--c); background: color-mix(in srgb, var(--c) 9%, #fff); }
+.dhx-j .dhx-navrow, .dhx-j .dhx-proj { border-radius: 11px; }
+.dhx-j :is(.dhx-navrow, .dhx-proj):hover { background: #e9ebf1; }
+.dhx-j :is(.dhx-navrow, .dhx-proj).is-on { background: #fff; box-shadow: 0 0 0 1px var(--ln), 0 1px 3px #17191f12; }
+.dhx-j .dhx-bar { height: 7px; gap: 2px; border-radius: 4px; }
+.dhx-j .dhx-seg { border-radius: 2px; }
+.dhx-j .dhx-chip { border-radius: 7px; }
+.dhx-j .dhx-group { color: var(--mu); }
+.dhx-j .dhx-item { border-radius: 11px; }
+.dhx-j .dhx-item:hover { background: var(--side); }
+.dhx-j .dhx-item.is-on { background: var(--hi); }
+.dhx-j .dhx-detcard { border-radius: 16px; padding: 18px 20px; background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--c) 14%, #fff), #fff 65%); box-shadow: 0 0 0 1px var(--ln); }
+.dhx-j .dhx-btn { border-radius: 11px; }
+.dhx-j .dhx-btn-grill { color: #2b1d00 !important; }
+@container dxouter (max-width: 760px) {
+  .dhx-j { border-radius: 0; box-shadow: none; }
+  .dhx-j .dhx-nav { background: transparent; border: 0; }
+  .dhx-j .dhx-mid { border: 0; }
+  .dhx-j .dhx-brand { font-size: 28px; }
+  .dhx-j :is(.dhx-navrow, .dhx-proj) { background: var(--side); margin-bottom: 6px; }
+  .dhx-j :is(.dhx-navrow, .dhx-proj).is-on { background: var(--side); box-shadow: none; }
+  .dhx-j .dhx-item { border-bottom: 1px solid var(--ln); border-radius: 0; padding: 12px 8px; }
+  .dhx-j .dhx-item.is-on { background: transparent; }
+}

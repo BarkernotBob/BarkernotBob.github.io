@@ -25,7 +25,8 @@ for (const note of notes) {
     await app.workspace.getLeaf(false).openFile(f, { state: { mode: 'preview' } });
   }, note);
   await page.waitForTimeout(2500);
-  const name = note.replace(/^Dev Hub prototype\//, '').replace(/[\/ ]+/g, '_').replace(/\.md$/, '');
+  if (process.env.SHOOT_JS) { await page.evaluate(process.env.SHOOT_JS); await page.waitForTimeout(800); }
+  const name = note.replace(/^Dev Hub prototype\//, '').replace(/[\/ ]+/g, '_').replace(/\.md$/, '') + (process.env.SUFFIX ?? '');
   await page.screenshot({ path: `${outdir}/${mode}-${name}.png` });
   console.log(`${outdir}/${mode}-${name}.png`);
 }

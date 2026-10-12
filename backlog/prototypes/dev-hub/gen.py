@@ -155,7 +155,12 @@ VIEWS = {  # letter: (folder, cssclass, source prefix)
     "G": ("G - Bright", "devhub-g", "g"),
     "H": ("H - Workspace", "devhub-h", "h"),
     "I": ("I - Briefing", "devhub-i", "i"),
+    # Round 4: one shared renderer (jkl_view.js + jkl_base.css), the look per letter in <v>_view.css.
+    "J": ("J - Studio", "devhub-j", "j"),
+    "K": ("K - Blocks", "devhub-k", "k"),
+    "L": ("L - Pebble", "devhub-l", "l"),
 }
+SHARED = {"j", "k", "l"}
 
 
 def gen_view(letter, base, items, done, projs):
@@ -178,10 +183,14 @@ def gen_view(letter, base, items, done, projs):
                            closed=x["closed"].strftime("%b %-d, %Y"), closedIso=x["closed"].isoformat(),
                            week=(SNAP_TIME - x["closed"]).days < 7, what=x["what"]) for x in done])
     write(d / "_view" / "data.json", json.dumps(data))
-    write(d / "_view" / "view.js", (HERE / f"{src}_view.js").read_text())
-    write(d / "_view" / "view.css", (HERE / f"{src}_view.css").read_text())
+    if src in SHARED:
+        write(d / "_view" / "view.js", (HERE / "jkl_view.js").read_text())
+        write(d / "_view" / "view.css", (HERE / "jkl_base.css").read_text() + "\n" + (HERE / f"{src}_view.css").read_text())
+    else:
+        write(d / "_view" / "view.js", (HERE / f"{src}_view.js").read_text())
+        write(d / "_view" / "view.css", (HERE / f"{src}_view.css").read_text())
     block = lambda kind, key="": (f"---\ncssclasses: [{css}]\n---\n```dataviewjs\nawait dv.view(\"{root}/_view\", "
-                                  f"{{kind: \"{kind}\", key: {json.dumps(key)}, root: \"{root}\"}})\n```\n")
+                                  f"{{kind: \"{kind}\", key: {json.dumps(key)}, root: \"{root}\", variant: \"{src}\"}})\n```\n")
     write(d / "Dev Hub.md", block("hub"))
     for p in projs:
         write(d / "Projects" / f"{p['name']}.md", block("project", p["name"]))
@@ -366,7 +375,7 @@ def gen_c(base, items, done, projs):
 
 if __name__ == "__main__":
     vault = Path(sys.argv[1])
-    which = sys.argv[2] if len(sys.argv) > 2 else "ABCDEFGHI"
+    which = sys.argv[2] if len(sys.argv) > 2 else "ABCDEFGHIJKL"
     base = vault / ROOT_NAME
     items, done = load()
     projs = projects(items, done)

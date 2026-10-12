@@ -51,8 +51,8 @@ The old Claude-made Routines are **paused, not deleted**:
 ## Exact next step
 
 1. **Dev Hub**: round 3 judged (I dropped; H's sidebar is the base, plus G's filter tiles and A's
-   project jump). Next: build **round 4 = 3 prototypes J/K/L** per the brief in `DEV-HUB-SCOPE.md`
-   → "Prototype round 4" (branch `prototype/dev-hub`). Related: BarkernotBob/claude-setup#1.
+   project jump). Round 4 **built**: J/K/L in KnoxLox, shots in
+   `backlog/prototypes/dev-hub/shots/`. Next: Isaiah picks, then `/to-spec` (branch `prototype/dev-hub`). Related: BarkernotBob/claude-setup#1.
 2. Studio v1 has items 1–7 specced in `STUDIO-SCOPE.md`. Mark which are done and
    pick up the first unfinished one — nothing records that status yet.
 

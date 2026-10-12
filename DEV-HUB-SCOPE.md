@@ -119,7 +119,18 @@ Assumptions to confirm with Isaiah in the round-4 session (not decided by him):
 - **Squished pane content.** Default: the squished sidebar shows icons + counts + the progress
   bars; the squished items list shows a narrow strip of coloured dots + short titles.
 
+Isaiah's answers (2026-10-12):
+- **Phone:** J and K keep H's phone drill-in. L tries tap-to-swap (tap the squished strip to expand it).
+- **Squished panes:** sidebar shows icons + counts + progress bars; items list shows coloured dots +
+  short titles (the one allowed exception to "full titles"; hovering/tapping shows them in full).
+- **Default + no snap-back:** the items list starts expanded; panes stay however the mouse left them.
+
+Built 2026-10-12: J "Studio" (soft cards, amber Grill / red Blocked), K "Blocks" (bold borders, solid
+tiles, orange Grill / charcoal Blocked), L "Pebble" (round pills, tiles band across both left panes,
+grape Grill / red Blocked, tap-to-swap on phone). Installed in KnoxLox → `Dev Hub prototype/J–L`.
+Shots: `backlog/prototypes/dev-hub/shots/{J,K,L}-*.png`. K was meant to use Obsidian's line icons, but
+they can't be reached from a dataview view, so it shows emoji like J and L.
+
 ## Next step
 
-Build round 4 (J, K, L) on branch `prototype/dev-hub` in a fresh session; Isaiah picks, then
-`/to-spec` and `/to-tickets`.
+Isaiah picks from J/K/L (or mixes), then `/to-spec` and `/to-tickets`.

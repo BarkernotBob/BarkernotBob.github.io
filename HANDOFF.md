@@ -50,7 +50,8 @@ The old Claude-made Routines are **paused, not deleted**:
 
 ## Exact next step
 
-1. **Dev Hub** (grilled 2026-10-11): `/prototype` per `DEV-HUB-SCOPE.md` → "Next step". Terms in
+1. **Dev Hub**: round 1 prototype done, Isaiah picked A "App". Next: round 2, three riffs on A,
+   per `DEV-HUB-SCOPE.md` → "Next step" (work on branch `prototype/dev-hub`). Terms in
    `GLOSSARY.md`. Related: BarkernotBob/claude-setup#1 (move local tickets into GitHub).
 2. Studio v1 has items 1–7 specced in `STUDIO-SCOPE.md`. Mark which are done and
    pick up the first unfinished one — nothing records that status yet.

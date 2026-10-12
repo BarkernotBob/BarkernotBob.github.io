@@ -145,13 +145,16 @@ PRETEND_NOTE = ("Prototype data: today's real issues (snapshot Oct 11). Nothing 
                 "`urgent` yet, so ytfree #2 and site #202 pretend to be Test, blockchain #46 pretends to be urgent.")
 
 
-# ---------------------------------------------------------------- A, D, E, F: custom renderers (dataviewjs)
+# ---------------------------------------------------------------- A, D-I: custom renderers (dataviewjs)
 # Each is one view.js/view.css pair rendering hub / project / item from a shared data.json.
 VIEWS = {  # letter: (folder, cssclass, source prefix)
     "A": ("A - App", "devhub-a", "a"),
     "D": ("D - Calm", "devhub-d", "d"),
     "E": ("E - Focus", "devhub-e", "e"),
     "F": ("F - Messages", "devhub-f", "f"),
+    "G": ("G - Bright", "devhub-g", "g"),
+    "H": ("H - Workspace", "devhub-h", "h"),
+    "I": ("I - Briefing", "devhub-i", "i"),
 }
 
 
@@ -363,7 +366,7 @@ def gen_c(base, items, done, projs):
 
 if __name__ == "__main__":
     vault = Path(sys.argv[1])
-    which = sys.argv[2] if len(sys.argv) > 2 else "ABCDEF"
+    which = sys.argv[2] if len(sys.argv) > 2 else "ABCDEFGHI"
     base = vault / ROOT_NAME
     items, done = load()
     projs = projects(items, done)

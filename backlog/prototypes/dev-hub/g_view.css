@@ -1,0 +1,107 @@
+/* PROTOTYPE — Dev Hub variant G ("Bright"). Throwaway. Always light, whatever the Obsidian theme. */
+.devhub-g .inline-title, .devhub-g .metadata-container,
+:is(.markdown-preview-view, .markdown-source-view):has(.dhg) :is(.inline-title, .metadata-container) { display: none; }
+:is(.markdown-preview-view, .markdown-source-view):has(.dhg) { --file-line-width: 1180px; background: #f6f7fb; }
+.workspace-leaf-content:has(.dhg) :is(.view-header, .view-content) { background: #f6f7fb; }
+.devhub-g .block-language-dataviewjs { margin: 0; }
+
+.dhg {
+  container-type: inline-size;
+  --bg: #f6f7fb; --card: #fff; --tx: #14161c; --mu: #646a7b; --ln: #e4e6ee;
+  --grill: #ee6a1f; --test: #7b4dff; --blocked: #e23c55; --in-progress: #1c7ed6; --ready: #2b9a52; --parked: #8a90a2; --urgent: #e23c55;
+  color: var(--tx); font-size: 15px; font-family: "Inter", -apple-system, var(--font-interface);
+}
+.dhg-c-grill { --c: var(--grill); } .dhg-c-test { --c: var(--test); } .dhg-c-blocked { --c: var(--blocked); }
+.dhg-c-in-progress { --c: var(--in-progress); } .dhg-c-ready { --c: var(--ready); } .dhg-c-parked { --c: var(--parked); } .dhg-c-urgent { --c: var(--urgent); }
+.dhg a { text-decoration: none !important; }
+.dhg-h1 { font-size: 34px; font-weight: 850; letter-spacing: -.025em; line-height: 1.12; }
+.dhg-sub { color: var(--mu); font-size: 13.5px; margin-top: 4px; }
+.dhg-h2 { font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+.dhg-h2-pad { display: block; margin: 34px 0 12px; }
+.dhg-link { color: var(--mu) !important; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.dhg-back { display: inline-block; color: var(--mu) !important; font-weight: 650; font-size: 14px; cursor: pointer; margin-bottom: 8px; }
+.dhg-foot { color: var(--mu); font-size: 12.5px; margin-top: 26px; line-height: 1.5; }
+.dhg-empty { color: var(--mu); padding: 16px; }
+
+.dhg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 4px 0 20px; }
+.dhg .dhg-refresh { flex: none; width: 116px; }
+
+.dhg-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
+.dhg-tile { border-radius: 20px; padding: 16px 18px; cursor: pointer; background: radial-gradient(130% 120% at 0% 0%, color-mix(in srgb, var(--c) 16%, #fff), #fff 70%);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 22%, var(--ln)), 0 1px 2px #14161c0a; }
+.dhg-tile:hover { box-shadow: inset 0 0 0 1.5px var(--c), 0 1px 2px #14161c0a; }
+.dhg-tile.is-on { box-shadow: inset 0 0 0 2.5px var(--c), 0 6px 18px color-mix(in srgb, var(--c) 18%, transparent); }
+.dhg-tile-n { font-size: 40px; font-weight: 850; letter-spacing: -.03em; color: var(--c); line-height: 1; }
+.dhg-tile-l { font-weight: 750; font-size: 16px; margin-top: 6px; }
+.dhg-tile-s { color: var(--mu); font-size: 13px; margin-top: 2px; }
+
+.dhg-listhead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.dhg-list { display: flex; flex-direction: column; gap: 8px; }
+.dhg-row { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 16px; padding: 12px 14px 12px 18px; cursor: pointer; position: relative;
+  box-shadow: 0 0 0 1px var(--ln), 0 1px 2px #14161c08; }
+.dhg-row::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: var(--c); }
+.dhg-row:hover { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 50%, var(--ln)), 0 4px 12px #14161c0f; }
+.dhg-row-main { flex: 1; min-width: 0; }
+.dhg-row-title { font-weight: 650; font-size: 15.5px; line-height: 1.35; }
+.dhg-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; color: var(--mu); font-size: 12.5px; margin-top: 5px; }
+.dhg-tag { font-size: 11.5px; font-weight: 750; padding: 2px 8px; border-radius: 7px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.dhg-c-urgent.dhg-tag { color: #fff; background: var(--urgent); }
+
+.dhg-acts { display: flex; gap: 8px; flex: none; }
+.dhg .dhg-btn { display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 16px; border-radius: 12px; font-weight: 700; font-size: 14px; color: #fff !important;
+  box-shadow: none; cursor: pointer; white-space: nowrap; }
+.dhg-btn-grill { background: var(--grill); } .dhg-btn-pass { background: var(--ready); } .dhg-btn-fail { background: var(--blocked); }
+.dhg .dhg-btn-ghost { background: #eef0f5; color: var(--tx) !important; }
+.dhg-row-acts .dhg-btn { width: 118px; padding: 0; }
+.dhg-row-acts .dhg-btn-ghost { width: 160px; }
+
+.dhg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dhg-card { background: var(--card); border-radius: 18px; padding: 16px; cursor: pointer; box-shadow: 0 0 0 1px var(--ln), 0 1px 2px #14161c08; }
+.dhg-card:hover { box-shadow: 0 0 0 1.5px #c9ccd8, 0 4px 12px #14161c0f; }
+.dhg-card-top { display: flex; align-items: center; gap: 8px; }
+.dhg-card-name { font-weight: 750; font-size: 16.5px; flex: 1; overflow-wrap: anywhere; }
+.dhg-counts { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 10px; }
+.dhg-count { display: inline-flex; gap: 5px; align-items: baseline; font-size: 12.5px; padding: 3px 9px; border-radius: 8px; color: var(--c); background: color-mix(in srgb, var(--c) 10%, transparent); font-weight: 600; }
+.dhg-count-n { font-weight: 850; }
+.dhg-card-foot { color: var(--mu); font-size: 12.5px; }
+
+.dhg-stats { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--mu); margin: 8px 0 8px; }
+.dhg-stat-n { font-weight: 850; color: var(--tx); font-size: 18px; }
+.dhg-sec { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 10px; }
+.dhg-sec-l { font-weight: 800; font-size: 16px; color: var(--c); }
+.dhg-sec-s { color: var(--mu); font-size: 13px; }
+.dhg-done { margin-top: 28px; background: var(--card); border-radius: 16px; padding: 12px 16px; box-shadow: 0 0 0 1px var(--ln); }
+.dhg-done summary { font-weight: 700; cursor: pointer; color: var(--mu); }
+.dhg-done-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 8px 0; border-top: 1px solid var(--ln); color: var(--tx) !important; line-height: 1.35; }
+.dhg-done-row:first-of-type { margin-top: 10px; }
+.dhg-done-date { color: var(--mu); font-size: 13px; }
+
+.dhg-ihead { border-radius: 24px; padding: 22px 24px; margin-bottom: 14px;
+  background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--c) 15%, #fff), #fff 65%); box-shadow: 0 0 0 1px var(--ln); }
+.dhg-ask { color: var(--c); font-weight: 750; font-size: 13.5px; margin-bottom: 6px; }
+.dhg-ihead .dhg-meta { margin: 10px 0 18px; font-size: 13px; }
+.dhg-acts-big .dhg-btn { height: 50px; font-size: 16px; border-radius: 14px; min-width: 170px; }
+.dhg-gh { display: inline-block; margin-top: 12px; color: var(--mu) !important; font-size: 13px; font-weight: 600; }
+.dhg-box { background: var(--card); border-radius: 18px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 0 0 1px var(--ln); }
+.dhg-box-q { box-shadow: 0 0 0 1px var(--ln), inset 4px 0 0 var(--c); }
+.dhg-box-h { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--c, var(--mu)); margin-bottom: 6px; }
+.dhg-prose { line-height: 1.62; max-width: 760px; overflow-wrap: anywhere; }
+.dhg-prose p:first-child { margin-top: 0; } .dhg-prose p:last-child { margin-bottom: 0; }
+.dhg-prose code { background: #eef0f5; color: var(--tx); }
+
+@container (max-width: 760px) {
+  .dhg-h1 { font-size: 27px; }
+  .dhg-tiles { gap: 8px; }
+  .dhg-tile { padding: 12px; border-radius: 16px; }
+  .dhg-tile-n { font-size: 30px; }
+  .dhg-tile-l { font-size: 14px; }
+  .dhg-tile-s { display: none; }
+  .dhg-listhead { flex-direction: column; gap: 2px; }
+  .dhg-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .dhg-row-acts .dhg-btn { flex: 1; width: auto; }
+  .dhg-grid { grid-template-columns: 1fr; gap: 8px; }
+  .dhg-ihead { padding: 18px; }
+  .dhg-acts-big .dhg-btn { flex: 1; min-width: 0; }
+  .dhg-done-row { grid-template-columns: 1fr; gap: 0; }
+}
+@container (min-width: 761px) and (max-width: 1000px) { .dhg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

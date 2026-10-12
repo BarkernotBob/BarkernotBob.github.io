@@ -4,9 +4,10 @@ Question: what should the Dev Hub (hub / project note / item note) look like in 
 Brief: `DEV-HUB-SCOPE.md` → "Next step".
 
 - `snapshot.sh`: one-shot `gh` snapshot of every repo in `backlog/repos.txt` into `snapshot.json` (+ `prs.json`).
-- `gen.py <vault> [letters]`: writes `<vault>/Dev Hub prototype/<letter folders>/` (default all, ABCDEF).
+- `gen.py <vault> [letters]`: writes `<vault>/Dev Hub prototype/<letter folders>/` (default all, ABCDEFGHI).
   - A: one dataviewjs renderer (`a_view.js`/`a_view.css`) for all pages.
   - D "Calm", E "Focus", F "Messages" (round 2): same setup, `d_/e_/f_view.js` + `.css`.
+  - G "Bright", H "Workspace", I "Briefing" (round 3, always light): `g_/h_/i_view.js` + `.css`.
   - B: native Bases tables + Meta Bind buttons + callouts.
   - C: plain markdown, links as buttons, copy-block fallback.
 - `shoot.mjs`/`ev.mjs`/`setup.mjs`: drive an isolated Obsidian (`--user-data-dir`, CDP port 9339) for screenshots.

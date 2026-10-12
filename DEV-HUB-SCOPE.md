@@ -73,7 +73,23 @@ Built (same branch and folder; notes in `KnoxLox/Dev Hub prototype/D - Calm`, `E
   buttons, most urgent at the bottom where it opens. Item = your issue as a blue bubble, Claude's
   latest comment as the reply, action bar pinned to the bottom.
 
+## Prototype round 3 (2026-10-12): verdict on round 2, and three new designs
+
+Isaiah's verdict on round 2: **A is still the favourite.** E's more refined look is liked, but:
+- **No dark mode, ever.** Every design is light, whatever the Obsidian theme.
+- **E traded away clarity.** Bring it back: never scroll sideways, show full titles (no "…"),
+  label every count and button, don't hide the queue behind one-at-a-time cycling.
+
+Built (notes in `KnoxLox/Dev Hub prototype/G - Bright`, `H - Workspace`, `I - Briefing`):
+- **G "Bright"**: A's layout with E's polish. Hub = three big Grill/Test/Blocked tiles that filter
+  one full list of everything that needs you, every row with its button; project cards with
+  labelled counts. Project = sections by status. Item = coloured header card with big buttons.
+- **H "Workspace"**: a Mail/Things-style app. Desktop is three panes (lists | items | the item)
+  so you never leave the page; phone drills in one pane at a time like Mail.
+- **I "Briefing"**: reads like a morning paper. A plain-English summary ("32 things need you…
+  start with blockchain"), then one story per project with its top 3 numbered items and buttons;
+  an "At a glance" table on the side. Item = article with the open questions below.
+
 ## Next step
 
-Isaiah picks one of A/D/E/F (or a mix, e.g. "E's hub with D's item page"), then `/to-spec` and
-`/to-tickets`.
+Isaiah picks one of A/G/H/I (or a mix), then `/to-spec` and `/to-tickets`.

@@ -2,8 +2,9 @@
 // One renderer for all three (input.variant picks the riff); the look lives in jkl_base.css + <v>_view.css.
 // H's workspace (lists | items | the item), plus: G's Grill/Test/Blocked filter tiles, A's stacked
 // progress bar under each project, and push-and-pull on desktop: the item viewer never moves; the two
-// left panes share a fixed width, one expanded and one squished. Hovering the squished one (a short
-// dwell, so sweeping across it to reach the viewer doesn't flip it) expands it. No snap-back.
+// left panes share a fixed width, one expanded and one squished. Hovering the squished one expands it
+// at once. No snap-back. Every row keeps the same height in both states (pin()), so whatever is under
+// the mouse is still under it when the swap finishes.
 // Phone: J and K drill in one pane at a time like H; L keeps both panes and swaps them on tap.
 const root = input.root;
 const v = input.variant;
@@ -53,23 +54,41 @@ const mid = wrap.createDiv({ cls: "dhx-pane dhx-mid" });
 const det = wrap.createDiv({ cls: "dhx-pane dhx-det" });
 
 // ---------------------------------------------------------------- push and pull
-let dwell;
 for (const [pane, name] of [[nav, "nav"], [mid, "mid"]]) {
-  pane.addEventListener("mouseenter", () => {
-    if (phone() || wrap.dataset.open === name) return;
-    clearTimeout(dwell);
-    dwell = setTimeout(() => (wrap.dataset.open = name), 220);
-  });
-  pane.addEventListener("mouseleave", () => clearTimeout(dwell));
+  pane.addEventListener("mouseenter", () => { if (!phone()) wrap.dataset.open = name; });
   // A click on the squished pane only expands it, so a mis-tap on a narrow strip never opens anything.
   pane.addEventListener("click", (e) => {
     if (wrap.dataset.open === name) return;
     if (phone() && v !== "l") return;
     e.stopPropagation(); e.preventDefault();
-    clearTimeout(dwell);
     wrap.dataset.open = name;
   }, true);
 }
+
+// Each row gets the taller of its two heights (expanded, squished), measured with the animation off.
+const ROWS = {
+  nav: ".dhx-navhead, .dhx-stamp, .dhx-tiles, .dhx-navrow, .dhx-navsec, .dhx-legend, .dhx-proj, .dhx-note",
+  mid: ".dhx-midhead, .dhx-tiles, .dhx-filter, .dhx-empty, .dhx-group, .dhx-item",
+};
+function pin() {
+  const rows = [...nav.querySelectorAll(ROWS.nav), ...mid.querySelectorAll(ROWS.mid)];
+  rows.forEach((r) => (r.style.height = ""));
+  if (phone() && (v !== "l" || wrap.dataset.view === "detail")) return;
+  const was = wrap.dataset.open, h = rows.map(() => 0);
+  wrap.addClass("is-measuring");
+  for (const s of ["mid", "nav"]) {
+    wrap.dataset.open = s;
+    rows.forEach((r, i) => (h[i] = Math.max(h[i], r.getBoundingClientRect().height)));
+  }
+  wrap.dataset.open = was;
+  rows.forEach((r, i) => { if (h[i]) r.style.height = `${h[i]}px`; });
+  void wrap.offsetWidth;
+  wrap.removeClass("is-measuring");
+}
+const setView = (x) => { wrap.dataset.view = x; pin(); };
+let lastW = 0;
+new ResizeObserver(() => { if (outer.clientWidth !== lastW) { lastW = outer.clientWidth; pin(); } }).observe(outer);
+document.fonts?.ready.then(pin);
 
 // ---------------------------------------------------------------- pieces
 function bar(parent, counts) {
@@ -168,7 +187,7 @@ function drawMid() {
   const l = listById(cur);
   const isProj = cur.startsWith("p:");
   const h = mid.createDiv({ cls: "dhx-midhead" });
-  h.createEl("a", { cls: "dhx-back", text: "‹ Dev Hub" }).onclick = () => (wrap.dataset.view = "nav");
+  h.createEl("a", { cls: "dhx-back", text: "‹ Dev Hub" }).onclick = () => setView("nav");
   h.createDiv({ cls: "dhx-title", text: l.name });
   h.createDiv({ cls: "dhx-sub", text: isProj ? `${l.p.needs} need you · ${l.items.length} open · ${l.p.week} shipped this week` : `${l.items.length} items · ${l.sub}` });
   h.createDiv({ cls: "dhx-sub-short", text: `${l.items.length} ${isProj ? "open" : "items"}` });
@@ -178,13 +197,13 @@ function drawMid() {
     const t = tiles(mid, l.items, (b) => kf === b);
     t.querySelectorAll(".dhx-tile").forEach((x) => (x.onclick = () => {
       if (x.hasClass("is-zero")) return;
-      kf = kf === x.dataset.k ? null : x.dataset.k; drawMid();
+      kf = kf === x.dataset.k ? null : x.dataset.k; drawMid(); pin();
     }));
     const f = mid.createDiv({ cls: "dhx-filter" });
     f.createSpan({ text: kf ? `Showing ${data.labels[kf]} only` : "Showing everything" });
     const all = f.createEl("a", { cls: "dhx-link", text: "Show all" });
     all.style.visibility = kf ? "visible" : "hidden";
-    all.onclick = () => { kf = null; drawMid(); };
+    all.onclick = () => { kf = null; drawMid(); pin(); };
     if (kf) its = its.filter((i) => i.bucket === kf);
   }
   if (!its.length) mid.createDiv({ cls: "dhx-empty", text: "Nothing here right now." });
@@ -205,7 +224,7 @@ function drawMid() {
       t.createDiv({ cls: "dhx-itemtitle", text: i.title });
       t.createDiv({ cls: "dhx-itemsub", text: `${isProj ? "" : i.proj + " · "}${data.labels[i.bucket]} · #${i.num} · ${i.age}` });
       if (i.urgent) r.createSpan({ cls: "dhx-urgent", text: "Urgent" });
-      r.onclick = () => { sel = i; wrap.dataset.view = "detail"; drawMid(); drawDet(); };
+      r.onclick = () => { sel = i; wrap.dataset.view = "detail"; drawMid(); pin(); drawDet(); };
     }
   }
   if (isProj) {
@@ -227,7 +246,7 @@ async function drawDet() {
   const i = sel;
   const h = det.createDiv({ cls: "dhx-dethead" });
   h.createEl("a", { cls: "dhx-back", text: v === "l" ? "‹ Back" : `‹ ${listById(cur).name}` }).onclick =
-    () => (wrap.dataset.view = v === "l" ? "nav" : "list");
+    () => setView(v === "l" ? "nav" : "list");
   if (!i) { det.createDiv({ cls: "dhx-empty", text: "Pick an item to see it here." }); return; }
   const card = det.createDiv({ cls: `dhx-detcard dhx-c-${i.bucket}` });
   const ask = card.createDiv({ cls: "dhx-ask" });
@@ -259,7 +278,7 @@ function pick(id) {
   wrap.dataset.view = "list";
   drawAll();
 }
-function drawAll() { if (band) drawBand(); drawNav(); drawMid(); return drawDet(); }
+function drawAll() { if (band) drawBand(); drawNav(); drawMid(); pin(); return drawDet(); }
 
 if (!sel) sel = listById(cur).items[0] ?? null;
 await drawAll();

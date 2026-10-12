@@ -3,7 +3,7 @@
 .dhx-j {
   --grill: #f59f00; --test: #7048e8; --blocked: #e03131; --in-progress: #1c7ed6; --ready: #2f9e44; --parked: #adb5bd;
   --acc: #4c6ef5; --side: #f4f5f9; --hi: #edf2ff;
-  --W: 720px; --S: 176px;
+  --W: 560px; --S: 164px;
   font-size: 14.5px; border-radius: 16px; box-shadow: 0 0 0 1px var(--ln), 0 8px 30px #17191f0d;
 }
 .dhx-j .dhx-nav { background: var(--side); border-right: 1px solid var(--ln); }

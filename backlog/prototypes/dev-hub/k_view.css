@@ -4,7 +4,7 @@
 .dhx-k {
   --grill: #f76707; --test: #d6336c; --blocked: #343a40; --in-progress: #1971c2; --ready: #0ca678; --parked: #ced4da;
   --acc: #1971c2; --ln: #dee2e6; --tx: #111418; --hi: #f1f3f5;
-  --W: 700px; --S: 172px;
+  --W: 550px; --S: 160px;
   font-size: 15.5px; border: 2px solid var(--tx); border-radius: 6px;
 }
 .dhx-k .dhx-nav { border-right: 2px solid var(--tx); }
@@ -42,7 +42,7 @@
 .dhx-k .dhx-btn-ghost { background: #fff; border: 1.5px solid var(--tx); }
 @container dxmid (max-width: 200px) {
   .dhx-k .dhx-mid .dhx-tiles { margin: 0 2px 6px; }
-  .dhx-k .dhx-group { margin: 0 2px 2px; padding: 10px 0 2px; }
+  .dhx-k .dhx-group { margin: 0 2px 4px; padding: 10px 0 2px; }
 }
 @container dxouter (max-width: 760px) {
   .dhx-k { border: 0; }

@@ -15,6 +15,8 @@
   height: calc(100vh - 130px); min-height: 560px; overflow: hidden;
   transition: grid-template-columns .28s ease;
 }
+.dhx, .dhx * { box-sizing: border-box; }
+.dhx.is-measuring { transition: none; }
 /* Push and pull: the two left columns always add up to --W, so the viewer never moves. */
 .dhx[data-open="mid"] { --nw: var(--S); --mw: calc(var(--W) - var(--S)); }
 .dhx[data-open="nav"] { --nw: calc(var(--W) - var(--S)); --mw: var(--S); }
@@ -66,7 +68,7 @@
 .dhx-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .dhx-chip { display: inline-flex; gap: 4px; align-items: baseline; font-size: 12px; font-weight: 600; padding: 2px 8px; color: var(--c); background: color-mix(in srgb, var(--c) 11%, transparent); }
 .dhx-chip-n { font-weight: 850; }
-.dhx-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 0 6px 8px; font-size: 11.5px; color: var(--mu); }
+.dhx-legend { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px 12px; padding: 0 6px 8px; font-size: 11.5px; color: var(--mu); }
 .dhx-leg { display: inline-flex; align-items: center; gap: 5px; }
 .dhx-legdot { width: 9px; height: 9px; border-radius: 3px; background: var(--c); }
 .dhx-note { color: var(--mu); font-size: 11.5px; line-height: 1.45; padding: 18px 6px 4px; }
@@ -113,19 +115,26 @@
 .dhx-prose p:first-child { margin-top: 0; } .dhx-prose p:last-child { margin-bottom: 0; }
 .dhx-prose code { background: #eef0f5; color: var(--tx); }
 
-/* ---------------------------------------------------------------- squished panes */
+/* ---------------------------------------------------------------- squished panes
+   Rows never change height here: jkl_view.js pins each row to the taller of its two states, and whole
+   rows are only ever visibility:hidden (never display:none) so nothing below them moves. */
 @container dxnav (max-width: 200px) {
-  .dhx-navhead { flex-wrap: wrap; padding: 0 2px; }
+  .dhx-navhead { padding: 0 2px; }
   .dhx-brand { font-size: 17px; }
-  .dhx button.dhx-refresh { height: 26px; padding: 0 8px; font-size: 12px; }
+  .dhx button.dhx-refresh { height: 26px; padding: 0 7px; font-size: 12px; }
+  .dhx-refresh-l { display: none; }
   .dhx-stamp { padding: 4px 2px 10px; font-size: 11px; }
-  .dhx-tiles { grid-template-columns: 1fr; gap: 4px; }
-  .dhx-tile { display: flex; align-items: center; gap: 8px; padding: 7px 8px; }
-  .dhx-tile-top { gap: 6px; }
-  .dhx-tile-n { font-size: 17px; }
+  .dhx-tiles { gap: 4px; }
+  .dhx-tile { padding: 6px 0; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .dhx-tile-top { flex-direction: column; gap: 2px; }
+  .dhx-tile-n { font-size: 20px; }
   .dhx-tile-ic { font-size: 14px; }
-  .dhx-tile-l { margin: 0; font-size: 13px; }
-  .dhx-tile-s, .dhx-navsub, .dhx-proj-sub, .dhx-chips, .dhx-legend, .dhx-note { display: none; }
+  .dhx-tile-l { margin: 3px 0 0; font-size: 10px; white-space: nowrap; letter-spacing: -.01em; }
+  .dhx-tile-s, .dhx-navsub, .dhx-proj-sub { display: none; }
+  .dhx-legend, .dhx-note { visibility: hidden; font-size: 0; }
+  .dhx-legend > * { display: none; }
+  .dhx-chips { flex-direction: column; gap: 3px; margin-top: 6px; }
+  .dhx-chip { font-size: 11px; padding: 1px 6px; width: fit-content; }
   .dhx-navrow { gap: 6px; padding: 7px 6px; }
   .dhx-navname { font-size: 12.5px; }
   .dhx-navic { width: 18px; height: 18px; font-size: 14px; }
@@ -144,15 +153,17 @@
   .dhx-title { font-size: 15px; }
   .dhx-midhead .dhx-sub { display: none; }
   .dhx-sub-short { display: block; }
-  .dhx-tiles { grid-template-columns: 1fr; gap: 4px; }
-  .dhx-tile { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
-  .dhx-tile-n { font-size: 16px; }
-  .dhx-tile-l { margin: 0; font-size: 12.5px; }
-  .dhx-tile-s, .dhx-filter, .dhx-done, .dhx-itemsub { display: none; }
+  .dhx-tiles { gap: 4px; }
+  .dhx-tile { padding: 6px 0; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .dhx-tile-top { flex-direction: column; gap: 2px; }
+  .dhx-tile-n { font-size: 20px; }
+  .dhx-tile-l { margin: 3px 0 0; font-size: 10px; white-space: nowrap; letter-spacing: -.01em; }
+  .dhx-tile-s, .dhx-itemsub { display: none; }
+  .dhx-filter, .dhx-done { visibility: hidden; }
   .dhx-group { padding: 10px 4px 2px; font-size: 10px; letter-spacing: .05em; }
   .dhx-item { gap: 7px; padding: 6px 4px; }
   .dhx-dot { width: 8px; height: 8px; margin-top: 4px; }
-  .dhx-itemtitle { font-size: 12px; font-weight: 550; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .dhx-itemtitle { font-size: 12px; font-weight: 550; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .dhx-item .dhx-urgent { font-size: 0; padding: 0; width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; }
 }
 
@@ -199,6 +210,7 @@
 }
 @container dxmid (max-width: 130px) {
   .dhx-title { font-size: 13.5px; }
+  .dhx-itemtitle { -webkit-line-clamp: 4; }
   .dhx-itemtitle { font-size: 11.5px; }
   .dhx-item { padding: 6px 2px; gap: 5px; }
 }

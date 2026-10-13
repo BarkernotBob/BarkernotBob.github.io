@@ -143,9 +143,8 @@ Isaiah picked **J**. Tweaks, all built in the prototype:
      Either lock stops the open/close move. Double-click the line to reset. The width is remembered.
   4. No Properties block on any Dev Hub note.
   5. On an item: Mark/Remove urgent, Move to top, Move to bottom (within that project's group).
-     **Open question:** this breaks v1's "one-way, read-only" rule. The prototype only saves on this device.
-     The real version needs a decision on how it writes to GitHub, where the order lives, and whether the order
-     drives the nightly.
+     **Decided (2026-10-12):** the urgent button just opens the issue on GitHub; Isaiah sets the label there.
+     The hub stays one-way. **Open:** Move to top/bottom has no GitHub equivalent (issues have no order).
 - **Phone:** back buttons are bigger (44px), styled like the app's other buttons.
 
 ## Next step

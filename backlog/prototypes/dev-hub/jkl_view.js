@@ -20,6 +20,20 @@ const ASK = { grill: "Needs your answers", test: "Needs you to test it", blocked
 const BTN = { Grill: "Grill it", Pass: "It works", Fail: "It's broken" };
 const needs = (i) => data.needsYou.includes(i.bucket);
 
+// Prototype stand-ins for write-back: urgent flags, list order and the left-panes width live in this
+// device's localStorage only. Nothing is sent to GitHub.
+const SKEY = `devhub-proto:${root}`;
+const saved = Object.assign({ urgent: {}, ord: {} }, JSON.parse(localStorage.getItem(SKEY) ?? "{}"));
+const save = () => localStorage.setItem(SKEY, JSON.stringify(saved));
+const ikey = (i) => `${i.proj}#${i.num}`;
+const rank = (i) => (i.urgent ? 0 : data.buckets.indexOf(i.bucket) + 1);
+data.items.forEach((i, n) => { i.ord = saved.ord[ikey(i)] ?? n; if (ikey(i) in saved.urgent) i.urgent = saved.urgent[ikey(i)]; });
+function resort() {
+  data.items.sort((a, b) => rank(a) - rank(b) || a.ord - b.ord);
+  for (const p of data.projects) p.urgent = data.items.filter((i) => i.proj === p.name && i.urgent).length;
+}
+resort();
+
 // Icons: J = emoji, K = Obsidian's line icons, L = emoji in a soft round badge.
 const LUCIDE = { grill: "flame", test: "flask-conical", blocked: "ban", "in-progress": "cog", ready: "list-todo",
   parked: "pause", needs: "star", queue: "cog", project: "folder", refresh: "refresh-cw" };
@@ -32,13 +46,15 @@ function icon(parent, k, cls = "") {
   return el;
 }
 
+// items is a getter so a re-sort (urgent / move) shows up everywhere.
+const list = (o, f) => Object.defineProperty(o, "items", { get: () => data.items.filter(f) });
 const LISTS = [
-  { id: "needs", ic: "needs", name: "Needs you", sub: "Grill, test or unblock", items: data.items.filter(needs) },
-  ...data.needsYou.map((b) => ({ id: b, ic: b, name: data.labels[b], sub: ASK[b], items: data.items.filter((i) => i.bucket === b) })),
-  { id: "queue", ic: "queue", name: "Claude's queue", sub: "Ready or being built", items: data.items.filter((i) => ["in-progress", "ready"].includes(i.bucket)) },
-  { id: "parked", ic: "parked", name: "Parked", sub: "On hold", items: data.items.filter((i) => i.bucket === "parked") },
+  list({ id: "needs", ic: "needs", name: "Needs you", sub: "Grill, test or unblock" }, needs),
+  ...data.needsYou.map((b) => list({ id: b, ic: b, name: data.labels[b], sub: ASK[b] }, (i) => i.bucket === b)),
+  list({ id: "queue", ic: "queue", name: "Claude's queue", sub: "Ready or being built" }, (i) => ["in-progress", "ready"].includes(i.bucket)),
+  list({ id: "parked", ic: "parked", name: "Parked", sub: "On hold" }, (i) => i.bucket === "parked"),
 ];
-const PROJ = data.projects.map((p) => ({ id: `p:${p.name}`, ic: "project", name: p.name, p, items: data.items.filter((i) => i.proj === p.name) }));
+const PROJ = data.projects.map((p) => list({ id: `p:${p.name}`, ic: "project", name: p.name, p }, (i) => i.proj === p.name));
 const listById = (id) => [...LISTS, ...PROJ].find((l) => l.id === id);
 
 let cur = kind === "project" ? `p:${key}` : "needs";
@@ -48,17 +64,46 @@ let kf = null;                       // K only: the tiles filter whatever list i
 wrap.dataset.open = "mid";           // decided: the items list starts expanded
 wrap.dataset.view = kind === "item" ? "detail" : kind === "project" ? "list" : "nav";
 
-const band = v === "l" ? wrap.createDiv({ cls: "dhx-band" }) : null;
+// J and L: the filter tiles sit in a band across both left panes, so the swap never resizes them.
+const band = v === "l" || v === "j" ? wrap.createDiv({ cls: "dhx-band" }) : null;
 const nav = wrap.createDiv({ cls: "dhx-pane dhx-nav" });
 const mid = wrap.createDiv({ cls: "dhx-pane dhx-mid" });
 const det = wrap.createDiv({ cls: "dhx-pane dhx-det" });
+const grip = wrap.createDiv({ cls: "dhx-grip", attr: { "aria-label": "Drag to resize" } });
+
+// ---------------------------------------------------------------- left width (drag the grip)
+// The two left panes share --W. Wide enough for both → they lock side by side ("wide"); too narrow for
+// push-and-pull to mean anything → they lock at half each ("narrow"). In between: push and pull.
+const cs = getComputedStyle(wrap);
+const S = parseFloat(cs.getPropertyValue("--S")), W0 = parseFloat(cs.getPropertyValue("--W"));
+const WMIN = 300, NARROW = 400, WIDE = 720, DET_MIN = 420;
+let W = saved.w ?? W0, dragging = false;
+function applyW() {
+  W = Math.round(Math.min(Math.max(W, WMIN), Math.max(WMIN, outer.clientWidth - DET_MIN)));
+  wrap.style.setProperty("--W", `${W}px`);
+  wrap.dataset.lock = W >= WIDE ? "wide" : W <= NARROW ? "narrow" : "";
+}
+applyW();
+grip.addEventListener("pointerdown", (e) => {
+  if (phone()) return;
+  e.preventDefault(); grip.setPointerCapture(e.pointerId);
+  dragging = true; wrap.addClass("is-dragging");
+  const x0 = e.clientX, w0 = W;
+  grip.onpointermove = (m) => { W = w0 + m.clientX - x0; const was = wrap.dataset.lock; applyW(); if (wrap.dataset.lock !== was) pin(); };
+  grip.onpointerup = grip.onpointercancel = () => {
+    grip.onpointermove = grip.onpointerup = grip.onpointercancel = null;
+    dragging = false; wrap.removeClass("is-dragging");
+    saved.w = W; save(); pin();
+  };
+});
+grip.ondblclick = () => { W = W0; applyW(); saved.w = W; save(); pin(); };
 
 // ---------------------------------------------------------------- push and pull
 for (const [pane, name] of [[nav, "nav"], [mid, "mid"]]) {
-  pane.addEventListener("mouseenter", () => { if (!phone()) wrap.dataset.open = name; });
+  pane.addEventListener("mouseenter", () => { if (!phone() && !dragging && !wrap.dataset.lock) wrap.dataset.open = name; });
   // A click on the squished pane only expands it, so a mis-tap on a narrow strip never opens anything.
   pane.addEventListener("click", (e) => {
-    if (wrap.dataset.open === name) return;
+    if (wrap.dataset.open === name || (wrap.dataset.lock && !phone())) return;
     if (phone() && v !== "l") return;
     e.stopPropagation(); e.preventDefault();
     wrap.dataset.open = name;
@@ -74,6 +119,7 @@ function pin() {
   const rows = [...nav.querySelectorAll(ROWS.nav), ...mid.querySelectorAll(ROWS.mid)];
   rows.forEach((r) => (r.style.height = ""));
   if (phone() && (v !== "l" || wrap.dataset.view === "detail")) return;
+  if (wrap.dataset.lock && !phone()) return;   // locked: nothing swaps, rows keep their own height
   const was = wrap.dataset.open, h = rows.map(() => 0);
   wrap.addClass("is-measuring");
   for (const s of ["mid", "nav"]) {
@@ -87,7 +133,7 @@ function pin() {
 }
 const setView = (x) => { wrap.dataset.view = x; pin(); };
 let lastW = 0;
-new ResizeObserver(() => { if (outer.clientWidth !== lastW) { lastW = outer.clientWidth; pin(); } }).observe(outer);
+new ResizeObserver(() => { if (outer.clientWidth !== lastW) { lastW = outer.clientWidth; applyW(); pin(); } }).observe(outer);
 document.fonts?.ready.then(pin);
 
 // ---------------------------------------------------------------- pieces
@@ -161,6 +207,7 @@ function drawNav() {
 
   if (v === "j") {
     const t = tiles(nav, data.items, (b) => cur === b);
+    t.addClass("dhx-phonetiles");
     t.querySelectorAll(".dhx-tile").forEach((x) => (x.onclick = () => pick(cur === x.dataset.k ? "needs" : x.dataset.k)));
   }
   navRow(nav, LISTS[0], v === "j" ? "All three kinds" : LISTS[0].sub);
@@ -262,6 +309,33 @@ async function drawDet() {
       async () => { await navigator.clipboard.writeText(i.actions[0].copy); toast(`Copied: ${i.actions[0].copy}`); };
   }
   acts.createEl("a", { cls: "dhx-btn dhx-btn-ghost", text: "Open on GitHub ↗", href: i.url });
+
+  // Prototype: these change this device only (see `saved`). The real ones would write to GitHub.
+  const org = card.createDiv({ cls: "dhx-acts dhx-acts-org" });
+  const ub = org.createEl("button", { cls: "dhx-btn dhx-btn-sm dhx-btn-urgent" });
+  const setUb = () => { ub.setText(i.urgent ? "✕ Remove urgent" : "⚑ Mark urgent"); ub.toggleClass("is-on", i.urgent); };
+  setUb();
+  const group = () => (i.urgent ? "Urgent" : data.labels[i.bucket]);
+  const peers = () => data.items.filter((x) => x.proj === i.proj && rank(x) === rank(i));
+  const after = (msg) => {
+    save(); resort(); setUb();
+    ask.lastChild.setText((i.urgent ? "Urgent · " : "") + ASK[i.bucket]);
+    drawNav(); drawMid(); pin();
+    mid.querySelector(".dhx-item.is-on")?.scrollIntoView({ block: "nearest" });
+    toast(`${msg} (prototype: this device only, not sent to GitHub)`);
+  };
+  ub.onclick = () => {
+    i.urgent = !i.urgent; saved.urgent[ikey(i)] = i.urgent;
+    after(i.urgent ? `Marked urgent: top of ${i.proj}` : `No longer urgent: back in ${i.proj}'s ${group()} list`);
+  };
+  const mv = (top) => () => {
+    const ps = peers(), ords = ps.map((x) => x.ord);
+    if (ps[top ? 0 : ps.length - 1] === i) return toast(`Already at the ${top ? "top" : "bottom"} of ${i.proj}'s ${group()} list`);
+    i.ord = top ? Math.min(...ords) - 1 : Math.max(...ords) + 1; saved.ord[ikey(i)] = i.ord;
+    after(`Moved to the ${top ? "top" : "bottom"} of ${i.proj}'s ${group()} list`);
+  };
+  org.createEl("button", { cls: "dhx-btn dhx-btn-sm", text: "↑ Move to top" }).onclick = mv(true);
+  org.createEl("button", { cls: "dhx-btn dhx-btn-sm", text: "↓ Move to bottom" }).onclick = mv(false);
 
   const body = det.createDiv({ cls: "dhx-body" });
   body.createDiv({ cls: "dhx-label", text: "What it is" });

@@ -16,11 +16,23 @@
   transition: grid-template-columns .28s ease;
 }
 .dhx, .dhx * { box-sizing: border-box; }
-.dhx.is-measuring { transition: none; }
+.dhx.is-measuring, .dhx.is-dragging { transition: none; }
+.dhx { position: relative; }
+.dhx.is-dragging { cursor: col-resize; user-select: none; }
 /* Push and pull: the two left columns always add up to --W, so the viewer never moves. */
 .dhx[data-open="mid"] { --nw: var(--S); --mw: calc(var(--W) - var(--S)); }
 .dhx[data-open="nav"] { --nw: calc(var(--W) - var(--S)); --mw: var(--S); }
-.dhx-band { grid-column: 1 / 3; grid-row: 1; }
+/* Locked (dragged wide or narrow): both panes keep a share and stop swapping. */
+.dhx[data-lock="wide"][data-open] { --nw: calc(var(--W) * .42); --mw: calc(var(--W) * .58); }
+.dhx[data-lock="narrow"][data-open] { --nw: calc(var(--W) / 2); --mw: calc(var(--W) / 2); }
+/* The grabbable line between the left panes and the item. Double-click resets the width. */
+.dhx-grip { position: absolute; top: 0; bottom: 0; left: calc(var(--W) + var(--gx, 0px) - 6px); width: 12px; z-index: 5; cursor: col-resize; touch-action: none; }
+.dhx-grip::before { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; background: transparent; transition: background .15s; }
+.dhx-grip::after { content: ""; position: absolute; top: 50%; left: 3px; width: 6px; height: 36px; margin-top: -18px; border-radius: 3px; background: #c9ccd6; transition: background .15s; }
+.dhx-grip:hover::before, .dhx.is-dragging .dhx-grip::before { background: var(--acc); }
+.dhx-grip:hover::after, .dhx.is-dragging .dhx-grip::after { background: var(--acc); }
+.dhx .dhx-phonetiles { display: none; }
+.dhx-band { grid-column: 1 / 3; grid-row: 1; container: dxband / inline-size; min-width: 0; }
 .dhx:has(.dhx-band) { grid-template-rows: auto minmax(0, 1fr); }
 .dhx:has(.dhx-band) .dhx-det { grid-column: 3; grid-row: 1 / 3; }
 .dhx:has(.dhx-band) .dhx-nav { grid-row: 2; } .dhx:has(.dhx-band) .dhx-mid { grid-row: 2; }
@@ -108,6 +120,11 @@
 .dhx .dhx-btn { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 18px; font-weight: 700; font-size: 14.5px; color: #fff !important; box-shadow: none; cursor: pointer; white-space: nowrap; }
 .dhx-btn-grill { background: var(--grill); } .dhx-btn-pass { background: var(--ready); } .dhx-btn-fail { background: var(--fail); }
 .dhx .dhx-btn-ghost { background: #eef0f5; color: var(--tx) !important; }
+.dhx-acts-org { margin-top: 10px; }
+.dhx .dhx-btn-sm { height: 34px; padding: 0 14px; font-size: 13px; font-weight: 650; background: #fff; color: var(--tx) !important; box-shadow: inset 0 0 0 1px var(--ln); }
+.dhx .dhx-btn-sm:hover { box-shadow: inset 0 0 0 1.5px var(--acc); }
+.dhx .dhx-btn-urgent { min-width: 148px; }
+.dhx .dhx-btn-urgent.is-on { color: var(--urgent) !important; box-shadow: inset 0 0 0 1.5px var(--urgent); }
 .dhx-body { padding: 6px 4px; }
 .dhx-label { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--mu); margin: 20px 0 6px; }
 .dhx-label-c { color: var(--c); }
@@ -158,13 +175,25 @@
   .dhx-tile-top { flex-direction: column; gap: 2px; }
   .dhx-tile-n { font-size: 20px; }
   .dhx-tile-l { margin: 3px 0 0; font-size: 10px; white-space: nowrap; letter-spacing: -.01em; }
-  .dhx-tile-s, .dhx-itemsub { display: none; }
+  .dhx-tile-s { display: none; }
+  .dhx-itemsub { font-size: 11px; line-height: 1.3; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dhx-filter, .dhx-done { visibility: hidden; }
   .dhx-group { padding: 10px 4px 2px; font-size: 10px; letter-spacing: .05em; }
   .dhx-item { gap: 7px; padding: 6px 4px; }
   .dhx-dot { width: 8px; height: 8px; margin-top: 4px; }
   .dhx-itemtitle { font-size: 12px; font-weight: 550; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .dhx-item .dhx-urgent { font-size: 0; padding: 0; width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; }
+}
+
+/* Band squeezed by the grip: tiles go compact like the squished panes. */
+@container dxband (max-width: 470px) {
+  .dhx-tiles { gap: 4px; }
+  .dhx-tile { padding: 6px 0; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .dhx-tile-top { flex-direction: column; gap: 2px; }
+  .dhx-tile-n { font-size: 20px; }
+  .dhx-tile-ic { font-size: 14px; }
+  .dhx-tile-l { margin: 3px 0 0; font-size: 11px; white-space: nowrap; }
+  .dhx-tile-s { display: none; }
 }
 
 /* ---------------------------------------------------------------- phone */
@@ -183,7 +212,10 @@
   .dhx:not(.dhx-l)[data-view="nav"] .dhx-nav, .dhx:not(.dhx-l)[data-view="list"] .dhx-mid, .dhx:not(.dhx-l)[data-view="detail"] .dhx-det { display: block; }
   .dhx:not(.dhx-l) .dhx-nav { padding: 4px 0; }
   .dhx:not(.dhx-l) .dhx-mid { padding: 4px 0; }
+  .dhx:not(.dhx-l) :is(.dhx-band, .dhx-grip) { display: none; }
+  .dhx:not(.dhx-l) .dhx-tiles.dhx-phonetiles { display: grid; }
 }
+@container dxouter (max-width: 760px) { .dhx-l .dhx-grip { display: none; } }
 /* L: both left panes stay, side by side; tap the squished one to swap. The item drills in. */
 @container dxouter (max-width: 760px) {
   .dhx-l[data-open="mid"] { grid-template-columns: 100px minmax(0, 1fr) 0; }

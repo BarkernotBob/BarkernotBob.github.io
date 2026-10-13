@@ -4,7 +4,7 @@
 .dhx-l {
   --grill: #ae3ec9; --test: #f59f00; --blocked: #f03e3e; --in-progress: #1c7ed6; --ready: #37b24d; --parked: #adb5bd;
   --acc: #0c8599; --tx: #1f1a2e; --mu: #736b85; --ln: #ece8f3; --side: #f7f4fc; --hi: #f3ecfb;
-  --W: 580px; --S: 172px;
+  --W: 580px; --S: 172px; --gx: 15px;
   font-size: 15px; gap: 0 10px;
 }
 .dhx-l .dhx-band { padding: 0 0 10px; }

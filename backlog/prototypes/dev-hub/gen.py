@@ -189,7 +189,9 @@ def gen_view(letter, base, items, done, projs):
     else:
         write(d / "_view" / "view.js", (HERE / f"{src}_view.js").read_text())
         write(d / "_view" / "view.css", (HERE / f"{src}_view.css").read_text())
-    block = lambda kind, key="": (f"---\ncssclasses: [{css}]\n---\n```dataviewjs\nawait dv.view(\"{root}/_view\", "
+    # J/K/L carry no frontmatter at all, so no note shows a Properties block (or "1 property").
+    fm = "" if src in SHARED else f"---\ncssclasses: [{css}]\n---\n"
+    block = lambda kind, key="": (f"{fm}```dataviewjs\nawait dv.view(\"{root}/_view\", "
                                   f"{{kind: \"{kind}\", key: {json.dumps(key)}, root: \"{root}\", variant: \"{src}\"}})\n```\n")
     write(d / "Dev Hub.md", block("hub"))
     for p in projs:

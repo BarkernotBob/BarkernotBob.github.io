@@ -131,6 +131,23 @@ grape Grill / red Blocked, tap-to-swap on phone). Installed in KnoxLox → `Dev 
 Shots: `backlog/prototypes/dev-hub/shots/{J,K,L}-*.png`. K was meant to use Obsidian's line icons, but
 they can't be reached from a dataview view, so it shows emoji like J and L.
 
+## Prototype round 5 (2026-10-12): verdict — J "Studio", with tweaks
+
+Isaiah picked **J**. Tweaks, all built in the prototype:
+
+- **Desktop**
+  1. Grill/Test/Blocked tiles sit in a band across the top of both left panes (like L), so push-and-pull never resizes them.
+  2. The squished items pane keeps its grey sub-line (one line, cut off with "…").
+  3. A grabbable line between the left panes and the reader resizes their total width. Wide enough for both
+     (≥720px) → they lock side by side; too narrow for push-and-pull to matter (≤400px) → they lock at half each.
+     Either lock stops the open/close move. Double-click the line to reset. The width is remembered.
+  4. No Properties block on any Dev Hub note.
+  5. On an item: Mark/Remove urgent, Move to top, Move to bottom (within that project's group).
+     **Open question:** this breaks v1's "one-way, read-only" rule. The prototype only saves on this device.
+     The real version needs a decision on how it writes to GitHub, where the order lives, and whether the order
+     drives the nightly.
+- **Phone:** back buttons are bigger (44px), styled like the app's other buttons.
+
 ## Next step
 
-Isaiah picks from J/K/L (or mixes), then `/to-spec` and `/to-tickets`.
+Isaiah answers the write-back questions (round 5, item 5), then `/to-spec` and `/to-tickets`.

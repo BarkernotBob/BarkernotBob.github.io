@@ -20,19 +20,10 @@ const ASK = { grill: "Needs your answers", test: "Needs you to test it", blocked
 const BTN = { Grill: "Grill it", Pass: "It works", Fail: "It's broken" };
 const needs = (i) => data.needsYou.includes(i.bucket);
 
-// Prototype stand-ins for write-back: urgent flags, list order and the left-panes width live in this
-// device's localStorage only. Nothing is sent to GitHub.
+// The hub is one-way: it never writes to GitHub. Only the left-panes width is remembered (this device).
 const SKEY = `devhub-proto:${root}`;
-const saved = Object.assign({ urgent: {}, ord: {} }, JSON.parse(localStorage.getItem(SKEY) ?? "{}"));
+const saved = JSON.parse(localStorage.getItem(SKEY) ?? "{}");
 const save = () => localStorage.setItem(SKEY, JSON.stringify(saved));
-const ikey = (i) => `${i.proj}#${i.num}`;
-const rank = (i) => (i.urgent ? 0 : data.buckets.indexOf(i.bucket) + 1);
-data.items.forEach((i, n) => { i.ord = saved.ord[ikey(i)] ?? n; if (ikey(i) in saved.urgent) i.urgent = saved.urgent[ikey(i)]; });
-function resort() {
-  data.items.sort((a, b) => rank(a) - rank(b) || a.ord - b.ord);
-  for (const p of data.projects) p.urgent = data.items.filter((i) => i.proj === p.name && i.urgent).length;
-}
-resort();
 
 // Icons: J = emoji, K = Obsidian's line icons, L = emoji in a soft round badge.
 const LUCIDE = { grill: "flame", test: "flask-conical", blocked: "ban", "in-progress": "cog", ready: "list-todo",
@@ -46,8 +37,7 @@ function icon(parent, k, cls = "") {
   return el;
 }
 
-// items is a getter so a re-sort (urgent / move) shows up everywhere.
-const list = (o, f) => Object.defineProperty(o, "items", { get: () => data.items.filter(f) });
+const list = (o, f) => ({ ...o, items: data.items.filter(f) });
 const LISTS = [
   list({ id: "needs", ic: "needs", name: "Needs you", sub: "Grill, test or unblock" }, needs),
   ...data.needsYou.map((b) => list({ id: b, ic: b, name: data.labels[b], sub: ASK[b] }, (i) => i.bucket === b)),
@@ -310,32 +300,11 @@ async function drawDet() {
   }
   acts.createEl("a", { cls: "dhx-btn dhx-btn-ghost", text: "Open on GitHub ↗", href: i.url });
 
-  // Prototype: these change this device only (see `saved`). The real ones would write to GitHub.
+  // Urgent: opens the issue on GitHub, where Isaiah sets the label himself. The hub picks it up on Refresh.
   const org = card.createDiv({ cls: "dhx-acts dhx-acts-org" });
-  const ub = org.createEl("button", { cls: "dhx-btn dhx-btn-sm dhx-btn-urgent" });
-  const setUb = () => { ub.setText(i.urgent ? "✕ Remove urgent" : "⚑ Mark urgent"); ub.toggleClass("is-on", i.urgent); };
-  setUb();
-  const group = () => (i.urgent ? "Urgent" : data.labels[i.bucket]);
-  const peers = () => data.items.filter((x) => x.proj === i.proj && rank(x) === rank(i));
-  const after = (msg) => {
-    save(); resort(); setUb();
-    ask.lastChild.setText((i.urgent ? "Urgent · " : "") + ASK[i.bucket]);
-    drawNav(); drawMid(); pin();
-    mid.querySelector(".dhx-item.is-on")?.scrollIntoView({ block: "nearest" });
-    toast(`${msg} (prototype: this device only, not sent to GitHub)`);
-  };
-  ub.onclick = () => {
-    i.urgent = !i.urgent; saved.urgent[ikey(i)] = i.urgent;
-    after(i.urgent ? `Marked urgent: top of ${i.proj}` : `No longer urgent: back in ${i.proj}'s ${group()} list`);
-  };
-  const mv = (top) => () => {
-    const ps = peers(), ords = ps.map((x) => x.ord);
-    if (ps[top ? 0 : ps.length - 1] === i) return toast(`Already at the ${top ? "top" : "bottom"} of ${i.proj}'s ${group()} list`);
-    i.ord = top ? Math.min(...ords) - 1 : Math.max(...ords) + 1; saved.ord[ikey(i)] = i.ord;
-    after(`Moved to the ${top ? "top" : "bottom"} of ${i.proj}'s ${group()} list`);
-  };
-  org.createEl("button", { cls: "dhx-btn dhx-btn-sm", text: "↑ Move to top" }).onclick = mv(true);
-  org.createEl("button", { cls: "dhx-btn dhx-btn-sm", text: "↓ Move to bottom" }).onclick = mv(false);
+  org.createEl("a", { cls: `dhx-btn dhx-btn-sm dhx-btn-urgent${i.urgent ? " is-on" : ""}`, href: i.url,
+    text: i.urgent ? "✕ Remove urgent on GitHub ↗" : "⚑ Mark urgent on GitHub ↗" }).onclick = () =>
+    toast(`Opening GitHub: ${i.urgent ? "remove" : "add"} the "urgent" label under Labels, then Refresh here`);
 
   const body = det.createDiv({ cls: "dhx-body" });
   body.createDiv({ cls: "dhx-label", text: "What it is" });

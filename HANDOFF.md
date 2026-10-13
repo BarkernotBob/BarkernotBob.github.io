@@ -51,9 +51,9 @@ The old Claude-made Routines are **paused, not deleted**:
 ## Exact next step
 
 1. **Dev Hub**: Isaiah picked J "Studio"; round-5 tweaks built (tiles band, resize grip + locks,
-   no Properties, urgent/move buttons, bigger phone back buttons). KnoxLox → `Dev Hub prototype/J - Studio`.
-   Waiting on Isaiah: write-back questions (`DEV-HUB-SCOPE.md` round 5, item 5). Then `/to-spec`
-   (branch `prototype/dev-hub`, never merges). Related: BarkernotBob/claude-setup#1.
+   no Properties, urgent button that opens GitHub, bigger phone back buttons). KnoxLox → `Dev Hub
+   prototype/J - Studio`. Next: `/to-spec` in a fresh session (prototype branch `prototype/dev-hub`
+   never merges). Related: BarkernotBob/claude-setup#1.
 2. Studio v1 has items 1–7 specced in `STUDIO-SCOPE.md`. Mark which are done and
    pick up the first unfinished one — nothing records that status yet.
 

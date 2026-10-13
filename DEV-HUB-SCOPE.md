@@ -142,11 +142,11 @@ Isaiah picked **J**. Tweaks, all built in the prototype:
      (≥720px) → they lock side by side; too narrow for push-and-pull to matter (≤400px) → they lock at half each.
      Either lock stops the open/close move. Double-click the line to reset. The width is remembered.
   4. No Properties block on any Dev Hub note.
-  5. On an item: Mark/Remove urgent, Move to top, Move to bottom (within that project's group).
-     **Decided (2026-10-12):** the urgent button just opens the issue on GitHub; Isaiah sets the label there.
-     The hub stays one-way. **Open:** Move to top/bottom has no GitHub equivalent (issues have no order).
+  5. On an item: a "Mark urgent / Remove urgent on GitHub ↗" button. **Decided (2026-10-12):** it just opens
+     the issue on GitHub; Isaiah sets the label there, and the hub shows it after Refresh. The hub stays
+     one-way. Move to top/bottom was dropped (GitHub issues have no order; urgent covers "do this next").
 - **Phone:** back buttons are bigger (44px), styled like the app's other buttons.
 
 ## Next step
 
-Isaiah answers the write-back questions (round 5, item 5), then `/to-spec` and `/to-tickets`.
+`/to-spec` and `/to-tickets` for J with the round-5 tweaks.

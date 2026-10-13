@@ -15,8 +15,8 @@ Brief: `DEV-HUB-SCOPE.md` → "Next step".
   - Round 5 (J picked): J and L get the tiles band across both left panes (`.dhx-band`, `dxband` ≤470px). A grip
     (`.dhx-grip`) resizes the two left panes' total `--W`; ≥720px locks them side by side (`data-lock="wide"`,
     42/58), ≤400px locks at half each (`narrow`). Locked = no hover swap, no `pin()`. Double-click grip = reset.
-    Detail card has Mark/Remove urgent + Move to top/bottom (within project and group): **localStorage only**,
-    key `devhub-proto:<root>`. J/K/L notes have no frontmatter (no Properties). Shots: `shots/r6/`.
+    Detail card has a "Mark/Remove urgent on GitHub ↗" link to the issue (hub stays one-way). Pane width is
+    remembered in localStorage `devhub-proto:<root>`. J/K/L notes have no frontmatter (no Properties). Shots: `shots/r6/`.
   - B: native Bases tables + Meta Bind buttons + callouts.
   - C: plain markdown, links as buttons, copy-block fallback.
 - `shoot.mjs`/`ev.mjs`/`setup.mjs`: drive an isolated Obsidian (`--user-data-dir`, CDP port 9339) for screenshots.

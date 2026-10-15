@@ -100,6 +100,8 @@
      reserve three lines so a lookup result can't push Save down either. */
   .geopanels{display:grid} .geopanel{grid-area:1/1;min-width:0} .geopanel.off{visibility:hidden}
   .geostatus{margin:8px 0 0;min-height:4.5em;overflow-wrap:anywhere}
+  /* #141: room for two lines, so a long address wrapping never moves Save. */
+  .mailto{margin:8px 0 0;min-height:3em;overflow-wrap:anywhere}
   .coord{display:flex;gap:6px} .coord input{flex:1;min-width:0}
   .coord button{flex:0 0 46px;width:46px;padding:0;font-size:18px}
   .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.02em;font-family:var(--font-body)}
@@ -682,8 +684,23 @@ async function loadAll(){
   D.tests  = await loadJson(FILES.tests, []);
   D.log    = await loadJson(FILES.log, []);
   D.swim   = await loadJson(FILES.swim, []);
+  D.mail   = mailRecord(await loadJson(FEED_STATE, []));
   normalizeConfig();
   updateBadges();
+}
+/* Where reminder emails actually go (#141). The app can't read the workflow's
+   MAIL_USERNAME secret, so the daily run (reminders.mjs) records the address it
+   used in db/feed-state.json → {items, mail:{to, source}}. Older files are a bare
+   array with no record: "not known yet". Read-only here — the app never writes it. */
+const FEED_STATE = 'db/feed-state.json';
+function mailRecord(feed){
+  const m = feed && !Array.isArray(feed) && feed.mail;
+  return (m && typeof m.to==='string' && m.to.trim()) ? { to:m.to.trim(), source:m.source==='settings'?'settings':'default' } : null;
+}
+function mailGoesTo(){
+  const m = D.mail;
+  if(!m) return 'Reminders go to: not known yet. It appears after the next daily email.';
+  return `Reminders go to: ${m.to}${m.source==='default'?' (default from GitHub)':''}`;
 }
 function swimForDate(d){ return (D.swim||[]).filter(s=>s.date===d).reduce((a,s)=>a+(+s.hours||0),0); }
 // A task log entry is shown under the task's CURRENT title, looked up by id,
@@ -1803,6 +1820,7 @@ function renderSettings(){
     <h2>📧 Reminder email</h2>
     <p class="small muted">Where the scheduled job emails you what's due. (The email job is set up separately — see pool-tool/SETUP.md.)</p>
     <input id="s_email" type="email" placeholder="you@example.com" value="${esc(c.email||'')}" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <p class="small muted mailto" id="mailTo">${esc(mailGoesTo())}</p>
     <button style="margin-top:10px" data-action="saveEmail">Save email</button>
   </div>
   <div class="card">

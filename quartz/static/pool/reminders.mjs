@@ -8,6 +8,7 @@
      - out/email_subject.txt / out/email_body.html  -> the reminder email
      - out/pool.xml                                  -> the RSS feed
      - db/feed-state.json                            -> remembered feed history
+                                                        + the address emailed
    It writes nothing back to your config/tests, so it never marks a task "done";
    you still do that in the app. Hosted publicly (no secrets here) so the
    workflow can curl the latest copy each run.
@@ -72,8 +73,14 @@ useConfig(() => config);
 migrateConfig(config);
 applyTargets(config);
 const tests  = readJson('db/tests.json', []);
-let   state  = readJson('db/feed-state.json', []);
-if(!Array.isArray(state)) state = [];
+/* db/feed-state.json is { items:[…feed history…], mail:{to, source, since} }.
+   It used to be the bare items array; both shapes read the same. `mail` is the
+   address this run sends to, so the app's Settings can show it (#141): the app
+   can't read the MAIL_USERNAME secret, but it can read this file, which the
+   workflow already commits. */
+const feedRaw = readJson('db/feed-state.json', []);
+let   state  = Array.isArray(feedRaw) ? feedRaw : (feedRaw && Array.isArray(feedRaw.items) ? feedRaw.items : []);
+let   mail   = (!Array.isArray(feedRaw) && feedRaw && feedRaw.mail && typeof feedRaw.mail==='object') ? feedRaw.mail : null;
 
 /* ---------- season + cadence (mirror the app) ---------- */
 const S = config.season || {};
@@ -278,10 +285,21 @@ mkdirSync('out', { recursive:true });
 writeFileSync('out/pool.xml', rss);
 writeFileSync('out/email_subject.txt', subject);
 writeFileSync('out/email_body.html', emailHtml());
-if(stateChanged) writeFileSync('db/feed-state.json', JSON.stringify(state,null,2)+'\n');
+// Where the email goes: the address saved in Settings, else the workflow's
+// MAIL_FALLBACK (the MAIL_USERNAME secret). Recorded only when it changes, so
+// the file isn't rewritten (and committed) every day just to say the same thing.
+const savedEmail = (config.email && String(config.email).trim()) || '';
+const to = savedEmail || (process.env.MAIL_FALLBACK || '').trim();
+const mailSource = savedEmail ? 'settings' : 'default';
+let mailChanged = false;
+if(to && (!mail || mail.to!==to || mail.source!==mailSource)){
+  mail = { to, source:mailSource, since:today };
+  mailChanged = true;
+}
+if(stateChanged || mailChanged){
+  writeFileSync('db/feed-state.json', JSON.stringify(mail ? { items:state, mail } : state, null, 2)+'\n');
+}
 if(wxChanged)    writeFileSync('db/weather.json', JSON.stringify(wxLog,null,2)+'\n');
-
-const to = (config.email && config.email.trim()) || process.env.MAIL_FALLBACK || '';
 
 function setOutput(name, value){
   if(!process.env.GITHUB_OUTPUT){ console.log(`${name}=${value}`); return; }
@@ -292,6 +310,6 @@ setOutput('has_due', hasDue ? 'true' : 'false');
 setOutput('to', to);
 setOutput('subject', subject);
 setOutput('body', emailHtml());
-setOutput('state_changed', stateChanged ? 'true' : 'false');
+setOutput('state_changed', (stateChanged || mailChanged) ? 'true' : 'false');
 
 console.error(`[reminders] today=${today} due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} wx=${rainSummary?('rain'+rainSummary.last7.toFixed(2)+'/temp'+(rainSummary.tmax!=null?Math.round(rainSummary.tmax):'?')+'/rh'+(rainSummary.rhAvg??'?')+(rainAlert?'/ALERT':'')):'n/a'} hasDue=${hasDue} to=${to||'(none)'}`);

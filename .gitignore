@@ -55,3 +55,6 @@ backlog/__pycache__/
 
 # Cloudflare Wrangler local state
 .wrangler/
+
+# Prototype files live only on prototype/* branches; leftovers on main stay local
+backlog/prototypes/

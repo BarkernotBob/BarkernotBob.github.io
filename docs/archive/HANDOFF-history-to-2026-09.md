@@ -24,3 +24,19 @@
   cleanup: 5 branches still need a decision — see
   `grocery-tool/BRANCH-REVIEW-abandoned-work.md`.
 - 2026-07-19 — **Studio** landed (edit-in-place + Publish). See `STUDIO-SCOPE.md`.
+
+## Moved from HANDOFF 2026-10-24
+
+- 2026-10-06 — **nightly redesigned to stop eating the week's usage.** One `search_issues` call
+  finds the work (an empty night ends there); the Opus coordinator stays thin and never reads code;
+  at most 3 background workers, one per repo, refilled one at a time; nothing new after 2h; workers
+  turn on auto-merge instead of waiting on CI, and the next night merges/fixes leftovers found by
+  the PR marker `Built by the nightly backlog run.`. The nightly never asks questions: unclear items
+  get questions on the issue + `needs-grilling`, and Isaiah grills with the new `/backlog-next`
+  (builds a project's top ready item, else grills its oldest `needs-grilling` one). **Isaiah still
+  needs to:** set `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` on the Routine's environment
+  (`backlog/routines/SETUP.md` step 8); attach chess, learn-claude-code-terminal and
+  business-assurance-resource-allocation to the nightly Routine; turn on "Allow auto-merge" in
+  repos with CI; run "Install Backlog System.command" on the Mac. **Unverified until the first
+  run:** background workers re-wake a Routine coordinator; the search reaches every attached repo
+  (the nightly audit checks one repo a night); the env var reaches subagents.

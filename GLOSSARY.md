@@ -45,3 +45,27 @@ Being grilled 2026-10-11; terms settle here as decisions land.
 - **Look** — "app" style: a custom renderer with tappable cards and big action buttons (prototype
   A, picked 2026-10-11). Not native Bases tables, not plain lists.
 - **Home** — code in `backlog/` of this repo. The Dev Hub replaces `BACKLOG.md`; `/backlog` stays.
+
+## Driveline (`/static/vehicle/`)
+
+Cost-model terms (2026-10 Leaf audit). Isaiah's facts:
+
+- **Isaiah's driving** — about 4,000 mi/yr, trips ≤25 mi, Fort Wayne, Indiana, with a daily-use
+  home outlet for charging.
+- **Seed data provenance** — the seed rows' insurance figures are Isaiah's real quotes, the
+  registration figures come from Isaiah's own research, and the mileage comes from CarEdge. Leave all
+  three alone when tuning the model.
+- **Today's dollars** — model v2 defaults inflation to 0%, so running costs sit on the same footing
+  as resale. Saves made before v2 (`settings.modelV` missing) with the old 3% default are moved to 0
+  once. A rate the user types afterwards is kept.
+- **Time-based maintenance share** — the part of maintenance you pay however little you drive (age,
+  rubber, 12V battery, coolant, inspections). Default 40%, editable in Settings → Model tuning. The
+  rest scales with miles.
+- **Cost of cash** — what the money tied up in the car would earn elsewhere. Charged yearly on
+  resale minus loan balance; default 1%/yr.
+- **Floor decay** — past the oldest model year CarEdge measured, the fitted value floor keeps
+  shrinking, so a 20-year-old car keeps losing value instead of flattening.
+- **Edge pick** — a lowest-cost plan that uses the oldest model year or the longest hold. It
+  depends on the extrapolated curve and carries a warning.
+- **Price override (EV)** — an EV's per-car override is in $/kWh, while a gas or hybrid car's is in
+  $/gal. Switching a car between EV and non-EV clears it.

@@ -110,6 +110,15 @@ test('the lowest-cost pick warns when it sits at the edge of the data (F4)', asy
   expect(box.height).toBeGreaterThan(0)
 })
 
+test('the edge warning survives a fractional max hold from an imported file', async ({ page }) => {
+  // optimal() searches whole years up to floor(maxHold), so 20.5 still means 20.
+  const s = leafState()
+  s.settings.maxHold = 20.5
+  await bootApp(page, { state: s })
+  await openCar(page, 'Nissan Leaf')
+  await expect(page.locator('#edgeWarn')).toContainText('longest hold')
+})
+
 test('time-based maintenance share defaults to 40% and is editable (F5)', async ({ page }) => {
   await bootApp(page, { state: leafState() })
   await goTab(page, 'settings')
@@ -145,6 +154,7 @@ test('switching a car between electric and gas clears its price override', async
   await openCar(page, 'Nissan Leaf')
   await page.locator('[data-vt="data"]').click()
   await expect(page.locator('#f_fuel')).toHaveValue('0.12')
+  await expect(page.locator('#f_fuel')).toHaveAttribute('placeholder', '0.160') // $/kWh needs 3 places
   await page.selectOption('#f_pt', 'gas')
   await expect.poll(async () => (await stored(page)).vehicles[0].fuelPriceOverride).toBeNull()
 })

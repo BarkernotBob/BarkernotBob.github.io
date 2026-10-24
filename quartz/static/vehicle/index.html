@@ -400,9 +400,8 @@ const Eng = (() => {
     }
     if(!best){const {m,b}=linreg(data.map(d=>d.a),data.map(d=>d.v));return a=>Math.max(0,b+m*a);}
     // Past the oldest year you entered there is no data to hold the floor up,
-    // so it decays at the same rate as the rest of the curve. Inside your data
-    // the fit is untouched; beyond it the car keeps losing value instead of
-    // flattening out at a fixed price forever.
+    // so it decays at the same rate as the rest of the curve, and the car keeps
+    // losing value instead of flattening out at a fixed price forever.
     const {f,A,k}=best, maxA=Math.max(...data.map(d=>d.a));
     return a=>{ a=Math.max(a,0); const floor=a>maxA?f*Math.exp(-k*(a-maxA)):f; return Math.max(0,floor+A*Math.exp(-k*a)); };
   }
@@ -413,13 +412,6 @@ const Eng = (() => {
     const {m,b}=linreg(data.map(d=>d.a),data.map(d=>d.v));
     const vals=data.map(d=>d.v),lo=floorFrac*Math.min(...vals),hi=capMul*Math.max(...vals);
     return a=>Math.min(hi,Math.max(lo,b+m*Math.max(a,0)));
-  }
-  function loanInterest(price,down,rate,years){
-    const principal=Math.max(price-down,0);
-    if(principal<=0||years<=0) return 0;
-    const r=rate/12,n=years*12;
-    const pmt=r===0?principal/n:principal*r/(1-Math.pow(1+r,-n));
-    return Math.max(pmt*n-principal,0);
   }
   // What is still owed after k monthly payments.
   function loanBalance(price,down,rate,years,k){
@@ -535,7 +527,7 @@ const Eng = (() => {
     }
     return {refYear,maxAge,marketValue,adjValue,valueAt,autoPrice,typicalOdo,ownership,optimal,cumulative,maintFn,insFn,regFn};
   }
-  return {DEFAULTS,model,prep,loanInterest,interestPaid};
+  return {DEFAULTS,model,prep,interestPaid};
 })();
 
 /* ============================================================ *
@@ -974,7 +966,7 @@ function renderVehicle(id){
     const isOpt=opt.modelYear===P.modelYear&&opt.H===H;
     // The optimizer can only search what the data spans; a winner on that boundary
     // usually means the true minimum lies beyond it, priced by extrapolation.
-    const edgeOld=opt.buyAge===M.maxAge, edgeLong=opt.H===+S.maxHold, edge=edgeOld||edgeLong;
+    const edgeOld=opt.buyAge===M.maxAge, edgeLong=opt.H===Math.max(1,Math.floor(+S.maxHold)||1), edge=edgeOld||edgeLong;
     const edgeWhy=edgeOld&&edgeLong?"oldest model year and longest hold":edgeOld?"oldest model year":"longest hold";
     h+=`<div class="card"><h2 class="tight">Lowest-cost alternative</h2>
       <div class="bd-row" style="padding:8px 0 10px">
@@ -1016,8 +1008,8 @@ function renderVehicle(id){
           </select></div>
         <div class="field"><label class="lbl">${v.pt==="ev"?"MPGe":"MPG"}</label><input class="inp num" id="f_mpg" inputmode="decimal" value="${esc(v.mpg)}"></div>
       </div>
-      <div class="field"><label class="lbl">${v.pt==="ev"?"Electricity":"Gas"} price override <span style="font-weight:400;color:var(--faint)">(blank = use ${money2(v.pt==="ev"?S.kwhPrice:S.fuelPrice)} global)</span></label>
-        <div class="inp-group"><span class="pre">$</span><input id="f_fuel" inputmode="decimal" placeholder="${(+(v.pt==="ev"?S.kwhPrice:S.fuelPrice)).toFixed(2)}" value="${esc(v.fuelPriceOverride!=null&&v.fuelPriceOverride!==""?v.fuelPriceOverride:"")}"><span class="suf">${v.pt==="ev"?"/kWh":"/gal"}</span></div></div>
+      <div class="field"><label class="lbl">${v.pt==="ev"?"Electricity":"Gas"} price override <span style="font-weight:400;color:var(--faint)">(blank = use ${v.pt==="ev"?"$"+(+S.kwhPrice).toFixed(3):money2(S.fuelPrice)} global)</span></label>
+        <div class="inp-group"><span class="pre">$</span><input id="f_fuel" inputmode="decimal" placeholder="${v.pt==="ev"?(+S.kwhPrice).toFixed(3):(+S.fuelPrice).toFixed(2)}" value="${esc(v.fuelPriceOverride!=null&&v.fuelPriceOverride!==""?v.fuelPriceOverride:"")}"><span class="suf">${v.pt==="ev"?"/kWh":"/gal"}</span></div></div>
     </div>`;
     h+=`<div class="card"><h2>Financing</h2>
       <div class="grid3">

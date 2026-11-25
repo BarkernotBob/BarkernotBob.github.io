@@ -78,7 +78,7 @@ test('deposits set by hand stay put and use up their payday', async ({ page }) =
   await expect.poll(() => plan(page, 'a_new')).toEqual([['2026-12-18', 200, true], ['2027-01-01', 800, true]])
   expect(await plan(page, 'a_hand')).toEqual([['2026-12-18', 1800, false]])
   await expect(page.locator('#section-detail')).toContainText('$200.00 on')
-  await page.locator('#section-detail .card').filter({ has: page.locator('.card-header', { hasText: 'Direct Deposit Plan' }) }).screenshot({ path: path.join(__dirname, 'screenshots', 'dd-detail.png') })
+  await page.locator('#section-detail .card').filter({ has: page.locator('.card-header', { hasText: 'Direct Deposit Plan' }) }).last().screenshot({ path: path.join(__dirname, 'screenshots', 'dd-detail.png') })
 })
 
 test('suggestions never land on a payday that has passed', async ({ page }) => {

@@ -352,9 +352,7 @@ import { esc } from '/static/shared/text.js';
 
 // Bump this on each deploy so the Settings footer shows which build is live —
 // lets you confirm a phone isn't serving a cached old copy.
-const BUILD = '2026-06-29 · r15';
-// Published setup guide for the optional daily-email / RSS notifications.
-const EMAIL_DOCS = 'https://github.com/barkernotbob/barkernotbob.github.io/blob/v5/bank-bonus-tool/automation/README.md';
+const BUILD = '2026-11-25 · r16';
 
 const LS = {
   get repo(){ return localStorage.getItem('bb_repo') || '' },
@@ -1129,7 +1127,6 @@ async function saveAccounts(msg='Update accounts'){
 
 function afterAccountsSaved(){
   refreshAppBadge();
-  if(config.rssEnabled && STORE.mode === 'github') saveRSS().catch(() => {});
 }
 
 async function saveOffers(msg='Update offers'){
@@ -1254,7 +1251,8 @@ function fillReopenAfter(a){
 }
 // When the same person may open this bank again: the date on the account, or,
 // for a closed account that was never saved since #14, the one its terms give.
-// One read for Today, Offers, the cards and the feed, so they agree.
+// One read for Today, Offers, the cards and the daily email, so they agree.
+// tools/daily_digest.py in the data repo repeats these rules for the email.
 function reopenDate(a){
   const d = a.dates || {};
   if(d.reopenAfter) return d.reopenAfter;
@@ -2365,8 +2363,6 @@ function render_reports(){
 function render_settings(){
   const section = $('#section-settings');
 
-  const notifyEmail = (config.notify && config.notify[0]) ? config.notify[0].email : '';
-
   let html = '';
   if(loadError) {
     html += `<div class="card" style="border-left:4px solid #cc8800;background:#fff8e6"><p style="margin:0">${esc(loadError)}</p></div>`;
@@ -2510,55 +2506,21 @@ function render_settings(){
     <button data-action="savePaycheckSettings">Save</button>
   </div>`;
 
-  // Notifications — email + RSS. These ride on a GitHub Action in the data
-  // repo, so they only apply once GitHub sync is connected.
+  // Daily email: the daily-alert workflow in the data repo emails the repo
+  // owner (through a GitHub issue) on mornings when something new is due.
   if(synced){
-  const rssEnabled = !!(config.rssEnabled);
-  const rssUrl = LS.repo ? 'https://raw.githubusercontent.com/'+LS.repo+'/main/db/rss.xml' : '';
   html += `<div class="card">
-    <div class="card-header">📧 Email &amp; RSS (when the app is closed)</div>
-    <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">Unlike the on-device reminders above, these reach you <b>without opening the app</b>: a daily email (and/or an RSS feed) when there's something to do. They're sent by a free GitHub Action in your data repo, so there's a one-time setup.</p>
-    <details style="margin:0 0 14px"><summary style="cursor:pointer;font-weight:600">📖 First time? Turn on the daily email (one-time, ~5 min)</summary>
-      <ol class="small muted" style="margin:8px 0 0 18px;padding:0;line-height:1.6">
-        <li>Make a Gmail <b>app password</b>: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a> (a 16-character code).</li>
-        <li>In your <code>bank-bonus-data</code> repo, add the file <code>.github/workflows/daily-email.yml</code> (copy it from the guide below).</li>
-        <li>In that repo: <b>Settings → Secrets and variables → Actions</b> → add <code>MAIL_USERNAME</code>, <code>MAIL_PASSWORD</code> (the app password), and <code>MAIL_TO</code>.</li>
-        <li>Enter your email below → <b>Save email</b> → <b>Send test email</b> to confirm.</li>
-      </ol>
-      <p style="margin:8px 0 0"><a href="${EMAIL_DOCS}" target="_blank" rel="noopener" style="font-size:13px">Open the full step-by-step guide →</a></p>
-    </details>
-    <div class="row"><div class="row-item">
-      <div class="label">Notify email</div>
-      <input type="email" id="set_email" value="${esc(notifyEmail)}">
-    </div></div>
+    <div class="card-header">📧 Daily email (when the app is closed)</div>
+    <p style="margin:-8px 0 12px;color:var(--muted);font-size:13px">On mornings when something new is due (a deposit to make, an account to open or close, a reminder or a deadline), GitHub emails you a short list. It goes to the email on your GitHub account, so there's nothing to set up.</p>
     <div class="action-bar" style="margin-top:4px">
-      <button data-action="saveNotifyEmail">Save email</button>
-      <button class="sec" data-action="testNotification">📧 Send test email</button>
+      <button class="sec" data-action="testNotification">📧 Send a test email</button>
     </div>
-    <p style="margin:8px 0 12px;color:var(--muted);font-size:12px">Test runs the email workflow now and sends a sample to the address above (requires the mail secrets set in your data repo).</p>
-    <hr style="border:none;border-top:1px solid var(--border);margin:0 0 12px">
-    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:10px">
-      <input type="checkbox" class="checkbox" id="set_rss" ${rssEnabled?'checked':''} data-change="toggleRSS">
-      <span><strong>Enable RSS feed</strong> — subscribe in any RSS reader</span>
-    </label>
-    ${rssEnabled && rssUrl ? `<div class="row" style="align-items:flex-end">
-      <div class="row-item">
-        <div class="label">RSS feed URL (paste into your RSS reader)</div>
-        <input type="text" readonly value="${esc(rssUrl)}" data-action="selectAll" style="font-size:16px;color:var(--muted)">
-      </div>
-      <button class="sec" data-action="refreshRSS">Refresh</button>
-    </div>
-    <p style="margin:4px 0 0;color:var(--faint);font-size:11px">Requires your data repo to be public, or use a reader that supports private GitHub raw URLs.</p>` : ''}
+    <p style="margin:8px 0 0;color:var(--muted);font-size:12px">The test arrives in a minute or two. If it doesn't, check that GitHub emails you about issues in your repos (GitHub → Settings → Notifications).</p>
   </div>`;
   } else {
     html += `<div class="card">
-      <div class="card-header">📧 Email &amp; RSS (when the app is closed)</div>
-      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">Want a reminder that reaches you <b>without opening the app</b>? A free GitHub Action in your data repo can send a daily email (and/or publish an RSS feed) of what's due. It needs two one-time things:</p>
-      <ol class="small muted" style="margin:0 0 10px 18px;padding:0;line-height:1.6">
-        <li>Turn on <b>GitHub sync</b> (in <b>Your data &amp; sync</b> above).</li>
-        <li>Add the daily-email workflow + mail secrets to your repo (~5 min).</li>
-      </ol>
-      <p style="margin:0"><a href="${EMAIL_DOCS}" target="_blank" rel="noopener" style="font-size:13px">See the step-by-step email guide →</a></p>
+      <div class="card-header">📧 Daily email (when the app is closed)</div>
+      <p style="margin:0;color:var(--muted);font-size:13px">Turn on <b>GitHub sync</b> (in <b>Your data &amp; sync</b> above) and GitHub will email you on mornings when something new is due.</p>
     </div>`;
   }
 
@@ -2689,26 +2651,17 @@ async function removePerson(p){
   catch(e){ toast('Error: ' + e.message); }
 }
 
-// Notifications: save email, and trigger a one-off test of the email workflow.
-async function saveNotifyEmail(){
-  const email = ($('#set_email').value || '').trim();
-  if(!config.notify) config.notify = [];
-  if(email) config.notify[0] = { email, enabled: true };
-  else config.notify = [];
-  try { await saveConfig('Update notify email'); toast('Email saved'); }
-  catch(e){ toast('Error: ' + e.message); }
-}
+// Runs the data repo's daily-alert workflow now, which sends a test email even
+// on a day with nothing new.
 async function testNotification(){
   if(STORE.mode !== 'github' || !LS.token || !LS.repo){ toast('Connect GitHub sync first'); return; }
-  const email = ($('#set_email') && $('#set_email').value.trim()) || '';
   try {
-    if(email){ if(!config.notify) config.notify = []; config.notify[0] = { email, enabled: true }; await saveConfig('Update notify email'); }
-    const r = await fetch(`${API}/repos/${LS.repo}/actions/workflows/daily-email.yml/dispatches`, {
+    const r = await fetch(`${API}/repos/${LS.repo}/actions/workflows/daily-alert.yml/dispatches`, {
       method: 'POST', headers: ghHeaders(),
       body: JSON.stringify({ ref: 'main', inputs: { test: 'true' } })
     });
-    if(r.status === 204){ toast('Test email sent — check your inbox in a minute 📧'); }
-    else { const j = await r.json().catch(() => ({})); toast('Could not send test: ' + (j.message || ('HTTP ' + r.status))); }
+    if(r.status === 204){ toast('Test email on its way. Check your inbox in a minute or two 📧'); }
+    else { const j = await r.json().catch(() => ({})); toast('Could not send the test: ' + (j.message || ('HTTP ' + r.status))); }
   } catch(e){ toast('Error: ' + e.message); }
 }
 
@@ -3053,60 +3006,6 @@ async function deleteAccountDetail(){
   }
 }
 
-// --------- RSS feed ---------
-function generateRSS(){
-  const today = todayISO();
-  const appUrl = 'https://barkernotbob.github.io/static/bank-bonus/';
-  const rawUrl = LS.repo ? 'https://raw.githubusercontent.com/' + LS.repo + '/main/db/rss.xml' : '';
-  const ex = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const items = [];
-  const addItem = (title, desc, date, guid) => {
-    items.push(`    <item>
-      <title>${ex(title)}</title>
-      <description>${ex(desc)}</description>
-      <pubDate>${new Date(date+'T12:00:00Z').toUTCString()}</pubDate>
-      <guid isPermaLink="false">${ex(guid)}</guid>
-      <link>${appUrl}</link>
-    </item>`);
-  };
-  accounts.filter(a => (a.status==='planned' && a.dates.plannedOpen===today) || reopenDate(a)===today)
-    .forEach(a => addItem(`Open: ${a.institution} (${a.person})`, `Bonus ${money(a.bonus)}, DD required ${money(a.directDepositTotal)}`, today, `${a.id}-open-${today}`));
-  accounts.filter(a => a.dates.closed===today)
-    .forEach(a => addItem(`Close: ${a.institution} (${a.person})`, `Bonus ${money(a.bonus)}`, today, `${a.id}-close-${today}`));
-  const soon = shiftISO(today, 14);
-  accounts.forEach(a => (a.reminders||[]).forEach(r => {
-    if(!r.done && r.date>=today && r.date<=soon)
-      addItem(`Reminder: ${a.institution} — ${r.note}`, `Due ${fmtDate(r.date)} for ${a.person}`, r.date, r.id+'-'+r.date);
-  }));
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Bank Bonus Tracker</title>
-    <link>${appUrl}</link>
-    <description>Bank bonus alerts, reminders, and upcoming events</description>
-    <language>en-us</language>
-    <atom:link href="${ex(rawUrl)}" rel="self" type="application/rss+xml"/>
-${items.join('\n')}
-  </channel>
-</rss>`;
-}
-
-async function saveRSS(){
-  const xml = generateRSS();
-  let sha = DB['db/rss.xml'] ? DB['db/rss.xml'].sha : null;
-  try {
-    const res = await ghPut('db/rss.xml', b64encode(xml), sha, 'Update RSS feed');
-    DB['db/rss.xml'] = {value: xml, sha: res.content.sha};
-  } catch(e) { console.error('RSS save error', e); throw e; }
-}
-
-async function toggleRSS(enabled){
-  config.rssEnabled = enabled;
-  await saveConfig('Toggle RSS feed');
-  render_settings();
-  if(enabled){ try { await saveRSS(); toast('RSS feed enabled and generated'); } catch(e){ toast('RSS error: '+e.message); } }
-}
-
 // Initialize — apply theme, then load (local-first; no sign-in round-trip).
 // Once data is in, fire the on-open badge + notification nudge.
 (async ()=>{
@@ -3144,18 +3043,12 @@ const ACTIONS = {
   reformatMoney: (el) => reformatMoney(el),
   importData: (el) => importData(el),
   saveMe: (el) => saveMe(el.value),
-  toggleRSS: (el) => toggleRSS(el.checked),
   onStatusSelectChange: (el) => onStatusSelectChange(el),
-  selectAll: (el) => el.select(),
   setSearchFilter: (el, tab) => setSearchFilter(tab, el.value),
   quickUpdateDate: (el, id, field) => quickUpdateDate(id, field, el.value),
 
   // Were multi-statement or expression handlers; now each has a name.
   openImportPicker: () => document.getElementById('importFile').click(),
-  refreshRSS: () =>
-    saveRSS()
-      .then(() => toast('RSS updated ✓'))
-      .catch((e) => toast('Error: ' + e.message)),
 
   show: (el, tab) => show(tab),
   editAccount: (el, id) => editAccount(id),
@@ -3187,7 +3080,6 @@ const ACTIONS = {
   moveToOffers: () => moveToOffers(),
   saveSettings: () => saveSettings(),
   savePaycheckSettings: () => savePaycheckSettings(),
-  saveNotifyEmail: () => saveNotifyEmail(),
   testNotification: () => testNotification(),
   enableNotifications: () => enableNotifications(),
   exportData: () => exportData(),

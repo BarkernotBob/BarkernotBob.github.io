@@ -42,9 +42,6 @@ jobs:
         run: npm test
         env:
           CI: 'true'
-      - name: TEMP print screenshots
-        if: ${{ !cancelled() && matrix.app == 'bank-bonus' }}
-        run: for f in offers-eligibility today-overdue; do echo "B64START $f"; base64 -w0 screenshots/$f.png; echo; echo "B64END"; done
       - name: Upload screenshot gallery
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

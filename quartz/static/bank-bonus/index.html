@@ -554,7 +554,9 @@ function modal(innerHtml){
     o.addEventListener('click', e => { if(e.target===o) close(null); });
     document.body.appendChild(o);
     const focusEl = o.querySelector('[autofocus]') || o.querySelector('input, select, textarea');
-    if(focusEl) setTimeout(() => focusEl.focus(), 30);
+    // Only if focus hasn't already moved into the dialog: a late focus() would
+    // pull a fast typist (or a test) back to the first field mid-entry.
+    if(focusEl) setTimeout(() => { if(!o.contains(document.activeElement)) focusEl.focus(); }, 30);
     o.querySelectorAll('[data-mval]').forEach(b => b.addEventListener('click', () => close(b.getAttribute('data-mval'))));
     o.querySelectorAll('[data-mcancel]').forEach(b => b.addEventListener('click', () => close(null)));
   });

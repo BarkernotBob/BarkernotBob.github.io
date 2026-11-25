@@ -235,6 +235,12 @@
     .cal-full { background: var(--open-bg); } .cal-full .cal-amt { color: var(--open); }
     .cal-partial { background: var(--warn-soft); } .cal-partial .cal-amt { color: var(--warn); }
     .cal-over { background: rgba(210,59,59,.12); } .cal-over .cal-amt { color: var(--danger); }
+    /* A payday whose paycheck was set to a one-off amount: a corner mark, drawn
+       over the cell so nothing inside it moves. */
+    .cal-cell { position: relative; }
+    .cal-bump::after, .cal-bump-key { content: ''; border-style: solid; border-width: 0 10px 10px 0; border-color: transparent var(--accent) transparent transparent; }
+    .cal-bump::after { position: absolute; top: 0; right: 0; border-top-right-radius: 7px; }
+    .cal-legend i.cal-bump-key { width: 0; height: 0; border-radius: 0; }
 
     /* Today-view list rows — clickable rows highlight on hover/tap. */
     .list-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); gap: 12px; font-size: 14px; }
@@ -1912,14 +1918,15 @@ function paycheckDates(fromISO, count){
   return out;
 }
 
-// Total DD already allocated on a payroll date by all accounts except one.
+// Total DD already allocated on a payroll date by all accounts except one
+// (every entry counts, also two from one account on the same payday).
 function allocatedOn(date, exceptId){
   return accounts.reduce((s, a) => {
     if(a.id === exceptId) return s;
-    const dd = (a.ddPlan || []).find(x => x.payrollDate === date);
-    return s + (dd ? dd.amount : 0);
+    return (a.ddPlan || []).reduce((t, x) => t + (x.payrollDate === date ? (x.amount || 0) : 0), s);
   }, 0);
 }
+const isPayday = (iso) => paycheckDates(iso, 1)[0] === iso;
 
 // --------- Paycheck amount over time ---------
 // Stored as config.paycheck.amounts = [{from:'YYYY-MM-DD', amount}], sorted. This
@@ -1934,12 +1941,80 @@ function pcAmounts(){
   pc.amounts.sort((a, b) => a.from.localeCompare(b.from));
   return pc.amounts;
 }
-// The take-home paycheck amount in effect on a given date.
-function paycheckAmountOn(dateISO){
+// The usual take-home paycheck in effect on a given date.
+function usualPaycheckOn(dateISO){
   const arr = pcAmounts();
   let amt = arr[0].amount;
   for(const e of arr){ if(e.from <= dateISO) amt = e.amount; else break; }
   return amt;
+}
+// One payday whose paycheck differs from the usual (a bonus check, overtime),
+// set from that day on the Calendar: config.paycheck.bumps = {'YYYY-MM-DD': amount}.
+function paycheckBump(dateISO){
+  const b = (config.paycheck || {}).bumps;
+  return b && typeof b[dateISO] === 'number' ? b[dateISO] : null;
+}
+// What a payday actually pays: its one-off amount if set, else the usual.
+function paycheckAmountOn(dateISO){
+  const bump = paycheckBump(dateISO);
+  return bump != null ? bump : usualPaycheckOn(dateISO);
+}
+
+// ---- Direct deposit planning (issue #16) ----
+// Same rules as the old sheet's Calendar tab, with Isaiah's changes (2026-11-25):
+// one paycheck pays every account; the first deposit lands on the first payday
+// at least ddClearDays after opening, the last on or before the requirement
+// deadline; the earliest deadline gets first claim on each paycheck; "N deposits"
+// splits the total evenly (total / N); amounts set by hand stay put. Only
+// suggested entries (auto: true) on today or later are ever replaced.
+function ddWindow(a){
+  const d = a.dates || {};
+  const open = d.opened || d.plannedOpen;
+  if(!open) return null;
+  const clear = (config.paycheck || {}).ddClearDays;
+  const first = paycheckDates(shiftISO(open, typeof clear === 'number' ? clear : 21), 1)[0];
+  const end = a.daysToCompleteReq > 0 ? shiftISO(open, a.daysToCompleteReq) : null;
+  return {first, end};
+}
+const ddPlanned = (a) => (a.ddPlan || []).reduce((s, x) => s + (x.amount || 0), 0);
+
+// Re-plan the suggested deposits of `focus` and of every other account that
+// already has suggested deposits ahead, earliest deadline first. Returns
+// {short: [{account, amount}]} for accounts that can't reach their total in time.
+function planDeposits(focus, today = todayISO()){
+  const live = a => (a.status === 'planned' || a.status === 'open') && (a.directDepositTotal || 0) > 0 &&
+    !(a.dates || {}).bonusPaidOut;
+  const group = accounts.filter(a => a && live(a) &&
+    (a === focus || (a.ddPlan || []).some(x => x.auto && x.payrollDate >= today)));
+  group.forEach(a => { a.ddPlan = (a.ddPlan || []).filter(x => !(x.auto && x.payrollDate >= today)); });
+  const wins = new Map(group.map(a => [a, ddWindow(a)]));
+  const key = a => (wins.get(a) || {}).end || '9999-12-31';
+  group.sort((x, y) => key(x).localeCompare(key(y)) || ((wins.get(x) || {}).first || '').localeCompare((wins.get(y) || {}).first || ''));
+  const short = [];
+  const cents = v => Math.round(v * 100) / 100;
+  group.forEach(a => {
+    const w = wins.get(a);
+    if(!w) return;
+    const need = a.directDepositTotal;
+    const n = a.nbDeposits > 1 ? Math.floor(a.nbDeposits) : 1;
+    const per = cents(need / n);
+    let remaining = cents(need - ddPlanned(a));
+    let made = (a.ddPlan || []).length;
+    const start = w.first > today ? w.first : paycheckDates(today, 1)[0];
+    for(const d of paycheckDates(start, 60)){
+      if(remaining <= 0 || (w.end && d > w.end)) break;
+      if(a.ddPlan.some(x => x.payrollDate === d)) continue;   // one deposit per payday per account
+      const free = cents(paycheckAmountOn(d) - allocatedOn(d, null));
+      const amt = cents(Math.min(remaining, free, made < n ? per : remaining));
+      if(amt <= 0) continue;
+      a.ddPlan.push({payrollDate: d, amount: amt, auto: true});
+      made++;
+      remaining = cents(remaining - amt);
+    }
+    a.ddPlan.sort((x, y) => x.payrollDate.localeCompare(y.payrollDate));
+    if(remaining > 0) short.push({account: a, amount: remaining});
+  });
+  return {short};
 }
 
 // Build one month's 7-column grid. Always renders 6 week-rows (42 day cells) so
@@ -1958,6 +2033,8 @@ function calMonthGrid(ym, allocByDate, today){
     let cls = 'cal-cell cal-day-cell';
     if(iso < today) cls += ' cal-past';
     if(iso === today) cls += ' cal-today';
+    const bump = paycheckBump(iso);
+    if(bump != null) cls += ' cal-bump';
     let inner = `<div class="cal-day">${d}</div>`;
     if(alloc != null){
       const cap = paycheckAmountOn(iso);
@@ -1989,6 +2066,15 @@ async function calDay(iso){
   const total = items.reduce((s,x) => s + x.amount, 0);
   const label = new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric', timeZone:'UTC'});
   let body = `<p style="margin:0 0 14px"><strong>${esc(label)}</strong></p>`;
+  const payday = isPayday(iso);
+  if(payday){
+    const usual = usualPaycheckOn(iso);
+    const note = cap !== usual ? ` <span style="color:var(--muted)">(usually ${money(usual)})</span>` : '';
+    body += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 14px">
+        <span>Paycheck: <strong>${money(cap)}</strong>${note}</span>
+        <button class="sec small" data-mval="setpay">Change this paycheck</button>
+      </div>`;
+  }
   if(items.length === 0){
     body += `<p style="color:var(--muted);margin:0 0 18px">No direct deposits planned on this day.</p>`;
   } else {
@@ -2016,10 +2102,31 @@ async function calDay(iso){
   }
   body += `<div class="row" style="justify-content:flex-end;margin:0"><button data-mval="ok">Close</button></div>`;
   const result = await modal(body);
+  if(result === 'setpay') return setPaydayAmount(iso);
   if(result && result.startsWith('goto_')){
     calReturnMonth = iso.slice(0, 7);
     editAccount(result.slice(5));
   }
+}
+
+// Set one payday's paycheck when it isn't the usual amount (issue #16). Setting it
+// back to the usual amount, or leaving it empty, clears the one-off.
+async function setPaydayAmount(iso){
+  const usual = usualPaycheckOn(iso);
+  const cur = paycheckAmountOn(iso);
+  const label = new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', timeZone:'UTC'});
+  const r = await modal(`<p style="margin:0 0 6px"><strong>Paycheck on ${esc(label)}</strong></p>
+    <p style="margin:0 0 12px;font-size:13px;color:var(--muted)">For one payday only, like a bonus check. Usually ${money(usual)}; change that in Settings.</p>
+    <div class="money-field" style="margin-bottom:14px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="pay_amt" value="${esc(fmtMoneyInput(cur))}" data-blur="reformatMoney"></div>
+    <div class="row"><button class="sec" data-mcancel>Cancel</button><button data-mval="save">Save</button></div>`);
+  if(r !== 'save') return;
+  const amt = parseMoney($('#pay_amt').value);
+  const pc = config.paycheck || (config.paycheck = {});
+  const bumps = {...(pc.bumps || {})};
+  if(amt == null || amt === usual) delete bumps[iso]; else bumps[iso] = amt;
+  pc.bumps = bumps;
+  try { await saveConfig('Set paycheck for ' + iso); render_calendar(); toast(amt == null || amt === usual ? 'Back to the usual paycheck' : 'Paycheck set to ' + money(amt)); }
+  catch(e){ toast('Save error: ' + e.message); }
 }
 
 // Navigate from calendar-sourced detail back to the exact calendar month.
@@ -2146,6 +2253,7 @@ function render_calendar(){
       <span><i style="background:var(--warn-soft)"></i> Partial</span>
       <span><i style="background:rgba(210,59,59,.18)"></i> Over</span>
       <span><i style="outline:2px solid var(--accent);outline-offset:-2px"></i> Today</span>
+      <span><i class="cal-bump-key"></i> Different paycheck</span>
     </div>
     <div class="card">
       <div class="cal-nav">
@@ -2734,7 +2842,7 @@ function render_detail(){
   } else {
     a.ddPlan.forEach((dd, i) => {
       html += `<div class="reminder-item">
-        <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(fmtDate(dd.payrollDate))}</span></div>
+        <div><strong>${money(dd.amount)}</strong> <span class="reminder-date">on ${esc(fmtDate(dd.payrollDate))}${dd.auto ? ' · suggested' : ''}</span></div>
         <button class="danger" style="font-size:12px;padding:2px 8px" data-action="deleteDD" data-a1="${i}">×</button>
       </div>`;
     });
@@ -2742,7 +2850,7 @@ function render_detail(){
   html += `<div class="action-bar" style="margin-top:4px">
       <button class="sec" data-action="suggestDD">⚡ Auto-suggest</button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Auto-suggest schedules from the planned/open date. If <b># Deposits</b> is set, it splits the DD total into that many equal deposits (e.g. 12 × $10); otherwise it fills each payday up to your paycheck amount.</div>
+    <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Auto-suggest starts on the first payday ${esc(String((config.paycheck || {}).ddClearDays ?? 21))} days after opening and ends by the requirement deadline, using only what's left of each paycheck. The earliest deadline gets first claim. If <b># Deposits</b> is set, it splits the DD total evenly (e.g. 12 × $10). Deposits you add by hand stay put.</div>
     <div class="row" style="margin-top:8px">
       <input type="date" id="d_new_dd_date">
       <div class="money-field" style="flex:1;min-width:120px"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="d_new_dd_amount" placeholder="Amount" data-blur="reformatMoney"></div>
@@ -2840,40 +2948,16 @@ async function suggestDD(){
   captureFields();
   const a = accounts.find(x => x.id === editingId);
   if(!a) return;
-  const need = a.directDepositTotal || 0;
-  if(need <= 0){ toast('No DD requirement to schedule'); return; }
-  const start = a.dates.plannedOpen || a.dates.opened || todayISO();
-  const dates = paycheckDates(start, 60);
-  const plan = [];
-  let remaining = need;
-  const n = (a.nbDeposits && a.nbDeposits > 1) ? Math.floor(a.nbDeposits) : 0;
-
-  if(n > 0){
-    // "Requires N deposits": split the total into N equal deposits, one per
-    // consecutive payday (e.g. $120 over 12 deposits -> 12 × $10).
-    const per = Math.round((need / n) * 100) / 100;
-    for(let i = 0; i < n && i < dates.length; i++){
-      const amt = (i === n - 1) ? Math.round(remaining * 100) / 100 : per;  // last absorbs rounding
-      plan.push({ payrollDate: dates[i], amount: amt });
-      remaining -= amt;
-    }
-    remaining = 0;
-  } else {
-    // Otherwise fill each payday up to that paycheck's take-home, until the total
-    // is met (without over-allocating a payday).
-    for(const d of dates){
-      if(remaining <= 0) break;
-      const free = paycheckAmountOn(d) - allocatedOn(d, a.id);
-      if(free <= 0) continue;
-      const amt = Math.min(remaining, free);
-      plan.push({ payrollDate: d, amount: Math.round(amt * 100) / 100 });
-      remaining -= amt;
-    }
-  }
-  if(plan.length === 0){ toast('No paycheck capacity available'); return; }
-  a.ddPlan = plan;
-  if(remaining > 0) toast('Scheduled ' + money(need - remaining) + ' of ' + money(need) + ' — ran out of paychecks');
-  else toast('Suggested ' + plan.length + ' deposit(s)' + (n > 0 ? ' of ' + money(plan[0].amount) : ''));
+  if(!(a.directDepositTotal > 0)){ toast('No DD requirement to schedule'); return; }
+  if(!ddWindow(a)){ toast('Add the opened or planned-open date first'); return; }
+  const before = new Map(accounts.map(x => [x, JSON.stringify(x.ddPlan || [])]));
+  const {short} = planDeposits(a);
+  const moved = accounts.filter(x => x !== a && before.get(x) !== JSON.stringify(x.ddPlan || []));
+  const mine = short.find(x => x.account === a);
+  let msg = mine ? `Short ${money(mine.amount)} of ${money(a.directDepositTotal)} by the deadline`
+    : `Planned ${money(a.directDepositTotal)} over ${(a.ddPlan || []).length} payday(s)`;
+  if(moved.length) msg += ` · also moved ${moved.map(x => x.institution).join(', ')}`;
+  toast(msg);
   await persistDetail('Auto-suggest DD plan');
 }
 

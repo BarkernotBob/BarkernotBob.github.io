@@ -109,6 +109,31 @@ function seasonalPrompt(){
   return null;
 }
 
+/* ---------- closed pool ----------
+   Once the pool is closed the daily emails stop. Closed means the season's
+   closing date has passed, or the closing checklist was marked done this season.
+   It reopens on the opening date, or when the opening checklist is marked done
+   in the run-up to it. While closed there are three good reasons to email, and
+   each one emails ONCE (its guid isn't in the feed history yet):
+     - the spring-opening heads-up;
+     - a water test logged since, with readings that need attention;
+     - a year-round task coming due.
+   Seasonal tasks, the closing prompt and rain alerts stay quiet until opening. */
+const log = readJson('db/log.json', []);
+function lastSeasonLog(){
+  const e = (Array.isArray(log)?log:[])
+    .filter(x=>x && x.kind==='season' && (x.task==='open'||x.task==='close') && !isNaN(new Date(x.at)))
+    .sort((a,b)=>new Date(b.at)-new Date(a.at))[0];
+  return e ? {task:e.task, day:new Date(e.at).toLocaleDateString('en-CA',{timeZone:TZ})} : null;
+}
+function poolClosed(){
+  if(!S.open || !S.close) return false;
+  const day = todayISO(), yr = day.slice(0,4), m = lastSeasonLog();
+  if(inSeason()) return !!(m && m.task==='close' && m.day>=`${yr}-${S.open}`);
+  const openedEarly = m && m.task==='open' && mmdd(day)<S.open && m.day>=`${yr}-01-01`;
+  return !openedEarly;
+}
+
 /* ---------- latest test advice ---------- */
 function latestTest(){ return (tests||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0]||null; }
 // The same list, text and order the app's advice cards show for this test.
@@ -117,12 +142,19 @@ function testAdvice(t){
 }
 
 /* ---------- assemble today's "events" ---------- */
-const due  = dueTasks();
-const sp   = seasonalPrompt();
-const lt   = latestTest();
-const adv  = testAdvice(lt);
 const today = todayISO();
 const year  = today.slice(0,4);
+const closed = poolClosed();
+const known  = new Set(state.map(i=>i.guid));
+const taskGuid = (t,d) => `pool-task-${t.id}-${d.next}`;
+const seasonGuid = p => `pool-season-${p.kind}-${year}-${p.when}`;
+const testGuid = t => `pool-test-${t.id}`;
+// Closed: only what hasn't been sent yet, and nothing that assumes open water.
+const due  = dueTasks().filter(({t,d}) => !closed || (t.season!=='in' && !known.has(taskGuid(t,d))));
+const lt   = latestTest();
+const adv  = closed && lt && known.has(testGuid(lt)) ? [] : testAdvice(lt);
+let   sp   = seasonalPrompt();
+if(sp && (closed ? (sp.kind==='close' || known.has(seasonGuid(sp))) : sp.kind==='open')) sp = null;
 
 /* ---------- daily weather: rain, temperature, humidity (Open-Meteo, no key, no AI) ---------- */
 async function getWeatherData(){
@@ -158,13 +190,13 @@ if(wxDays){
   const recent = wxDays.filter(x=>x.date>=addDaysISO(today,-2) && x.date<=today);
   const peak = recent.reduce((m,x)=>Math.max(m, x.in||0), 0);
   const peakDay = recent.find(x=>(x.in||0)===peak);
-  if(peak>=0.5 && peakDay) rainAlert = { date:peakDay.date, in:peak };
+  if(!closed && peak>=0.5 && peakDay) rainAlert = { date:peakDay.date, in:peak };
 }
 
 const events = [];
 for(const {t,d} of due){
   events.push({
-    guid: `pool-task-${t.id}-${d.next}`,
+    guid: taskGuid(t,d),
     title: `Pool: ${t.title}`,
     body: t.detail || 'Due today.',
     overdueBy: d.overdueBy||0,
@@ -172,7 +204,7 @@ for(const {t,d} of due){
 }
 if(sp){
   events.push({
-    guid: `pool-season-${sp.kind}-${year}-${sp.when}`,
+    guid: seasonGuid(sp),
     title: sp.kind==='open' ? 'Pool: spring opening is coming up' : 'Pool: fall closing is coming up',
     body: sp.kind==='open'
       ? `Season opens around ${sp.when}. Time to plan opening: clean the cover, top up water, balance, and shock.`
@@ -182,7 +214,7 @@ if(sp){
 }
 if(adv.length && lt){
   events.push({
-    guid: `pool-test-${lt.id}`,
+    guid: testGuid(lt),
     title: `Pool: ${adv.length} reading${adv.length>1?'s':''} need attention (test ${lt.date})`,
     body: adv.map(a=>`${a.name} (${a.display}): ${a.text}`).join('  •  '),
     overdueBy: 0,
@@ -201,7 +233,6 @@ const hasDue = events.length > 0;
 
 /* ---------- update feed state (dedupe by guid, keep newest 50) ---------- */
 const nowRfc = new Date().toUTCString();
-const known = new Set(state.map(i=>i.guid));
 let stateChanged = false;
 for(const e of events){
   if(!known.has(e.guid)){
@@ -312,4 +343,4 @@ setOutput('subject', subject);
 setOutput('body', emailHtml());
 setOutput('state_changed', (stateChanged || mailChanged) ? 'true' : 'false');
 
-console.error(`[reminders] today=${today} due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} wx=${rainSummary?('rain'+rainSummary.last7.toFixed(2)+'/temp'+(rainSummary.tmax!=null?Math.round(rainSummary.tmax):'?')+'/rh'+(rainSummary.rhAvg??'?')+(rainAlert?'/ALERT':'')):'n/a'} hasDue=${hasDue} to=${to||'(none)'}`);
+console.error(`[reminders] today=${today} ${closed?'CLOSED ':''}due=${due.length} season=${sp?sp.kind:'-'} testAdvice=${adv.length} wx=${rainSummary?('rain'+rainSummary.last7.toFixed(2)+'/temp'+(rainSummary.tmax!=null?Math.round(rainSummary.tmax):'?')+'/rh'+(rainSummary.rhAvg??'?')+(rainAlert?'/ALERT':'')):'n/a'} hasDue=${hasDue} to=${to||'(none)'}`);

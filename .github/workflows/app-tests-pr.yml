@@ -35,9 +35,6 @@ jobs:
         run: npm test
         env:
           CI: 'true'
-      - name: TEMP print card screenshot (removed before merge)
-        if: ${{ !cancelled() }}
-        run: echo BEGIN64; base64 -w 100 screenshots/offers-verify-card.png; echo END64
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

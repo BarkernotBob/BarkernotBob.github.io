@@ -145,6 +145,10 @@
     .pill-partial { color: var(--warn); background: var(--warn-soft); }
     .pill-over { color: var(--danger); background: rgba(210,59,59,.12); }
     .late { font-size: 12px; font-weight: 600; color: var(--danger); }
+    .elig { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+    .elig-ok { color: var(--open); }
+    .elig-wait, .elig-check { color: var(--warn); }
+    .deadline-line { font-size: 12px; color: var(--muted); margin-top: 6px; }
     .pill-verify { color: var(--warn); background: var(--warn-soft); text-transform: none; }
     .offer-notes { font-size: 13px; color: var(--muted); white-space: pre-line; margin: 6px 0 2px; }
     .person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
@@ -1199,6 +1203,99 @@ function reopenHandled(a){
   return accounts.some(b => b !== a && b.person === a.person && sameBank(a, b) &&
     (b.status === 'planned' || ((b.dates && b.dates.opened) || '') > since));
 }
+// ---- Deadlines (issue #14) ----
+// Worked out from the terms each account already stores, never stored themselves
+// (except the reopen date), so editing a date or a term moves the deadline too.
+function addMonthsISO(iso, months){
+  const [y, m, d] = iso.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1 + months, 1));
+  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  t.setUTCDate(Math.min(d, last));
+  return t.toISOString().split('T')[0];
+}
+function deadlinesFor(a){
+  const d = a.dates || {};
+  const n = v => (typeof v === 'number' && v > 0) ? v : null;
+  return {
+    // Requirements must be met this many days after opening.
+    reqDue: d.opened && n(a.daysToCompleteReq) ? shiftISO(d.opened, a.daysToCompleteReq) : null,
+    // Minimum balance must be held this many days from the first deposit.
+    minBalUntil: (d.firstDD || d.opened) && n(a.minBalDays) ? shiftISO(d.firstDD || d.opened, a.minBalDays) : null,
+    // Same convention as the old sheet: the reopen clock runs from the bonus
+    // payout (or the close date when no payout is recorded).
+    reopenFrom: (d.bonusPaidOut || d.closed) && n(a.monthsTillReopen) ? addMonthsISO(d.bonusPaidOut || d.closed, a.monthsTillReopen) : null,
+  };
+}
+// Fill in the reopen date from the terms, unless it was typed in by hand: a date
+// this function set earlier (reopenAutoFrom) is kept up to date, any other is left.
+function fillReopenAfter(a){
+  const want = deadlinesFor(a).reopenFrom;
+  if(!want || !a.dates) return;
+  if(!a.dates.reopenAfter || a.dates.reopenAfter === a.reopenAutoFrom){
+    a.dates.reopenAfter = want;
+    a.reopenAutoFrom = want;
+  }
+}
+// Deadlines worth showing on Today: requirements from two weeks out until a
+// month past (after that the bonus is either paid or lost), and the end of a
+// minimum-balance hold from two weeks out until a week past.
+function upcomingDeadlines(today){
+  const out = [];
+  const within = (iso, before, after) => iso && iso >= shiftISO(today, -after) && iso <= shiftISO(today, before);
+  accounts.filter(a => a && a.dates && a.status === 'open').forEach(a => {
+    const dl = deadlinesFor(a);
+    if(!a.dates.bonusPaidOut && within(dl.reqDue, 14, 30))
+      out.push({account: a, kind: 'req', date: dl.reqDue});
+    if(within(dl.minBalUntil, 14, 7))
+      out.push({account: a, kind: 'minbal', date: dl.minBalUntil});
+  });
+  return out.sort((x, y) => x.date.localeCompare(y.date));
+}
+
+// ---- Eligibility per person (issue #14) ----
+// Bank names are matched loosely ("Ally Bank" = "Ally", "Langley FCU" =
+// "Langley Federal Credit Union"), and an account made from an offer always matches it.
+function bankKey(name){
+  return String(name || '').toLowerCase()
+    .replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\b(federal credit union|credit union|fcu|cu|bank|na|n a|national association|the)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+// {state, label}: 'has' (has one open or planned), 'wait' (eligible from a date),
+// 'check' (had one before and the reopen rule isn't known), 'ok'.
+function eligibility(offer, person, today = todayISO()){
+  const key = bankKey(offer.institution);
+  const mine = accounts.filter(a => a && a.person === person &&
+    (a.offerId === offer.id || (key && bankKey(a.institution) === key)));
+  const live = mine.find(a => a.status === 'open' || a.status === 'planned');
+  if(live) return {state: 'has', label: live.status === 'planned' ? 'planned' : 'has one open'};
+  if(!mine.length) return {state: 'ok', label: 'eligible'};
+  const last = mine.slice().sort((x, y) => String((x.dates||{}).closed || (x.dates||{}).opened || '').localeCompare(String((y.dates||{}).closed || (y.dates||{}).opened || ''))).at(-1);
+  const from = (last.dates || {}).reopenAfter || deadlinesFor(last).reopenFrom;
+  if(from) return from > today ? {state: 'wait', label: 'from ' + fmtDate(from)} : {state: 'ok', label: 'eligible again'};
+  return {state: 'check', label: 'had one, check terms'};
+}
+// One line of an account's deadlines, for its card and its detail page.
+function deadlineLine(a){
+  const dl = deadlinesFor(a);
+  const parts = [];
+  if(dl.reqDue && !(a.dates || {}).bonusPaidOut) parts.push('Requirements by ' + fmtDate(dl.reqDue));
+  if(dl.minBalUntil) parts.push('Keep the minimum balance until ' + fmtDate(dl.minBalUntil));
+  const reopen = (a.dates || {}).reopenAfter || dl.reopenFrom;
+  if(reopen) parts.push('Reopen after ' + fmtDate(reopen));
+  return parts.length ? `<div class="deadline-line">${esc(parts.join(' · '))}</div>` : '';
+}
+
+function eligibilityLine(offer){
+  const people = config.people || [];
+  if(!people.length) return '';
+  const icon = {ok: '✓', has: '•', wait: '⏳', check: '?'};
+  return `<div class="elig">${people.map(p => {
+    const e = eligibility(offer, p);
+    return `<span class="elig-item elig-${e.state}">${icon[e.state]} ${esc(p)}: ${esc(e.label)}</span>`;
+  }).join('')}</div>`;
+}
+
 function computeDueToday(){
   const today = todayISO();
   const due = (iso) => !!iso && iso <= today;
@@ -1219,8 +1316,11 @@ function computeDueToday(){
   const byLate = (x, y) => y.late - x.late;
   [toOpen, reopen, toClose, reminders].forEach(list => list.sort(byLate));
   const ddCleared = live.filter(a => a.dates.firstDD === shiftISO(today, -1) && a.status === 'open');
-  return { toOpen, reopen, toClose, reminders, ddCleared,
-    count: toOpen.length + reopen.length + toClose.length + reminders.length + ddCleared.length };
+  const deadlines = upcomingDeadlines(today).map(x => ({...x, late: daysLate(x.date, today)}));
+  // Only deadlines that have arrived count toward the badge; upcoming ones are a heads-up.
+  const dueDeadlines = deadlines.filter(x => x.late >= 0).length;
+  return { toOpen, reopen, toClose, reminders, ddCleared, deadlines,
+    count: toOpen.length + reopen.length + toClose.length + reminders.length + ddCleared.length + dueDeadlines };
 }
 
 function lateNote(late){
@@ -1276,6 +1376,8 @@ function nudgeOnOpen(){
   if(due.toClose.length) parts.push(`${due.toClose.length} to close`);
   if(due.reminders.length) parts.push(`${due.reminders.length} reminder${due.reminders.length>1?'s':''}`);
   if(due.ddCleared.length) parts.push(`${due.ddCleared.length} DD cleared`);
+  const dueDl = due.deadlines.filter(x => x.late >= 0).length;
+  if(dueDl) parts.push(`${dueDl} deadline${dueDl > 1 ? 's' : ''}`);
   const title = `🏦 ${due.count} need${due.count === 1 ? 's' : ''} attention`;
   const opts = { body: parts.join(' · '), tag: 'bb-due-'+today,
     icon: '/static/bank-bonus/icon-192.png', badge: '/static/bank-bonus/icon-192.png' };
@@ -1294,9 +1396,9 @@ function render_today(){
   const section = $('#section-today');
   let html = '';
 
-  const { toOpen, reopen, toClose, reminders, ddCleared, count } = computeDueToday();
+  const { toOpen, reopen, toClose, reminders, ddCleared, deadlines, count } = computeDueToday();
 
-  if(count === 0) {
+  if(count === 0 && !deadlines.length) {
     if(accounts.length === 0){
       // No accounts yet — point the user at the Offers catalog to get started.
       html = `<div class="empty">No accounts yet.<br>
@@ -1345,6 +1447,17 @@ function render_today(){
       html += '<div class="card"><div class="card-header">🔒 Accounts to Close</div>';
       toClose.forEach(a => {
         html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})${lateNote(a.late)}</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+      });
+      html += '</div>';
+    }
+
+    if(deadlines.length) {
+      html += '<div class="card"><div class="card-header">⏳ Deadlines</div>';
+      deadlines.forEach(x => {
+        const a = x.account;
+        const what = x.kind === 'req' ? 'Requirements due' : 'Minimum balance hold ends';
+        const when = x.late > 0 ? lateNote(x.late) : ` <span style="color:var(--muted)">${x.late === 0 ? 'today' : x.late === -1 ? 'tomorrow' : 'in ' + (-x.late) + ' days'}</span>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})${when}<br><span style="font-size:12px;color:var(--muted)">${what} ${fmtDate(x.date)}</span></div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -1472,6 +1585,7 @@ function render_active(){
           <div class="row-item"><div class="label">Opened</div><input type="date" class="date-quick" value="${esc(a.dates.opened||'')}" title="Opened date" data-stop="1" data-change="quickUpdateDate" data-a1="${esc(a.id)}" data-a2="opened"></div>
           <div class="row-item"><div class="label">First DD</div><input type="date" class="date-quick" value="${esc(a.dates.firstDD||'')}" title="First DD date" data-stop="1" data-change="quickUpdateDate" data-a1="${esc(a.id)}" data-a2="firstDD"></div>
         </div>
+        ${deadlineLine(a)}
       </div>`;
     });
   }
@@ -1591,6 +1705,7 @@ function render_offers(){
           <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(o.bonus)}</div></div>
           <div class="row-item"><div class="label">DD Required</div><div class="value money">${money(o.directDepositTotal)}</div></div>
         </div>
+        ${eligibilityLine(o)}
         ${o.notes ? `<div class="offer-notes">${esc(o.notes)}</div>` : ''}
         <div class="action-bar">
           ${o.needsVerification ? `<button class="sec" data-action="markOfferVerified" data-a1="${esc(o.id)}">Mark verified</button>` : ''}
@@ -1662,7 +1777,8 @@ async function promoteOffer(offerId, toStatus){
   // and the label (which would otherwise inject markup). The rewrite above took
   // names out of executable positions; this keeps them out of markup too.
   const personList = config.people
-    .map(p => `<button data-mval="${esc(p)}">${esc(p)}</button>`)
+    .map(p => { const e = eligibility(offer, p);
+      return `<button ${e.state === 'ok' ? '' : 'class="sec" '}data-mval="${esc(p)}">${esc(p)}${e.state === 'ok' ? '' : ` <span style="font-size:11px">(${esc(e.label)})</span>`}</button>`; })
     .join('');
   const result = await modal(`
     <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
@@ -2541,6 +2657,7 @@ function render_detail(){
       <div class="card-header">Dates</div>
       <div class="row">${dat('d_date_plannedOpen','Planned Open', a.dates.plannedOpen)}${dat('d_date_opened','Opened', a.dates.opened)}${dat('d_date_firstDD','First DD', a.dates.firstDD)}</div>
       <div class="row">${dat('d_date_bonusPaidOut','Bonus Paid Out', a.dates.bonusPaidOut)}${dat('d_date_closed','Closed', a.dates.closed)}${dat('d_date_reopenAfter','Reopen After', a.dates.reopenAfter)}</div>
+      ${deadlineLine(a)}
     </div>
 
     <div class="card">
@@ -2724,6 +2841,8 @@ async function suggestDD(){
 
 async function saveAccountDetail(){
   captureFields();
+  const cur = accounts.find(x => x.id === editingId);
+  if(cur) fillReopenAfter(cur);
   try {
     await saveAccounts('Update account');
     toast('Saved');
@@ -2741,6 +2860,7 @@ async function closeAccountDetail(){
   if(!a) return;
   a.status = 'closed';
   if(!a.dates.closed) a.dates.closed = todayISO();
+  fillReopenAfter(a);
   try {
     await saveAccounts('Close account: ' + a.institution);
     toast('Account closed');

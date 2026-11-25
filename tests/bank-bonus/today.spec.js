@@ -83,12 +83,12 @@ test('Today: a reminder dated before today stays until marked done', async ({ pa
   const reminders = today.locator('.card', { hasText: 'Reminders' })
   await expect(reminders).toContainText('Move the DD back')
   await expect(reminders.locator('.late')).toHaveText('5 days overdue')
-  // Overdue open + reopen + reminder.
-  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(3)
+  // Overdue open + reopen + reminder + Openbank One's requirements deadline (#14).
+  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(4)
 
   await reminders.getByRole('button', { name: 'Done' }).click()
   await expect(reminders.getByRole('button', { name: 'Done ✓' })).toBeDisabled()
-  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(2)
+  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(3)
   await page.reload()
   await expect(page.locator('#section-today')).not.toContainText('Move the DD back')
   expect(errors).toEqual([])

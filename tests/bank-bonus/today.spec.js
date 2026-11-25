@@ -48,8 +48,9 @@ test('Today: a reopen date that passed shows until dismissed, and the dismissal 
   const reopen = today.locator('.card', { hasText: 'Eligible to Reopen' })
   await expect(reopen).toContainText('Closed Cooperative')
   await expect(reopen).toContainText('Eligible since 11/01/26')
-  await page.screenshot({ path: testInfo.outputPath('today-overdue.png'), fullPage: true })
-  await testInfo.attach('today-overdue', { path: testInfo.outputPath('today-overdue.png'), contentType: 'image/png' })
+  const shot = path.join(__dirname, 'screenshots', 'today-overdue.png')
+  await page.screenshot({ path: shot, fullPage: true })
+  await testInfo.attach('today-overdue', { path: shot, contentType: 'image/png' })
 
   // The row settles in place (no reflow) and the icon badge drops at once.
   const before = await page.evaluate(() => window.__badge)

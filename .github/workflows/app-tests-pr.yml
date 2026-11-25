@@ -1,8 +1,8 @@
 name: App tests (pull requests)
 
-# Runs the bank-bonus Playwright suite on pull requests, so a change is tested
-# and its screenshots can be reviewed before it reaches main. deploy.yml still
-# runs every affected suite as the gate on push to main.
+# Runs the bank-bonus and grocery Playwright suites on pull requests, so a
+# change is tested (and its screenshots can be reviewed) before it reaches main.
+# deploy.yml still runs every affected suite as the gate on push to main.
 on:
   pull_request:
     branches: [main]
@@ -10,6 +10,8 @@ on:
       - 'quartz/static/bank-bonus/**'
       - 'quartz/static/shared/**'
       - 'tests/bank-bonus/**'
+      - 'quartz/static/grocery/**'
+      - 'tests/grocery/**'
       - 'tests/shared/**'
       - '.github/workflows/app-tests-pr.yml'
 
@@ -17,11 +19,16 @@ permissions:
   contents: read
 
 jobs:
-  bank-bonus:
+  app:
+    name: ${{ matrix.app }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [bank-bonus, grocery]
     defaults:
       run:
-        working-directory: tests/bank-bonus
+        working-directory: tests/${{ matrix.app }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -31,7 +38,7 @@ jobs:
         run: npm ci
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: Run bank-bonus regression suite
+      - name: Run ${{ matrix.app }} regression suite
         run: npm test
         env:
           CI: 'true'
@@ -39,13 +46,13 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: bank-bonus-screenshots
-          path: tests/bank-bonus/screenshots/
+          name: ${{ matrix.app }}-screenshots
+          path: tests/${{ matrix.app }}/screenshots/
           if-no-files-found: warn
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: bank-bonus-playwright-report
-          path: tests/bank-bonus/playwright-report/
+          name: ${{ matrix.app }}-playwright-report
+          path: tests/${{ matrix.app }}/playwright-report/
           if-no-files-found: ignore

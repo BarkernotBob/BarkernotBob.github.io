@@ -167,6 +167,16 @@ test('Reports: the money adds up to the fixtures', async ({ page }) => {
   await expect(reports).toContainText('16.75%')
 })
 
+test('Reports: a payout date still in the future stays pending', async ({ page }) => {
+  const fs = require('fs')
+  const accounts = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'db', 'accounts.json'), 'utf8'))
+  accounts.find((a) => a.id === 'a_open_1').dates.bonusPaidOut = '2099-01-01'
+  await bootApp(page, { seed: { 'bb_local_db/accounts.json': JSON.stringify(accounts) } })
+  await goTab(page, 'reports')
+  const pending = page.locator('#section-reports tr').filter({ has: page.locator('td:first-child', { hasText: /^Pending \(open, unpaid\)$/ }) })
+  await expect(pending).toContainText('$800.00')
+})
+
 test('Calendar renders a month grid', async ({ page }) => {
   const { errors } = await bootApp(page)
   await goTab(page, 'calendar')

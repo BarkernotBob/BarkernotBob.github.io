@@ -35,6 +35,13 @@ jobs:
         run: npm test
         env:
           CI: 'true'
+      - name: Upload screenshot gallery
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bank-bonus-screenshots
+          path: tests/bank-bonus/screenshots/
+          if-no-files-found: warn
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

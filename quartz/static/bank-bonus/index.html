@@ -1187,12 +1187,12 @@ function render_offers(){
   } else {
     backlog.forEach(o => {
       html += `<div class="card">
-        <div class="card-header"><span class="card-title">${esc(o.institution)}${o.person ? ' ' + personChip(o.person) : ''}</span>${o.needsVerification ? '<span class="pill pill-verify">Verify terms</span>' : ''}</div>
+        <div class="card-header"><span class="card-title">${esc(o.institution)}${o.person ? ' ' + personChip(o.person) : ''}</span>${o.needsVerification ? `<span class="pill pill-verify" data-verify-pill="${esc(o.id)}">Verify terms</span>` : ''}</div>
         <div class="row">
           <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(o.bonus)}</div></div>
           <div class="row-item"><div class="label">DD Required</div><div class="value money">${money(o.directDepositTotal)}</div></div>
         </div>
-        ${o.needsVerification && o.notes ? `<div class="offer-notes">${esc(o.notes)}</div>` : ''}
+        ${o.notes ? `<div class="offer-notes">${esc(o.notes)}</div>` : ''}
         <div class="action-bar">
           ${o.needsVerification ? `<button class="sec" data-action="markOfferVerified" data-a1="${esc(o.id)}">Mark verified</button>` : ''}
           <button data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="planned">Move to Planned</button>
@@ -1267,6 +1267,7 @@ async function promoteOffer(offerId, toStatus){
     .join('');
   const result = await modal(`
     <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
+    ${offer.needsVerification ? '<p class="offer-notes">These terms came from the old sheet and haven\'t been verified. Check the bank\'s current offer first.</p>' : ''}
     <div class="row">${personList}</div>
   `);
 
@@ -1326,12 +1327,15 @@ async function promoteOffer(offerId, toStatus){
 
 // Offers brought over from the old spreadsheet carry needsVerification until
 // Isaiah has rechecked the bank's current terms.
-async function markOfferVerified(offerId){
+// Updates the card in place rather than re-rendering, so nothing below it moves.
+async function markOfferVerified(el, offerId){
   const offer = offers.find(o => o.id === offerId);
   if(!offer) return;
   delete offer.needsVerification;
   await saveOffers('Verify offer: ' + offer.institution);
-  render_offers();
+  const pill = document.querySelector(`[data-verify-pill="${CSS.escape(offerId)}"]`);
+  if(pill) pill.style.visibility = 'hidden';
+  if(el){ el.disabled = true; el.textContent = 'Verified'; }
   toast(offer.institution + ' marked verified');
 }
 
@@ -2502,7 +2506,7 @@ const ACTIONS = {
   openPlanned: (el, id) => openPlanned(id),
   promoteOffer: (el, id, status) => promoteOffer(id, status),
   deleteOffer: (el, id) => deleteOffer(id),
-  markOfferVerified: (el, id) => markOfferVerified(id),
+  markOfferVerified: (el, id) => markOfferVerified(el, id),
   markReminderDone: (el, accountId, id) => markReminderDone(accountId, id),
   setPersonFilter: (el, tab, person) => setPersonFilter(tab, person),
   setStatusFilter: (el, status) => setStatusFilter(status),

@@ -61,6 +61,14 @@ test('a bank that needs several deposits gets the total split evenly', async ({ 
   ])
 })
 
+test('an uneven split gives the last deposit the rounding, not an extra deposit', async ({ page }) => {
+  await bootAt(page, [acct('a_odd', 'Odd Split Bank', { directDepositTotal: 100, nbDeposits: 3 })])
+  await suggest(page, 'Odd Split Bank')
+  await expect.poll(() => plan(page, 'a_odd')).toEqual([
+    ['2026-12-18', 33.33, true], ['2027-01-01', 33.33, true], ['2027-01-15', 33.34, true],
+  ])
+})
+
 test('deposits set by hand stay put and use up their payday', async ({ page }) => {
   await bootAt(page, [
     acct('a_hand', 'Hand Set Bank', { directDepositTotal: 1800, ddPlan: [{ payrollDate: '2026-12-18', amount: 1800 }] }),

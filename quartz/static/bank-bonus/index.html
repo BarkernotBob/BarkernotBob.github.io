@@ -2658,7 +2658,7 @@ async function testNotification(){
   try {
     const r = await fetch(`${API}/repos/${LS.repo}/actions/workflows/daily-alert.yml/dispatches`, {
       method: 'POST', headers: ghHeaders(),
-      body: JSON.stringify({ ref: 'main', inputs: { test: 'true' } })
+      body: JSON.stringify({ ref: await dataBranch(), inputs: { test: 'true' } })
     });
     if(r.status === 204){ toast('Test email on its way. Check your inbox in a minute or two 📧'); }
     else { const j = await r.json().catch(() => ({})); toast('Could not send the test: ' + (j.message || ('HTTP ' + r.status))); }

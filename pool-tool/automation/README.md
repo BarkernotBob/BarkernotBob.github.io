@@ -71,7 +71,8 @@ That's email done. It will now run **every morning** on its own.
 has passed, or you marked the closing checklist done. You still get one email each
 for: the spring-opening heads-up (3 weeks before the opening date), a new water test
 with readings that need attention, and a year-round task coming due. Daily emails
-resume on the opening date, or when you mark the opening checklist done.
+resume on the opening date, or when you mark the opening checklist done, without
+advice from last season's water test.
 
 ---
 

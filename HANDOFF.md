@@ -37,7 +37,8 @@ The old Claude-made Routines are **paused, not deleted**:
   search/sort dropped to 15/14px on desktop. Now 16px, sort column sized to its content.
   `tests/install-checks` is still not in the deploy gate (needs a `deploy.yml` edit).
 - 2026-11-24 — **Pool emails stop once the pool is closed** (`reminders.mjs` → `poolClosed()`),
-  pinned in `tests/pool/closed.spec.js`. The rule is in the pool-data README.
+  and last season's test advice stays out after reopening. Pinned in `tests/pool/closed.spec.js`.
+  The rule is in the pool-data README.
 - 2026-10-24 — **Driveline cost-model fixes** (Leaf audit). Today's dollars, resale scales with the
   price paid, value keeps falling past the data, a 40% time-based maintenance share, EVs priced per
   kWh, interest only for the months held, cost of cash, imported insurance and registration fixes,

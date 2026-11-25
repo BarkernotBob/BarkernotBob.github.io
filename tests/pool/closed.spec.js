@@ -3,41 +3,25 @@
 // date) re-sent its advice every day for six weeks, and winter rain sent alerts.
 //
 // Runs the real reminders.mjs under Node, alone in an empty folder as the
-// workflow's `curl` leaves it, with the clock and the weather pinned by a
-// preload. `has_due` is what the workflow reads to decide whether to email.
+// workflow's `curl` leaves it, with the clock and the weather pinned
+// (support/pin-run.mjs). `has_due` is what the workflow reads to decide whether to email.
 const { test, expect } = require('@playwright/test')
 const { execFileSync } = require('child_process')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const { pathToFileURL } = require('url')
 const { fixture } = require('./support/boot')
 
 const SCRIPT = path.join(__dirname, '..', '..', 'quartz', 'static', 'pool', 'reminders.mjs')
 const CHEM_URL = 'http://127.0.0.1:5176/static/shared/pool-chem.js'
-
-// Fake `new Date()` / Date.now() and Open-Meteo (an inch of rain every day).
-const PRELOAD = `
-const NOW = new Date(process.env.FAKE_TODAY + 'T16:00:00Z').getTime()
-const Real = Date
-globalThis.Date = class extends Real {
-  constructor(...a) { a.length ? super(...a) : super(NOW) }
-  static now() { return NOW }
-}
-const realFetch = globalThis.fetch
-globalThis.fetch = async (url, ...rest) => {
-  if (!String(url).includes('open-meteo')) return realFetch(url, ...rest)
-  const time = Array.from({ length: 11 }, (_, i) => new Real(NOW - (10 - i) * 864e5).toISOString().slice(0, 10))
-  const each = (v) => time.map(() => v)
-  return new Response(JSON.stringify({ daily: { time, precipitation_sum: each(1), temperature_2m_max: each(60), temperature_2m_min: each(40) }, hourly: { time: [], relative_humidity_2m: [] } }))
-}
-`
+const PIN = pathToFileURL(path.join(__dirname, 'support', 'pin-run.mjs')).href
 
 let dir
 test.beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pool-closed-'))
   fs.mkdirSync(path.join(dir, 'db'))
   fs.copyFileSync(SCRIPT, path.join(dir, 'reminders.mjs'))
-  fs.writeFileSync(path.join(dir, 'preload.mjs'), PRELOAD)
   put('config.json', fixture('config.json'))
 })
 test.afterEach(() => fs.rmSync(dir, { recursive: true, force: true }))
@@ -50,7 +34,7 @@ const logSeason = (task, date) => put('log.json', JSON.stringify([{ id: 'l1', at
 function run(today) {
   const env = { ...process.env, POOL_CHEM_URL: CHEM_URL, FAKE_TODAY: today, MAIL_FALLBACK: 'me@example.com' }
   delete env.GITHUB_OUTPUT
-  const out = execFileSync(process.execPath, ['--import', './preload.mjs', 'reminders.mjs'], { cwd: dir, env, encoding: 'utf8', stdio: 'pipe', timeout: 60_000 })
+  const out = execFileSync(process.execPath, ['--import', PIN, 'reminders.mjs'], { cwd: dir, env, encoding: 'utf8', stdio: 'pipe', timeout: 60_000 })
   return {
     emails: /^has_due=true$/m.test(out),
     subject: out.match(/^subject=(.*)$/m)[1],
@@ -96,6 +80,17 @@ test('the spring-opening heads-up emails once, without last season’s test advi
   expect(heads.body).not.toContain('From your last test')
   expect(run('2027-03-31').emails).toBe(false)
   expect(run('2027-04-20').emails).toBe(true) // open: routine tasks resume
+})
+
+test('once reopened, last season’s test advice stays out until a new test is logged', () => {
+  waterTest('2026-10-14')
+  const reopened = run('2027-04-20')
+  expect(reopened.subject).toMatch(/due/)
+  expect(reopened.subject).not.toContain('test advice')
+  expect(reopened.body).not.toContain('From your last test')
+  waterTest('2027-04-21')
+  expect(run('2027-04-21').subject).toContain('test advice')
+  expect(run('2027-04-22').subject).toContain('test advice')
 })
 
 test('marking the opening checklist done early turns emails back on', () => {

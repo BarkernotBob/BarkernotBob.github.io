@@ -150,11 +150,17 @@ test('Reports: the money adds up to the fixtures', async ({ page }) => {
   await bootApp(page)
   await goTab(page, 'reports')
   const reports = page.locator('#section-reports')
-  // Fixtures: closed 250 earned; open 300+500+400 = 1200 pending; planned 200.
-  await expect(reports).toContainText('$1,650.00')
-  await expect(reports).toContainText('$1,200.00')
-  await expect(reports).toContainText('$250.00')
-  await expect(reports).toContainText('$200.00')
+  // Fixtures: earned = closed 250 + paid-but-open 400 = 650; pending = open
+  // unpaid 300+500 = 800; planned 200; total 1650. (#15: a paid bonus on an
+  // open account is earned, not pending.)
+  const row = (label) => reports.locator('tr', { hasText: label })
+  await expect(row('Earned (paid or closed)')).toContainText('$650.00')
+  await expect(row('Earned (paid or closed)').locator('td').last()).toHaveText('2')
+  await expect(row('Pending (open, unpaid)')).toContainText('$800.00')
+  await expect(row('Pending (open, unpaid)').locator('td').last()).toHaveText('2')
+  await expect(row('Planned')).toContainText('$200.00')
+  await expect(row('Total projected')).toContainText('$1,650.00')
+  await expect(reports).toContainText('Earned includes 1 paid bonus on accounts still open')
   // After-tax at the fixture's 16.75% marginal rate.
   await expect(reports).toContainText('16.75%')
 })

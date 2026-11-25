@@ -67,6 +67,12 @@ Open the Pool Care app → **⚙︎ Settings** → put your email in the reminde
 
 That's email done. It will now run **every morning** on its own.
 
+**When the pool is closed, the emails stop.** Closed = the closing date in Settings
+has passed, or you marked the closing checklist done. You still get one email each
+for: the spring-opening heads-up (3 weeks before the opening date), a new water test
+with readings that need attention, and a year-round task coming due. Daily emails
+resume on the opening date, or when you mark the opening checklist done.
+
 ---
 
 ## Part 2 — RSS feed (optional, do whenever)

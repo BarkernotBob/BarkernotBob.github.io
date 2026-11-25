@@ -193,6 +193,7 @@ test('Offers: an offer from the old sheet shows "Verify terms" until marked veri
   await expect(card).toContainText('verify current terms')
   await expect(page.locator('#section-offers .pill-verify')).toHaveCount(1)
   await testInfo.attach('offers-verify-mobile.png', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
+  await card.screenshot({ path: require('path').join(__dirname, 'screenshots', 'offers-verify-card.png') })
   await card.getByRole('button', { name: 'Mark verified' }).click()
   await expect.poll(async () => (await offersInStore(page))[0].needsVerification).toBeUndefined()
   await expect(page.locator('#section-offers .pill-verify')).toHaveCount(0)

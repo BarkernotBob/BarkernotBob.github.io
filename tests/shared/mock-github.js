@@ -156,6 +156,21 @@ async function installGitHubMock(page, opts = {}) {
     armLostResponse() {
       this._lostResponse = true
     },
+    _putStatus: null,
+    _putDelay: 0,
+    // One-shot: the NEXT Contents API PUT answers with this HTTP status and
+    // writes nothing (models a network or server failure on save), after
+    // `delayMs` so a test can act while that save is still in flight.
+    armContentsPutFailure(status, delayMs = 0) {
+      this._putStatus = status
+      this._putDelay = delayMs
+    },
+    _putLost: false,
+    // One-shot: the NEXT Contents API PUT commits, then answers 502 (the
+    // reply was lost on the way back).
+    armContentsPutLostResponse() {
+      this._putLost = true
+    },
     // Directly advance main (models the processor committing between polls).
     injectRemote(mods) {
       injectRemote(mods)
@@ -365,12 +380,33 @@ async function installGitHubMock(page, opts = {}) {
       if (method === 'PUT') {
         // Bootstrap path (ensureInitialized) — seed a blob into a new head commit.
         const body = JSON.parse(req.postData() || '{}')
+        if (state._putStatus) {
+          const status = state._putStatus
+          const delay = state._putDelay
+          state._putStatus = null
+          state._putDelay = 0
+          if (delay) await new Promise((r) => setTimeout(r, delay))
+          return route.fulfill({ status, json: { message: 'Server Error' } })
+        }
+        // opts.strictContentsSha: behave like GitHub — a PUT must name the
+        // file's current blob sha (409 if stale, 422 if missing on an existing file).
+        if (opts.strictContentsSha) {
+          const current = headTreeMap()[filePath]
+          if (current != null && !body.sha)
+            return route.fulfill({ status: 422, json: { message: '"sha" wasn\'t supplied.' } })
+          if (current != null && body.sha !== current)
+            return route.fulfill({ status: 409, json: { message: `${filePath} does not match ${body.sha}` } })
+        }
         const sha = putBlob(body.content)
         const map = Object.assign({}, headTreeMap())
         map[filePath] = sha
         const t = putTree(map)
         const c = putCommit(t, [git.head.commitSha])
         git.head = { commitSha: c, etag: '"' + c + '"' }
+        if (state._putLost) {
+          state._putLost = false
+          return route.fulfill({ status: 502, json: { message: 'Bad Gateway' } })
+        }
         return json(route, { content: { path: filePath, sha }, commit: { sha: c } })
       }
     }

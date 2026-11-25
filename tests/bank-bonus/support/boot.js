@@ -79,7 +79,7 @@ async function bootApp(page, { viewport = VIEWPORTS.mobile, seed = {} } = {}) {
 }
 
 // Boot with GitHub sync on, backed by the shared mock.
-async function bootSynced(page, { viewport = VIEWPORTS.mobile, mock: mockOpts = {} } = {}) {
+async function bootSynced(page, { viewport = VIEWPORTS.mobile, mock: mockOpts = {}, prepare } = {}) {
   const errors = watchConsole(page)
   await page.setViewportSize(viewport)
   await page.addInitScript(() => {
@@ -98,6 +98,8 @@ async function bootSynced(page, { viewport = VIEWPORTS.mobile, mock: mockOpts = 
     }
   })
   const mock = await installGitHubMock(page, { fixturesDir: FIXTURES, ...mockOpts })
+  // Lets a test shape the repo (mock.injectRemote) before the app first loads it.
+  if (prepare) await prepare(mock)
   await page.goto(APP_URL)
   await ready(page)
   return { errors, mock, VIEWPORTS }

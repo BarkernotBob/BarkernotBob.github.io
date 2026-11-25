@@ -152,6 +152,12 @@ async function installGitHubMock(page, opts = {}) {
     // then answers 502 — the phone case where the commit landed but the
     // response never arrived. The app sees a failure; a retry must not
     // write the same record twice (pool #134).
+    _putStatus: null,
+    // One-shot: the NEXT Contents API PUT answers with this HTTP status and
+    // writes nothing (models a network or server failure on save).
+    armContentsPutFailure(status) {
+      this._putStatus = status
+    },
     _lostResponse: false,
     armLostResponse() {
       this._lostResponse = true
@@ -365,6 +371,20 @@ async function installGitHubMock(page, opts = {}) {
       if (method === 'PUT') {
         // Bootstrap path (ensureInitialized) — seed a blob into a new head commit.
         const body = JSON.parse(req.postData() || '{}')
+        if (state._putStatus) {
+          const status = state._putStatus
+          state._putStatus = null
+          return route.fulfill({ status, json: { message: 'Server Error' } })
+        }
+        // opts.strictContentsSha: behave like GitHub — a PUT must name the
+        // file's current blob sha (409 if stale, 422 if missing on an existing file).
+        if (opts.strictContentsSha) {
+          const current = headTreeMap()[filePath]
+          if (current != null && !body.sha)
+            return route.fulfill({ status: 422, json: { message: '"sha" wasn\'t supplied.' } })
+          if (current != null && body.sha !== current)
+            return route.fulfill({ status: 409, json: { message: `${filePath} does not match ${body.sha}` } })
+        }
         const sha = putBlob(body.content)
         const map = Object.assign({}, headTreeMap())
         map[filePath] = sha

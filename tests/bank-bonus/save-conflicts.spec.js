@@ -90,3 +90,31 @@ test('a failed save is reported and the screen goes back to the saved data', asy
     page.locator('#section-offers .card', { hasText: a.institution }).locator('.pill-verify')
   ).toBeVisible()
 })
+
+test('a change queued behind a failed save is not reported as saved', async ({ page }) => {
+  const { mock } = await bootSynced(page, { mock: strict, prepare })
+  await goTab(page, 'offers')
+  const [a, b] = flagged()
+  mock.armContentsPutFailure(500, 1500)
+  await markVerified(page, a.institution)
+  await markVerified(page, b.institution) // queued while the first save is still failing
+  await expect(page.locator('.toast')).toContainText(/Not saved|Couldn't save/)
+  await expect(page.locator('#section-offers .pill-verify')).toHaveCount(2)
+  const remote = remoteOffers(mock)
+  expect(remote[0].needsVerification).toBe(true)
+  expect(remote[1].needsVerification).toBe(true)
+})
+
+test('a save whose reply was lost but which landed counts as saved', async ({ page }) => {
+  const { mock } = await bootSynced(page, { mock: strict, prepare })
+  await goTab(page, 'offers')
+  const [a, b] = flagged()
+  mock.armContentsPutLostResponse()
+  await markVerified(page, a.institution)
+  await expect.poll(() => remoteOffers(mock)[0].needsVerification).toBeUndefined()
+  await expect(page.locator('.toast')).toContainText('marked verified')
+  // The next save uses the right file version (no conflict, no merge commit).
+  await markVerified(page, b.institution)
+  await expect.poll(() => remoteOffers(mock)[1].needsVerification).toBeUndefined()
+  await expect(page.locator('.toast')).not.toContainText(/couldn't|another device/i)
+})

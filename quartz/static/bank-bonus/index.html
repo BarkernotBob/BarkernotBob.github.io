@@ -699,29 +699,32 @@ async function loadJson(path, fallback){
 // On a real conflict (the file changed elsewhere since this device last read or
 // wrote it) the whole list is NEVER re-sent over the newer version: this
 // device's changes are merged record by record with the other change, and if
-// both changed the same record, the newer data is reloaded and the user is told.
-// Any failure puts the screen back to what is actually saved and says so.
+// both changed the same record, the newer data is loaded and the user is told.
+// Any failure puts the screen back to what is actually saved, says so, and
+// fails the saves queued behind it rather than letting them report success.
+// (Actions that save two files are made all-or-nothing separately: issue #17.)
 const DATA_VARS = {
   'db/config.json':   { get: () => config,   set: v => { config = v; } },
   'db/accounts.json': { get: () => accounts, set: v => { accounts = v; } },
   'db/offers.json':   { get: () => offers,   set: v => { offers = v; } },
 };
 const saveQueues = {};
+const saveGen = {};   // bumped whenever a file's in-memory copy is replaced after a failure
 
 class SaveError extends Error {
   constructor(msg){ super(msg); this.name = 'SaveError'; this.userMessage = msg; }
 }
 
 function saveJson(path, value, message){
+  const gen = saveGen[path] || 0;
   const prev = saveQueues[path] || Promise.resolve();
-  const run = prev.catch(() => {}).then(() => saveJsonNow(path, value, message));
+  const run = prev.catch(() => {}).then(() => {
+    if((saveGen[path] || 0) !== gen)
+      throw new SaveError("Not saved, because an earlier change couldn't be saved. Please redo it.");
+    return saveJsonNow(path, value, message);
+  });
   saveQueues[path] = run;
   return run;
-}
-
-// Wait for every queued save to finish (used before multi-file operations).
-function savesSettled(){
-  return Promise.allSettled(Object.values(saveQueues));
 }
 
 function currentValue(path, fallback){
@@ -734,19 +737,21 @@ function setValue(path, value){
   if(v) v.set(value);
 }
 
+// Re-draw after data was replaced. The account detail form holds its own copy
+// of the fields, so leave it rather than let a later Save write stale values.
 function rerenderCurrent(){
   const tab = currentTab();
+  if(tab === 'detail'){ show(lastTab); return; }
   const fn = RENDERERS[tab];
-  if(fn && tab !== 'detail') fn();
+  if(fn) fn();
 }
 
-// Put the screen back to the last saved copy of `path`.
-function revertToSaved(path){
-  const entry = DB[path];
-  if(!entry || entry.base == null || !DATA_VARS[path]) return;
-  const value = JSON.parse(entry.base);
+// Replace the in-memory copy of `path` with saved data (text) after a failure.
+function replaceWithSaved(path, text, sha){
+  const value = JSON.parse(text);
   setValue(path, value);
-  DB[path] = {...entry, value};
+  DB[path] = {value, sha, base: text};
+  saveGen[path] = (saveGen[path] || 0) + 1;
   rerenderCurrent();
 }
 
@@ -765,45 +770,60 @@ async function saveJsonNow(path, fallbackValue, message){
     return;
   } catch(e) {
     const conflict = e.status === 409 || (e.status === 422 && !entry.sha);
-    if(!conflict){
-      revertToSaved(path);
+    if(conflict) return resolveConflict(path, entry, value, body, message);
+    // The write may have landed even though the reply was lost: check first.
+    let c = null;
+    try { c = await ghContents(path); } catch(_) {}
+    const remoteText = c ? b64decode(c.content) : null;
+    if(remoteText === body){
+      DB[path] = {value, sha: c.sha, base: body};
+      return;
+    }
+    if(remoteText != null){
+      replaceWithSaved(path, remoteText, c.sha);
       throw new SaveError(`Couldn't save (${e.message}). Your last change was undone.`);
     }
+    if(entry.base != null){
+      replaceWithSaved(path, entry.base, entry.sha);
+      throw new SaveError(`Couldn't save (${e.message}). Your last change was undone.`);
+    }
+    throw new SaveError(`Couldn't save (${e.message}). Reload to see what is saved.`);
   }
-  return resolveConflict(path, entry, value, message);
 }
 
-async function resolveConflict(path, entry, local, message){
+async function resolveConflict(path, entry, local, localText, message){
   let c;
   try { c = await ghContents(path); }
-  catch(e){ revertToSaved(path); throw new SaveError(`Couldn't save (${e.message}). Your last change was undone.`); }
+  catch(e){
+    if(entry.base != null) replaceWithSaved(path, entry.base, entry.sha);
+    throw new SaveError(`Couldn't save (${e.message}). Your last change was undone.`);
+  }
   const remoteText = c ? b64decode(c.content) : null;
   const remote = remoteText != null ? JSON.parse(remoteText) : null;
   const base = entry.base != null ? JSON.parse(entry.base) : null;
   const merged = mergeThreeWay(base, local, remote);
   if(!merged.ok){
     // Both sides changed the same record: keep the other change, drop ours.
-    if(remote != null){
-      setValue(path, remote);
-      DB[path] = {value: remote, sha: c.sha, base: remoteText};
-    }
-    rerenderCurrent();
+    if(remoteText != null) replaceWithSaved(path, remoteText, c.sha);
     throw new SaveError('This changed on another device, so I loaded the latest. Please redo your last change.');
   }
   const body = JSON.stringify(merged.value, null, 2);
+  let res;
   try {
-    const res = await ghPut(path, b64encode(body), c ? c.sha : null, message + ' (merged)');
-    setValue(path, merged.value);
-    DB[path] = {value: merged.value, sha: res.content.sha, base: body};
-    rerenderCurrent();
+    res = await ghPut(path, b64encode(body), c ? c.sha : null, message + ' (merged)');
   } catch(e) {
-    if(remote != null){
-      setValue(path, remote);
-      DB[path] = {value: remote, sha: c.sha, base: remoteText};
-    }
-    rerenderCurrent();
+    if(remoteText != null) replaceWithSaved(path, remoteText, c.sha);
     throw new SaveError(`Couldn't save (${e.message}). I loaded the latest; please redo your last change.`);
   }
+  // Keep any edit made on this device while the merge was in flight: fold the
+  // live data onto what was just saved, with what we sent as the common base.
+  const live = currentValue(path, local);
+  const folded = mergeThreeWay(JSON.parse(localText), live, merged.value);
+  const next = folded.ok ? folded.value : merged.value;
+  setValue(path, next);
+  DB[path] = {value: next, sha: res.content.sha, base: body};
+  // Redraw only when the other device's changes are visible.
+  if(body !== localText) rerenderCurrent();
 }
 
 // Three-way merge of one data file. base = last copy this device synced,

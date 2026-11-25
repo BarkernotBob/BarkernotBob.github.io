@@ -52,7 +52,9 @@ test('a change made elsewhere to another record is kept, not overwritten', async
   await expect(page.locator('#section-offers .card', { hasText: b.institution })).toContainText(
     'Edited on another device'
   )
-  expect(errors, errors.join('\n')).toEqual([])
+  // The browser logs the expected 409 itself; nothing else may reach the console.
+  const unexpected = errors.filter((e) => !/status of 409/.test(e))
+  expect(unexpected, unexpected.join('\n')).toEqual([])
 })
 
 test('when both sides changed the same record, the other change wins and the user is told', async ({

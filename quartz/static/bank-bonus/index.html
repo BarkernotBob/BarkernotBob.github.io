@@ -615,9 +615,11 @@ async function connectGitHub(repo, token){
     const existing = await ghContents('db/config.json');   // null if the repo has no data yet
     if(existing === null){
       // Empty repo → push whatever this browser currently has (first device).
-      await saveJson('db/config.json', config, 'Seed config from device');
+      // config.json goes last: its presence is what marks a repo as seeded, so a
+      // seed cut short is redone on the next connect rather than loaded half-empty.
       await saveJson('db/accounts.json', accounts, 'Seed accounts from device');
       await saveJson('db/offers.json', offers, 'Seed offers from device');
+      await saveJson('db/config.json', config, 'Seed config from device');
       toast('Connected — your data is now synced to GitHub ✓');
     } else {
       toast('Connected — loaded the data already in your repo ✓');
@@ -703,7 +705,8 @@ async function loadJson(path, fallback){
 // both changed the same record, the newer data is loaded and the user is told.
 // Any failure puts the screen back to what is actually saved, says so, and
 // fails the saves queued behind it rather than letting them report success.
-// (Actions that save two files are made all-or-nothing separately: issue #17.)
+// Actions that change more than one file go through saveBatch, below, which
+// writes them all in one commit or none of them (issue #17).
 const DATA_VARS = {
   'db/config.json':   { get: () => config,   set: v => { config = v; } },
   'db/accounts.json': { get: () => accounts, set: v => { accounts = v; } },
@@ -825,6 +828,128 @@ async function resolveConflict(path, entry, local, localText, message){
   DB[path] = {value: next, sha: res.content.sha, base: body};
   // Redraw only when the other device's changes are visible.
   if(body !== localText) rerenderCurrent();
+}
+
+// ---- All-or-nothing saves across files (issue #17) ----
+// Promoting an offer changes accounts and offers together; saving them one at a
+// time could leave the account made but the offer still in the backlog. A batch
+// waits behind every queued save to its files, then writes them as ONE commit
+// (Git Data API: blobs -> tree -> commit -> move main), so either every file
+// changes or none does. A file changed elsewhere is merged record by record as
+// in a single save; a race on main is retried; a failure puts every file in the
+// batch back to what is saved.
+function saveBatch(paths, message){
+  const gens = paths.map(p => saveGen[p] || 0);
+  const prev = Promise.all(paths.map(p => (saveQueues[p] || Promise.resolve()).catch(() => {})));
+  const run = prev.then(() => {
+    if(paths.some((p, i) => (saveGen[p] || 0) !== gens[i]))
+      throw new SaveError("Not saved, because an earlier change couldn't be saved. Please redo it.");
+    return saveBatchNow(paths, message);
+  });
+  paths.forEach(p => { saveQueues[p] = run; });
+  return run;
+}
+
+let defaultBranch = null;
+async function ghJson(path, opts = {}){
+  const r = await fetch(`${API}/repos/${LS.repo}${path}`, {cache: 'no-store', ...opts,
+    headers: {...ghHeaders(), ...(opts.body ? {'Content-Type': 'application/json'} : {})}});
+  if(!r.ok){ const err = new Error(`GitHub ${r.status}`); err.status = r.status; throw err; }
+  return r.json();
+}
+const ghPost = (path, body, method = 'POST') => ghJson(path, {method, body: JSON.stringify(body)});
+
+// Put every file in the batch back to its last saved copy after a failure.
+function revertBatch(paths, latest = {}){
+  paths.forEach(p => {
+    if(latest[p]) return replaceWithSaved(p, latest[p].text, latest[p].sha);
+    const e = DB[p];
+    if(e && e.base != null) replaceWithSaved(p, e.base, e.sha);
+  });
+}
+
+async function saveBatchNow(paths, message){
+  const items = paths.map(p => { const value = currentValue(p); return {path: p, value, body: JSON.stringify(value, null, 2)}; });
+  if(STORE.mode !== 'github'){
+    const old = paths.map(p => localStorage.getItem(LKEY(p)));
+    try { items.forEach(it => localStorage.setItem(LKEY(it.path), it.body)); }
+    catch(e){
+      paths.forEach((p, i) => { try { old[i] == null ? localStorage.removeItem(LKEY(p)) : localStorage.setItem(LKEY(p), old[i]); } catch(_){} });
+      revertBatch(paths);
+      throw new SaveError(`Couldn't save (${e.message}). Your last change was undone.`);
+    }
+    items.forEach(it => { DB[it.path] = {value: it.value, sha: null, base: it.body}; });
+    return;
+  }
+  const latest = {};   // remote copies read along the way, for a revert
+  try {
+    if(!defaultBranch) defaultBranch = (await ghJson('')).default_branch || 'main';
+    const refPath = `/git/refs/heads/${defaultBranch}`;
+    for(let attempt = 0; attempt < 3; attempt++){
+      const head = (await ghJson(`/git/ref/heads/${defaultBranch}`)).object.sha;
+      const treeSha = (await ghJson(`/git/commits/${head}`)).tree.sha;
+      const tree = await ghJson(`/git/trees/${treeSha}?recursive=1`);
+      const shaAt = {};
+      (tree.tree || []).forEach(e => { if(e.type === 'blob') shaAt[e.path] = e.sha; });
+      // Work out what to write for each file: ours as is, or merged with a change
+      // made elsewhere since this device last synced it.
+      const plan = [];
+      for(const it of items){
+        const entry = DB[it.path] || {sha: null, base: null};
+        let remoteSha = shaAt[it.path];
+        if(remoteSha === undefined && tree.truncated){
+          const c = await ghContents(it.path); remoteSha = c ? c.sha : undefined;
+        }
+        if((remoteSha || null) === (entry.sha || null)){ plan.push({...it, out: it.value, outBody: it.body}); continue; }
+        const remoteText = b64decode((await ghJson(`/git/blobs/${remoteSha}`)).content.replace(/\n/g, ''));
+        latest[it.path] = {text: remoteText, sha: remoteSha};
+        const merged = mergeThreeWay(entry.base != null ? JSON.parse(entry.base) : null, it.value, JSON.parse(remoteText));
+        if(!merged.ok){
+          revertBatch(paths, latest);
+          throw new SaveError('This changed on another device, so I loaded the latest. Please redo your last change.');
+        }
+        plan.push({...it, out: merged.value, outBody: JSON.stringify(merged.value, null, 2)});
+      }
+      const entries = [];
+      for(const f of plan){
+        const blob = await ghPost('/git/blobs', {content: b64encode(f.outBody), encoding: 'base64'});
+        f.blobSha = blob.sha;
+        entries.push({path: f.path, mode: '100644', type: 'blob', sha: blob.sha});
+      }
+      const newTree = await ghPost('/git/trees', {base_tree: treeSha, tree: entries});
+      const commit = await ghPost('/git/commits', {message, tree: newTree.sha, parents: [head]});
+      let moved = false;
+      try {
+        await ghPost(refPath, {sha: commit.sha, force: false}, 'PATCH');
+        moved = true;
+      } catch(e) {
+        if(e.status === 422) continue;   // main moved underneath us: read it again and retry
+        // The ref may have moved even though the reply was lost: check first.
+        let now = null;
+        try { now = (await ghJson(`/git/ref/heads/${defaultBranch}`)).object.sha; } catch(_) {}
+        if(now !== commit.sha) throw e;
+        moved = true;
+      }
+      if(moved){
+        for(const f of plan){
+          if(f.outBody === f.body){ DB[f.path] = {value: f.value, sha: f.blobSha, base: f.body}; continue; }
+          // Merged with another device's change: keep any edit made here meanwhile.
+          const live = currentValue(f.path, f.value);
+          const folded = mergeThreeWay(JSON.parse(f.body), live, f.out);
+          const next = folded.ok ? folded.value : f.out;
+          setValue(f.path, next);
+          DB[f.path] = {value: next, sha: f.blobSha, base: f.outBody};
+        }
+        if(plan.some(f => f.outBody !== f.body)) rerenderCurrent();
+        return;
+      }
+    }
+    throw new Error('main kept changing');
+  } catch(e) {
+    if(e instanceof SaveError) throw e;
+    revertBatch(paths, latest);
+    throw new SaveError(`Couldn't save (${e.message}). Your last change was undone.`);
+  }
 }
 
 // Three-way merge of one data file. base = last copy this device synced,
@@ -961,6 +1086,10 @@ async function loadAll(){
 
 async function saveAccounts(msg='Update accounts'){
   await saveJson('db/accounts.json', accounts, msg);
+  afterAccountsSaved();
+}
+
+function afterAccountsSaved(){
   refreshAppBadge();
   if(config.rssEnabled && STORE.mode === 'github') saveRSS().catch(() => {});
 }
@@ -1559,8 +1688,8 @@ async function promoteOffer(offerId, toStatus){
   accounts.push(acc);
   offer.status = 'archived';
 
-  await saveAccounts('Promote offer: ' + offer.institution);
-  await saveOffers('Archive offer: ' + offer.institution);
+  await saveBatch(['db/accounts.json', 'db/offers.json'], 'Promote offer: ' + offer.institution);
+  afterAccountsSaved();
   render_offers();
   render_planned();
   render_today();
@@ -2200,9 +2329,7 @@ async function importData(input){
       throw new Error('Not a Bank Bonus Tracker backup file');
     }
     config = data.config; accounts = data.accounts; offers = data.offers;
-    await saveConfig('Import backup');
-    await saveAccounts('Import backup');
-    await saveOffers('Import backup');
+    await saveBatch(['db/config.json', 'db/accounts.json', 'db/offers.json'], 'Import backup');
     toast('Backup imported ✓');
     init();
   } catch(e){ toast('Import failed: ' + (e.message || e)); }
@@ -2619,14 +2746,14 @@ async function moveToOffers(){
   });
   accounts = accounts.filter(x => x.id !== editingId);
   try {
-    await saveOffers('Move account to offers: ' + a.institution);
-    await saveAccounts('Remove account moved to offers: ' + a.institution);
+    await saveBatch(['db/offers.json', 'db/accounts.json'], 'Move account to offers: ' + a.institution);
+    afterAccountsSaved();
     toast(a.institution + ' moved to Offers');
     editingId = null;
     show('offers');
     return true;
   } catch(e) {
-    toast('Save error: ' + e.message);
+    reportSaveError(e);
     return false;
   }
 }

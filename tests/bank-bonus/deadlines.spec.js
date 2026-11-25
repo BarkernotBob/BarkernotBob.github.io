@@ -35,8 +35,8 @@ test('Today lists requirement deadlines coming up and recently missed', async ({
   const missed = card.locator('.list-item', { hasText: 'Second Savings' })
   await expect(missed).toContainText('Requirements due 10/12/26')
   await expect(missed.locator('.late')).toHaveText('8 days overdue')
-  // Only arrived deadlines count: the overdue planned open + Second Savings.
-  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(2)
+  // Deadlines ahead or past are a heads-up: only the overdue planned open counts.
+  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(1)
   expect(errors).toEqual([])
 })
 
@@ -71,6 +71,17 @@ test('closing an account sets its reopen date from the terms', async ({ page }) 
   expect(saved.dates.closed).toBe('2026-11-25')
   expect(saved.dates.reopenAfter).toBe('2027-06-29')
   expect(errors).toEqual([])
+})
+
+test('saving an account that is still open gives it no reopen date', async ({ page }) => {
+  const accounts = load('accounts.json')
+  accounts.find((x) => x.id === 'a_paid_1').monthsTillReopen = 6
+  await bootAt(page, '2026-11-25', { 'bb_local_db/accounts.json': JSON.stringify(accounts) })
+  await goTab(page, 'active')
+  await page.locator('#section-active .card', { hasText: 'Paid Out Bank' }).locator('.card-title').click()
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.toast')).toContainText('Saved')
+  expect((await accountsInStore(page)).find((x) => x.id === 'a_paid_1').dates.reopenAfter).toBeNull()
 })
 
 test('a reopen date typed in by hand is kept', async ({ page }) => {

@@ -153,7 +153,9 @@ test('Reports: the money adds up to the fixtures', async ({ page }) => {
   // Fixtures: earned = closed 250 + paid-but-open 400 = 650; pending = open
   // unpaid 300+500 = 800; planned 200; total 1650. (#15: a paid bonus on an
   // open account is earned, not pending.)
-  const row = (label) => reports.locator('tr', { hasText: label })
+  // Match the Bonuses table's label cell exactly ("Planned" also appears in
+  // the All accounts table).
+  const row = (label) => reports.locator('tr').filter({ has: page.locator('td:first-child', { hasText: new RegExp('^' + label.replace(/[()]/g, '\\$&') + '$') }) })
   await expect(row('Earned (paid or closed)')).toContainText('$650.00')
   await expect(row('Earned (paid or closed)').locator('td').last()).toHaveText('2')
   await expect(row('Pending (open, unpaid)')).toContainText('$800.00')

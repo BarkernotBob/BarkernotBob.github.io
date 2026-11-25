@@ -1,0 +1,51 @@
+name: App tests (pull requests)
+
+# Runs the bank-bonus Playwright suite on pull requests, so a change is tested
+# and its screenshots can be reviewed before it reaches main. deploy.yml still
+# runs every affected suite as the gate on push to main.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'quartz/static/bank-bonus/**'
+      - 'quartz/static/shared/**'
+      - 'tests/bank-bonus/**'
+      - 'tests/shared/**'
+      - '.github/workflows/app-tests-pr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bank-bonus:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/bank-bonus
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install test dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run bank-bonus regression suite
+        run: npm test
+        env:
+          CI: 'true'
+      - name: Upload screenshot gallery
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bank-bonus-screenshots
+          path: tests/bank-bonus/screenshots/
+          if-no-files-found: warn
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bank-bonus-playwright-report
+          path: tests/bank-bonus/playwright-report/
+          if-no-files-found: ignore

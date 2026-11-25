@@ -32,6 +32,7 @@ content/.smart-env/
 # Playwright regression-rig local outputs (grocery app). CI uploads these as
 # build artifacts; they're generated, never committed.
 tests/grocery/screenshots/
+tests/bank-bonus/screenshots/
 tests/grocery/test-results/
 tests/grocery/playwright-report/
 tests/install-checks/test-results/

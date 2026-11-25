@@ -144,6 +144,8 @@
     .pill-full { color: var(--open); background: var(--open-bg); }
     .pill-partial { color: var(--warn); background: var(--warn-soft); }
     .pill-over { color: var(--danger); background: rgba(210,59,59,.12); }
+    .pill-verify { color: var(--warn); background: var(--warn-soft); text-transform: none; }
+    .offer-notes { font-size: 13px; color: var(--muted); white-space: pre-line; margin: 6px 0 2px; }
     .person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
     .person-dot { width: 18px; height: 18px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 
@@ -1185,12 +1187,14 @@ function render_offers(){
   } else {
     backlog.forEach(o => {
       html += `<div class="card">
-        <div class="card-header"><span class="card-title">${esc(o.institution)}${o.person ? ' ' + personChip(o.person) : ''}</span></div>
+        <div class="card-header"><span class="card-title">${esc(o.institution)}${o.person ? ' ' + personChip(o.person) : ''}</span>${o.needsVerification ? `<span class="pill pill-verify" data-verify-pill="${esc(o.id)}">Verify terms</span>` : ''}</div>
         <div class="row">
           <div class="row-item"><div class="label">Bonus</div><div class="value money">${money(o.bonus)}</div></div>
           <div class="row-item"><div class="label">DD Required</div><div class="value money">${money(o.directDepositTotal)}</div></div>
         </div>
+        ${o.notes ? `<div class="offer-notes">${esc(o.notes)}</div>` : ''}
         <div class="action-bar">
+          ${o.needsVerification ? `<button class="sec" data-action="markOfferVerified" data-a1="${esc(o.id)}">Mark verified</button>` : ''}
           <button data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="planned">Move to Planned</button>
           <button class="sec" data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="open">Open now</button>
           <button class="danger" data-action="deleteOffer" data-a1="${esc(o.id)}">Delete</button>
@@ -1263,6 +1267,7 @@ async function promoteOffer(offerId, toStatus){
     .join('');
   const result = await modal(`
     <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
+    ${offer.needsVerification ? '<p class="offer-notes">These terms came from the old sheet and haven\'t been verified. Check the bank\'s current offer first.</p>' : ''}
     <div class="row">${personList}</div>
   `);
 
@@ -1318,6 +1323,20 @@ async function promoteOffer(offerId, toStatus){
   render_planned();
   render_today();
   toast(offer.institution + ' promoted to ' + toStatus);
+}
+
+// Offers brought over from the old spreadsheet carry needsVerification until
+// Isaiah has rechecked the bank's current terms.
+// Updates the card in place rather than re-rendering, so nothing below it moves.
+async function markOfferVerified(el, offerId){
+  const offer = offers.find(o => o.id === offerId);
+  if(!offer) return;
+  delete offer.needsVerification;
+  await saveOffers('Verify offer: ' + offer.institution);
+  const pill = document.querySelector(`[data-verify-pill="${CSS.escape(offerId)}"]`);
+  if(pill) pill.style.visibility = 'hidden';
+  if(el){ el.disabled = true; el.textContent = 'Verified'; }
+  toast(offer.institution + ' marked verified');
 }
 
 async function deleteOffer(offerId){
@@ -2487,6 +2506,7 @@ const ACTIONS = {
   openPlanned: (el, id) => openPlanned(id),
   promoteOffer: (el, id, status) => promoteOffer(id, status),
   deleteOffer: (el, id) => deleteOffer(id),
+  markOfferVerified: (el, id) => markOfferVerified(el, id),
   markReminderDone: (el, accountId, id) => markReminderDone(accountId, id),
   setPersonFilter: (el, tab, person) => setPersonFilter(tab, person),
   setStatusFilter: (el, status) => setStatusFilter(status),

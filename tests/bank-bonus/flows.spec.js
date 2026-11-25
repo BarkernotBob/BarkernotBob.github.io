@@ -181,3 +181,27 @@ test('Settings still says data is local until GitHub is connected', async ({ pag
   await expect(page.locator('#section-settings')).toContainText('Saved on this device only')
   expect(await configInStore(page)).toBeTruthy()
 })
+
+test('Offers: an offer from the old sheet shows "Verify terms" until marked verified', async ({ page }, testInfo) => {
+  const offers = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'db', 'offers.json'), 'utf8'))
+  offers[0].needsVerification = true
+  offers[0].notes = 'From the old sheet: verify current terms before opening.'
+  const { errors } = await bootApp(page, { seed: { 'bb_local_db/offers.json': JSON.stringify(offers) } })
+  await goTab(page, 'offers')
+  const card = page.locator('#section-offers .card', { hasText: offers[0].institution })
+  await expect(card.locator('.pill-verify')).toHaveText('Verify terms')
+  await expect(card).toContainText('verify current terms')
+  await expect(page.locator('#section-offers .pill-verify')).toHaveCount(1)
+  await testInfo.attach('offers-verify-mobile.png', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
+  await card.screenshot({ path: require('path').join(__dirname, 'screenshots', 'offers-verify-card.png') })
+  await card.getByRole('button', { name: 'Mark verified' }).click()
+  await expect.poll(async () => (await offersInStore(page))[0].needsVerification).toBeUndefined()
+  // Updated in place (no reflow): pill hidden, button disabled; gone after a reload.
+  await expect(card.locator('.pill-verify')).toBeHidden()
+  await expect(card.getByRole('button', { name: 'Verified' })).toBeDisabled()
+  await expect(card).toContainText('verify current terms')
+  await page.reload()
+  await goTab(page, 'offers')
+  await expect(page.locator('#section-offers .pill-verify')).toHaveCount(0)
+  expect(errors, errors.join('\n')).toEqual([])
+})

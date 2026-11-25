@@ -150,13 +150,31 @@ test('Reports: the money adds up to the fixtures', async ({ page }) => {
   await bootApp(page)
   await goTab(page, 'reports')
   const reports = page.locator('#section-reports')
-  // Fixtures: closed 250 earned; open 300+500+400 = 1200 pending; planned 200.
-  await expect(reports).toContainText('$1,650.00')
-  await expect(reports).toContainText('$1,200.00')
-  await expect(reports).toContainText('$250.00')
-  await expect(reports).toContainText('$200.00')
+  // Fixtures: earned = closed 250 + paid-but-open 400 = 650; pending = open
+  // unpaid 300+500 = 800; planned 200; total 1650. (#15: a paid bonus on an
+  // open account is earned, not pending.)
+  // Match the Bonuses table's label cell exactly ("Planned" also appears in
+  // the All accounts table).
+  const row = (label) => reports.locator('tr').filter({ has: page.locator('td:first-child', { hasText: new RegExp('^' + label.replace(/[()]/g, '\\$&') + '$') }) })
+  await expect(row('Earned (paid or closed)')).toContainText('$650.00')
+  await expect(row('Earned (paid or closed)').locator('td').last()).toHaveText('2')
+  await expect(row('Pending (open, unpaid)')).toContainText('$800.00')
+  await expect(row('Pending (open, unpaid)').locator('td').last()).toHaveText('2')
+  await expect(row('Planned')).toContainText('$200.00')
+  await expect(row('Total projected')).toContainText('$1,650.00')
+  await expect(reports).toContainText('Earned includes 1 paid bonus on accounts still open')
   // After-tax at the fixture's 16.75% marginal rate.
   await expect(reports).toContainText('16.75%')
+})
+
+test('Reports: a payout date still in the future stays pending', async ({ page }) => {
+  const fs = require('fs')
+  const accounts = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'db', 'accounts.json'), 'utf8'))
+  accounts.find((a) => a.id === 'a_open_1').dates.bonusPaidOut = '2099-01-01'
+  await bootApp(page, { seed: { 'bb_local_db/accounts.json': JSON.stringify(accounts) } })
+  await goTab(page, 'reports')
+  const pending = page.locator('#section-reports tr').filter({ has: page.locator('td:first-child', { hasText: /^Pending \(open, unpaid\)$/ }) })
+  await expect(pending).toContainText('$800.00')
 })
 
 test('Calendar renders a month grid', async ({ page }) => {

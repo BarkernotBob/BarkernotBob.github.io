@@ -1870,8 +1870,16 @@ function render_reports(){
   const taxRate = config.taxRate || 0;
   const afterTax = v => v * (1 - taxRate);
 
-  const earned = sum(closed);
-  const pending = sum(open);
+  // A bonus is earned once it's paid out, even if the account is still open
+  // (kept for its minimum period). Closed accounts count as earned as before.
+  // A payout date in the future is an expectation, not money received.
+  const todayStr = todayISO();
+  const isPaid = a => !!(a.dates && a.dates.bonusPaidOut && a.dates.bonusPaidOut <= todayStr);
+  const earnedAccts = accounts.filter(a => a.status === 'closed' || (a.status === 'open' && isPaid(a)));
+  const pendingAccts = open.filter(a => !isPaid(a));
+  const paidOpen = earnedAccts.length - closed.length;
+  const earned = sum(earnedAccts);
+  const pending = sum(pendingAccts);
   const plannedTot = sum(planned);
   const total = earned + pending + plannedTot;
 
@@ -1887,19 +1895,19 @@ function render_reports(){
   // Headline numbers up top.
   let html = `<div class="summary-strip">
       <div class="stat"><div class="stat-label">Total projected (after-tax)</div><div class="stat-value">${money(afterTax(total))}</div><div class="stat-sub">${money(total)} gross · ${accounts.length} accounts</div></div>
-      <div class="stat"><div class="stat-label">Earned</div><div class="stat-value">${money(afterTax(earned))}</div><div class="stat-sub">${closed.length} closed</div></div>
-      <div class="stat"><div class="stat-label">Pending</div><div class="stat-value">${money(afterTax(pending))}</div><div class="stat-sub">${open.length} open</div></div>
+      <div class="stat"><div class="stat-label">Earned</div><div class="stat-value">${money(afterTax(earned))}</div><div class="stat-sub">${earnedAccts.length} paid or closed</div></div>
+      <div class="stat"><div class="stat-label">Pending</div><div class="stat-value">${money(afterTax(pending))}</div><div class="stat-sub">${pendingAccts.length} open, unpaid</div></div>
       <div class="stat"><div class="stat-label">After-tax $/hr</div><div class="stat-value">${money(afterTaxRealized / Math.max(totalHours, 1))}</div><div class="stat-sub">${totalHours.toFixed(1)}h invested</div></div>
     </div>`;
 
   html += '<div class="card" style="padding:0"><div class="card-header" style="padding:16px 16px 0">Bonuses (gross → after-tax)</div>';
   html += '<div class="table-wrap"><table><thead><tr><th></th><th class="num">Gross</th><th class="num">After-tax</th><th class="num">#</th></tr></thead><tbody>';
-  html += `<tr><td>Earned (closed)</td><td class="num">${money(earned)}</td><td class="num">${money(afterTax(earned))}</td><td class="num">${closed.length}</td></tr>`;
-  html += `<tr><td>Pending (open)</td><td class="num">${money(pending)}</td><td class="num">${money(afterTax(pending))}</td><td class="num">${open.length}</td></tr>`;
+  html += `<tr><td>Earned (paid or closed)</td><td class="num">${money(earned)}</td><td class="num">${money(afterTax(earned))}</td><td class="num">${earnedAccts.length}</td></tr>`;
+  html += `<tr><td>Pending (open, unpaid)</td><td class="num">${money(pending)}</td><td class="num">${money(afterTax(pending))}</td><td class="num">${pendingAccts.length}</td></tr>`;
   html += `<tr><td>Planned</td><td class="num">${money(plannedTot)}</td><td class="num">${money(afterTax(plannedTot))}</td><td class="num">${planned.length}</td></tr>`;
   html += `<tr style="font-weight:700"><td>Total projected</td><td class="num">${money(total)}</td><td class="num">${money(afterTax(total))}</td><td class="num">${accounts.length}</td></tr>`;
   html += '</tbody></table></div>';
-  html += `<div style="font-size:12px;color:var(--muted);padding:8px 16px 16px">After-tax applies your ${pct}% marginal rate to bonus + referral income.</div>`;
+  html += `<div style="font-size:12px;color:var(--muted);padding:8px 16px 16px">${paidOpen ? `Earned includes ${paidOpen} paid bonus${paidOpen === 1 ? '' : 'es'} on accounts still open. ` : ''}After-tax applies your ${pct}% marginal rate to bonus + referral income.</div>`;
   html += '</div>';
 
   html += '<div class="card"><div class="card-header">Effort & return</div><div class="row">';

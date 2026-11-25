@@ -58,6 +58,19 @@ test('if the commit fails, neither file changes and the screen shows what is sav
   await expect.poll(() => promotedRemotely(mock)).toBe(1)
 })
 
+test('a busy main (409) is retried rather than undone', async ({ page }) => {
+  const { mock } = await bootSynced(page, { mock: strict })
+  let answered = false
+  await page.route('https://api.github.com/repos/*/*/git/refs/heads/main', (route) => {
+    if (answered || route.request().method() !== 'PATCH') return route.fallback()
+    answered = true
+    return route.fulfill({ status: 409, json: { message: 'Reference cannot be updated' } })
+  })
+  await promote(page)
+  await expect.poll(() => promotedRemotely(mock)).toBe(1)
+  await expect(page.locator('.toast', { hasText: /couldn't/i })).toHaveCount(0)
+})
+
 test('a lost reply on a commit that landed counts as saved, once', async ({ page }) => {
   const { mock } = await bootSynced(page, { mock: strict })
   mock.armLostResponse()

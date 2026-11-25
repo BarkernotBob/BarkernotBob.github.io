@@ -626,6 +626,9 @@ async function connectGitHub(repo, token){
     }
   }catch(e){
     STORE.mode = prevMode;                                  // roll back on failure
+    // Forget the half-made connection too, or a reload would start in github
+    // mode against a repo whose seed never finished.
+    if(prevMode !== 'github') ['bb_repo','bb_token','bb_login','bb_method'].forEach(k => localStorage.removeItem(k));
     toast('Connected but sync failed: '+(e.message||e));
     return false;
   }
@@ -850,7 +853,22 @@ function saveBatch(paths, message){
   return run;
 }
 
-let defaultBranch = null;
+let branchCache = {repo: null, name: null};   // the data repo's default branch, per repo
+async function dataBranch(){
+  if(branchCache.repo !== LS.repo)
+    branchCache = {repo: LS.repo, name: (await ghJson('')).default_branch || 'main'};
+  return branchCache.name;
+}
+// Did `sha` land on the branch? True if it is the head or behind it.
+async function commitLanded(sha, branch){
+  let now = null;
+  try { now = (await ghJson(`/git/ref/heads/${branch}`)).object.sha; } catch(_) { return false; }
+  if(now === sha) return true;
+  try {
+    const cmp = await ghJson(`/compare/${sha}...${now}`);
+    return cmp.status === 'ahead' || cmp.status === 'identical';
+  } catch(_) { return false; }
+}
 async function ghJson(path, opts = {}){
   const r = await fetch(`${API}/repos/${LS.repo}${path}`, {cache: 'no-store', ...opts,
     headers: {...ghHeaders(), ...(opts.body ? {'Content-Type': 'application/json'} : {})}});
@@ -859,13 +877,19 @@ async function ghJson(path, opts = {}){
 }
 const ghPost = (path, body, method = 'POST') => ghJson(path, {method, body: JSON.stringify(body)});
 
-// Put every file in the batch back to its last saved copy after a failure.
+// Put every file in the batch back to its last saved copy after a failure. A
+// file with no saved copy on this device can't be put back from memory, so
+// reload everything from storage instead.
 function revertBatch(paths, latest = {}){
+  let reload = false;
   paths.forEach(p => {
     if(latest[p]) return replaceWithSaved(p, latest[p].text, latest[p].sha);
     const e = DB[p];
-    if(e && e.base != null) replaceWithSaved(p, e.base, e.sha);
+    if(e && e.base != null) return replaceWithSaved(p, e.base, e.sha);
+    saveGen[p] = (saveGen[p] || 0) + 1;
+    reload = true;
   });
+  if(reload) setTimeout(() => init(), 0);
 }
 
 async function saveBatchNow(paths, message){
@@ -883,10 +907,11 @@ async function saveBatchNow(paths, message){
   }
   const latest = {};   // remote copies read along the way, for a revert
   try {
-    if(!defaultBranch) defaultBranch = (await ghJson('')).default_branch || 'main';
-    const refPath = `/git/refs/heads/${defaultBranch}`;
-    for(let attempt = 0; attempt < 3; attempt++){
-      const head = (await ghJson(`/git/ref/heads/${defaultBranch}`)).object.sha;
+    const branch = await dataBranch();
+    const refPath = `/git/refs/heads/${branch}`;
+    for(let attempt = 0; attempt < 5; attempt++){
+      if(attempt) await new Promise(r => setTimeout(r, 250 * attempt));
+      const head = (await ghJson(`/git/ref/heads/${branch}`)).object.sha;
       const treeSha = (await ghJson(`/git/commits/${head}`)).tree.sha;
       const tree = await ghJson(`/git/trees/${treeSha}?recursive=1`);
       const shaAt = {};
@@ -901,9 +926,13 @@ async function saveBatchNow(paths, message){
           const c = await ghContents(it.path); remoteSha = c ? c.sha : undefined;
         }
         if((remoteSha || null) === (entry.sha || null)){ plan.push({...it, out: it.value, outBody: it.body}); continue; }
-        const remoteText = b64decode((await ghJson(`/git/blobs/${remoteSha}`)).content.replace(/\n/g, ''));
-        latest[it.path] = {text: remoteText, sha: remoteSha};
-        const merged = mergeThreeWay(entry.base != null ? JSON.parse(entry.base) : null, it.value, JSON.parse(remoteText));
+        let remoteValue = null;   // the file is gone on GitHub: ours stands
+        if(remoteSha){
+          const remoteText = b64decode((await ghJson(`/git/blobs/${remoteSha}`)).content.replace(/\n/g, ''));
+          latest[it.path] = {text: remoteText, sha: remoteSha};
+          remoteValue = JSON.parse(remoteText);
+        }
+        const merged = mergeThreeWay(entry.base != null ? JSON.parse(entry.base) : null, it.value, remoteValue);
         if(!merged.ok){
           revertBatch(paths, latest);
           throw new SaveError('This changed on another device, so I loaded the latest. Please redo your last change.');
@@ -923,11 +952,10 @@ async function saveBatchNow(paths, message){
         await ghPost(refPath, {sha: commit.sha, force: false}, 'PATCH');
         moved = true;
       } catch(e) {
-        if(e.status === 422) continue;   // main moved underneath us: read it again and retry
-        // The ref may have moved even though the reply was lost: check first.
-        let now = null;
-        try { now = (await ghJson(`/git/ref/heads/${defaultBranch}`)).object.sha; } catch(_) {}
-        if(now !== commit.sha) throw e;
+        if(e.status === 422 || e.status === 409) continue;   // main moved underneath us: read it again and retry
+        // The commit may have landed even though the reply was lost (and other
+        // commits may already sit on top of it): check before calling it failed.
+        if(!(await commitLanded(commit.sha, branch))) throw e;
         moved = true;
       }
       if(moved){
@@ -2332,7 +2360,10 @@ async function importData(input){
     await saveBatch(['db/config.json', 'db/accounts.json', 'db/offers.json'], 'Import backup');
     toast('Backup imported ✓');
     init();
-  } catch(e){ toast('Import failed: ' + (e.message || e)); }
+  } catch(e){
+    if(e instanceof SaveError){ reportSaveError(e); init(); return; }   // show what is actually saved
+    toast('Import failed: ' + (e.message || e));
+  }
 }
 
 async function savePaycheckSettings(){

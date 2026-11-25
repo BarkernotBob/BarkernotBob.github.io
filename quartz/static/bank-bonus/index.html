@@ -1191,18 +1191,16 @@ async function init(){
 function daysLate(iso, today){
   return Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(iso + 'T12:00:00Z')) / 86400000);
 }
-const sameBank = (a, b) => {
-  const ka = bankKey(a.institution), kb = bankKey(b.institution);
-  return ka ? ka === kb : String(a.institution || '').trim().toLowerCase() === String(b.institution || '').trim().toLowerCase();
-};
+const sameBank = (a, b) => bankMatch(a.institution, b.institution);
 // A passed reopen date is handled once the same person has a newer account at the
 // same bank (planned, or opened after this one closed), or it was dismissed on Today.
 // A dismissal covers only the reopen date it was made against, so moving that date
 // later brings the item back when the new date arrives.
 function reopenHandled(a){
   const d = a.dates || {};
-  if(a.reopenDismissedOn && a.reopenDismissedOn >= d.reopenAfter) return true;
-  const since = d.closed || d.opened || d.reopenAfter || '';
+  const reopen = reopenDate(a);
+  if(a.reopenDismissedOn && a.reopenDismissedOn >= reopen) return true;
+  const since = d.closed || d.opened || reopen || '';
   return accounts.some(b => b !== a && b.person === a.person && sameBank(a, b) &&
     (b.status === 'planned' || ((b.dates && b.dates.opened) || '') > since));
 }
@@ -1232,8 +1230,11 @@ function deadlinesFor(a){
 // Fill in a closed account's reopen date from its terms, unless it was typed in
 // by hand: a date this function set earlier (reopenAutoFrom) is kept up to date
 // (or cleared when the terms no longer give one); any other date is left alone.
+// Emptying a filled-in date counts as a hand edit (reopenAutoOff): it stays empty.
 function fillReopenAfter(a){
   if(!a || !a.dates || a.status !== 'closed') return;
+  if(!a.dates.reopenAfter && a.reopenAutoFrom){ delete a.reopenAutoFrom; a.reopenAutoOff = true; }
+  if(a.reopenAutoOff) return;
   const want = deadlinesFor(a).reopenFrom;
   const auto = a.dates.reopenAfter && a.dates.reopenAfter === a.reopenAutoFrom;
   if(!want){
@@ -1244,6 +1245,14 @@ function fillReopenAfter(a){
     a.dates.reopenAfter = want;
     a.reopenAutoFrom = want;
   }
+}
+// When the same person may open this bank again: the date on the account, or,
+// for a closed account that was never saved since #14, the one its terms give.
+// One read for Today, Offers, the cards and the feed, so they agree.
+function reopenDate(a){
+  const d = a.dates || {};
+  if(d.reopenAfter) return d.reopenAfter;
+  return a.status === 'closed' && !a.reopenAutoOff ? deadlinesFor(a).reopenFrom : null;
 }
 // Deadlines worth showing on Today: requirements from two weeks out until a
 // month past (after that the bonus is either paid or lost), and the end of a
@@ -1263,28 +1272,41 @@ function upcomingDeadlines(today){
 
 // ---- Eligibility per person (issue #14) ----
 // Bank names are matched loosely ("Ally Bank" = "Ally", "Langley FCU" =
-// "Langley Federal Credit Union"), and an account made from an offer always matches it.
-// "Credit union" spellings become one token rather than vanishing, so "Citizens
-// Bank" and "Citizens FCU" stay different banks.
+// "Langley Federal Credit Union", "Navy Federal" = "Navy Federal Credit Union"),
+// and an account made from an offer always matches it. A bare name matches the
+// bank or the credit union of that name, but a name that says which it is keeps
+// "Citizens Bank" and "Citizens FCU" apart.
 function bankKey(name){
-  return String(name || '').toLowerCase()
-    .replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ')
-    .replace(/\b(federal credit union|credit union|fcu)\b/g, ' cu ')
+  let s = String(name || '').toLowerCase()
+    .replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  let kind = '';
+  if(/\b(credit union|fcu|cu)\b/.test(s)) kind = 'cu';
+  else if(/\b(bank|na|n a|national association)\b/.test(s)) kind = 'bank';
+  s = s.replace(/\b(federal credit union|credit union|fcu|cu)\b/g, ' ')
     .replace(/\b(bank|na|n a|national association|the)\b/g, ' ')
-    .replace(/\s+/g, ' ').trim();
+    .replace(/\s+/g, ' ').trim()
+    .replace(/ federal$/, '');   // "Navy Federal" is the credit union's short name
+  return {base: s, kind};
+}
+function bankMatch(x, y){
+  const a = bankKey(x), b = bankKey(y);
+  if(!a.base || !b.base)
+    return String(x || '').trim().toLowerCase() === String(y || '').trim().toLowerCase();
+  return a.base === b.base && (a.kind === b.kind || !a.kind || !b.kind);
 }
 // {state, label}: 'has' (has one open or planned), 'wait' (eligible from a date),
 // 'check' (had one before and the reopen rule isn't known), 'ok'.
 function eligibility(offer, person, today = todayISO()){
-  const key = bankKey(offer.institution);
   const mine = accounts.filter(a => a && a.person === person &&
-    (a.offerId === offer.id || (key && bankKey(a.institution) === key)));
+    (a.offerId === offer.id || bankMatch(a.institution, offer.institution)));
   const live = mine.find(a => a.status === 'open' || a.status === 'planned');
   if(live) return {state: 'has', label: live.status === 'planned' ? 'planned' : 'has one open'};
   if(!mine.length) return {state: 'ok', label: 'eligible'};
-  // The latest reopen date across past accounts decides; without one, it's unknown.
-  const froms = mine.map(a => (a.dates || {}).reopenAfter || deadlinesFor(a).reopenFrom).filter(Boolean).sort();
-  const from = froms.at(-1);
+  // The most recent past account decides: an older account's reopen date says
+  // nothing about the lockout from a newer one. Without a date, it's unknown.
+  const ended = a => { const d = a.dates || {}; return d.closed || d.bonusPaidOut || d.opened || ''; };
+  const last = [...mine].sort((x, y) => ended(x).localeCompare(ended(y))).at(-1);
+  const from = reopenDate(last);
   if(from) return from > today ? {state: 'wait', label: 'from ' + fmtDate(from)} : {state: 'ok', label: 'eligible again'};
   return {state: 'check', label: 'had one, check terms'};
 }
@@ -1294,7 +1316,7 @@ function deadlineLine(a){
   const parts = [];
   if(dl.reqDue && !(a.dates || {}).bonusPaidOut) parts.push('Requirements by ' + fmtDate(dl.reqDue));
   if(dl.minBalUntil) parts.push('Keep the minimum balance until ' + fmtDate(dl.minBalUntil));
-  const reopen = (a.dates || {}).reopenAfter || dl.reopenFrom;
+  const reopen = reopenDate(a);
   if(reopen) parts.push('Reopen after ' + fmtDate(reopen));
   return parts.length ? `<div class="deadline-line">${esc(parts.join(' · '))}</div>` : '';
 }
@@ -1316,8 +1338,8 @@ function computeDueToday(){
   const live = accounts.filter(a => a && a.dates);
   const toOpen = live.filter(a => a.status === 'planned' && due(a.dates.plannedOpen))
     .map(a => withLate(a, a.dates.plannedOpen));
-  const reopen = live.filter(a => due(a.dates.reopenAfter) && !reopenHandled(a))
-    .map(a => withLate(a, a.dates.reopenAfter));
+  const reopen = live.filter(a => due(reopenDate(a)) && !reopenHandled(a))
+    .map(a => ({...withLate(a, reopenDate(a)), reopenOn: reopenDate(a)}));
   const toClose = live.filter(a => a.status === 'open' && due(a.dates.closed))
     .map(a => withLate(a, a.dates.closed));
   const reminders = [];
@@ -1450,7 +1472,7 @@ function render_today(){
     if(reopen.length) {
       html += '<div class="card"><div class="card-header">🔁 Eligible to Reopen</div>';
       reopen.forEach(a => {
-        const since = a.late ? `since ${fmtDate(a.dates.reopenAfter)}` : 'from today';
+        const since = a.late ? `since ${fmtDate(a.reopenOn)}` : 'from today';
         const note = a.status === 'open' ? `Eligible ${since}; this account is still open` : `Eligible ${since}`;
         html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${note}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" data-stop="1" data-action="dismissReopen" data-a1="${esc(a.id)}">Dismiss</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
       });
@@ -1644,7 +1666,8 @@ async function quickUpdateDate(accountId, field, iso){
   const a = accounts.find(x => x.id === accountId);
   if(!a) return;
   a.dates[field] = iso || null;
-  try { await saveAccounts('Update ' + field); render_today(); toast('Date updated'); }
+  // Redraw the tab the edit came from too: its card shows deadlines worked out from these dates.
+  try { await saveAccounts('Update ' + field); if(currentTab() !== 'today') render_today(); rerenderCurrent(); toast('Date updated'); }
   catch(e){ toast('Save error: ' + e.message); }
 }
 
@@ -2953,7 +2976,7 @@ function generateRSS(){
       <link>${appUrl}</link>
     </item>`);
   };
-  accounts.filter(a => (a.status==='planned' && a.dates.plannedOpen===today) || a.dates.reopenAfter===today)
+  accounts.filter(a => (a.status==='planned' && a.dates.plannedOpen===today) || reopenDate(a)===today)
     .forEach(a => addItem(`Open: ${a.institution} (${a.person})`, `Bonus ${money(a.bonus)}, DD required ${money(a.directDepositTotal)}`, today, `${a.id}-open-${today}`));
   accounts.filter(a => a.dates.closed===today)
     .forEach(a => addItem(`Close: ${a.institution} (${a.person})`, `Bonus ${money(a.bonus)}`, today, `${a.id}-close-${today}`));

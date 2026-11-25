@@ -51,8 +51,12 @@ test('Today: a reopen date that passed shows until dismissed, and the dismissal 
   await page.screenshot({ path: testInfo.outputPath('today-overdue.png'), fullPage: true })
   await testInfo.attach('today-overdue', { path: testInfo.outputPath('today-overdue.png'), contentType: 'image/png' })
 
-  await reopen.getByRole('button', { name: 'Dismiss' }).click()
-  await expect(today.locator('.card', { hasText: 'Eligible to Reopen' })).toHaveCount(0)
+  // The row settles in place (no reflow) and the icon badge drops at once.
+  const before = await page.evaluate(() => window.__badge)
+  const dismiss = reopen.getByRole('button', { name: 'Dismiss' })
+  await dismiss.click()
+  await expect(reopen.getByRole('button', { name: 'Dismissed' })).toBeDisabled()
+  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(before - 1)
   await expect.poll(async () =>
     (await accountsInStore(page)).find((a) => a.id === 'a_closed_1').reopenDismissedOn
   ).toBe('2026-11-25')
@@ -81,6 +85,32 @@ test('Today: a reminder dated before today stays until marked done', async ({ pa
   await expect.poll(() => page.evaluate(() => window.__badge)).toBe(3)
 
   await reminders.getByRole('button', { name: 'Done' }).click()
-  await expect(today).not.toContainText('Move the DD back')
+  await expect(reminders.getByRole('button', { name: 'Done ✓' })).toBeDisabled()
+  await expect.poll(() => page.evaluate(() => window.__badge)).toBe(2)
+  await page.reload()
+  await expect(page.locator('#section-today')).not.toContainText('Move the DD back')
+  expect(errors).toEqual([])
+})
+
+test('Today: a dismissal covers only the reopen date it was made against', async ({ page }) => {
+  const accounts = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'))
+  const acc = accounts.find((x) => x.id === 'a_closed_1')
+  // Dismissed back in May against an older date; the date has since moved to Nov 1.
+  acc.reopenDismissedOn = '2026-05-10'
+  await bootLate(page, { 'bb_local_db/accounts.json': JSON.stringify(accounts) })
+  await expect(page.locator('#section-today')).toContainText('Eligible to Reopen')
+})
+
+test('Today: an older account at the same bank does not hide a reopen', async ({ page }) => {
+  const accounts = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'))
+  const acc = accounts.find((x) => x.id === 'a_closed_1')
+  acc.dates.opened = null // entered by hand without an opened date
+  accounts.push({ ...acc, id: 'a_older', dates: { ...acc.dates, opened: '2023-02-01', closed: '2023-09-01', reopenAfter: '2024-09-01' },
+    reopenDismissedOn: '2024-09-02' })
+  // A record with no dates at all must not break Today either.
+  accounts.push({ id: 'a_nodates', institution: 'Closed Cooperative', person: 'Sam', status: 'closed' })
+  const { errors } = await bootLate(page, { 'bb_local_db/accounts.json': JSON.stringify(accounts) })
+  const reopen = page.locator('#section-today .card', { hasText: 'Eligible to Reopen' })
+  await expect(reopen).toContainText('Closed Cooperative')
   expect(errors).toEqual([])
 })

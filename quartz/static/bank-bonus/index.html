@@ -961,6 +961,7 @@ async function loadAll(){
 
 async function saveAccounts(msg='Update accounts'){
   await saveJson('db/accounts.json', accounts, msg);
+  refreshAppBadge();
   if(config.rssEnabled && STORE.mode === 'github') saveRSS().catch(() => {});
 }
 
@@ -1030,32 +1031,37 @@ function daysLate(iso, today){
   return Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(iso + 'T12:00:00Z')) / 86400000);
 }
 const sameBank = (a, b) => String(a.institution || '').trim().toLowerCase() === String(b.institution || '').trim().toLowerCase();
-// A passed reopen date is handled once the same person has a later account at the
-// same bank (planned, or opened after this one), or it was dismissed on Today.
+// A passed reopen date is handled once the same person has a newer account at the
+// same bank (planned, or opened after this one closed), or it was dismissed on Today.
+// A dismissal covers only the reopen date it was made against, so moving that date
+// later brings the item back when the new date arrives.
 function reopenHandled(a){
-  if(a.reopenDismissedOn) return true;
+  const d = a.dates || {};
+  if(a.reopenDismissedOn && a.reopenDismissedOn >= d.reopenAfter) return true;
+  const since = d.closed || d.opened || d.reopenAfter || '';
   return accounts.some(b => b !== a && b.person === a.person && sameBank(a, b) &&
-    (b.status === 'planned' || (b.dates.opened || '') > (a.dates.opened || '')));
+    (b.status === 'planned' || ((b.dates && b.dates.opened) || '') > since));
 }
 function computeDueToday(){
   const today = todayISO();
   const due = (iso) => !!iso && iso <= today;
   const withLate = (a, iso) => ({...a, late: daysLate(iso, today)});
-  const toOpen = accounts.filter(a => a.status === 'planned' && due(a.dates.plannedOpen))
+  const live = accounts.filter(a => a && a.dates);
+  const toOpen = live.filter(a => a.status === 'planned' && due(a.dates.plannedOpen))
     .map(a => withLate(a, a.dates.plannedOpen));
-  const reopen = accounts.filter(a => due(a.dates.reopenAfter) && !reopenHandled(a))
+  const reopen = live.filter(a => due(a.dates.reopenAfter) && !reopenHandled(a))
     .map(a => withLate(a, a.dates.reopenAfter));
-  const toClose = accounts.filter(a => a.status === 'open' && due(a.dates.closed))
+  const toClose = live.filter(a => a.status === 'open' && due(a.dates.closed))
     .map(a => withLate(a, a.dates.closed));
   const reminders = [];
-  accounts.forEach(a => {
+  live.forEach(a => {
     if(a.reminders) a.reminders.forEach(r => {
       if(due(r.date) && !r.done) reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id, late: daysLate(r.date, today)});
     });
   });
   const byLate = (x, y) => y.late - x.late;
   [toOpen, reopen, toClose, reminders].forEach(list => list.sort(byLate));
-  const ddCleared = accounts.filter(a => a.dates.firstDD === shiftISO(today, -1) && a.status === 'open');
+  const ddCleared = live.filter(a => a.dates.firstDD === shiftISO(today, -1) && a.status === 'open');
   return { toOpen, reopen, toClose, reminders, ddCleared,
     count: toOpen.length + reopen.length + toClose.length + reminders.length + ddCleared.length };
 }
@@ -1071,15 +1077,20 @@ function lateNote(late){
 // yet today — fire a single local notification summarizing what's due. No server,
 // no push subscription; works offline. On iPhone, both require the app to be
 // installed to the Home Screen and opened from that icon.
+// App-icon badge — supported on installed PWAs; silently ignored elsewhere.
+// Called on open and after every accounts save, so the icon never lags Today.
+function refreshAppBadge(due){
+  try {
+    if(!('setAppBadge' in navigator)) return;
+    if(!due) due = computeDueToday();
+    if(due.count > 0) navigator.setAppBadge(due.count); else navigator.clearAppBadge();
+  } catch(e){}
+}
+
 function nudgeOnOpen(){
   let due;
   try { due = computeDueToday(); } catch(e){ return; }
-  // App-icon badge — supported on installed PWAs; silently ignored elsewhere.
-  try {
-    if('setAppBadge' in navigator){
-      if(due.count > 0) navigator.setAppBadge(due.count); else navigator.clearAppBadge();
-    }
-  } catch(e){}
+  refreshAppBadge(due);
   // Local notification — only if granted, only once per day, only if something's due.
   if(due.count === 0) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -1194,23 +1205,34 @@ function render_today(){
 }
 
 // Stop showing a passed reopen date on Today without opening a new account.
-async function dismissReopen(accountId){
+// Settle a Today row in place rather than redrawing, so nothing below it jumps
+// under the user's finger. It drops off on the next visit to Today.
+function settleRow(el, label){
+  if(!el) { render_today(); return; }
+  el.style.width = el.offsetWidth + 'px';
+  el.disabled = true;
+  el.textContent = label;
+  const row = el.closest('.list-item');
+  if(row){ row.style.opacity = '0.5'; row.removeAttribute('data-action'); row.classList.remove('clickable'); }
+}
+
+async function dismissReopen(el, accountId){
   const acc = accounts.find(a => a.id === accountId);
   if(!acc) return;
   acc.reopenDismissedOn = todayISO();
   await saveAccounts('Dismiss reopen: ' + acc.institution);
-  render_today();
+  settleRow(el, 'Dismissed');
   toast(acc.institution + ' dismissed');
 }
 
-async function markReminderDone(accountId, reminderId){
+async function markReminderDone(el, accountId, reminderId){
   const acc = accounts.find(a => a.id === accountId);
   if(acc && acc.reminders) {
     const rem = acc.reminders.find(r => r.id === reminderId);
     if(rem) {
       rem.done = true;
       await saveAccounts('Mark reminder done');
-      render_today();
+      settleRow(el, 'Done ✓');
       toast('Reminder marked done');
     }
   }
@@ -2718,8 +2740,8 @@ const ACTIONS = {
   promoteOffer: (el, id, status) => promoteOffer(id, status),
   deleteOffer: (el, id) => deleteOffer(id),
   markOfferVerified: (el, id) => markOfferVerified(el, id),
-  markReminderDone: (el, accountId, id) => markReminderDone(accountId, id),
-  dismissReopen: (el, id) => dismissReopen(id),
+  markReminderDone: (el, accountId, id) => markReminderDone(el, accountId, id),
+  dismissReopen: (el, id) => dismissReopen(el, id),
   setPersonFilter: (el, tab, person) => setPersonFilter(tab, person),
   setStatusFilter: (el, status) => setStatusFilter(status),
   setReportPerson: (el, person) => setReportPerson(person),

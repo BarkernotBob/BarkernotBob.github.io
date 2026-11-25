@@ -35,9 +35,6 @@ jobs:
         run: npm test
         env:
           CI: 'true'
-      - name: TEMP print screenshot
-        if: ${{ !cancelled() }}
-        run: echo "B64START"; base64 -w0 screenshots/today-overdue.png; echo; echo "B64END"
       - name: Upload screenshot gallery
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

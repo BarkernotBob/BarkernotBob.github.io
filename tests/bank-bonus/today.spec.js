@@ -49,7 +49,7 @@ test('Today: a reopen date that passed shows until dismissed, and the dismissal 
   await expect(reopen).toContainText('Closed Cooperative')
   await expect(reopen).toContainText('Eligible since 11/01/26')
   const shot = path.join(__dirname, 'screenshots', 'today-overdue.png')
-  await page.screenshot({ path: shot, fullPage: true })
+  await page.screenshot({ path: shot, fullPage: true, animations: 'disabled' })
   await testInfo.attach('today-overdue', { path: shot, contentType: 'image/png' })
 
   // The row settles in place (no reflow) and the icon badge drops at once.
@@ -58,6 +58,7 @@ test('Today: a reopen date that passed shows until dismissed, and the dismissal 
   await dismiss.click()
   await expect(reopen.getByRole('button', { name: 'Dismissed' })).toBeDisabled()
   await expect.poll(() => page.evaluate(() => window.__badge)).toBe(before - 1)
+  await expect(page.locator('.nav-btn[data-tab="today"] .badge')).toHaveText(String(before - 1))
   await expect.poll(async () =>
     (await accountsInStore(page)).find((a) => a.id === 'a_closed_1').reopenDismissedOn
   ).toBe('2026-11-25')

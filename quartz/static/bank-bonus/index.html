@@ -1077,12 +1077,28 @@ function lateNote(late){
 // yet today — fire a single local notification summarizing what's due. No server,
 // no push subscription; works offline. On iPhone, both require the app to be
 // installed to the Home Screen and opened from that icon.
-// App-icon badge — supported on installed PWAs; silently ignored elsewhere.
-// Called on open and after every accounts save, so the icon never lags Today.
+// The count on the Today tab. Kept in place at zero (hidden, not removed) so the
+// tab row never shifts when the last item is dealt with.
+function setNavBadge(count){
+  const tab = $('[data-tab="today"]'); if(!tab) return;
+  let b = tab.querySelector('.badge');
+  if(!b){
+    if(!count) return;
+    tab.innerHTML = '<span class="ic">🗓</span>Today<span class="badge"></span>';
+    b = tab.querySelector('.badge');
+  }
+  b.textContent = count;
+  b.style.visibility = count ? '' : 'hidden';
+}
+
+// The Today-tab count and the app-icon badge (installed PWAs only; silently
+// ignored elsewhere). Called on open and after every accounts save, so neither
+// lags Today.
 function refreshAppBadge(due){
   try {
-    if(!('setAppBadge' in navigator)) return;
     if(!due) due = computeDueToday();
+    setNavBadge(due.count);
+    if(!('setAppBadge' in navigator)) return;
     if(due.count > 0) navigator.setAppBadge(due.count); else navigator.clearAppBadge();
   } catch(e){}
 }
@@ -1193,14 +1209,7 @@ function render_today(){
     }
   }
 
-  // Update nav badge
-  const badge = $('[data-tab="today"] .badge') || document.createElement('span');
-  if(count > 0) {
-    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today<span class="badge">' + count + '</span>';
-  } else {
-    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today';
-  }
-
+  setNavBadge(count);
   section.innerHTML = html;
 }
 

@@ -14,6 +14,8 @@ const configInStore = (page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem('bb_local_db/config.json') || '{}'))
 
 test('Today summarises the fixtures: 3 open, 1 planned, 1 closed', async ({ page }) => {
+  // Pinned to a day when nothing in the fixtures is due, so the summary shows.
+  await page.clock.setFixedTime(new Date('2026-08-20T16:00:00Z'))
   await bootApp(page)
   const today = page.locator('#section-today')
   await expect(today).toContainText('5 accounts')

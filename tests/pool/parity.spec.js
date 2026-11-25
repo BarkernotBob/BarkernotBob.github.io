@@ -17,10 +17,13 @@ const { execFileSync } = require('child_process')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const { pathToFileURL } = require('url')
 const { bootApp, fixture } = require('./support/boot')
 
 const SCRIPT = path.join(__dirname, '..', '..', 'quartz', 'static', 'pool', 'reminders.mjs')
 const CHEM_URL = 'http://127.0.0.1:5176/static/shared/pool-chem.js'
+// The email drops last season's test, so pin its clock to the app's (boot.js).
+const PIN = pathToFileURL(path.join(__dirname, 'support', 'pin-run.mjs')).href
 
 const decode = (s) =>
   s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
@@ -34,9 +37,9 @@ function emailAdvice(configJson, testsJson) {
     fs.writeFileSync(path.join(dir, 'db', 'config.json'), configJson)
     fs.writeFileSync(path.join(dir, 'db', 'tests.json'), testsJson)
     fs.copyFileSync(SCRIPT, path.join(dir, 'reminders.mjs'))
-    const env = { ...process.env, POOL_CHEM_URL: CHEM_URL }
+    const env = { ...process.env, POOL_CHEM_URL: CHEM_URL, FAKE_TODAY: '2026-07-15' }
     delete env.GITHUB_OUTPUT
-    execFileSync(process.execPath, ['reminders.mjs'], { cwd: dir, env, stdio: 'pipe', timeout: 60_000 })
+    execFileSync(process.execPath, ['--import', PIN, 'reminders.mjs'], { cwd: dir, env, stdio: 'pipe', timeout: 60_000 })
     const html = fs.readFileSync(path.join(dir, 'out', 'email_body.html'), 'utf8')
     const re = /<b>([^<]*)<\/b><br><span style="color:#444;font-size:14px">([^<]*)<\/span><\/div>/g
     return [...html.matchAll(re)].map((m) => `${decode(m[1])}: ${decode(m[2])}`)

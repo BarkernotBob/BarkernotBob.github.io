@@ -152,7 +152,11 @@ const testGuid = t => `pool-test-${t.id}`;
 // Closed: only what hasn't been sent yet, and nothing that assumes open water.
 const due  = dueTasks().filter(({t,d}) => !closed || (t.season!=='in' && !known.has(taskGuid(t,d))));
 const lt   = latestTest();
-const adv  = closed && lt && known.has(testGuid(lt)) ? [] : testAdvice(lt);
+// Open: a test from an earlier year is last season's water, so its doses no
+// longer apply (a season never spans New Year; the routine "test the water"
+// task is what asks for a fresh one).
+const staleTest = lt && (closed ? known.has(testGuid(lt)) : String(lt.date||'').slice(0,4) < year);
+const adv  = staleTest ? [] : testAdvice(lt);
 let   sp   = seasonalPrompt();
 if(sp && (closed ? (sp.kind==='close' || known.has(seasonGuid(sp))) : sp.kind==='open')) sp = null;
 

@@ -144,6 +144,7 @@
     .pill-full { color: var(--open); background: var(--open-bg); }
     .pill-partial { color: var(--warn); background: var(--warn-soft); }
     .pill-over { color: var(--danger); background: rgba(210,59,59,.12); }
+    .late { font-size: 12px; font-weight: 600; color: var(--danger); }
     .pill-verify { color: var(--warn); background: var(--warn-soft); text-transform: none; }
     .offer-notes { font-size: 13px; color: var(--muted); white-space: pre-line; margin: 6px 0 2px; }
     .person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
@@ -960,6 +961,7 @@ async function loadAll(){
 
 async function saveAccounts(msg='Update accounts'){
   await saveJson('db/accounts.json', accounts, msg);
+  refreshAppBadge();
   if(config.rssEnabled && STORE.mode === 'github') saveRSS().catch(() => {});
 }
 
@@ -1023,19 +1025,50 @@ async function init(){
 
 // Shared "what's due today" computation — used by the Today screen, the app-icon
 // badge, and the on-open notification nudge so they can never disagree.
+// Everything due today OR overdue and not yet handled (issue #12): an item
+// stays on Today, and in the badge, until it is dealt with. `late` is days past due.
+function daysLate(iso, today){
+  return Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(iso + 'T12:00:00Z')) / 86400000);
+}
+const sameBank = (a, b) => String(a.institution || '').trim().toLowerCase() === String(b.institution || '').trim().toLowerCase();
+// A passed reopen date is handled once the same person has a newer account at the
+// same bank (planned, or opened after this one closed), or it was dismissed on Today.
+// A dismissal covers only the reopen date it was made against, so moving that date
+// later brings the item back when the new date arrives.
+function reopenHandled(a){
+  const d = a.dates || {};
+  if(a.reopenDismissedOn && a.reopenDismissedOn >= d.reopenAfter) return true;
+  const since = d.closed || d.opened || d.reopenAfter || '';
+  return accounts.some(b => b !== a && b.person === a.person && sameBank(a, b) &&
+    (b.status === 'planned' || ((b.dates && b.dates.opened) || '') > since));
+}
 function computeDueToday(){
   const today = todayISO();
-  const toOpen = accounts.filter(a => (a.status === 'planned' && a.dates.plannedOpen === today) || (a.dates.reopenAfter === today));
-  const toClose = accounts.filter(a => a.dates.closed === today);
+  const due = (iso) => !!iso && iso <= today;
+  const withLate = (a, iso) => ({...a, late: daysLate(iso, today)});
+  const live = accounts.filter(a => a && a.dates);
+  const toOpen = live.filter(a => a.status === 'planned' && due(a.dates.plannedOpen))
+    .map(a => withLate(a, a.dates.plannedOpen));
+  const reopen = live.filter(a => due(a.dates.reopenAfter) && !reopenHandled(a))
+    .map(a => withLate(a, a.dates.reopenAfter));
+  const toClose = live.filter(a => a.status === 'open' && due(a.dates.closed))
+    .map(a => withLate(a, a.dates.closed));
   const reminders = [];
-  accounts.forEach(a => {
+  live.forEach(a => {
     if(a.reminders) a.reminders.forEach(r => {
-      if(r.date === today && !r.done) reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id});
+      if(due(r.date) && !r.done) reminders.push({...r, institution: a.institution, person: a.person, accountId: a.id, late: daysLate(r.date, today)});
     });
   });
-  const ddCleared = accounts.filter(a => a.dates.firstDD === shiftISO(today, -1) && a.status === 'open');
-  return { toOpen, toClose, reminders, ddCleared,
-    count: toOpen.length + toClose.length + reminders.length + ddCleared.length };
+  const byLate = (x, y) => y.late - x.late;
+  [toOpen, reopen, toClose, reminders].forEach(list => list.sort(byLate));
+  const ddCleared = live.filter(a => a.dates.firstDD === shiftISO(today, -1) && a.status === 'open');
+  return { toOpen, reopen, toClose, reminders, ddCleared,
+    count: toOpen.length + reopen.length + toClose.length + reminders.length + ddCleared.length };
+}
+
+function lateNote(late){
+  if(!late) return '';
+  return ` <span class="late">${late === 1 ? '1 day overdue' : late + ' days overdue'}</span>`;
 }
 
 // On-open nudge + Home Screen icon badge. Zero infrastructure: the app already
@@ -1044,15 +1077,36 @@ function computeDueToday(){
 // yet today — fire a single local notification summarizing what's due. No server,
 // no push subscription; works offline. On iPhone, both require the app to be
 // installed to the Home Screen and opened from that icon.
+// The count on the Today tab. Kept in place at zero (hidden, not removed) so the
+// tab row never shifts when the last item is dealt with.
+function setNavBadge(count){
+  const tab = $('[data-tab="today"]'); if(!tab) return;
+  let b = tab.querySelector('.badge');
+  if(!b){
+    if(!count) return;
+    tab.innerHTML = '<span class="ic">🗓</span>Today<span class="badge"></span>';
+    b = tab.querySelector('.badge');
+  }
+  b.textContent = count;
+  b.style.visibility = count ? '' : 'hidden';
+}
+
+// The Today-tab count and the app-icon badge (installed PWAs only; silently
+// ignored elsewhere). Called on open and after every accounts save, so neither
+// lags Today.
+function refreshAppBadge(due){
+  try {
+    if(!due) due = computeDueToday();
+    setNavBadge(due.count);
+    if(!('setAppBadge' in navigator)) return;
+    if(due.count > 0) navigator.setAppBadge(due.count); else navigator.clearAppBadge();
+  } catch(e){}
+}
+
 function nudgeOnOpen(){
   let due;
   try { due = computeDueToday(); } catch(e){ return; }
-  // App-icon badge — supported on installed PWAs; silently ignored elsewhere.
-  try {
-    if('setAppBadge' in navigator){
-      if(due.count > 0) navigator.setAppBadge(due.count); else navigator.clearAppBadge();
-    }
-  } catch(e){}
+  refreshAppBadge(due);
   // Local notification — only if granted, only once per day, only if something's due.
   if(due.count === 0) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -1061,10 +1115,11 @@ function nudgeOnOpen(){
   localStorage.setItem('bb_last_nudge', today);
   const parts = [];
   if(due.toOpen.length) parts.push(`${due.toOpen.length} to open`);
+  if(due.reopen.length) parts.push(`${due.reopen.length} eligible to reopen`);
   if(due.toClose.length) parts.push(`${due.toClose.length} to close`);
   if(due.reminders.length) parts.push(`${due.reminders.length} reminder${due.reminders.length>1?'s':''}`);
   if(due.ddCleared.length) parts.push(`${due.ddCleared.length} DD cleared`);
-  const title = `🏦 ${due.count} due today`;
+  const title = `🏦 ${due.count} need${due.count === 1 ? 's' : ''} attention`;
   const opts = { body: parts.join(' · '), tag: 'bb-due-'+today,
     icon: '/static/bank-bonus/icon-192.png', badge: '/static/bank-bonus/icon-192.png' };
   try {
@@ -1082,9 +1137,9 @@ function render_today(){
   const section = $('#section-today');
   let html = '';
 
-  const { toOpen, toClose, reminders, ddCleared } = computeDueToday();
+  const { toOpen, reopen, toClose, reminders, ddCleared, count } = computeDueToday();
 
-  if(toOpen.length + toClose.length + reminders.length + ddCleared.length === 0) {
+  if(count === 0) {
     if(accounts.length === 0){
       // No accounts yet — point the user at the Offers catalog to get started.
       html = `<div class="empty">No accounts yet.<br>
@@ -1114,7 +1169,17 @@ function render_today(){
     if(toOpen.length) {
       html += '<div class="card"><div class="card-header">📖 Accounts to Open</div>';
       toOpen.forEach(a => {
-        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})${lateNote(a.late)}<br><span style="font-size:12px;color:var(--muted)">${money(a.bonus)} bonus, ${money(a.directDepositTotal)} DD</span></div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+      });
+      html += '</div>';
+    }
+
+    if(reopen.length) {
+      html += '<div class="card"><div class="card-header">🔁 Eligible to Reopen</div>';
+      reopen.forEach(a => {
+        const since = a.late ? `since ${fmtDate(a.dates.reopenAfter)}` : 'from today';
+        const note = a.status === 'open' ? `Eligible ${since}; this account is still open` : `Eligible ${since}`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})<br><span style="font-size:12px;color:var(--muted)">${note}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" data-stop="1" data-action="dismissReopen" data-a1="${esc(a.id)}">Dismiss</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
       });
       html += '</div>';
     }
@@ -1122,7 +1187,7 @@ function render_today(){
     if(toClose.length) {
       html += '<div class="card"><div class="card-header">🔒 Accounts to Close</div>';
       toClose.forEach(a => {
-        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(a.id)}"><div><strong>${esc(a.institution)}</strong> (${esc(a.person)})${lateNote(a.late)}</div><span style="color:var(--faint);font-size:18px">›</span></div>`;
       });
       html += '</div>';
     }
@@ -1130,7 +1195,7 @@ function render_today(){
     if(reminders.length) {
       html += '<div class="card"><div class="card-header">⏰ Reminders</div>';
       reminders.forEach(r => {
-        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(r.accountId)}"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})<br><span style="font-size:13px">${esc(r.note)}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" data-stop="1" data-action="markReminderDone" data-a1="${esc(r.accountId)}" data-a2="${esc(r.id)}">Done</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
+        html += `<div class="list-item clickable" data-action="editAccount" data-a1="${esc(r.accountId)}"><div><strong>${esc(r.institution)}</strong> (${esc(r.person)})${lateNote(r.late)}<br><span style="font-size:13px">${esc(r.note)}</span></div><div style="display:flex;align-items:center;gap:8px"><button class="sec" data-stop="1" data-action="markReminderDone" data-a1="${esc(r.accountId)}" data-a2="${esc(r.id)}">Done</button><span style="color:var(--faint);font-size:18px">›</span></div></div>`;
       });
       html += '</div>';
     }
@@ -1144,26 +1209,39 @@ function render_today(){
     }
   }
 
-  // Update nav badge
-  const badge = $('[data-tab="today"] .badge') || document.createElement('span');
-  const count = toOpen.length + toClose.length + reminders.length + ddCleared.length;
-  if(count > 0) {
-    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today<span class="badge">' + count + '</span>';
-  } else {
-    $('[data-tab="today"]').innerHTML = '<span class="ic">🗓</span>Today';
-  }
-
+  setNavBadge(count);
   section.innerHTML = html;
 }
 
-async function markReminderDone(accountId, reminderId){
+// Stop showing a passed reopen date on Today without opening a new account.
+// Settle a Today row in place rather than redrawing, so nothing below it jumps
+// under the user's finger. It drops off on the next visit to Today.
+function settleRow(el, label){
+  if(!el) { render_today(); return; }
+  el.style.width = el.offsetWidth + 'px';
+  el.disabled = true;
+  el.textContent = label;
+  const row = el.closest('.list-item');
+  if(row){ row.style.opacity = '0.5'; row.removeAttribute('data-action'); row.classList.remove('clickable'); }
+}
+
+async function dismissReopen(el, accountId){
+  const acc = accounts.find(a => a.id === accountId);
+  if(!acc) return;
+  acc.reopenDismissedOn = todayISO();
+  await saveAccounts('Dismiss reopen: ' + acc.institution);
+  settleRow(el, 'Dismissed');
+  toast(acc.institution + ' dismissed');
+}
+
+async function markReminderDone(el, accountId, reminderId){
   const acc = accounts.find(a => a.id === accountId);
   if(acc && acc.reminders) {
     const rem = acc.reminders.find(r => r.id === reminderId);
     if(rem) {
       rem.done = true;
       await saveAccounts('Mark reminder done');
-      render_today();
+      settleRow(el, 'Done ✓');
       toast('Reminder marked done');
     }
   }
@@ -2671,7 +2749,8 @@ const ACTIONS = {
   promoteOffer: (el, id, status) => promoteOffer(id, status),
   deleteOffer: (el, id) => deleteOffer(id),
   markOfferVerified: (el, id) => markOfferVerified(el, id),
-  markReminderDone: (el, accountId, id) => markReminderDone(accountId, id),
+  markReminderDone: (el, accountId, id) => markReminderDone(el, accountId, id),
+  dismissReopen: (el, id) => dismissReopen(el, id),
   setPersonFilter: (el, tab, person) => setPersonFilter(tab, person),
   setStatusFilter: (el, status) => setStatusFilter(status),
   setReportPerson: (el, person) => setReportPerson(person),

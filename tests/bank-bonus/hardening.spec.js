@@ -1,0 +1,19 @@
+const { test, expect } = require('@playwright/test')
+const fs = require('fs')
+const path = require('path')
+const { bootSynced } = require('./support/boot')
+
+const APP = path.join(__dirname, '..', '..', 'quartz', 'static', 'bank-bonus', 'index.html')
+
+test('the app has no regex lookbehind, which older iPhones cannot parse', () => {
+  // Safari before 16.4 rejects (?<= and (?<! as a syntax error, and the whole
+  // script then fails to load: an empty app with no message.
+  const src = fs.readFileSync(APP, 'utf8')
+  expect(src).not.toMatch(/\(\?<[=!]/)
+})
+
+test('a synced repo with no config stops at Settings instead of opening empty', async ({ page }) => {
+  await bootSynced(page, { mock: { omitFiles: ['config.json', 'accounts.json', 'offers.json'] } })
+  await expect(page.locator('#section-settings')).toBeVisible()
+  await expect(page.locator('#section-settings')).toContainText('No data found in testuser/bank-bonus-data: db/config.json is missing.')
+})

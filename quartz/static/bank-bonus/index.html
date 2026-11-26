@@ -1465,12 +1465,17 @@ function floatInUse(today = todayISO()){
     return s + Math.max(ddIn, a.minBalance || 0);
   }, 0);
 }
-// 0 can open now · 1 terms missing · 2 waiting to reopen · 3 already have one.
+// People who open personal accounts: everyone but a business. An offer with no
+// person is a personal one, so a business being "eligible" doesn't count.
+function personalPeople(){ return (config.people || []).filter(p => !/business/i.test(p)); }
+// 0 can open now · 1 terms missing · 2 waiting to reopen · 3 already have one
+// · 4 everyone has had one and no reopen date is known.
 function offerGroup(o, r){
-  const people = o.person ? [o.person] : (config.people || []);
+  const people = o.person ? [o.person] : personalPeople();
   const st = people.map(p => eligibility(o, p).state);
-  if(!st.length || st.includes('ok') || st.includes('check')) return r.missingTerms ? 1 : 0;
-  return st.includes('wait') ? 2 : 3;
+  if(!st.length || st.includes('ok')) return r.missingTerms ? 1 : 0;
+  if(st.includes('wait')) return 2;
+  return st.includes('has') ? 3 : 4;
 }
 
 // --------- Opening plan (the recommendation engine, agreed Nov 26) ---------
@@ -1484,7 +1489,7 @@ function planSettings(){ return {...PLAN_DEFAULTS, ...(config.plan || {})}; }
 const isoDiff = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
 function planPeople(){
   const P = config.plan && Array.isArray(config.plan.people) ? config.plan.people : null;
-  return P || (config.people || []).filter(p => !/business/i.test(p));
+  return P || personalPeople();
 }
 // Cash an existing open or planned account holds on each day from `today`,
 // as an array indexed by days from today. Deposits stay until it closes; a
@@ -2091,7 +2096,7 @@ function render_offers(){
   } else {
     const S = rankSettings();
     const free = S.floatLimit - floatInUse();
-    const GROUP_LABEL = ['', '? Terms missing', '◷ Waiting to reopen', '● Already have one'];
+    const GROUP_LABEL = ['', '? Terms missing', '◷ Waiting to reopen', '● Already have one', '✕ Had one, no reopen date'];
     const ranked = backlog.map(o => { const r = rankOffer(o); return {o, r, g: offerGroup(o, r)}; })
       .sort((x, y) => x.g - y.g || y.r.perHour - x.r.perHour);
     html += planSummaryHTML();

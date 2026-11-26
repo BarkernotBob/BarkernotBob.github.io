@@ -110,3 +110,39 @@ test('editing an offer saves its terms and fee and re-ranks it', async ({ page }
   await expect(card.locator('.rank-how')).toHaveText('fee not on file')
   expect(errors).toEqual([])
 })
+
+test("offers nobody can reopen go last, and a business doesn't count for personal offers", async ({ page }) => {
+  const read = (f) => JSON.parse(fs.readFileSync(path.join(FIX, f), 'utf8'))
+  const config = read('config.json')
+  config.people = ['Me', 'Sam', 'Business']
+  const offers = read('offers.json')
+  const base = offers.find((o) => o.id === 'seed_test_01')
+  offers.push({ ...base, id: 'o_gone', institution: 'Gone Bank', monthsTillReopen: null, churnable: false })
+  offers.push({ ...base, id: 'o_half', institution: 'Half Bank', monthsTillReopen: null, churnable: false })
+  const accounts = read('accounts.json')
+  const closed = accounts.find((a) => a.id === 'a_closed_1')
+  const past = (id, institution, person, status) => ({ ...closed, id, offerId: null, institution, person, status, monthsTillReopen: null,
+    dates: { plannedOpen: null, opened: '2025-01-10', firstDD: null, bonusPaidOut: '2025-04-01', closed: status === 'closed' ? '2025-06-01' : null, reopenAfter: null } })
+  accounts.push(past('a_gone_me', 'Gone Bank', 'Me', 'closed'), past('a_gone_sam', 'Gone Bank', 'Sam', 'closed'))
+  accounts.push(past('a_half_me', 'Half Bank', 'Me', 'closed'), past('a_half_sam', 'Half Bank', 'Sam', 'open'))
+  const { errors } = await boot(page, {
+    'bb_local_db/config.json': JSON.stringify(config),
+    'bb_local_db/offers.json': JSON.stringify(offers),
+    'bb_local_db/accounts.json': JSON.stringify(accounts),
+  })
+  await goTab(page, 'offers')
+  const cards = page.locator('#section-offers .card')
+  await expect(cards).toHaveCount(4)
+  await expect(cards.nth(2)).toContainText('Half Bank')
+  await expect(cards.nth(2).locator('.rank-group')).toHaveText('● Already have one')
+  await expect(cards.nth(3)).toContainText('Gone Bank')
+  await expect(cards.nth(3).locator('.rank-group')).toHaveText('✕ Had one, no reopen date')
+  await expect(cards.nth(3).locator('.elig')).toContainText('? Me: had one, check terms')
+  // Neither is in the opening plan.
+  await expect(page.locator('#section-offers .plan-card')).not.toContainText('Gone Bank')
+  await page.locator('#section-offers .plan-card').getByRole('button', { name: 'See the plan' }).click()
+  await expect(page.locator('.modal-card .plan-item')).toHaveCount(4)
+  await expect(page.locator('.modal-card')).not.toContainText('Gone Bank')
+  await expect(page.locator('.modal-card')).not.toContainText('Half Bank')
+  expect(errors).toEqual([])
+})

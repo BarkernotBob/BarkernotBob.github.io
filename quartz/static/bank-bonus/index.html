@@ -1106,7 +1106,7 @@ let offers = [];
 // A fresh, personal-data-free starting config.
 function defaultConfig(){
   return {owner:'Me', people:['Me'], paycheck:{amount:2000, firstDate:'2025-01-03', intervalDays:14, ddClearDays:21},
-    taxRate:0.1675, laborHours:{open:0.35, adjustDD:0.15, requirements:0.5, close:0.5}, notify:[], timezone:'America/New_York'};
+    taxRate:0.1675, notify:[], timezone:'America/New_York'};
 }
 
 // First run on this device (local mode): pre-fill the browser store with a
@@ -2773,11 +2773,12 @@ function render_reports(){
   const plannedTot = sum(planned);
   const total = earned + pending + plannedTot;
 
-  const hrs = config.laborHours || {};
-  const perOpen = (hrs.open || 0.35) + (hrs.requirements || 0.5);
-  const perClosed = (hrs.open || 0.35) + (hrs.requirements || 0.5) + (hrs.close || 0.5);
-  // Realized + in-progress effort (planned accounts not yet worked)
-  const totalHours = open.length * perOpen + closed.length * perClosed;
+  // Realized + in-progress effort (planned accounts not yet worked), timed the
+  // same way as the offer ranking (Settings → Offer ranking). An open account
+  // hasn't been closed yet, so its closing time isn't counted.
+  const closeMin = rankSettings().minutes.close || 0;
+  const acctMinutes = a => { const m = rankOffer(a).minutes || 0; return a.status === 'closed' ? m : Math.max(0, m - closeMin); };
+  const totalHours = open.concat(closed).reduce((s, a) => s + acctMinutes(a), 0) / 60;
   const afterTaxRealized = afterTax(earned + pending);
 
   const pct = (taxRate * 100).toFixed(2);

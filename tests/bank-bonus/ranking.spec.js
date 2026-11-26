@@ -146,3 +146,19 @@ test("offers nobody can reopen go last, and a business doesn't count for persona
   await expect(page.locator('.modal-card')).not.toContainText('Half Bank')
   expect(errors).toEqual([])
 })
+
+test('Reports times the work with the ranking minutes', async ({ page }) => {
+  // Three open accounts at 30 min to open, one closed at 30 to open + 30 to close.
+  await boot(page)
+  await goTab(page, 'reports')
+  await expect(page.locator('#section-reports .summary-strip')).toContainText('2.5h invested')
+})
+
+test('Reports follows a changed ranking time', async ({ page }) => {
+  // Opening takes an hour instead: 3 × 60 + 90 = 270 min.
+  const config = JSON.parse(fs.readFileSync(path.join(FIX, 'config.json'), 'utf8'))
+  config.ranking = { minutes: { open: 60 } }
+  await boot(page, { 'bb_local_db/config.json': JSON.stringify(config) })
+  await goTab(page, 'reports')
+  await expect(page.locator('#section-reports .summary-strip')).toContainText('4.5h invested')
+})

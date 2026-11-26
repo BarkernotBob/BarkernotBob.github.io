@@ -61,6 +61,9 @@ test('the plan waits until the float has room', async ({ page }, testInfo) => {
   // $2,200 is parked now; Testbank needs $2,500 until the open accounts close.
   await expect(page.locator('#section-offers .plan-card')).toContainText('Next: Testbank & Trust (Me), open by 12/24/26.')
   await page.locator('#section-offers .plan-card').getByRole('button', { name: 'See the plan' }).click()
+  await page.screenshot({ path: path.join(__dirname, 'screenshots', 'plan-dialog.png') })
+  await page.keyboard.press('Escape')
+  await page.screenshot({ path: path.join(__dirname, 'screenshots', 'plan-card.png') })
   await testInfo.attach('plan-mobile.png', { body: await page.screenshot(), contentType: 'image/png' })
 })
 

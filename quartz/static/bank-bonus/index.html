@@ -1137,9 +1137,18 @@ function seedLocalIfNeeded(){
   localStorage.setItem('bb_seeded', '1');
 }
 
+let loadFailMsg = '';
 async function loadAll(){
+  loadFailMsg = '';
   try {
     config = await loadJson('db/config.json', defaultConfig());
+    // Connecting always writes config.json, so a synced repo without it is the
+    // wrong repo or lost its data: stop here rather than open an empty app whose
+    // next save would write a blank config into it.
+    if(STORE.mode === 'github' && !DB['db/config.json'].sha){
+      loadFailMsg = `No data found in ${LS.repo}: db/config.json is missing. Check the repo name below.`;
+      return false;
+    }
     accounts = await loadJson('db/accounts.json', []);
     offers = await loadJson('db/offers.json', []);
     return true;
@@ -1208,9 +1217,9 @@ async function init(){
     const saved = localStorage.getItem('bb_tab');
     show(TABS.includes(saved) ? saved : 'today');
   } else {
-    loadError = STORE.mode === 'github'
+    loadError = loadFailMsg || (STORE.mode === 'github'
       ? 'Could not load from GitHub. Check your repo name and token below.'
-      : 'Could not load your local data.';
+      : 'Could not load your local data.');
     show('settings');
   }
 }
@@ -1380,11 +1389,14 @@ const dollars = n => '$' + Math.round(n || 0).toLocaleString('en-US');
 // Purchases the bonus itself asks for ("20 Debits", "10 debit card purchases of $5+").
 function bonusPurchases(o){
   const t = o.additionalRequirements || '';
-  const m = t.match(/(?<![$\d,.])(\d+)\s*(?:[a-z]+\s+){0,2}?(debit|purchase|transaction)/i);
-  if(!m || +m[1] > 100) return {count: 0, min: false};
-  const near = t.slice(Math.max(0, m.index - 60), m.index + m[0].length + 60);
+  // No lookbehind: Safari before 16.4 can't parse one, and the whole app would
+  // fail to load. The first group stands in for "not after $, a digit, , or .".
+  const m = t.match(/(^|[^$\d,.])(\d+)\s*(?:[a-z]+\s+){0,2}?(debit|purchase|transaction)/i);
+  if(!m || +m[2] > 100) return {count: 0, min: false};
+  const at = m.index + m[1].length, len = m[0].length - m[1].length;
+  const near = t.slice(Math.max(0, at - 60), at + len + 60);
   const min = /\$\s?\d+\s*(or more|\+|minimum|min\b)|(minimum of|at least|above|over|each of) \$/i.test(near) && !/balance/i.test(near);
-  return {count: +m[1], min};
+  return {count: +m[2], min};
 }
 function avoidLabel(w){
   if(w.type === 'balance') return `keep ${dollars(w.amount)} ${w.kind === 'average' ? 'average' : 'daily'} balance`;

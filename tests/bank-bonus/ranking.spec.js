@@ -48,10 +48,10 @@ test('changing the ranking settings re-orders the offers and is saved', async ({
   expect(saved.minutes.upkeep).toBe(120)
   expect(saved.floatLimit).toBe(25000)
   await goTab(page, 'offers')
-  // Testbank now takes 180 minutes ($134/hr), so Fixture FCU moves ahead.
+  // Testbank now takes 180 minutes ($133/hr), so Fixture FCU moves ahead.
   const cards = page.locator('#section-offers .card')
   await expect(cards.nth(0)).toContainText('Fixture Federal Credit Union')
-  await expect(cards.nth(1).locator('.rank-line')).toHaveText(/#2\s+\$134\/hr/)
+  await expect(cards.nth(1).locator('.rank-line')).toHaveText(/#2\s+\$133\/hr/)
 })
 
 test('a fee is paid or avoided, whichever pays more per hour, and a full float is flagged', async ({ page }, testInfo) => {

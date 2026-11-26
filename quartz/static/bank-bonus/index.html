@@ -155,7 +155,8 @@
     .rank-no { font-weight: 700; }
     .rank-rate { font-size: 18px; font-weight: 700; }
     .rank-uses, .rank-how { font-size: 12px; color: var(--muted); }
-    .rank-warn { font-size: 12px; color: #a35a00; margin-top: 2px; }
+    .rank-warn { font-size: 12px; color: var(--warn); margin-top: 2px; }
+    .rank-group { color: var(--muted); background: var(--surface-2, rgba(127,127,127,.12)); text-transform: none; }
     .rank-dim { opacity: .75; }
     .offer-notes { font-size: 13px; color: var(--muted); white-space: pre-line; margin: 6px 0 2px; }
     .person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
@@ -1357,10 +1358,10 @@ const dollars = n => '$' + Math.round(n || 0).toLocaleString('en-US');
 // Purchases the bonus itself asks for ("20 Debits", "10 debit card purchases of $5+").
 function bonusPurchases(o){
   const t = o.additionalRequirements || '';
-  const m = t.match(/(\d+)\s*(?:[a-z]+\s+){0,2}?(debit|purchase|transaction)/i);
-  if(!m) return {count: 0, min: false};
+  const m = t.match(/(?<![$\d,.])(\d+)\s*(?:[a-z]+\s+){0,2}?(debit|purchase|transaction)/i);
+  if(!m || +m[1] > 100) return {count: 0, min: false};
   const near = t.slice(Math.max(0, m.index - 60), m.index + m[0].length + 60);
-  const min = /\$\s?\d+\s*(or more|\+|minimum|min\b)|minimum of \$|at least \$/i.test(near) && !/balance/i.test(near);
+  const min = /\$\s?\d+\s*(or more|\+|minimum|min\b)|(minimum of|at least|above|over|each of) \$/i.test(near) && !/balance/i.test(near);
   return {count: +m[1], min};
 }
 function avoidLabel(w){
@@ -1401,11 +1402,15 @@ function rankOffer(o){
     const feeBal = w.type === 'balance' ? (w.amount || 0) : 0;
     let deps = bonusDeps.slice(), extraMin = 0;
     if(w.type === 'deposit'){
-      // Bonus deposits big enough cover their own months; the rest need one more each month.
-      const covered = bonusDeps.filter(d => d.amt >= (w.amount || 0)).length;
-      for(let m = covered; m < feeMonths; m++) deps.push({day: Math.min((m + 1) * 30, closeDay), amt: w.amount || 0});
+      // Each fee month (after the grace months) needs a deposit of at least the
+      // amount; a big enough bonus deposit that lands that month covers it.
+      const months = Math.ceil(closeDay / 30);
+      for(let m = fee.graceMonths || 0; m < months; m++){
+        const hit = bonusDeps.some(d => d.amt >= (w.amount || 0) && d.day > m * 30 && d.day <= (m + 1) * 30);
+        if(!hit) deps.push({day: Math.min((m + 1) * 30, closeDay), amt: w.amount || 0});
+      }
     }
-    if(w.type === 'purchases') extraMin = feeMonths * (w.count || 0) * (w.minAmount ? M.purchaseMin : M.purchase);
+    if(w.type === 'purchases') extraMin = Math.max(0, feeMonths * (w.count || 0) - purch.count) * (w.minAmount ? M.purchaseMin : M.purchase);
     if(c.avoid && fee.minutes != null) extraMin = fee.minutes * feeMonths;
     const totalDD = deps.reduce((s, d) => s + d.amt, 0);
     // The balance needed: the larger of the two while the bonus balance runs,
@@ -1416,11 +1421,17 @@ function rankOffer(o){
     const inDays = transferIn * d1 + Math.max(0, feeBal - totalDD) * d2;
     const base = M.open + M.close + (need ? M.upkeep : 0) + (transferIn ? M.transfer : 0)
       + purch.count * (purch.min ? M.purchaseMin : M.purchase) + extraMin;
-    const modes = [{mode: 'leave', dDays: deps.reduce((s, d) => s + d.amt * (closeDay - d.day), 0), peak: totalDD, extra: 0}];
+    // Day by day: leaving deposits in parks all that has arrived; sweeping
+    // keeps only what has arrived up to the balance still needed that day.
+    let leaveDays = 0, sweepDays = 0;
+    for(let t = 1; t <= closeDay; t++){
+      const arrived = deps.reduce((s, d) => s + (d.day <= t ? d.amt : 0), 0);
+      leaveDays += arrived;
+      sweepDays += Math.min(arrived, t <= d1 ? need : feeBal);
+    }
+    const modes = [{mode: 'leave', dDays: leaveDays, peak: totalDD, extra: 0}];
     if(totalDD > need){
-      // Sweep out everything above the balance still needed.
-      modes.push({mode: 'sweep', dDays: Math.min(totalDD, need) * d1 + Math.min(totalDD, feeBal) * d2,
-        peak: Math.min(totalDD, need), extra: deps.length * M.transfer});
+      modes.push({mode: 'sweep', dDays: sweepDays, peak: Math.min(totalDD, need), extra: deps.length * M.transfer});
     }
     for(const md of modes){
       const dDays = md.dDays + inDays;
@@ -1449,7 +1460,7 @@ function floatInUse(today = todayISO()){
 function offerGroup(o, r){
   const people = o.person ? [o.person] : (config.people || []);
   const st = people.map(p => eligibility(o, p).state);
-  if(st.includes('ok') || st.includes('check')) return r.missingTerms ? 1 : 0;
+  if(!st.length || st.includes('ok') || st.includes('check')) return r.missingTerms ? 1 : 0;
   return st.includes('wait') ? 2 : 3;
 }
 
@@ -2656,7 +2667,7 @@ function render_settings(){
     <div class="row">${rnum('rk_open', 'Open', RM.open)}${rnum('rk_close', 'Close', RM.close)}${rnum('rk_transfer', 'Transfer', RM.transfer)}</div>
     <div class="row">${rnum('rk_upkeep', 'Balance upkeep', RM.upkeep)}${rnum('rk_purchase', 'Purchase', RM.purchase)}${rnum('rk_purchaseMin', 'Purchase with a minimum', RM.purchaseMin)}</div>
     <div class="row">
-      <div class="row-item"><div class="label">Float you can park</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="rk_float" value="${esc(String(RS.floatLimit))}" data-blur="reformatMoney"></div></div>
+      <div class="row-item"><div class="label">Float you can park</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="rk_float" value="${esc(fmtMoneyInput(RS.floatLimit))}" data-blur="reformatMoney"></div></div>
       ${rnum('rk_rate', 'Savings rate (%)', +(RS.savingsRate * 100).toFixed(2), '0.01')}
       ${rnum('rk_post', 'Days for a bonus to post', RS.bonusPostDays)}
     </div>

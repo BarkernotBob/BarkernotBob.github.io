@@ -13,7 +13,12 @@ test('the app has no regex lookbehind, which older iPhones cannot parse', () => 
 })
 
 test('a synced repo with no config stops at Settings instead of opening empty', async ({ page }) => {
-  await bootSynced(page, { mock: { omitFiles: ['config.json', 'accounts.json', 'offers.json'] } })
+  // The repo answers 404 for the data files (the mock would otherwise fall back
+  // to the fixtures). Routes added later take precedence over the mock's.
+  await bootSynced(page, {
+    prepare: () => page.route(/\/contents\/db\/[a-z]+\.json$/, (route) =>
+      route.request().method() === 'GET' ? route.fulfill({ status: 404, json: { message: 'Not Found' } }) : route.fallback()),
+  })
   await expect(page.locator('#section-settings')).toBeVisible()
   await expect(page.locator('#section-settings')).toContainText('No data found in testuser/bank-bonus-data: db/config.json is missing.')
 })

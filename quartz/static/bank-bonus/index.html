@@ -163,6 +163,16 @@
     .plan-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
     .plan-btns { margin: 8px 0 6px !important; flex-direction: row !important; gap: 10px !important; }
     .plan-btns button { flex: 1; }
+    .gs-step { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+    .gs-n { flex: 0 0 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+    .gs-body { flex: 1; min-width: 0; }
+    .gs-title { font-weight: 600; font-size: 14px; }
+    .gs-text { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
+    .gs-how { width: 100%; margin-top: 4px; }
+    .how-item { padding: 8px 0; border-top: 1px solid var(--border); }
+    .how-term { font-weight: 600; font-size: 14px; }
+    .how-def { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .rank-how-btn { background: none; border: none; box-shadow: none; color: var(--accent); padding: 0; min-height: 0; font-size: 12px; text-decoration: underline; cursor: pointer; }
     .edit-sub { font-weight: 600; margin: 8px 0 4px; }
     .edit-hint { font-size: 12px; color: var(--muted); margin: 0 0 10px !important; }
     .rank-group { color: var(--muted); background: var(--surface-2, rgba(127,127,127,.12)); text-transform: none; }
@@ -1690,6 +1700,38 @@ async function acceptPlanItem(x){
   toast(o.institution + ' added to Planned for ' + fmtDate(x.open));
 }
 
+// --------- Getting started and explainers ---------
+// Shown on Today until the first account exists: the three things to set up,
+// each with the button that does it.
+function getStartedHTML(){
+  const step = (n, title, text, btn) => `<div class="gs-step"><div class="gs-n">${n}</div><div class="gs-body">
+    <div class="gs-title">${title}</div><div class="gs-text">${text}</div>${btn}</div></div>`;
+  return `<div class="card gs-card">
+    <div class="card-header">👋 Get started</div>
+    <p class="gs-text" style="margin:0 0 12px">This app finds bank bonuses worth your time, plans when to open each one around your paychecks, and reminds you what each account still needs.</p>
+    ${step(1, 'Tell it about your paycheck', 'Who you open accounts for, how much each paycheck is and when it lands, your tax rate, and how much cash you can leave parked in bank accounts.',
+      `<button class="sec" data-action="show" data-a1="settings">Open Settings</button>`)}
+    ${step(2, 'Add accounts you already have', "Open or recently closed ones, so it doesn't suggest a bank you can't get a bonus from again.",
+      `<button class="sec" data-action="addAccount" data-a1="open">+ Add Account</button>`)}
+    ${step(3, 'Pick from the offers', 'Offers are ranked by what they pay per hour of your time, and the opening plan says when to open each one. Accept a plan item to add it to Planned.',
+      `<button class="sec" data-action="show" data-a1="offers">See offers</button>`)}
+    <button class="sec gs-how" data-action="showHowItWorks">How it works</button>
+  </div>`;
+}
+// Plain-language meanings of the app's terms, in one dialog.
+function showHowItWorks(){
+  const item = (t, d) => `<div class="how-item"><div class="how-term">${t}</div><div class="how-def">${d}</div></div>`;
+  modal(`<p><strong>How it works</strong></p>
+    ${item('Bonus', 'Cash a bank pays you for opening an account and meeting its requirements, usually direct deposits, a balance or debit card purchases, by a deadline.')}
+    ${item('Direct deposit (DD)', 'Part of your paycheck sent to the new account. Each paycheck can only be split so far, so the app keeps track of what every account takes from each payday.')}
+    ${item('Float', "Cash sitting in bonus accounts instead of your savings. It's capped by the float you can park (Settings), and the interest it would have earned counts as a cost.")}
+    ${item('$/hr', 'What an offer pays per hour of your time: the bonus after tax, minus fees and lost interest, divided by the minutes it takes to open, move money, keep it up and close.')}
+    ${item('Opening plan', "The best offers placed on the earliest dates that fit your paydays and keep float under your limit every day. Accept adds one to Planned; Skip hides it from the plan.")}
+    ${item('Fees', 'A monthly fee is either paid or avoided, whichever leaves more per hour. "Fee not on file" means the ranking assumes no fee; Edit the offer to add it.')}
+    ${item('Reopen', 'Banks only pay a bonus again after some months. Offers you or everyone already had sit lower in the list until you can open them again.')}
+    <div class="row" style="justify-content:flex-end"><button class="sec" data-mcancel>Close</button></div>`);
+}
+
 function computeDueToday(){
   const today = todayISO();
   const due = (iso) => !!iso && iso <= today;
@@ -1795,9 +1837,8 @@ function render_today(){
 
   if(count === 0 && !deadlines.length) {
     if(accounts.length === 0){
-      // No accounts yet — point the user at the Offers catalog to get started.
-      html = `<div class="empty">No accounts yet.<br>
-        <span style="font-size:13px">Head to <b>Offers</b> (press <kbd>O</kbd>) and tap <b>Move to Planned</b> or <b>Open now</b> on a bank to start tracking it — or add one on <b>Active</b> / <b>Planned</b>.</span></div>`;
+      // No accounts yet: walk a new user through setting it up.
+      html = getStartedHTML();
     } else {
       // Caught up for today, but accounts still exist — show the totals so an empty
       // Today screen is never mistaken for "my data is gone."
@@ -2100,7 +2141,7 @@ function render_offers(){
     const ranked = backlog.map(o => { const r = rankOffer(o); return {o, r, g: offerGroup(o, r)}; })
       .sort((x, y) => x.g - y.g || y.r.perHour - x.r.perHour);
     html += planSummaryHTML();
-    html += `<div class="rank-summary">Ranked by after-tax dollars per hour of your time. Float in use: ${dollars(S.floatLimit - free)} of ${dollars(S.floatLimit)}.</div>`;
+    html += `<div class="rank-summary">Ranked by after-tax dollars per hour of your time. Float in use: ${dollars(S.floatLimit - free)} of ${dollars(S.floatLimit)}. <button class="rank-how-btn" data-action="showHowItWorks">How it works</button></div>`;
     let n = 0;
     ranked.forEach(({o, r, g}) => {
       const fits = r.float <= free;
@@ -2988,6 +3029,7 @@ function render_settings(){
       ${rnum('rk_rate', 'Savings rate (%)', +(RS.savingsRate * 100).toFixed(2), '0.01')}
       ${rnum('rk_post', 'Days for a bonus to post', RS.bonusPostDays)}
     </div>
+    <div class="row">${rnum('rk_tax', 'Tax rate on bonuses (%)', +((config.taxRate || 0) * 100).toFixed(2), '0.01')}</div>
     <div class="label">Opening plan</div>
     <div class="row">${rnum('pl_months', 'Months ahead', Math.round(planSettings().horizonDays / 30.4))}${rnum('pl_per', 'Most new accounts per pay period', planSettings().perPeriod)}</div>
     <button data-action="saveRankingSettings">Save</button>
@@ -3094,6 +3136,8 @@ async function saveRankingSettings(){
     savingsRate: n('rk_rate', D.savingsRate * 100) / 100,
     bonusPostDays: n('rk_post', D.bonusPostDays),
   };
+  const tax = n('rk_tax', (config.taxRate || 0) * 100);
+  config.taxRate = Math.min(tax, 100) / 100;
   const ps = planSettings();
   config.plan = {...ps, horizonDays: Math.max(14, Math.round(n('pl_months', ps.horizonDays / 30.4) * 30.4)), perPeriod: Math.max(1, Math.round(n('pl_per', ps.perPeriod)))};
   try {
@@ -3567,6 +3611,7 @@ const ACTIONS = {
   deleteOffer: (el, id) => deleteOffer(id),
   editOffer: (el, id) => editOffer(id),
   openPlan: () => openPlan(),
+  showHowItWorks: () => showHowItWorks(),
   markOfferVerified: (el, id) => markOfferVerified(el, id),
   markReminderDone: (el, accountId, id) => markReminderDone(el, accountId, id),
   dismissReopen: (el, id) => dismissReopen(el, id),

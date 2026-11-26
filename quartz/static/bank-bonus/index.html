@@ -82,7 +82,7 @@
     nav button { flex: 0 0 auto; background: none; border: none; padding: 0 16px; cursor: pointer; font-size: 14px; font-weight: 500;
       border-bottom: 2px solid transparent; color: var(--muted); height: var(--tab-h); white-space: nowrap; transition: color .12s; }
     nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-    nav button:hover { color: var(--text); }
+    nav button:hover, nav button:active { color: var(--text); background: none; transform: none; }
     .ic { margin-right: 5px; }
     .badge { background: var(--danger); color: #fff; border-radius: var(--pill); display: inline-block; min-width: 19px; height: 19px; padding: 0 5px; text-align: center; line-height: 19px; font-size: 11px; font-weight: 600; margin-left: 5px; }
     .badge.hidden { display: none; }
@@ -172,7 +172,8 @@
     .how-item { padding: 8px 0; border-top: 1px solid var(--border); }
     .how-term { font-weight: 600; font-size: 14px; }
     .how-def { font-size: 13px; color: var(--muted); margin-top: 2px; }
-    .rank-how-btn { background: none; border: none; box-shadow: none; color: var(--accent); padding: 0; min-height: 0; font-size: 12px; text-decoration: underline; cursor: pointer; }
+    .rank-how-btn, .rank-how-btn:hover, .rank-how-btn:active { background: none; transform: none; }
+    .rank-how-btn { border: none; box-shadow: none; color: var(--accent); padding: 0; min-height: 0; font-size: 12px; text-decoration: underline; cursor: pointer; }
     .edit-sub { font-weight: 600; margin: 8px 0 4px; }
     .edit-hint { font-size: 12px; color: var(--muted); margin: 0 0 10px !important; }
     .rank-group { color: var(--muted); background: var(--surface-2, rgba(127,127,127,.12)); text-transform: none; }
@@ -297,8 +298,10 @@
       .row { flex-direction: column; gap: 14px; }
       .row-item { min-width: 0; width: 100%; }
       /* Full-width, comfortably spaced action buttons — never squished or overlapping. */
-      .action-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+      .action-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
       .action-bar > button { width: 100%; }
+      /* An odd count: the first button takes the whole first row. */
+      .action-bar > button:first-child:nth-last-child(odd of button) { grid-column: 1 / -1; }
       .filter-bar .search-input { min-width: 120px; }
       .chip { min-height: 44px; }   /* easy-tap filter segments */
       /* Calendar: tighter cells; show bar + dot, hide the money amount text. */
@@ -2992,7 +2995,7 @@ function render_settings(){
       <button data-action="addPerson">Add</button>
     </div>
     <div class="label" style="margin-top:14px">Your state</div>
-    <select id="set_state" data-change="saveState">
+    <select id="set_state" data-change="saveState" style="width:100%">
       <option value=""${config.state ? '' : ' selected'}>Not set (show every offer)</option>
       ${US_STATES.map(c => `<option value="${c}"${config.state === c ? ' selected' : ''}>${c}</option>`).join('')}
     </select>

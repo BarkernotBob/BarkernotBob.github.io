@@ -1477,10 +1477,23 @@ function floatInUse(today = todayISO()){
 }
 // People who open personal accounts: everyone but a business. An offer with no
 // person is a personal one, so a business being "eligible" doesn't count.
+// Where an offer can be opened (wish-list #6). offer.states lists two-letter
+// codes; none means anywhere, or not known. config.state is where you live.
+const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+function parseStates(text){
+  const out = [];
+  String(text || '').toUpperCase().split(/[^A-Z]+/).forEach(c => { if(US_STATES.includes(c) && !out.includes(c)) out.push(c); });
+  return out;
+}
+function outOfState(o){
+  const st = Array.isArray(o.states) ? o.states : [];
+  return !!config.state && st.length > 0 && !st.includes(config.state);
+}
 function personalPeople(){ return (config.people || []).filter(p => !/business/i.test(p)); }
 // 0 can open now · 1 terms missing · 2 waiting to reopen · 3 already have one
-// · 4 everyone has had one and no reopen date is known.
+// · 4 everyone has had one and no reopen date is known · 5 not in your state.
 function offerGroup(o, r){
+  if(outOfState(o)) return 5;
   const people = o.person ? [o.person] : personalPeople();
   const st = people.map(p => eligibility(o, p).state);
   if(!st.length || st.includes('ok')) return r.missingTerms ? 1 : 0;
@@ -1581,7 +1594,7 @@ function buildPlan(today = todayISO()){
   const cands = [];
   offers.filter(o => o.status === 'backlog').forEach(o => {
     const r = rankOffer(o);
-    if(r.missingTerms || r.perHour <= 0) return;
+    if(r.missingTerms || r.perHour <= 0 || outOfState(o)) return;
     (o.person ? [o.person] : people).forEach(p => {
       if(!people.includes(p) || skipped.has(planKey(o, p))) return;
       cands.push({o, r, p});
@@ -2137,7 +2150,7 @@ function render_offers(){
   } else {
     const S = rankSettings();
     const free = S.floatLimit - floatInUse();
-    const GROUP_LABEL = ['', '? Terms missing', '◷ Waiting to reopen', '● Already have one', '✕ Had one, no reopen date'];
+    const GROUP_LABEL = ['', '? Terms missing', '◷ Waiting to reopen', '● Already have one', '✕ Had one, no reopen date', '⌂ Not in your state'];
     const ranked = backlog.map(o => { const r = rankOffer(o); return {o, r, g: offerGroup(o, r)}; })
       .sort((x, y) => x.g - y.g || y.r.perHour - x.r.perHour);
     html += planSummaryHTML();
@@ -2155,6 +2168,7 @@ function render_offers(){
       const rankBlock = `<div class="rank-line">${rankTag} <span class="rank-rate">${r.missingTerms ? '—' : dollars(r.perHour) + '/hr'}</span></div>
         <div class="rank-uses">${esc(uses)}</div>
         <div class="rank-how">${esc(how)}</div>
+        ${(o.states || []).length ? `<div class="rank-how">${esc(o.states.length > 6 ? o.states.length + ' states' : o.states.join(', ') + ' only')}</div>` : ''}
         ${g === 0 && !fits ? `<div class="rank-warn">Float full: needs ${dollars(r.float)}, ${dollars(Math.max(0, free))} free</div>` : ''}`;
       html += `<div class="card${g ? ' rank-dim' : ''}">
         <div class="card-header"><span class="card-title">${esc(o.institution)}${o.person ? ' ' + personChip(o.person) : ''}</span>${o.needsVerification ? `<span class="pill pill-verify" data-verify-pill="${esc(o.id)}">Verify terms</span>` : ''}</div>
@@ -2336,6 +2350,8 @@ async function editOffer(offerId){
     <div class="row">${num('eo_nbdep', '# Deposits', o.nbDeposits)}${num('eo_days', 'Days to finish', o.daysToCompleteReq)}</div>
     <div class="row">${mon('eo_minbal', 'Min balance', o.minBalance)}${num('eo_minbaldays', 'Min balance days', o.minBalDays)}</div>
     <div class="row">${num('eo_keepopen', 'Keep open days', o.keepOpenDays)}${num('eo_reopen', 'Months till reopen', o.monthsTillReopen)}</div>
+    <div class="label">Open in states</div>
+    <input type="text" id="eo_states" value="${esc((o.states || []).join(', '))}" placeholder="e.g. IN, OH (blank = anywhere)" autocapitalize="characters" style="width:100%;margin-bottom:12px">
     <div class="label">Other requirements</div>
     <textarea id="eo_req" rows="2" style="width:100%;margin-bottom:12px">${esc(o.additionalRequirements || '')}</textarea>
     <div class="edit-sub">Monthly fee</div>
@@ -2391,6 +2407,7 @@ async function editOffer(offerId){
     additionalRequirements: gs('eo_req'),
     avoidFees: gs('eo_feenotes'),
     notes: gs('eo_notes'),
+    states: parseStates(gs('eo_states')),
     fee: {...(cur.fee || {}), monthly: gn('eo_fee'), graceMonths: int('eo_grace') || 0, avoid,
       earlyCloseFee: gn('eo_ecfee'), earlyCloseDays: int('eo_ecdays'), minutes: gn('eo_feemin')},
   });
@@ -2974,6 +2991,12 @@ function render_settings(){
       <input type="text" id="new_person" placeholder="Add a person…" style="flex:1" data-enter="addPerson">
       <button data-action="addPerson">Add</button>
     </div>
+    <div class="label" style="margin-top:14px">Your state</div>
+    <select id="set_state" data-change="saveState">
+      <option value=""${config.state ? '' : ' selected'}>Not set (show every offer)</option>
+      ${US_STATES.map(c => `<option value="${c}"${config.state === c ? ' selected' : ''}>${c}</option>`).join('')}
+    </select>
+    <p style="margin:6px 0 0;color:var(--muted);font-size:12px">Offers limited to other states move to the bottom of Offers and stay out of the plan.</p>
   </div>`;
 
   // Paycheck schedule with amount-over-time history.
@@ -3071,6 +3094,12 @@ async function saveSettings(){
 }
 
 // "Your name on this device" — remembered locally, no save round-trip.
+async function saveState(v){
+  const prev = config.state;
+  config.state = US_STATES.includes(v) ? v : null;
+  try { await saveConfig('Set state: ' + (config.state || 'none')); toast(config.state ? 'State set to ' + config.state : 'State cleared'); }
+  catch(e){ config.state = prev; toast('Error: ' + e.message); }
+}
 function saveMe(v){ LS.me = v; updateAppbarUser(); toast('Saved'); }
 
 // On-device notification permission: the button shown in Settings reflects the
@@ -3596,6 +3625,7 @@ const ACTIONS = {
   reformatMoney: (el) => reformatMoney(el),
   importData: (el) => importData(el),
   saveMe: (el) => saveMe(el.value),
+  saveState: (el) => saveState(el.value),
   onStatusSelectChange: (el) => onStatusSelectChange(el),
   setSearchFilter: (el, tab) => setSearchFilter(tab, el.value),
   quickUpdateDate: (el, id, field) => quickUpdateDate(id, field, el.value),

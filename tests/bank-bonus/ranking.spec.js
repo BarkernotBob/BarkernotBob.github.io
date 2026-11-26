@@ -74,3 +74,39 @@ test('a fee is paid or avoided, whichever pays more per hour, and a full float i
   await expect(tbCard.locator('.rank-warn')).toHaveText('Float full: needs $30,000, $22,800 free')
   await testInfo.attach('offers-ranked-mobile.png', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 })
+
+test('editing an offer saves its terms and fee and re-ranks it', async ({ page }) => {
+  const { errors } = await boot(page)
+  await goTab(page, 'offers')
+  const fcuCard = page.locator('#section-offers .card', { hasText: 'Fixture Federal Credit Union' })
+  await fcuCard.getByRole('button', { name: 'Edit' }).click()
+  const dlg = page.locator('.modal-card')
+  await expect(dlg).toContainText('Edit Fixture Federal Credit Union')
+  // $15 a month, 1 free month, avoidable by 10 purchases a month: paying wins at $195/hr.
+  await dlg.locator('#eo_fee').fill('15')
+  await dlg.locator('#eo_grace').fill('1')
+  await dlg.locator('#eo_av_pur').fill('10')
+  await dlg.locator('#eo_av_bal').fill('5000')
+  await dlg.locator('#eo_av_balkind').selectOption('average')
+  await dlg.locator('#eo_keepopen').fill('180')
+  await dlg.getByRole('button', { name: 'Save' }).click()
+  await expect(page.locator('.toast').last()).toContainText('Fixture Federal Credit Union saved')
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('bb_local_db/offers.json')).find((o) => o.id === 'seed_test_01'))
+  expect(saved.keepOpenDays).toBe(180)
+  expect(saved.fee).toEqual({ monthly: 15, graceMonths: 1, earlyCloseFee: null, earlyCloseDays: null, minutes: null,
+    avoid: [{ type: 'balance', amount: 5000, kind: 'average' }, { type: 'purchases', count: 10 }] })
+  // Open 180 days is 6 months, 5 with the fee: paying $75 beats 50 purchases or parking $5,000.
+  const card = page.locator('#section-offers .card', { hasText: 'Fixture Federal Credit Union' })
+  await expect(card.locator('.rank-how')).toHaveText('pay $75 in fees')
+
+  // A blank fee means "not on file"; the form opens with what was saved.
+  await card.getByRole('button', { name: 'Edit' }).click()
+  await expect(dlg.locator('#eo_fee')).toHaveValue('15')
+  await expect(dlg.locator('#eo_av_balkind')).toHaveValue('average')
+  await dlg.locator('#eo_fee').fill('')
+  await dlg.locator('#eo_av_bal').fill('')
+  await dlg.locator('#eo_av_pur').fill('')
+  await dlg.getByRole('button', { name: 'Save' }).click()
+  await expect(card.locator('.rank-how')).toHaveText('fee not on file')
+  expect(errors).toEqual([])
+})

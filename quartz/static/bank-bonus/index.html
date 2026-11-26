@@ -156,6 +156,8 @@
     .rank-rate { font-size: 18px; font-weight: 700; }
     .rank-uses, .rank-how { font-size: 12px; color: var(--muted); }
     .rank-warn { font-size: 12px; color: var(--warn); margin-top: 2px; }
+    .edit-sub { font-weight: 600; margin: 8px 0 4px; }
+    .edit-hint { font-size: 12px; color: var(--muted); margin: 0 0 10px !important; }
     .rank-group { color: var(--muted); background: var(--surface-2, rgba(127,127,127,.12)); text-transform: none; }
     .rank-dim { opacity: .75; }
     .offer-notes { font-size: 13px; color: var(--muted); white-space: pre-line; margin: 6px 0 2px; }
@@ -1901,6 +1903,7 @@ function render_offers(){
           ${o.needsVerification ? `<button class="sec" data-action="markOfferVerified" data-a1="${esc(o.id)}">Mark verified</button>` : ''}
           <button data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="planned">Move to Planned</button>
           <button class="sec" data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="open">Open now</button>
+          <button class="sec" data-action="editOffer" data-a1="${esc(o.id)}">Edit</button>
           <button class="danger" data-action="deleteOffer" data-a1="${esc(o.id)}">Delete</button>
         </div>
       </div>`;
@@ -2044,6 +2047,94 @@ async function markOfferVerified(el, offerId){
   if(pill) pill.style.visibility = 'hidden';
   if(el){ el.disabled = true; el.textContent = 'Verified'; }
   toast(offer.institution + ' marked verified');
+}
+
+// Edit an offer's terms and its structured fee (the fields the ranking reads).
+// A blank fee means "not on file"; 0 means no monthly fee. Each way to avoid
+// the fee is one row: leave it blank if that way doesn't apply.
+async function editOffer(offerId){
+  const o = offers.find(x => x.id === offerId);
+  if(!o) return;
+  const fee = o.fee || {};
+  // The form shows the first way of each type; anything else is kept as it is.
+  const way = t => (fee.avoid || []).find(w => w && w.type === t) || {};
+  const bal = way('balance'), dep = way('deposit'), pur = way('purchases'), oth = way('other');
+  const v = n => n == null ? '' : esc(String(n));
+  const mon = (id, label, val) => `<div class="row-item"><div class="label">${label}</div><div class="money-field"><span class="money-prefix">$</span><input type="text" inputmode="decimal" id="${id}" value="${fmtMoneyInput(val)}" data-blur="reformatMoney"></div></div>`;
+  const num = (id, label, val) => `<div class="row-item"><div class="label">${label}</div><input type="number" inputmode="numeric" min="0" id="${id}" value="${v(val)}"></div>`;
+  const result = await modal(`
+    <p><strong>Edit ${esc(o.institution)}</strong></p>
+    <div class="label">Institution</div>
+    <input type="text" id="eo_inst" value="${esc(o.institution || '')}">
+    <div class="row">${mon('eo_bonus', 'Bonus', o.bonus)}${mon('eo_dd', 'DD required', o.directDepositTotal)}</div>
+    <div class="row">${num('eo_nbdep', '# Deposits', o.nbDeposits)}${num('eo_days', 'Days to finish', o.daysToCompleteReq)}</div>
+    <div class="row">${mon('eo_minbal', 'Min balance', o.minBalance)}${num('eo_minbaldays', 'Min balance days', o.minBalDays)}</div>
+    <div class="row">${num('eo_keepopen', 'Keep open days', o.keepOpenDays)}${num('eo_reopen', 'Months till reopen', o.monthsTillReopen)}</div>
+    <div class="label">Other requirements</div>
+    <textarea id="eo_req" rows="2" style="width:100%;margin-bottom:12px">${esc(o.additionalRequirements || '')}</textarea>
+    <div class="edit-sub">Monthly fee</div>
+    <p class="edit-hint">Leave the fee blank if you don't know it. Put 0 for no fee.</p>
+    <div class="row">${mon('eo_fee', 'Fee a month', fee.monthly)}${num('eo_grace', 'Free months first', fee.graceMonths)}</div>
+    <div class="row">${mon('eo_ecfee', 'Early-closing fee', fee.earlyCloseFee)}${num('eo_ecdays', 'If closed within days', fee.earlyCloseDays)}</div>
+    <div class="edit-sub">Ways to avoid the fee</div>
+    <p class="edit-hint">Fill in each way the bank offers; leave the rest blank.</p>
+    <div class="row">${mon('eo_av_bal', 'Keep a balance of', bal.amount)}<div class="row-item"><div class="label">Balance type</div><select id="eo_av_balkind"><option value="daily"${bal.kind === 'average' ? '' : ' selected'}>Daily</option><option value="average"${bal.kind === 'average' ? ' selected' : ''}>Average</option></select></div></div>
+    <div class="row">${mon('eo_av_dep', 'Deposit a month', dep.amount)}</div>
+    <div class="row">${num('eo_av_pur', 'Purchases a month', pur.count)}${mon('eo_av_purmin', 'Each at least', pur.minAmount)}</div>
+    <div class="label">Another way</div>
+    <input type="text" id="eo_av_other" value="${esc(oth.text || '')}" placeholder="e.g. be under 25">
+    <div class="row">${num('eo_feemin', 'Minutes a month to avoid it', fee.minutes)}</div>
+    <p class="edit-hint">Leave minutes blank and the app works them out.</p>
+    <div class="label">Fee notes</div>
+    <input type="text" id="eo_feenotes" value="${esc(o.avoidFees || '')}">
+    <div class="label">Notes</div>
+    <textarea id="eo_notes" rows="2" style="width:100%;margin-bottom:12px">${esc(o.notes || '')}</textarea>
+    <div class="row" style="justify-content:flex-end">
+      <button class="sec" data-mcancel>Cancel</button>
+      <button data-mval="save">Save</button>
+    </div>
+  `);
+  if(result !== 'save') return;
+  const gs = id => ($('#' + id).value || '').trim();
+  const gn = id => { const n = parseMoney($('#' + id).value); return n == null ? null : Math.max(0, n); };
+  const int = id => { const n = gn(id); return n == null ? null : Math.round(n); };
+  // A save or sync may have replaced the offers list while the form was open.
+  const cur = offers.find(x => x.id === offerId);
+  if(!cur){ toast('That offer was removed, so the edit wasn\'t saved'); return; }
+  const inst = gs('eo_inst') || cur.institution;
+  const shown = new Set([bal, dep, pur, oth]);
+  const avoid = (fee.avoid || []).filter(w => !shown.has(w));
+  if(gn('eo_av_bal')) avoid.push({...bal, type: 'balance', amount: gn('eo_av_bal'), kind: $('#eo_av_balkind').value === 'average' ? 'average' : 'daily'});
+  if(gn('eo_av_dep')) avoid.push({...dep, type: 'deposit', amount: gn('eo_av_dep')});
+  if(int('eo_av_pur')){
+    const p = {...pur, type: 'purchases', count: int('eo_av_pur')};
+    if(gn('eo_av_purmin')) p.minAmount = gn('eo_av_purmin'); else delete p.minAmount;
+    avoid.push(p);
+  }
+  if(gs('eo_av_other')) avoid.push({...oth, type: 'other', text: gs('eo_av_other')});
+  Object.assign(cur, {
+    institution: inst,
+    bonus: gn('eo_bonus') || 0,
+    directDepositTotal: gn('eo_dd') || 0,
+    nbDeposits: int('eo_nbdep'),
+    daysToCompleteReq: int('eo_days'),
+    minBalance: gn('eo_minbal'),
+    minBalDays: int('eo_minbaldays'),
+    keepOpenDays: int('eo_keepopen'),
+    monthsTillReopen: int('eo_reopen'),
+    additionalRequirements: gs('eo_req'),
+    avoidFees: gs('eo_feenotes'),
+    notes: gs('eo_notes'),
+    fee: {...(cur.fee || {}), monthly: gn('eo_fee'), graceMonths: int('eo_grace') || 0, avoid,
+      earlyCloseFee: gn('eo_ecfee'), earlyCloseDays: int('eo_ecdays'), minutes: gn('eo_feemin')},
+  });
+  cur.requiresMultipleDeposits = (cur.nbDeposits || 0) > 1;
+  await saveOffers('Edit offer: ' + inst);
+  render_offers();
+  // Its rank may have changed: bring the edited card back into view.
+  const btn = document.querySelector(`#section-offers [data-action="editOffer"][data-a1="${CSS.escape(offerId)}"]`);
+  if(btn) btn.closest('.card').scrollIntoView({block: 'nearest'});
+  toast(inst + ' saved');
 }
 
 async function deleteOffer(offerId){
@@ -3244,6 +3335,7 @@ const ACTIONS = {
   openPlanned: (el, id) => openPlanned(id),
   promoteOffer: (el, id, status) => promoteOffer(id, status),
   deleteOffer: (el, id) => deleteOffer(id),
+  editOffer: (el, id) => editOffer(id),
   markOfferVerified: (el, id) => markOfferVerified(el, id),
   markReminderDone: (el, accountId, id) => markReminderDone(el, accountId, id),
   dismissReopen: (el, id) => dismissReopen(el, id),

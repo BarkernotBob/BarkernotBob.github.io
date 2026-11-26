@@ -73,7 +73,4 @@ test('a fee is paid or avoided, whichever pays more per hour, and a full float i
   await expect(tbCard.locator('.rank-how')).toContainText('move in $27,500')
   await expect(tbCard.locator('.rank-warn')).toHaveText('Float full: needs $30,000, $22,800 free')
   await testInfo.attach('offers-ranked-mobile.png', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
-  await page.screenshot({ path: path.join(__dirname, 'screenshots', 'offers-ranked.png'), fullPage: true })
-  await goTab(page, 'settings')
-  await page.locator('#section-settings .card', { hasText: 'Offer ranking' }).screenshot({ path: path.join(__dirname, 'screenshots', 'ranking-settings.png') })
 })

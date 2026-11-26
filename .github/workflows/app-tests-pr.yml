@@ -42,9 +42,6 @@ jobs:
         run: npm test
         env:
           CI: 'true'
-      - name: TEMP print ranking screenshots
-        if: ${{ matrix.app == 'bank-bonus' && !cancelled() }}
-        run: for f in screenshots/offers-ranked.png screenshots/ranking-settings.png; do [ -f "$f" ] && { echo "BEGIN $f"; base64 -w0 "$f"; echo; echo "END $f"; }; done; true
       - name: Upload screenshot gallery
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

@@ -161,7 +161,7 @@
     .plan-item { border-top: 1px solid var(--border); padding: 10px 0 2px; }
     .plan-when { font-weight: 600; font-size: 14px; }
     .plan-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-    .plan-btns { margin: 8px 0 6px !important; }
+    .plan-btns { margin: 8px 0 6px !important; flex-direction: row !important; gap: 10px !important; }
     .plan-btns button { flex: 1; }
     .edit-sub { font-weight: 600; margin: 8px 0 4px; }
     .edit-hint { font-size: 12px; color: var(--muted); margin: 0 0 10px !important; }
@@ -1616,7 +1616,7 @@ function planSummaryHTML(){
   if(!P.items.length) return `<div class="plan-card"><div class="card-header">Opening plan</div>
     <p class="plan-text">Nothing fits your paychecks and float in the next ${months} months.</p></div>`;
   return `<div class="plan-card"><div class="card-header">Opening plan</div>
-    <p class="plan-text">Open ${P.items.length} account${P.items.length > 1 ? 's' : ''} over the next ${months} months for about ${dollars(P.net)} after tax, in about ${Math.round(P.minutes / 60)} hours. Float peaks at ${dollars(P.peak)} on ${esc(fmtDate(P.peakOn))}.</p>
+    <p class="plan-text">Open ${P.items.length} account${P.items.length > 1 ? 's' : ''} over the next ${months} months for about ${dollars(P.net)} after tax, in about ${Math.round(P.minutes / 60)} hours. Float peaks at ${dollars(P.peak)} on ${esc(fmtDate(P.peakOn))}${P.peak > rankSettings().floatLimit + 0.005 ? `, over your ${dollars(rankSettings().floatLimit)} limit from accounts you already have` : ''}.</p>
     <p class="plan-text">Next: ${esc(P.items[0].offer.institution)} (${esc(P.items[0].person)}), open by ${esc(fmtDate(P.items[0].open))}.</p>
     <button data-action="openPlan">See the plan</button></div>`;
 }

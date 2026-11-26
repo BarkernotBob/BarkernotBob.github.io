@@ -74,7 +74,9 @@ test('Offers: promoting an offer creates a tracked account for the chosen person
   await goTab(page, 'offers')
   const before = (await accountsInStore(page)).length
 
-  await page.getByRole('button', { name: 'Move to Planned' }).first().click()
+  // Offers are ranked now, so pick the card by name rather than position.
+  await page.locator('#section-offers .card', { hasText: 'Fixture Federal Credit Union' })
+    .getByRole('button', { name: 'Move to Planned' }).click()
   // It asks who is opening it before creating anything.
   const dialog = page.locator('.modal-ov')
   await expect(dialog).toContainText('Fixture Federal Credit Union')

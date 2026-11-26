@@ -156,6 +156,13 @@
     .rank-rate { font-size: 18px; font-weight: 700; }
     .rank-uses, .rank-how { font-size: 12px; color: var(--muted); }
     .rank-warn { font-size: 12px; color: var(--warn); margin-top: 2px; }
+    .plan-card { background: var(--surface); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+    .plan-text { font-size: 13px; color: var(--muted); margin: 0 0 10px !important; }
+    .plan-item { border-top: 1px solid var(--border); padding: 10px 0 2px; }
+    .plan-when { font-weight: 600; font-size: 14px; }
+    .plan-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .plan-btns { margin: 8px 0 6px !important; }
+    .plan-btns button { flex: 1; }
     .edit-sub { font-weight: 600; margin: 8px 0 4px; }
     .edit-hint { font-size: 12px; color: var(--muted); margin: 0 0 10px !important; }
     .rank-group { color: var(--muted); background: var(--surface-2, rgba(127,127,127,.12)); text-transform: none; }
@@ -1441,7 +1448,7 @@ function rankOffer(o){
       const minutes = base + md.extra;
       const net = atBonus - c.cost - lost;
       const r = {perHour: net / (Math.max(minutes, 1) / 60), net, minutes, lost, paycheck: totalDD, float: md.peak + transferIn,
-        transferIn, mode: md.mode, feeHow: c.how, feeUnknown: !!c.unknown, closeDay};
+        transferIn, mode: md.mode, feeHow: c.how, feeUnknown: !!c.unknown, closeDay, need, feeBal, balDays: d1, extraDeps: deps.slice(bonusDeps.length)};
       if(!best || r.perHour > best.perHour) best = r;
     }
   }
@@ -1464,6 +1471,218 @@ function offerGroup(o, r){
   const st = people.map(p => eligibility(o, p).state);
   if(!st.length || st.includes('ok') || st.includes('check')) return r.missingTerms ? 1 : 0;
   return st.includes('wait') ? 2 : 3;
+}
+
+// --------- Opening plan (the recommendation engine, agreed Nov 26) ---------
+// Goes down the ranked offers and gives each the earliest opening date, within
+// the plan's horizon, where its deposits fit the paydays (what other accounts
+// already take is set aside) and the cash parked across all accounts stays
+// under the float limit on every day. Business offers aren't planned: they
+// don't run on your paycheck.
+const PLAN_DEFAULTS = {horizonDays: 182, perPeriod: 3, skipped: []};
+function planSettings(){ return {...PLAN_DEFAULTS, ...(config.plan || {})}; }
+const isoDiff = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+function planPeople(){
+  const P = config.plan && Array.isArray(config.plan.people) ? config.plan.people : null;
+  return P || (config.people || []).filter(p => !/business/i.test(p));
+}
+// Cash an existing open or planned account holds on each day from `today`,
+// as an array indexed by days from today. Deposits stay until it closes; a
+// required balance is held from opening. With no close date, it closes when
+// the ranking expects it to, or within a pay period if that's already past.
+function floatSchedule(today, days){
+  const F = new Float64Array(days);
+  const interval = (config.paycheck || {}).intervalDays || 14;
+  const clear = (config.paycheck || {}).ddClearDays;
+  accounts.forEach(a => {
+    if(!a || (a.status !== 'open' && a.status !== 'planned')) return;
+    const d = a.dates || {};
+    const start = d.opened || d.plannedOpen;
+    if(!start) return;
+    let end = d.closed || shiftISO(start, rankOffer(a).closeDay);
+    if(end < today) end = shiftISO(today, interval);
+    let deps = (a.ddPlan || []).filter(x => x.payrollDate).map(x => ({day: x.payrollDate, amt: x.amount || 0}));
+    if(!deps.length && (a.directDepositTotal || 0) > 0)
+      deps = [{day: d.firstDD || paycheckDates(shiftISO(start, typeof clear === 'number' ? clear : 21) > today ? shiftISO(start, typeof clear === 'number' ? clear : 21) : today, 1)[0], amt: a.directDepositTotal}];
+    const from = Math.max(0, isoDiff(today, start)), to = Math.min(days - 1, isoDiff(today, end));
+    for(let t = from; t <= to; t++){
+      const iso = shiftISO(today, t);
+      const inSoFar = deps.reduce((s, x) => s + (x.day <= iso ? x.amt : 0), 0);
+      F[t] += Math.max(inSoFar, a.minBalance || 0);
+    }
+  });
+  return F;
+}
+// The deposits an offer opened on `open` would take, under the same rules as
+// deposit planning: first payday at least ddClearDays after opening, last by
+// the requirement deadline, total split into its deposits, each no more than
+// what's left of that paycheck. Null if it can't reach its total in time.
+function planDepositsFor(o, open, alloc){
+  const need = o.directDepositTotal || 0;
+  if(!need) return [];
+  const clear = (config.paycheck || {}).ddClearDays;
+  const first = paycheckDates(shiftISO(open, typeof clear === 'number' ? clear : 21), 1)[0];
+  const end = shiftISO(open, o.daysToCompleteReq || 90);
+  const n = o.nbDeposits > 1 ? Math.floor(o.nbDeposits) : (o.requiresMultipleDeposits ? 2 : 1);
+  const cents = v => Math.round(v * 100) / 100;
+  const per = cents(need / n);
+  const out = [];
+  let remaining = need;
+  for(const d of paycheckDates(first, 40)){
+    if(remaining <= 0 || d > end) break;
+    const free = cents(paycheckAmountOn(d) - (alloc.get(d) || 0));
+    const amt = cents(Math.min(remaining, free, out.length < n - 1 ? per : remaining));
+    if(amt <= 0) continue;
+    out.push({payrollDate: d, amount: amt});
+    remaining = cents(remaining - amt);
+  }
+  return remaining > 0 ? null : out;
+}
+// Cash a planned offer would hold each day after opening (index 0 = opening day).
+function offerFloat(r, deps, open){
+  const len = r.closeDay + 1;
+  const f = new Float64Array(len);
+  const held = r.transferIn ? r.need : 0;
+  for(let t = 0; t < len; t++){
+    const iso = shiftISO(open, t);
+    const arrived = deps.reduce((s, x) => s + (x.payrollDate <= iso ? x.amount : 0), 0);
+    const kept = r.mode === 'sweep' ? Math.min(arrived, t <= r.balDays ? r.need : r.feeBal) : arrived;
+    f[t] = Math.max(kept, held);
+  }
+  return f;
+}
+function planKey(o, p){ return o.id + '|' + p; }
+function buildPlan(today = todayISO()){
+  const S = rankSettings(), PS = planSettings();
+  const H = PS.horizonDays;
+  const span = H + 800;   // room for the longest account to close
+  const F = floatSchedule(today, span);
+  const alloc = new Map();
+  accounts.forEach(a => (a.ddPlan || []).forEach(x => { if(x.payrollDate) alloc.set(x.payrollDate, (alloc.get(x.payrollDate) || 0) + (x.amount || 0)); }));
+  const skipped = new Set(PS.skipped || []);
+  const people = planPeople();
+  const taken = [];   // {person, institution} planned in this run
+  const items = [], notFit = [], notEligible = [];
+  const cands = [];
+  offers.filter(o => o.status === 'backlog').forEach(o => {
+    const r = rankOffer(o);
+    if(r.missingTerms || r.perHour <= 0) return;
+    (o.person ? [o.person] : people).forEach(p => {
+      if(!people.includes(p) || skipped.has(planKey(o, p))) return;
+      cands.push({o, r, p});
+    });
+  });
+  cands.sort((x, y) => y.r.perHour - x.r.perHour);
+  const interval = (config.paycheck || {}).intervalDays || 14;
+  for(const c of cands){
+    const {o, r, p} = c;
+    if(taken.some(t => t.person === p && bankMatch(t.institution, o.institution))) continue;
+    let placed = null, everEligible = false;
+    for(let t0 = 0; t0 <= H && !placed; t0 += interval){
+      const open = shiftISO(today, t0);
+      const e = eligibility(o, p, open);
+      if(e.state !== 'ok') continue;
+      everEligible = true;
+      // No more than perPeriod new accounts in one pay period.
+      if(items.filter(x => x.open === open).length >= PS.perPeriod) continue;
+      const deps = planDepositsFor(o, open, alloc);
+      if(!deps) continue;
+      const extra = (r.extraDeps || []).map(x => ({payrollDate: shiftISO(open, x.day), amount: x.amt}));
+      const f = offerFloat(r, deps.concat(extra), open);
+      let fits = true;
+      for(let t = 0; t < f.length && t0 + t < span; t++) if(F[t0 + t] + f[t] > S.floatLimit + 0.005){ fits = false; break; }
+      if(!fits) continue;
+      placed = {open, deps, f, t0};
+    }
+    if(!placed){ (everEligible ? notFit : notEligible).push(c); continue; }
+    placed.deps.forEach(x => alloc.set(x.payrollDate, (alloc.get(x.payrollDate) || 0) + x.amount));
+    for(let t = 0; t < placed.f.length && placed.t0 + t < span; t++) F[placed.t0 + t] += placed.f[t];
+    taken.push({person: p, institution: o.institution});
+    items.push({key: planKey(o, p), offer: o, person: p, r, open: placed.open, deps: placed.deps,
+      peak: placed.f.reduce((m, v) => Math.max(m, v), 0)});
+  }
+  items.sort((x, y) => x.open.localeCompare(y.open) || y.r.perHour - x.r.perHour);
+  let peak = 0, peakDay = 0;
+  for(let t = 0; t <= H; t++) if(F[t] > peak){ peak = F[t]; peakDay = t; }
+  return {items, notFit, notEligible, peak, peakOn: shiftISO(today, peakDay), horizon: H,
+    net: items.reduce((s, x) => s + x.r.net, 0), minutes: items.reduce((s, x) => s + x.r.minutes, 0)};
+}
+
+// The plan's summary on the Offers tab; the list itself opens in a dialog so
+// accepting or skipping never moves anything on the page.
+function planSummaryHTML(){
+  const P = buildPlan();
+  const months = Math.round(P.horizon / 30.4);
+  if(!P.items.length) return `<div class="plan-card"><div class="card-header">Opening plan</div>
+    <p class="plan-text">Nothing fits your paychecks and float in the next ${months} months.</p></div>`;
+  return `<div class="plan-card"><div class="card-header">Opening plan</div>
+    <p class="plan-text">Open ${P.items.length} account${P.items.length > 1 ? 's' : ''} over the next ${months} months for about ${dollars(P.net)} after tax, in about ${Math.round(P.minutes / 60)} hours. Float peaks at ${dollars(P.peak)} on ${esc(fmtDate(P.peakOn))}.</p>
+    <p class="plan-text">Next: ${esc(P.items[0].offer.institution)} (${esc(P.items[0].person)}), open by ${esc(fmtDate(P.items[0].open))}.</p>
+    <button data-action="openPlan">See the plan</button></div>`;
+}
+function planItemHTML(x){
+  const deps = x.deps.length ? x.deps.map(d => `${fmtDate(d.payrollDate)} ${dollars(d.amount)}`).join(', ') : 'none';
+  return `<div class="plan-item">
+    <div class="plan-when">${esc(fmtDate(x.open))} · ${esc(x.offer.institution)} (${esc(x.person)})</div>
+    <div class="plan-sub">${dollars(x.r.perHour)}/hr · ${dollars(x.r.net)} after tax${x.offer.needsVerification ? ' · verify terms first' : ''}</div>
+    <div class="plan-sub">Paycheck deposits: ${esc(deps)}</div>
+    <div class="row plan-btns"><button data-mval="accept:${esc(x.key)}">Accept</button><button class="sec" data-mval="skip:${esc(x.key)}">Skip</button></div>
+  </div>`;
+}
+async function openPlan(){
+  for(;;){
+    const P = buildPlan();
+    const skippedN = (planSettings().skipped || []).length;
+    const more = [];
+    if(P.notFit.length) more.push(`${P.notFit.length} more don't fit your paychecks or float in this time.`);
+    if(P.notEligible.length) more.push(`${P.notEligible.length} aren't open to you in this time.`);
+    const v = await modal(`<p><strong>Opening plan</strong></p>
+      <p class="plan-text">Earliest dates that fit your paydays and keep parked cash under ${dollars(rankSettings().floatLimit)} every day. Accept adds it to Planned with its deposits.</p>
+      ${P.items.map(planItemHTML).join('') || '<p class="plan-text">Nothing fits right now.</p>'}
+      ${more.length ? `<p class="plan-text">${esc(more.join(' '))}</p>` : ''}
+      <div class="row" style="justify-content:flex-end">
+        ${skippedN ? `<button class="sec" data-mval="unskip">Bring back ${skippedN} skipped</button>` : ''}
+        <button class="sec" data-mcancel>Close</button>
+      </div>`);
+    if(!v) return;
+    if(v === 'unskip'){ config.plan = {...planSettings(), skipped: []}; await saveConfig('Plan: bring back skipped offers'); render_offers(); continue; }
+    const [act, ...rest] = v.split(':');
+    const key = rest.join(':');
+    const x = P.items.find(i => i.key === key);
+    if(!x) continue;
+    if(act === 'skip'){
+      const ps = planSettings();
+      config.plan = {...ps, skipped: [...(ps.skipped || []), key]};
+      await saveConfig('Plan: skip ' + x.offer.institution);
+      render_offers();
+      toast(x.offer.institution + ' skipped in the plan');
+      continue;
+    }
+    if(act === 'accept'){ await acceptPlanItem(x); continue; }
+  }
+}
+async function acceptPlanItem(x){
+  const o = offers.find(q => q.id === x.offer.id);
+  if(!o) return;
+  const acc = {
+    id: uid('a'), offerId: o.id, institution: o.institution, person: x.person, status: 'planned',
+    bonus: o.bonus, referralValue: o.referralValue, directDepositTotal: o.directDepositTotal,
+    requiresMultipleDeposits: o.requiresMultipleDeposits, nbDeposits: o.nbDeposits,
+    minBalance: o.minBalance, minBalDays: o.minBalDays, additionalRequirements: o.additionalRequirements,
+    daysToCompleteReq: o.daysToCompleteReq, bonusTiming: o.bonusTiming, avoidFees: o.avoidFees,
+    fee: o.fee ? JSON.parse(JSON.stringify(o.fee)) : undefined, keepOpenDays: o.keepOpenDays ?? null,
+    churnable: o.churnable, monthsTillReopen: o.monthsTillReopen, notes: o.notes,
+    dates: {plannedOpen: x.open, opened: null, firstDD: null, bonusPaidOut: null, closed: null, reopenAfter: null},
+    tasks: {estatements: false, alerts: false, ddSetup: false, documented: false, reminders: false, referrals: false},
+    reminders: [],
+    ddPlan: x.deps.map(d => ({payrollDate: d.payrollDate, amount: d.amount, auto: true})),
+  };
+  accounts.push(acc);
+  await saveAccounts('Plan: open ' + o.institution + ' (' + x.person + ')');
+  render_offers();
+  render_planned();
+  render_today();
+  toast(o.institution + ' added to Planned for ' + fmtDate(x.open));
 }
 
 function computeDueToday(){
@@ -1875,6 +2094,7 @@ function render_offers(){
     const GROUP_LABEL = ['', '? Terms missing', '◷ Waiting to reopen', '● Already have one'];
     const ranked = backlog.map(o => { const r = rankOffer(o); return {o, r, g: offerGroup(o, r)}; })
       .sort((x, y) => x.g - y.g || y.r.perHour - x.r.perHour);
+    html += planSummaryHTML();
     html += `<div class="rank-summary">Ranked by after-tax dollars per hour of your time. Float in use: ${dollars(S.floatLimit - free)} of ${dollars(S.floatLimit)}.</div>`;
     let n = 0;
     ranked.forEach(({o, r, g}) => {
@@ -2762,6 +2982,8 @@ function render_settings(){
       ${rnum('rk_rate', 'Savings rate (%)', +(RS.savingsRate * 100).toFixed(2), '0.01')}
       ${rnum('rk_post', 'Days for a bonus to post', RS.bonusPostDays)}
     </div>
+    <div class="label">Opening plan</div>
+    <div class="row">${rnum('pl_months', 'Months ahead', Math.round(planSettings().horizonDays / 30.4))}${rnum('pl_per', 'Most new accounts per pay period', planSettings().perPeriod)}</div>
     <button data-action="saveRankingSettings">Save</button>
   </div>`;
 
@@ -2866,6 +3088,8 @@ async function saveRankingSettings(){
     savingsRate: n('rk_rate', D.savingsRate * 100) / 100,
     bonusPostDays: n('rk_post', D.bonusPostDays),
   };
+  const ps = planSettings();
+  config.plan = {...ps, horizonDays: Math.max(14, Math.round(n('pl_months', ps.horizonDays / 30.4) * 30.4)), perPeriod: Math.max(1, Math.round(n('pl_per', ps.perPeriod)))};
   try {
     await saveConfig('Update offer ranking settings');
     toast('Ranking settings saved');
@@ -3336,6 +3560,7 @@ const ACTIONS = {
   promoteOffer: (el, id, status) => promoteOffer(id, status),
   deleteOffer: (el, id) => deleteOffer(id),
   editOffer: (el, id) => editOffer(id),
+  openPlan: () => openPlan(),
   markOfferVerified: (el, id) => markOfferVerified(el, id),
   markReminderDone: (el, accountId, id) => markReminderDone(el, accountId, id),
   dismissReopen: (el, id) => dismissReopen(el, id),

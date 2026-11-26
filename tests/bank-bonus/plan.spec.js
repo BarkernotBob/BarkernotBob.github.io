@@ -63,10 +63,8 @@ test('the plan waits until the float has room', async ({ page }, testInfo) => {
   // Accounts already open or planned take it over the limit before anything new opens.
   await expect(page.locator('#section-offers .plan-card')).toContainText('Float peaks at $4,450 on 12/04/26, over your $3,500 limit from accounts you already have.')
   await page.locator('#section-offers .plan-card').getByRole('button', { name: 'See the plan' }).click()
-  await page.waitForTimeout(500)
   await page.screenshot({ path: path.join(__dirname, 'screenshots', 'plan-dialog.png') })
   await page.keyboard.press('Escape')
-  await page.waitForTimeout(500)
   await page.screenshot({ path: path.join(__dirname, 'screenshots', 'plan-card.png') })
   await testInfo.attach('plan-mobile.png', { body: await page.screenshot(), contentType: 'image/png' })
 })

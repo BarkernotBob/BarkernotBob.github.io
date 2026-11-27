@@ -298,3 +298,24 @@ test('no other app token is reachable from this origin in a test run', async ({ 
   )
   expect(foreign).toEqual([])
 })
+
+test("a scraped offer links its bank page, but only a plain https address", async ({ page }) => {
+  // Deal scraping (wish-list #8) stores the bank's offer page in source.bank so
+  // the offer can be checked there. The address comes from a web page, so
+  // anything but a plain https link must not become a link.
+  const offers = JSON.parse(fixture('offers.json'))
+  offers[0].source = { doc: 'https://www.doctorofcredit.com/x/', bank: 'https://bank.example/offer?a=1', read: '2026-11-26' }
+  offers[1].source = { bank: 'javascript:window.__pwned=1' }
+  if (offers[2]) offers[2].source = { bank: `https://x.example/"><img src=x onerror="window.__pwned=1">` }
+  const { errors } = await bootApp(page, { seed: { 'bb_local_db/offers.json': JSON.stringify(offers) } })
+  await goTab(page, 'offers')
+
+  const links = page.locator('#section-offers a', { hasText: "Bank's offer page" })
+  await expect(links).toHaveCount(1)
+  await expect(links.first()).toHaveAttribute('href', 'https://bank.example/offer?a=1')
+  await expect(links.first()).toHaveAttribute('rel', 'noopener noreferrer')
+  expect(await page.locator('a[href^="javascript:"]').count()).toBe(0)
+  expect(await page.locator('img[src="x"]').count()).toBe(0)
+  expect(await page.evaluate(() => window.__pwned)).toBeFalsy()
+  expect(errors, errors.join('\n')).toEqual([])
+})

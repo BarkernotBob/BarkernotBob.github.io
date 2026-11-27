@@ -2194,6 +2194,7 @@ function render_offers(){
         ${rankBlock}
         ${eligibilityLine(o)}
         ${o.notes ? `<div class="offer-notes">${esc(o.notes)}</div>` : ''}
+        ${bankPage(o) ? `<div class="offer-notes"><a href="${esc(bankPage(o))}" target="_blank" rel="noopener noreferrer">Bank's offer page</a></div>` : ''}
         <div class="action-bar">
           ${o.needsVerification ? `<button class="sec" data-action="markOfferVerified" data-a1="${esc(o.id)}">Mark verified</button>` : ''}
           <button data-action="promoteOffer" data-a1="${esc(o.id)}" data-a2="planned">Move to Planned</button>
@@ -2270,7 +2271,7 @@ async function promoteOffer(offerId, toStatus){
     .join('');
   const result = await modal(`
     <p><strong>Who is opening ${esc(offer.institution)}?</strong></p>
-    ${offer.needsVerification ? '<p class="offer-notes">These terms came from the old sheet and haven\'t been verified. Check the bank\'s current offer first.</p>' : ''}
+    ${offer.needsVerification ? '<p class="offer-notes">These terms haven\'t been verified. Check the bank\'s current offer first.</p>' : ''}
     <div class="row">${personList}</div>
   `);
 
@@ -2330,8 +2331,16 @@ async function promoteOffer(offerId, toStatus){
   toast(offer.institution + ' promoted to ' + toStatus);
 }
 
-// Offers brought over from the old spreadsheet carry needsVerification until
-// Isaiah has rechecked the bank's current terms.
+// The bank's offer page that a scraped offer's terms came from (deal scraping,
+// wish-list #8). Only plain https links are shown.
+function bankPage(o){
+  const u = o && o.source && o.source.bank;
+  return typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/.test(u) ? u : '';
+}
+
+// Offers brought over from the old spreadsheet, and offers the deal-scraping
+// run couldn't settle, carry needsVerification until Isaiah has rechecked the
+// bank's current terms.
 // Updates the card in place rather than re-rendering, so nothing below it moves.
 async function markOfferVerified(el, offerId){
   const offer = offers.find(o => o.id === offerId);
